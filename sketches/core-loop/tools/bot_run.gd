@@ -6,7 +6,7 @@ const BotProfile := preload("res://tools/bot_profile.gd")
 const BotAudit := preload("res://tools/bot_audit.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
-const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
@@ -247,7 +247,7 @@ func _physics_process(delta: float) -> bool:
 			_plants.attach(_game, _driver, BotPlants.parse(String(_settings["plant"])))
 		_game.presentation.audio.bake_opening_now()
 		if _settings.get("warm-band", "0") == "1":
-			MusicEngine.prepare_rest()
+			MusicPrebake.prepare_rest()
 			_game.presentation.audio.engine.warm_stingers = true
 		_game.run.run_seed_override = _seeds[_index]
 		var run_tier := int(_settings.get("run-tier", "0"))

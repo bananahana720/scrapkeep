@@ -15,6 +15,7 @@ Live coordination material for the alpha. The local Mac Studio coordinator owns 
 | [UI-FINDINGS.tsv](UI-FINDINGS.tsv) | Open UI audit findings with failure classes and test guards (LESSONS 70) |
 | [WEEKLY.tsv](WEEKLY.tsv) | Tests deferred to the weekly sweep (`ruling ca`, empty since `1e0de5210` unparked W2–3) |
 | [DEEP-SWEEP.md](DEEP-SWEEP.md) | Deep-modules sweep run after promotions / milestones |
+| [STRUCTURE-SWEEP.md](STRUCTURE-SWEEP.md) | The whole-repository structure sweep (27 Nov 2026): rules for its writers, the measured dependency map, what has landed and what waits on Andrew |
 | [THREADS.md](THREADS.md) | Worker roles and ownership ([AGENTS.md](../../AGENTS.md) rule 11) |
 | [COMMS.md](COMMS.md) | Writing rules for briefs, receipts, PRs, and reports (ruling `cz`) |
 | [DEVICES.md](DEVICES.md) | Mac Studio Gate host, Linux `ahana` bench, and cloud box setup |

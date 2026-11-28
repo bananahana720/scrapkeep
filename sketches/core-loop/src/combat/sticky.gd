@@ -5,6 +5,7 @@ const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 
 const CONTACT_REACH := preload("res://src/core/devices.gd").STICKY_CONTACT_REACH
 const ARC_POINTS := 16
@@ -210,7 +211,7 @@ func _touching(charge: Dictionary, enemies: Array):
 	for enemy in enemies:
 		if DamageDoor.dead(enemy):
 			continue
-		var hull: float = float(enemy.get("radius")) if enemy.get("radius") != null else 1.0
+		var hull: float = ActiveBase.enemy_girth(enemy, 1.0)
 		if (enemy.global_position - charge["pos"]).length() - hull <= reach:
 			return enemy
 	return null

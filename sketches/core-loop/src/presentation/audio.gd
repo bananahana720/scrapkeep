@@ -7,7 +7,9 @@ const Rows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
@@ -306,7 +308,7 @@ static func reset_for_tests() -> void:
 	_baked = false
 	_bake_done = false
 	SfxBank.bake_cancel = false
-	SfxBank.reset_voice_sidecar()
+	VoiceSynth.reset_voice_sidecar()
 
 
 func _init() -> void:
@@ -433,7 +435,7 @@ static func _landing_ids(rung: int, tones: Array) -> Array:
 
 static func _bake_everything(ids: Array) -> void:
 	SfxBank.bake_all(ids)
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	_bake_done = not SfxBank.bake_cancel
 
 
@@ -516,7 +518,7 @@ func _notification(what: int) -> void:
 func bake_opening_now() -> void:
 	bake_now()
 	_finish_opening()
-	MusicEngine.prepare_opening()
+	MusicPrebake.prepare_opening()
 
 
 func _ready_for_run() -> void:
@@ -542,9 +544,9 @@ static func finish_band_bakes() -> void:
 
 static func _start_band_bakes() -> void:
 	if _opening_task < 0:
-		_opening_task = WorkerThreadPool.add_task(MusicEngine.prepare_opening, false, "presentation opening band bake")
+		_opening_task = WorkerThreadPool.add_task(MusicPrebake.prepare_opening, false, "presentation opening band bake")
 	if _rest_task < 0:
-		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, true, "presentation band bake")
+		_rest_task = WorkerThreadPool.add_task(MusicPrebake.prepare_rest, true, "presentation band bake")
 
 
 func bake_now() -> void:
@@ -1819,8 +1821,8 @@ func speak(kind: String, text: String, beat: int) -> bool:
 		_next_babble()
 		return true
 	if not _babble.has(key):
-		_babble[key] = Synth.to_wav(SfxBank.babble(text, beat, live))
-	_start(kind, "babble", _babble[key], SfxBank.trim_db("babble"), 1.0, "SFX")
+		_babble[key] = Synth.to_wav(VoiceSynth.babble(text, beat, live))
+	_start(kind, "babble", _babble[key], VoiceSynth.trim_db("babble"), 1.0, "SFX")
 	return true
 
 
@@ -1845,7 +1847,7 @@ func _next_babble() -> void:
 		return
 	var ask: Array = _babble_queue.pop_front()
 	var out: Array = []
-	var task := WorkerThreadPool.add_task(func(): out.append(SfxBank.babble(ask[2], ask[3], ask[4])), true, "babble")
+	var task := WorkerThreadPool.add_task(func(): out.append(VoiceSynth.babble(ask[2], ask[3], ask[4])), true, "babble")
 	_babble_job = {"key": ask[0], "kind": ask[1], "task": task, "out": out}
 
 
@@ -1857,7 +1859,7 @@ func _tend_babble() -> void:
 	if not _babble.has(key) and not _babble_job.out.is_empty():
 		_babble[key] = Synth.to_wav(_babble_job.out[0])
 	if _babble.has(key) and not _babble_job.get("silent", false):
-		_start(_babble_job.kind, "babble", _babble[key], SfxBank.trim_db("babble"), 1.0, "SFX")
+		_start(_babble_job.kind, "babble", _babble[key], VoiceSynth.trim_db("babble"), 1.0, "SFX")
 	_babble_job = {}
 	_next_babble()
 
@@ -1880,12 +1882,12 @@ func call_in(kind: String, speaker: String, text: String) -> float:
 		return 0.0
 	var step := grid_unit(4)
 	var at := engine.clock + int(CALL_LEAD_S * Harmony.RATE)
-	if SfxBank.caller_on_grid(speaker):
+	if VoiceSynth.caller_on_grid(speaker):
 		at += posmod(next_grid(4) - at, step)
-	var id := SfxBank.say_id(speaker, text)
-	SfxBank.keep_said(id)
+	var id := VoiceSynth.say_id(speaker, text)
+	VoiceSynth.keep_said(id)
 	engine.schedule_stinger_at(id, at, 0.0, false, step)
-	var seconds := float(at - engine.clock) / Harmony.RATE + SfxBank.say_seconds(speaker, text, step)
+	var seconds := float(at - engine.clock) / Harmony.RATE + VoiceSynth.say_seconds(speaker, text, step)
 	_gates["call_in"] = clock + seconds
 	_calling = id
 	_duck(CALL_DUCK, seconds)
@@ -5158,10 +5160,10 @@ func set_voice_mode(mode: String, dir := "") -> void:
 	_voice_clips.clear()
 	_voice_manifest_loaded = false
 	if voice_mode != VOICE_TTS:
-		SfxBank.set_voice_sidecar(false, {})
+		VoiceSynth.set_voice_sidecar(false, {})
 		return
 	_load_voice_manifest()
-	SfxBank.set_voice_sidecar(true, _voice_clips)
+	VoiceSynth.set_voice_sidecar(true, _voice_clips)
 
 
 func voice_manifest_loaded() -> bool:
@@ -5169,9 +5171,9 @@ func voice_manifest_loaded() -> bool:
 
 
 func voice_clip_for(speaker: String, text: String) -> String:
-	if voice_mode != VOICE_TTS or speaker in SfxBank.SYNTH_ONLY_SPEAKERS:
+	if voice_mode != VOICE_TTS or speaker in VoiceSynth.SYNTH_ONLY_SPEAKERS:
 		return ""
-	return SfxBank.voice_clip_path(speaker, text)
+	return VoiceSynth.voice_clip_path(speaker, text)
 
 
 func _voice_candidate_dirs() -> Array[String]:
@@ -5244,8 +5246,8 @@ func _ingest_voice_manifest(data: Dictionary, clip_root: String, base_dir: Strin
 			for k in items:
 				var key_s := String(k)
 				var val = items[k]
-				if val is String and key_s.begins_with(SfxBank.SAY):
-					var parts := SfxBank.parse_said(key_s)
+				if val is String and key_s.begins_with(VoiceSynth.SAY):
+					var parts := VoiceSynth.parse_said(key_s)
 					_register_voice_clip(String(parts[0]).to_lower(), String(parts[1]), val, clip_root, base_dir)
 				elif val is Dictionary:
 					for line_text in val:
@@ -5261,7 +5263,7 @@ func _ingest_voice_manifest(data: Dictionary, clip_root: String, base_dir: Strin
 
 
 func _register_voice_clip(speaker: String, text: String, file: String, clip_root: String, base_dir: String) -> void:
-	if speaker == "" or file == "" or speaker in SfxBank.SYNTH_ONLY_SPEAKERS:
+	if speaker == "" or file == "" or speaker in VoiceSynth.SYNTH_ONLY_SPEAKERS:
 		return
 	var resolved := _resolve_voice_file(file, clip_root, base_dir)
 	if resolved == "":

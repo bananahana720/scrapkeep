@@ -3,6 +3,7 @@ extends SceneTree
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -49,14 +50,16 @@ func _initialize() -> void:
 	var silent: Array = []
 	var unkeyed: Array = []
 	for id in NEW_CUES:
-		if not SfxBank.has_recipe(id) or Synth.peak(SfxBank.samples(id)) < 0.1:
+		var has_own: bool = VoiceSynth.has_recipe(id) if id == "babble" else SfxBank.has_recipe(id)
+		var buf: PackedFloat32Array = VoiceSynth.samples(id) if id == "babble" else SfxBank.samples(id)
+		if not has_own or Synth.peak(buf) < 0.1:
 			silent.append(id)
 		if not id in UNPITCHED and not id in Audio.KEYED_SOUNDS:
 			unkeyed.append(id)
 	_check("new cues", silent.is_empty() and unkeyed.is_empty(), "%d cues bake non-silent; unbaked %s; pitched but not keyed %s" % [NEW_CUES.size(), silent, unkeyed])
 
-	var babble := [SfxBank.babble("Still no. Pick one.", 1).size(), SfxBank.babble("Still no. Pick one.", 5).size()]
-	_check("babble hurries", babble[1] < babble[0] and SfxBank.babble("Still no. Pick one.", 1) == SfxBank.babble("Still no. Pick one.", 1),
+	var babble := [VoiceSynth.babble("Still no. Pick one.", 1).size(), VoiceSynth.babble("Still no. Pick one.", 5).size()]
+	_check("babble hurries", babble[1] < babble[0] and VoiceSynth.babble("Still no. Pick one.", 1) == VoiceSynth.babble("Still no. Pick one.", 1),
 		"a line babbles the same way twice, and faster at beat 5 (%d then %d samples)" % babble)
 
 	_class_counter()

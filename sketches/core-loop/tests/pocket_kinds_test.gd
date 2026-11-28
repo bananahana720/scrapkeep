@@ -384,7 +384,7 @@ func _objectives() -> void:
 
 func _rounds() -> void:
 	var owner: Dictionary = Activities.RULES.round_arena
-	var floor_s: float = Schema._lead_floor({"family": "natural", "kind": "lightning", "effect": {}})
+	var floor_s: float = Schema.lead_floor({"family": "natural", "kind": "lightning", "effect": {}})
 	var formula := true
 	var additions := true
 	var lead := true

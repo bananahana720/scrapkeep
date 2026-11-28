@@ -178,7 +178,7 @@ func _run() -> void:
 	t.eq("T1 restores the third Tarn launch without another launch redesign", by_row["kick_wmid_3"]["size"], [60.0, 32.0, 36.0])
 	t.eq("T1 preserves the measured third-trial entry height", float(by_row["kick_wmid_3"]["y"]), 56.118102)
 	var heights := ParkTerrain._read_zstd(BAKE_DIR + "/ground.bin", ParkTerrain.SIDE * ParkTerrain.SIDE * 4).to_float32_array()
-	var ground := func(x: float, z: float) -> float: return Terrain._grid_height(heights, x, z)
+	var ground := func(x: float, z: float) -> float: return Terrain.grid_height(heights, x, z)
 	var holder := Node3D.new()
 	root.add_child(holder)
 	var perch_failures := physical_perch_failures(park, holder, ground)

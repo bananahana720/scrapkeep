@@ -262,7 +262,7 @@ func _check_thermobaric_dunk() -> void:
 		"pins=%d" % _combat._thermobaric_pins.size())
 
 	# Heat e1, then slam: launches nearby enemies skyward as flaming pins.
-	_combat._heat(e1, e1.global_position)
+	_combat.apply_heat(e1, e1.global_position)
 	_t.check("thermobaric_enemy_heated", _combat.heated(e1), "heated=%s" % _combat.heated(e1))
 	_slams_seen = 0
 	_game.ctx.events.slammed.emit(origin + Vector3(3.0, 0.0, 0.0), 1.0, 1.0)
@@ -335,7 +335,7 @@ func _check_attempt_and_death_cleanup() -> void:
 	var origin: Vector3 = _player.ball_position()
 	var e: Node3D = _combat.spawn_enemy("chaser", origin + Vector3(3.0, 0.0, 0.0))
 	_set_parts(["arc_coil", "hot_rivets", "long_spool", "rivet_plating"])
-	_combat._heat(e, e.global_position)
+	_combat.apply_heat(e, e.global_position)
 	_game.ctx.events.slammed.emit(origin + Vector3(3.0, 0.0, 0.0), 1.0, 1.0)
 	_t.check("cleanup_had_pin", not _combat._thermobaric_pins.is_empty(), "pins=%d" % _combat._thermobaric_pins.size())
 	_combat._on_player_died()

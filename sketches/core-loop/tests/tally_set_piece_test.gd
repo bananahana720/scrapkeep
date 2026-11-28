@@ -159,11 +159,11 @@ func _piece(id: String, from: Vector3, to: Vector3) -> void:
 
 
 func _tech(id: String, ball: Vector3, aim := Vector3.RIGHT) -> int:
-	return int(_ult._ult_rows[id]["tech"].call(1, ball, aim, Ultimate.HEFT_MULT[_ult._heft_index()]))
+	return int(_ult._ult_rows[id]["tech"].call(1, ball, aim, Ultimate.HEFT_MULT[_ult.heft_index()]))
 
 
 func _land(id: String, at: Vector3, chain := 1.0) -> Array:
-	return _ult._ult_rows[id]["landing"].call(at, Ultimate.HEFT_MULT[_ult._heft_index()], chain)
+	return _ult._ult_rows[id]["landing"].call(at, Ultimate.HEFT_MULT[_ult.heft_index()], chain)
 
 
 func _hits(enemy: Node3D, kind := "") -> Array:
@@ -180,7 +180,7 @@ func _aim(forward: Vector3) -> Dictionary:
 
 
 func _plate_at(dx: float, dz := 0.0) -> Vector3:
-	var at: Vector3 = _combat._floor_at(_player.ball_position() + Vector3(dx, 2.0, dz))
+	var at: Vector3 = _combat.floor_at(_player.ball_position() + Vector3(dx, 2.0, dz))
 	_combat.plate = {"at": at, "until": _combat._clock + 4.0}
 	return at
 
@@ -265,7 +265,7 @@ func _volley_cases() -> void:
 		_enemy("chaser", 2.0 + 0.6 * i, -2.0 + 0.3 * i)
 	for beat in 4:
 		_tech("plate_return", ball)
-	_t.eq("class V caps the ride at 10 clips", [_ult._heft_index(), _combat.ride_clips.size()], [4, 10])
+	_t.eq("class V caps the ride at 10 clips", [_ult.heft_index(), _combat.ride_clips.size()], [4, 10])
 
 
 # --- the peak and the landing --------------------------------------------------------------

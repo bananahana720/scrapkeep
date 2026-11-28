@@ -393,6 +393,10 @@ func register_family(family: String, handler: Callable) -> void:
 	_park_families[family] = handler
 
 
+func clear_families() -> void:
+	_park_families.clear()
+
+
 func set_clock_tier(effective_tier: int) -> void:
 	_park_tier = effective_tier
 
@@ -539,7 +543,7 @@ func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dict
 		if pick < 0.0:
 			selected = candidate[0]
 			break
-	var lead := float(selected.row.lead_s) if selected.weather else maxf(float(selected.row.telegraph.lead_s), ParkSchema._lead_floor(selected.row))
+	var lead := float(selected.row.lead_s) if selected.weather else maxf(float(selected.row.telegraph.lead_s), ParkSchema.lead_floor(selected.row))
 	selected.phase = ANNOUNCED
 	selected.pending = maxi(0, int(selected.pending) - 1)
 	selected.holding = false

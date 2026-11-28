@@ -55,7 +55,7 @@ func _simple_plan(to: Vector3, mode := "arc", beats := 6) -> Dictionary:
 
 func _cases() -> void:
 	_ult.beat_seconds = func() -> float: return 60.0 / 172.0
-	_game.events.ultimate_peak.connect(func(_id: String, _at: Vector3): _peak_modes.append(_ult._plan["legs"][_ult._leg]["mode"]))
+	_game.events.ultimate_peak.connect(func(_id: String, _at: Vector3): _peak_modes.append(_ult.leg_state()["mode"]))
 	_game.events.cloak_broken.connect(func(reason: String): _cloak_breaks.append(reason))
 	var floor := StaticBody3D.new()
 	floor.collision_layer = 1
@@ -97,7 +97,7 @@ func _cases() -> void:
 		_t.eq("peak occurs in hold class %d" % heft, _peak_modes, ["hold"])
 		_t.check("volleys respect target cap and B class %d" % heft,
 			_ult.volley_log.size() > 2 and _ult.volley_log.all(func(v): return v["targets"] <= Kest.targets_for_class(heft) and v["centre"] == p["to"]))
-		_t.check("stoop hits eight enemies class %d" % heft, _ult._record["landing_hits"] == 8)
+		_t.check("stoop hits eight enemies class %d" % heft, _ult.record()["landing_hits"] == 8)
 		_t.check("cloak runs 1.5 seconds after landing class %d" % heft, _combat.cloak_left > 1.20 and _combat.cloak_left <= 1.5)
 		_t.eq("satchel count matches targets class %d" % heft, _ult.kest_cage_state()["satchel_bands"], Kest.minis_per_throw(heft))
 		await _flush_cards()

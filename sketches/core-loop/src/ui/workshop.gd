@@ -10,7 +10,7 @@ const TreePick := preload("res://src/ui/tree_pick.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
-const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const CompanionPanel := preload("res://src/ui/companion_panel.gd")
 
 
@@ -431,7 +431,7 @@ func _on_acted(fact: String, record: Dictionary) -> void:
 	if record.has("bark"):
 		bubble.bark(record["bark"], fact)
 		_place_bubble()
-		_babble(fact, String(record["bark"].get("text", "")), SfxBank.BABBLE_LEVEL)
+		_babble(fact, String(record["bark"].get("text", "")), VoiceSynth.BABBLE_LEVEL)
 	_cue(fact)
 
 
@@ -441,7 +441,7 @@ func _speak_world_bark(fact: String) -> void:
 	if armed and not line.is_empty():
 		bubble.bark(line, fact)
 		_place_bubble()
-		_babble(fact, String(line.get("text", "")), SfxBank.BABBLE_LEVEL)
+		_babble(fact, String(line.get("text", "")), VoiceSynth.BABBLE_LEVEL)
 
 
 func _on_bay_left() -> void:
@@ -474,9 +474,9 @@ func _audio():
 
 static func babble_beat(record: Dictionary) -> int:
 	if record.get("relent", false):
-		return SfxBank.BABBLE_RELENT
+		return VoiceSynth.BABBLE_RELENT
 	if record.get("restart", false):
-		return SfxBank.BABBLE_LEVEL
+		return VoiceSynth.BABBLE_LEVEL
 	return int(record.get("beat", 0)) + 1
 
 

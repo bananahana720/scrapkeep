@@ -80,19 +80,19 @@ class Index:
 		return g.site_node(park, row_index, deck_start, deck_count, Vector2(float(at[0]), float(at[1])), site)
 
 
-static func _pay(pay: Dictionary) -> Dictionary:
-	if pay.has("named"):
-		var named := String(pay["named"])
+static func pay(row: Dictionary) -> Dictionary:
+	if row.has("named"):
+		var named := String(row["named"])
 		if Parts.rows().has(named):
 			return {"rarities": [String(Parts.rows()[named]["rarity"])], "named": named}
 	var out := []
-	if pay.get("rarities") is Array:
-		for r in pay["rarities"]:
+	if row.get("rarities") is Array:
+		for r in row["rarities"]:
 			out.append(String(r))
 	return {"rarities": out, "named": ""}
 
 
-static func _within(rarities: Array, allowed: Array) -> bool:
+static func within(rarities: Array, allowed: Array) -> bool:
 	if rarities.is_empty():
 		return false
 	for r in rarities:

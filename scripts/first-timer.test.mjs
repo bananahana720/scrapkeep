@@ -97,16 +97,20 @@ test("one failing pilot fails the mechanic", () => {
 
 test("--from re-judges saved probes and exits 1 on a miss", async () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "first-timer-"));
-  writeFileSync(
-    path.join(dir, "probe-tally-1.json"),
-    JSON.stringify(probe({}, { stage_entered: { tick: 0, stage: 1 } }, "tally")),
-  );
-  const code = await main([`--from=${dir}`, `--out=${dir}`]);
-  assert.equal(code, 1);
-  assert.match(
-    readFileSync(path.join(dir, "report.md"), "utf8"),
-    /Roll and steer the ball \*\*FAIL\*\*/,
-  );
+  try {
+    writeFileSync(
+      path.join(dir, "probe-tally-1.json"),
+      JSON.stringify(probe({}, { stage_entered: { tick: 0, stage: 1 } }, "tally")),
+    );
+    const code = await main([`--from=${dir}`, `--out=${dir}`]);
+    assert.equal(code, 1);
+    assert.match(
+      readFileSync(path.join(dir, "report.md"), "utf8"),
+      /Roll and steer the ball \*\*FAIL\*\*/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("parseArgs rejects an unknown pilot", () => {

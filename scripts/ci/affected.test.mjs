@@ -37,6 +37,15 @@ test("docs-only change skips web build and godot tests", () => {
   assert.equal(res.godot_matrix, "[1]");
 });
 
+test("a change to the structure sweep's data files or its checker runs the docs check", () => {
+  for (const file of [
+    "project-guide/handoff/shared/structure-sweep/pool.tsv",
+    "project-guide/handoff/shared/structure-sweep/units.tsv",
+    "scripts/structure-sweep.mjs",
+  ])
+    assert.equal(classifyAffected([file]).docs, true, file);
+});
+
 test("godot sketch change triggers godot and node tests without web build", () => {
   const small = classifyAffected(["sketches/core-loop/src/ui/badge.gd"]);
   assert.equal(small.godot, true);
