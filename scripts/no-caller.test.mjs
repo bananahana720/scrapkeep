@@ -22,6 +22,10 @@ function scratchRepo() {
     "docs/notes.md": "Run `godot --script res://tools/called.gd` to see it.\n",
     "sketches/core-loop/tools/form.py": "WIDTH = 2\n",
     "sketches/core-loop/tools/gate.py": "import form as F\nreform = F.WIDTH\n",
+    "sketches/core-loop/tools/by_uid.gd": "extends Node\n",
+    "sketches/core-loop/tools/by_uid.gd.uid": "uid://b7byuid42\n",
+    "sketches/core-loop/scenes/rig.tscn":
+      '[ext_resource type="Script" uid="uid://b7byuid42" id="1"]\n',
   };
   for (const [rel, text] of Object.entries(files)) {
     mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
@@ -90,6 +94,51 @@ test("a path given from a subfolder resolves against the repository root", () =>
     const r = run(path.join(dir, "sketches/core-loop"), "tools/dead.gd");
     assert.equal(r.status, 0, r.stdout);
     assert.match(r.stdout, /^sketches\/core-loop\/tools\/dead\.gd: 0 mentions/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a .gd file is mentioned by the uid in its .uid file", () => {
+  const dir = scratchRepo();
+  try {
+    const hits = findMentions(["sketches/core-loop/tools/by_uid.gd"], dir).get(
+      "sketches/core-loop/tools/by_uid.gd",
+    );
+    assert.deepEqual(hits, [
+      'sketches/core-loop/scenes/rig.tscn:1: [ext_resource type="Script" uid="uid://b7byuid42" id="1"]',
+    ]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a missing, wrong-prefix, untracked or directory path exits 2, names the path and searches nothing", () => {
+  const dir = scratchRepo();
+  try {
+    writeFileSync(path.join(dir, "sketches/core-loop/tools/loose.gd"), "extends Node\n");
+    const cases = {
+      "sketches/core-loop/tools/missing.gd": /does not exist/,
+      "tools/called.gd": /does not exist/,
+      "sketches/core-loop/tools": /is a directory/,
+      "sketches/core-loop/tools/loose.gd": /is not tracked by git/,
+      "../outside.gd": /lies outside the repository/,
+    };
+    for (const [given, reason] of Object.entries(cases)) {
+      const r = run(dir, given, "sketches/core-loop/tools/dead.gd");
+      assert.equal(r.status, 2, given);
+      assert.equal(r.stdout, "", given);
+      assert.ok(r.stderr.startsWith(`${given}: `), r.stderr);
+      assert.match(r.stderr, reason, given);
+      assert.match(
+        r.stderr,
+        /pass a path to a tracked file, relative to where you run the command/,
+      );
+    }
+    assert.throws(
+      () => findMentions(["tools/called.gd"], dir),
+      /tools\/called\.gd: does not exist/,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
