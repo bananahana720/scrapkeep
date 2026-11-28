@@ -2,10 +2,10 @@ extends VBoxContainer
 
 const Secrets := preload("res://src/core/secrets.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Companion := preload("res://src/core/companion.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
@@ -185,17 +185,10 @@ func refresh(game) -> void:
 	var pilots: Array = read["pilots"]
 	var lines: PackedStringArray = read["lines"]
 	for i in lines.size():
-		var label := Label.new()
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.add_theme_font_override("font", UiFonts.bold())
-		label.add_theme_font_size_override("font_size", UiTokens.LABEL)
-		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var color: Color = Palette.AMBER
 		if i >= 1 and i <= pilots.size():
 			color = Palette.SAND if pilots[i - 1]["ready"] else Palette.SLATE
-		label.add_theme_color_override("font_color", color)
-		label.text = lines[i]
-		_lines.add_child(label)
+		_lines.add_child(UiDraw.label(UiTokens.LABEL, color, lines[i]))
 	var wanted: bool = read["pieces"] > 0
 	if wanted and _companion.get_parent() == null:
 		_buttons.add_child(_companion)

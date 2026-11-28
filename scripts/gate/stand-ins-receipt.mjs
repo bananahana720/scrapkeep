@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { cleanHead, root } from "./clean-head.mjs";
+import { cleanHead, parseReceiptArgs, root, runReceiptCliSync } from "./receipt-cli.mjs";
 import { runAlone } from "./solo-run.mjs";
 
 export const TEST = "prim_census_test";
@@ -186,26 +186,13 @@ function produceAll() {
 }
 
 function main(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--scope=all") args.all = true;
-    else if (argv[i] === "--out" && argv[i + 1]) args.out = argv[++i];
-    else {
-      console.error("usage: stand-ins-receipt.mjs [--scope=all] [--out file]");
-      return 2;
-    }
-  }
-  let receipt;
-  try {
-    receipt = args.all ? produceAll() : produce();
-  } catch (e) {
-    console.error(String(e.message ?? e));
-    return 2;
-  }
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) writeFileSync(args.out, text);
-  else process.stdout.write(text);
-  return receipt.pass ? 0 : 1;
+  return runReceiptCliSync(() => {
+    const args = parseReceiptArgs(argv, {
+      boolFlags: { "--scope=all": "all" },
+      usageError: "usage: stand-ins-receipt.mjs [--scope=all] [--out file]",
+    });
+    return { receipt: args.all ? produceAll() : produce(), out: args.out };
+  });
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))

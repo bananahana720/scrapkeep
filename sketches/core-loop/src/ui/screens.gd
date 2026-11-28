@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-const ResultsOdds := preload("res://src/ui/results_odds.gd")
+const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
@@ -481,7 +481,7 @@ func _on_flow_changed(state: String) -> void:
 				if game.flow.death_tip != "":
 					memo = DeathCause.memo(game.run.run_seed, game.run.stage, game.flow.death_cause, game.ctx.profile, _journal_pages(), game.run)
 			var after := PackedStringArray()
-			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets) if game.ctx.dev else ""
+			var trade_lines := OddsReadout.results_text(game.run.summary().trade_pockets) if game.ctx.dev else ""
 			if trade_lines != "":
 				after.append(trade_lines)
 			var epitaph := String(_victory_boss.get("epitaph", ""))
@@ -1091,7 +1091,7 @@ func radio_key(key: int) -> bool:
 		KEY_N:
 			var made: int = radio.new_mixtape()
 			if made >= 0:
-				radio.mixtape = made
+				radio.pick_mixtape(made)
 		KEY_X:
 			var rng := RandomNumberGenerator.new()
 			rng.randomize()
@@ -1100,7 +1100,7 @@ func radio_key(key: int) -> bool:
 			radio.tune(radio.MIXTAPE)
 		_:
 			if key >= KEY_1 and key < KEY_1 + radio.mixtapes.size():
-				radio.mixtape = key - KEY_1
+				radio.pick_mixtape(key - KEY_1)
 			else:
 				return true
 	_radio.refresh(game.ctx.profile, radio)

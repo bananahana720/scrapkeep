@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -9,10 +9,11 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveGodotBinary } from "./godot-home.mjs";
+import { pool, runProcess } from "./lib/proc.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
-const recordedBinary = "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 
 export const PILOTS = [
   { id: "pylon_engineer", name: "Sable" },
@@ -280,40 +281,17 @@ function gitVersion() {
   return r.status === 0 ? r.stdout.trim() : "unknown";
 }
 
-function runOne(spec) {
-  return new Promise((resolve) => {
-    const child = spawn(spec.cmd, spec.argv, { cwd: root });
-    let out = "";
-    child.stdout.on("data", (d) => (out += d));
-    child.stderr.on("data", (d) => (out += d));
-    const timer = setTimeout(() => child.kill("SIGKILL"), 15 * 60 * 1000);
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve(
-        parseRow(out) ?? {
-          error: `no row (exit ${code}): ${out
-            .split("\n")
-            .filter((l) => /ERROR/.test(l))
-            .slice(0, 3)
-            .join(" | ")}`,
-        },
-      );
-    });
-  });
-}
-
-async function pool(tasks, jobs) {
-  const results = [];
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: jobs }, async () => {
-      while (next < tasks.length) {
-        const i = next++;
-        results[i] = await tasks[i]();
-      }
-    }),
+async function runOne(spec) {
+  const res = await runProcess(spec.cmd, spec.argv, { cwd: root, timeoutMs: 15 * 60 * 1000 });
+  return (
+    parseRow(res.output) ?? {
+      error: `no row (exit ${res.exit}): ${res.output
+        .split("\n")
+        .filter((l) => /ERROR/.test(l))
+        .slice(0, 3)
+        .join(" | ")}`,
+    }
   );
-  return results;
 }
 
 function readRows(dir) {
@@ -330,9 +308,11 @@ export async function main(argv = process.argv.slice(2)) {
   let rows;
   if (args.rows) rows = readRows(args.rows);
   else {
-    const binary = process.env.GODOT_BIN || recordedBinary;
-    if (!existsSync(binary))
-      throw new PowerReadError(`Godot binary not found at ${binary}; set GODOT_BIN`);
+    const binary = resolveGodotBinary();
+    if (!binary || !existsSync(binary))
+      throw new PowerReadError(
+        `Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN`,
+      );
     let render = args.render;
     if (render === "xvfb" && spawnSync("sh", ["-c", "command -v xvfb-run"]).status !== 0) {
       console.error(

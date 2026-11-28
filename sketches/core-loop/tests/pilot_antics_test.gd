@@ -13,6 +13,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const T := preload("res://tests/support/t.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 var _t := T.new("pilot_antics_test")
 var _capture := ""
@@ -25,7 +26,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_capture = OS.get_environment("TTL_CAPTURE_DIR")
 	if _capture != "":
-		if DisplayServer.get_name() == "headless":
+		if AppShell.headless():
 			_t.check("capture requires a rendered display", false)
 			quit(_t.verdict())
 			return

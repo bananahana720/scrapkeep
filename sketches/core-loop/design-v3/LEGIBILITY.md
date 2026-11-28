@@ -53,12 +53,12 @@ Ten situations. Each has one source table.
 | An activity is on offer | A standing amber beam and ground ring from stage start with the family glyph on top. No timer and no toast. Its goal is a gauge on the object itself. | At the site | `ACTIVITY_ROWS` |
 | A reward is paid | The part rises from the exact spot the goal completed, the won sound plays, and its glyph flies onto the ball with a two-word name. | The completion spot, then the ball | `LOOT_ROWS` |
 
-**Defence bars (SG7).** Three bar classes, each with one regen rule and one existing palette row, so a bar's look predicts how to attack it. The table lives in `src/core/defence_bars.gd` (`CLASSES`, `STATES`); `tests/defence_bars_test.gd` holds it. Every defence state maps to exactly one class, no two classes share a colour, and no class takes a colour-law row other than its own (the shield takes slate, "not yet") or the `weak_point_opened` colour.
+**Defence bars (SG7).** Three bar classes, each with one regen rule and one existing palette row, so a bar's look predicts how to attack it. The table lives in `tests/support/defence_bars.gd` (`CLASSES`, `STATES`); `tests/defence_bars_test.gd` holds it. Every defence state maps to exactly one class, no two classes share a colour, and no class takes a colour-law row other than its own (the shield takes slate, "not yet") or the `weak_point_opened` colour.
 
 | Class | Colour (`Palette`) | Pattern cue | Rule | What the player reads |
 | --- | --- | --- | --- | --- |
 | Armour | `BRASS` | Segmented blocks | Breaks at zero, never regenerates | Break it once and it stays broken |
-| Shield | `SLATE` | Hollow outline | Regenerates after a declared delay (`SHIELD_REGEN_DELAY`, then `SHIELD_REGEN_PER_S` of max per second, `src/core/defence_bars.gd`) | Burst it before it recovers |
+| Shield | `SLATE` | Hollow outline | Regenerates after a declared delay (`SHIELD_REGEN_DELAY`, then `SHIELD_REGEN_PER_S` of max per second, `tests/support/defence_bars.gd`) | Burst it before it recovers |
 | Health | `SAND` (neutral ink) | Solid fill | No regeneration, no break state | Just damage |
 
 The pattern cue carries the class for a colour-blind player. At the 150 m read distance the pattern is under a pixel, so colour alone must separate the classes there: the test makes a modeled colour read at the 150 m haze start value (`HAZE_MIX`; no frame is read) and requires each bar's class. The rendered 150 m still, read blind, belongs to the SG-LOOK legibility unit. Start values (delay, rate, haze) sit in named constants citing [research/comps/gunfire/enemies-and-bosses.md](research/comps/gunfire/enemies-and-bosses.md).

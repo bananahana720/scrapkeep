@@ -2,7 +2,6 @@ extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
-const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -380,16 +379,11 @@ func _build_hoop(fab: Dictionary) -> void:
 func _refresh_glyph(fab: Dictionary) -> void:
 	var d: Resource = Parts.def(fab["part_id"])
 	var rarity: String = d.rarity if d != null else "common"
-	var color: Color = _rarity_color(rarity)
+	var color: Color = RewardGates.rarity_color(rarity)
 	var glyph: MeshInstance3D = fab["glyph"]
 	glyph.material_override = Palette.solid(color, 2.4)
 	glyph.visible = fab["restock"] <= 0.0
 	fab["text"] = ""
-
-
-static func _rarity_color(rarity: String) -> Color:
-	var id := ItemGen.resolve_rarity(rarity)
-	return ItemGen.RARITY[id if id != "" else "common"]["color"]
 
 
 func _refresh_label(fab: Dictionary, cogs: int, held: Array) -> void:

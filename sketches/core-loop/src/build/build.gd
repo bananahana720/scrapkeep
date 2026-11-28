@@ -1501,7 +1501,7 @@ func _step_synergies(ball: Vector3, delta: float) -> void:
 			_fire("shrapnel_bloom", null, at)
 	_kills.clear()
 	for impact in _landings:
-		field.flash_ring(ball + Vector3.DOWN * 0.8, GLACIER_RADIUS, ElementField.ICE)
+		field.flash_ring(ball + Vector3.DOWN * 0.8, GLACIER_RADIUS, Palette.ICE)
 		var ring_targets := _enemies_near(ball, GLACIER_RADIUS, 99)
 		for enemy in ring_targets:
 			_synergy_hit(enemy, impact * 1.5, "glacier_hull")

@@ -539,7 +539,7 @@ func continue_refusal() -> String:
 
 func sitting_save_guard() -> void:
 	if tuning != null and tuning.sitting() and ctx.profile != null:
-		ctx.profile._refuse("sitting profile: this session does not save")
+		ctx.profile.disable_saving("sitting profile: this session does not save")
 		Secrets.open_for_sitting(ctx.profile)
 
 
@@ -666,7 +666,7 @@ func restart_hold_fraction() -> float:
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	player.kit.aim = Harpoon.target(player.kit, tuning, get_world_3d().direct_space_state,
 		get_tree().get_nodes_in_group("enemy"), from, forward, player.ball_position())
-	Grip.mark(player.kit.aim, player.heft(), tuning.pole_flail())
+	Grip.mark(player.kit.aim, player.heft(), player.enemy_heft(player.kit.aim.get("body")), tuning.pole_flail())
 	return player.kit.aim
 
 

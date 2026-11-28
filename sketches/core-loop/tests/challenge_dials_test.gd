@@ -152,7 +152,7 @@ func _rules() -> void:
 	for phase in range(1, 5):
 		for family in WakingAttacks.exposed(phase):
 			for d in WakingAttacks.commit(family, 7, ball, Vector3.ZERO, center, phase, RADIUS):
-				var h = MindAttacks.build(d)
+				var h = Hazard.from_def(d)
 				least = minf(least, h.warn_seconds)
 				h.free()
 	_t.check("committed waking hazards at tell_mult 0.1 stay >= MIN_WARN", least >= Hazard.MIN_WARN - 1e-6 and least < INF, str(least))
@@ -160,7 +160,7 @@ func _rules() -> void:
 	for phase in range(1, MindAttacks.phase_cap() + 1):
 		for family in MindAttacks.exposed(phase):
 			for d in MindAttacks.commit(family, 7, ball, center, phase, RADIUS):
-				var h = MindAttacks.build(d)
+				var h = Hazard.from_def(d)
 				least = minf(least, h.warn_seconds)
 				h.free()
 	_t.check("committed mind hazards at tell_mult 0.1 stay >= WARN_FLOOR", least >= MindAttacks.WARN_FLOOR - 1e-6 and least < INF, str(least))
@@ -269,7 +269,7 @@ func _hazard(label: String, world: int, boss: String, family: String, source: St
 		_hits.clear()
 		var d := {"family": family, "family_index": 1, "id": "dials_test_ring", "shape": "annulus", "type": Threat.Type.INSTANT,
 			"warn": 1.0, "live": 1.0, "height": WakingAttacks.HEIGHT, "at": center, "band": Vector2(0.0, 36.0), "delay": 0.0}
-		var h = MindAttacks.build(d)
+		var h = Hazard.from_def(d)
 		h.ground = Callable(mod, "ground_height_at")
 		mod.ctx.root.add_child(h)
 		var attack := {"hazards": [h], "family": family, "landed": false, "descs": [d]}
@@ -347,7 +347,7 @@ func _waking_punish() -> void:
 	mod._combo_left = 2
 	var d := {"family": "bore", "family_index": 3, "id": "waking_bore_0", "shape": "annulus", "type": Threat.Type.INSTANT,
 		"warn": 1.0, "live": 1.0, "height": WakingAttacks.HEIGHT, "at": center, "band": Vector2(0.0, 6.0), "delay": 0.0}
-	var h = MindAttacks.build(d)
+	var h = Hazard.from_def(d)
 	h.ground = Callable(mod, "ground_height_at")
 	mod.ctx.root.add_child(h)
 	mod.attacks.append({"hazards": [h], "family": "bore", "landed": false, "descs": [d]})
@@ -407,7 +407,7 @@ func _waking_clock_after_jam() -> void:
 	mod._attack_clock = 1.0e9
 	var d := {"family": "bore", "family_index": 3, "id": "waking_bore_0", "shape": "annulus", "type": Threat.Type.INSTANT,
 		"warn": 1.0, "live": 1.0, "height": WakingAttacks.HEIGHT, "at": center, "band": Vector2(0.0, 6.0), "delay": 0.0}
-	var h = MindAttacks.build(d)
+	var h = Hazard.from_def(d)
 	h.ground = Callable(mod, "ground_height_at")
 	mod.ctx.root.add_child(h)
 	mod.attacks.append({"hazards": [h], "family": "bore", "landed": false, "descs": [d]})

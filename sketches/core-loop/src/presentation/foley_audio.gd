@@ -1,5 +1,7 @@
 extends RefCounted
 
+const WavIo := preload("res://src/presentation/wav_io.gd")
+
 const DIR := "res://assets/audio/foley/"
 const WHINE_LEAD := 2.0
 const COLLAPSE_LAND := 0.12
@@ -29,30 +31,8 @@ static func stream(id: String) -> AudioStreamWAV:
 	return out
 
 
-# Headless Godot runs without an import cache, falling back to raw 16-bit RIFF.
 static func wav(p: String, raw := false) -> AudioStreamWAV:
-	if not raw and ResourceLoader.exists(p):
-		return load(p) as AudioStreamWAV
-	if FileAccess.file_exists(p):
-		return _from_riff(FileAccess.get_file_as_bytes(p))
-	return null
-
-
-static func _from_riff(bytes: PackedByteArray) -> AudioStreamWAV:
-	var out := AudioStreamWAV.new()
-	out.format = AudioStreamWAV.FORMAT_16_BITS
-	var at := 12
-	while at + 8 <= bytes.size():
-		var tag := bytes.slice(at, at + 4).get_string_from_ascii()
-		var size := bytes.decode_u32(at + 4)
-		if tag == "fmt ":
-			out.stereo = bytes.decode_u16(at + 10) == 2
-			out.mix_rate = bytes.decode_u32(at + 12)
-		elif tag == "data":
-			out.data = bytes.slice(at + 8, at + 8 + size)
-			return out
-		at += 8 + size + (size & 1)
-	return null
+	return WavIo.load_wav(p, raw)
 
 
 static func player(id: String, host: Node3D) -> AudioStreamPlayer3D:

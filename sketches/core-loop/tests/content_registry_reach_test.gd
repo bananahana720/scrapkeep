@@ -1,6 +1,6 @@
 extends SceneTree
 
-const ContentRegistry := preload("res://src/core/content_registry.gd")
+const ContentRegistry := preload("res://tests/support/content_registry.gd")
 const T := preload("res://tests/support/t.gd")
 
 # BUGFIX-CORE F005 (2026-10-09): tree reachability follows the whole heap chain. A blank

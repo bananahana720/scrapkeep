@@ -1,15 +1,6 @@
-extends RefCounted
-
-# A one-stage table on the Dig, so a live Game enters map_dig.gd at stage 1. No timed
-# events, so only the test changes the terrain. Same statics as stage_defs.gd.
-
-const Worlds := preload("res://src/core/worlds.gd")
-
-const BOSS := "brindle"
+extends "res://tests/doubles/stage_table_base.gd"
 
 const COUNT := 1
-
-const PACKS := [{"id": "table_lobbers", "kinds": ["lobber"]}]
 
 const DEFS := [
 	{"stage": 1, "world": 1, "music": {"theme": 0, "ace": ""}, "warden_family": "reactor", "name": "Dig: the upper bench", "map": "dig", "threat": 1.0, "unlock_base": 2, "ancient": "reactor_relic",
@@ -19,7 +10,7 @@ const DEFS := [
 
 
 static func of(stage: int) -> Dictionary:
-	return DEFS[clampi(stage, 1, COUNT) - 1]
+	return of_defs(DEFS, stage)
 
 
 static func is_last(stage: int) -> bool:
@@ -52,34 +43,3 @@ static func is_world_last(stage: int) -> bool:
 
 static func is_run_last(stage: int) -> bool:
 	return Worlds.is_run_last(DEFS, stage)
-
-
-static func synergy_in_play(_synergy_id: String) -> bool:
-	return true
-
-
-static func part_in_play(_part_id: String) -> bool:
-	return true
-
-
-static func parts_listed() -> bool:
-	return false
-
-
-const PICK_ON_CLASS_UP := false
-
-
-static func packs() -> Array:
-	return PACKS
-
-
-static func elite() -> Dictionary:
-	return {"id": "table_elite", "kinds": ["lobber", "lobber"]}
-
-
-static func elite_arrival() -> int:
-	return 3
-
-
-static func has_vault() -> bool:
-	return true

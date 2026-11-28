@@ -13,8 +13,8 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { userDataEnv } from "./godot-home.mjs";
-import { holdQuietSync } from "./sketch-smoke.mjs";
+import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv, userDataEnv } from "./godot-home.mjs";
+import { holdQuietSync } from "./lib/machine-lock.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
@@ -89,12 +89,12 @@ export function gameArgv(args) {
   return [...engine, "--", "--self-play", ...args.selfPlayArgs, ...args.gameArgs];
 }
 
-export function selfPlayXdg(outDir) {
-  const data = path.join(outDir, "xdg-data");
-  const config = path.join(outDir, "xdg-config");
-  mkdirSync(data, { recursive: true });
-  mkdirSync(config, { recursive: true });
-  return { XDG_DATA_HOME: data, XDG_CONFIG_HOME: config };
+export function selfPlayXdg(outDir, platform = process.platform) {
+  return scratchGodotEnv(outDir, {
+    dirs: { data: "xdg-data", config: "xdg-config" },
+    create: true,
+    platform,
+  });
 }
 
 export function parseSelfPlay(text, warmup = 0) {
@@ -419,7 +419,11 @@ export function main(
     `Logging starts ${args.warmup} s after launch and runs ${args.seconds} s. Play normally for about ${minutes} min, then quit.`,
   );
   const launch = {
-    env: { ...env, MANGOHUD_CONFIG: config, ...(args.selfPlay ? selfPlayXdg(outDir) : {}) },
+    env: {
+      ...env,
+      MANGOHUD_CONFIG: config,
+      ...(args.selfPlay ? selfPlayXdg(outDir, platform) : {}),
+    },
   };
   const run = launchQuiet(quiet, () =>
     spawnSync(
@@ -481,10 +485,10 @@ function launchQuiet(quiet, launch) {
 function engineCapture(args, env, outDir, platform, quiet) {
   if (args.hud)
     throw new FrametimeError("--hud is MangoHud's overlay; the engine capture has none");
-  const godotBin = env.GODOT_BIN;
+  const godotBin = resolveGodotBinary({ env, requireExplicit: true });
   if (!args.exe && !(godotBin && existsSync(godotBin))) {
     console.error(
-      "The engine capture needs GODOT_BIN set to the Godot 4.7.2 editor binary, or --exe=<a packed build's binary>.",
+      `The engine capture needs GODOT_BIN set to the Godot ${GODOT_VERSION} editor binary, or --exe=<a packed build's binary>.`,
     );
     return 2;
   }

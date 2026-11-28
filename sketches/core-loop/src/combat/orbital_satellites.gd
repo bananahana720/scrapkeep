@@ -5,7 +5,7 @@ const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const Grip := preload("res://src/movement/grip.gd")
+const Roster := preload("res://src/combat/roster.gd")
 
 const MAX_SATELLITES := 5
 const ORBIT_BASE_RADIUS := 3.1
@@ -671,7 +671,7 @@ func on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, _part := "") -
 
 
 func _apply_whiplash_pull(enemy: Node3D) -> void:
-	var body_heft := Grip.heft_of(enemy)
+	var body_heft := Roster.heft_of(enemy)
 	var pilot_heft := float(combat.heft()) if combat != null and combat.has_method("heft") else 1.0
 	if body_heft > pilot_heft:
 		return

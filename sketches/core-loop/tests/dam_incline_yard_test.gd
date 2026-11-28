@@ -1,5 +1,5 @@
 extends SceneTree
-# smoke: solo timeout=300s
+# smoke: timeout=300s
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")

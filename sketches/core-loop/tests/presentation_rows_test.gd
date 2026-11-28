@@ -55,15 +55,9 @@ func _initialize() -> void:
 	var thwack_tail := _tail(thwack)
 	_check("clank is not thwack", absf(corr) < 0.3 and clank_tail > thwack_tail * 3.0 and absf(clank_hz - thwack_hz) > 0.4 * minf(clank_hz, thwack_hz),
 		"correlation %.2f; the clank rings (energy after 80 ms %.0f%% vs %.0f%%) at %.0f Hz against the punch's %.0f Hz" % [corr, clank_tail * 100.0, thwack_tail * 100.0, clank_hz, thwack_hz])
-	var style: Dictionary = load("res://src/presentation/codex_style.gd").style()
-	var icons_ok := true
-	for id in ["build", "world", "enemy", "npc", "coop"]:
-		var cat: Dictionary = style["categories"].get(id, {})
-		icons_ok = icons_ok and cat.get("color") is Color and cat.get("icon") is ImageTexture and (cat["icon"] as ImageTexture).get_width() == 64
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
-	_check("codex style", icons_ok and style.get("banner_script") is Script, "5 categories, each with a colour and a 64 px icon, plus the banner script")
 
 
 func _process(_delta: float) -> bool:
@@ -77,6 +71,12 @@ func _process(_delta: float) -> bool:
 		engine = _audio.engine
 	match _step:
 		0:
+			var style: Dictionary = _game.presentation.codex_style()
+			var icons_ok := true
+			for id in ["build", "world", "enemy", "npc", "coop"]:
+				var cat: Dictionary = style["categories"].get(id, {})
+				icons_ok = icons_ok and cat.get("color") is Color and cat.get("icon") is ImageTexture and (cat["icon"] as ImageTexture).get_width() == 64
+			_check("codex style", icons_ok and style.get("banner_script") is Script, "5 categories, each with a colour and a 64 px icon, plus the banner script")
 			_game.tuning.set_option("music", "synth")
 			_audio = _game.presentation.audio
 			_audio.bake_now()

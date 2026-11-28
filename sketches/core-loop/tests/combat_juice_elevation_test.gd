@@ -2,7 +2,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const Palette := preload("res://src/core/palette.gd")
-const DefenceBars := preload("res://src/core/defence_bars.gd")
+const DefenceBars := preload("res://tests/support/defence_bars.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const KillMark := preload("res://src/presentation/kill_mark.gd")

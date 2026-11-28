@@ -10,6 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const SIZE := Vector2i(1280, 720)
@@ -39,7 +40,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out = arg.trim_prefix("--out=")
-	if _out.is_empty() or DisplayServer.get_name() == "headless":
+	if _out.is_empty() or AppShell.headless():
 		push_error("harpoon_physics_capture: pass --out=/abs/dir on a display server")
 		quit(2)
 		return

@@ -619,7 +619,7 @@ static func mark_rect(box: Rect2, tag: String, under := false, shift := 0.0) -> 
 
 
 static func tag_rect(box: Rect2, tag: String, under := false, shift := 0.0) -> Rect2:
-	var chip := Vector2(UiDraw.width(tag, TAG_FONT), UiFonts.bold().get_height(TAG_FONT)) + TAG_PAD * 2.0
+	var chip := Vector2(UiFonts.width(tag, TAG_FONT), UiFonts.bold().get_height(TAG_FONT)) + TAG_PAD * 2.0
 	var off := maxf(box.size.x, box.size.y) * 0.5 * MARK_PULSE + MARK_STROKE + TAG_GAP
 	var top := box.end.y + off if under else box.position.y - off - chip.y
 	return Rect2(Vector2(box.get_center().x - chip.x * 0.5 + shift, top), chip)

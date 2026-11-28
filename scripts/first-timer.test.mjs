@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -170,4 +171,21 @@ test("the radio dial is optional, with a reason: an untaught dial is listed but 
   const radio = audit([p]).rows.find((r) => r.id === "radio");
   assert.equal(radio.failed, false);
   assert.equal(judge(row, p).verdict, "never");
+});
+
+test("first-timer exits 2 with a clear GODOT_BIN message when Godot is missing", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "first-timer-missing-"));
+  try {
+    const result = spawnSync(process.execPath, ["scripts/first-timer.mjs", `--out=${dir}`], {
+      encoding: "utf8",
+      env: { ...process.env, GODOT_BIN: "/does/not/exist/first-timer-godot" },
+    });
+    assert.equal(result.status, 2);
+    assert.match(
+      result.stderr,
+      /Godot binary not found at \/does\/not\/exist\/first-timer-godot; set GODOT_BIN/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

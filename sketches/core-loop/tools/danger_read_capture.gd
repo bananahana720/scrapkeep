@@ -11,6 +11,7 @@ const Arena := preload("res://src/boss/arena.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
 const LockRows := preload("res://src/world/lock_rows.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const MARKS := ["boil", "lobber", "yard", "slag", "charge"]
 const SETTLE := 45
@@ -42,7 +43,7 @@ func _initialize() -> void:
 				quit(2)
 				return
 			at = clampf(float(arg.trim_prefix("--at=")), 0.05, 0.95)
-	if out.is_empty() or DisplayServer.get_name() == "headless" or only.any(func(id): return not MARKS.has(id)):
+	if out.is_empty() or AppShell.headless() or only.any(func(id): return not MARKS.has(id)):
 		quit(2)
 		return
 	if DirAccess.make_dir_recursive_absolute(out) != OK:

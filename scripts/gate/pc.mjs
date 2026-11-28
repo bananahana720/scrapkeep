@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
 import { checkImportStamp, sketchState, stampPath, writeImportStamp } from "../import-stamp.mjs";
 import { defaultChallengeJobs } from "../challenge/lib.mjs";
-import { userDataEnv } from "../godot-home.mjs";
+import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -614,9 +614,7 @@ export function stepEnv({
   return {
     ...base,
     GODOT_BIN: godot,
-    ...userDataEnv(path.join(home, "data"), platform),
-    XDG_CONFIG_HOME: path.join(home, "config"),
-    XDG_CACHE_HOME: path.join(home, "cache"),
+    ...scratchGodotEnv(home, { platform }),
     SCRAPKEEP_LOCK_DIR: lockDir,
     SMOKE_SLOTS: String(SLOT_POOL),
     SMOKE_FULL: "1",
@@ -1060,9 +1058,11 @@ function buildPlan(options) {
 }
 
 async function run(options) {
-  const godot = process.env.GODOT_BIN;
+  const godot = resolveGodotBinary({ requireExplicit: true });
   if (!godot || !existsSync(godot))
-    throw new Error("GODOT_BIN must name the Godot 4.7.2 editor, and the file must exist");
+    throw new Error(
+      `GODOT_BIN must name the Godot ${GODOT_VERSION} editor, and the file must exist`,
+    );
   if (git("rev-parse", "HEAD") !== options.head)
     throw new Error(
       `this checkout is not at ${options.head.slice(0, 8)}; run pc.mjs from a checkout of the head, where the lists are counted`,

@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SIZE := Vector2i(1280, 720)
 const SMALL := Vector2i(256, 144)
@@ -150,7 +151,7 @@ func _initialize() -> void:
 			trials = maxi(1, int(a.trim_prefix("--trials=")))
 		elif a.begins_with("--cases="):
 			only = Array(a.trim_prefix("--cases=").split(",", false))
-	if DisplayServer.get_name() == "headless" or out == "":
+	if AppShell.headless() or out == "":
 		printerr("needs a display and --out")
 		quit(2)
 		return

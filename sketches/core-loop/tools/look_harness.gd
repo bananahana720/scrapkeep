@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Subjects := preload("res://tools/look_subjects.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SIZE := Vector2i(1920, 1080)
 const METRIC_SIZE := Vector2i(480, 270)
@@ -74,7 +75,7 @@ func _initialize() -> void:
 		baseline_root = ProjectSettings.globalize_path("res://").path_join("../../artifacts/local/alpha/baselines").simplify_path()
 	if not baseline.is_empty():
 		out = baseline_root.path_join(baseline)
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		printerr("look_harness: needs a native display (run through gpu_queue.sh --display)")
 		quit(2)
 		return

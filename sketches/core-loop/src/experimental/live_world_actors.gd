@@ -5,6 +5,7 @@ const EnvTags := preload("res://src/experimental/env_tags.gd")
 const Ecology := preload("res://src/experimental/ecology_actors.gd")
 const AdversityDirector := preload("res://src/experimental/adversity_director.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
+const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -1092,7 +1093,7 @@ static func _mat(role: String) -> Material:
 
 
 static func _c(wear: float, grime: float, emissive := 0.0) -> Color:
-	return CampCraftMeshes.vc(wear, grime, emissive)
+	return CraftLookdev.encode_mask(wear, grime, emissive)
 
 
 static func _begin() -> SurfaceTool:

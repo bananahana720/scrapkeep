@@ -1,5 +1,6 @@
 extends "res://src/world/device.gd"
 
+const ModelKit := preload("res://src/world/model_kit.gd")
 
 const SECONDS := 30.0
 const RING := 10.0
@@ -15,8 +16,6 @@ var _cap: Node3D
 
 const MODEL := "res://assets/models/world_one/ambush_altar.glb"
 const REQUIRED := ["AltarPost", "AltarCap", "AltarBand", "AltarRing"]
-static var _shared: Array = []
-static var _loaded := false
 
 
 func _init() -> void:
@@ -34,11 +33,15 @@ static func dress(parent: Node3D) -> MeshInstance3D:
 	var parts := _parts()
 	if parts.is_empty():
 		return null
-	_model_part(parts, "AltarPost", parent).material_override = finish(Palette.VERDIGRIS)
-	_model_part(parts, "AltarBand", parent).material_override = _bone_material(true)
-	var cap := _model_part(parts, "AltarCap", parent)
+	ModelKit.attach_part(parts, "AltarPost", parent).material_override = finish(Palette.VERDIGRIS)
+	ModelKit.attach_part(parts, "AltarBand", parent).material_override = _bone_material(true)
+	var cap := ModelKit.attach_part(parts, "AltarCap", parent)
 	cap.material_override = finish(Palette.BRASS)
 	return cap
+
+
+static func _parts() -> Array:
+	return ModelKit.device_parts(MODEL, REQUIRED, "ambush_altar")
 
 
 func _build_greybox() -> void:
@@ -123,76 +126,3 @@ func _end(cleared: bool) -> void:
 	if cleared:
 		ctx.run.add_core("ambush", reach_point())
 	ctx.events.ambush_ended.emit(id, cleared, reach_point())
-
-
-static func _slot_material(slot: String) -> StandardMaterial3D:
-	if slot not in ["device_concrete", "device_metal", "device_marks"]:
-		return null
-	var mat := Palette.solid(Color.WHITE)
-	mat.resource_name = slot
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.95 if slot == "device_concrete" else 0.85
-	if slot == "device_metal":
-		mat.roughness = 0.68
-		mat.metallic = 0.28
-	return mat
-
-
-static func _parts() -> Array:
-	if _loaded:
-		return _shared
-	_loaded = true
-	var packed: PackedScene
-	if ResourceLoader.exists(MODEL):
-		packed = load(MODEL) as PackedScene
-	if packed != null:
-		var scene := packed.instantiate()
-		if scene == null:
-			push_warning("ambush_altar: %s cannot instantiate; keeping greybox" % MODEL)
-			return _shared
-		var valid := scene is Node3D
-		var found := {}
-		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
-			if view.mesh == null or view.mesh.get_surface_count() == 0:
-				valid = false
-				break
-			var mesh := view.mesh.duplicate() as Mesh
-			for s in mesh.get_surface_count():
-				var source := mesh.surface_get_material(s)
-				var mat := _slot_material(String(source.resource_name)) if source != null else null
-				var arrays := mesh.surface_get_arrays(s)
-				if (mat == null or arrays.size() != Mesh.ARRAY_MAX
-					or arrays[Mesh.ARRAY_VERTEX] == null or arrays[Mesh.ARRAY_VERTEX].is_empty()
-					or arrays[Mesh.ARRAY_COLOR] == null or arrays[Mesh.ARRAY_COLOR].size() != arrays[Mesh.ARRAY_VERTEX].size()):
-					valid = false
-					break
-				mesh.surface_set_material(s, mat)
-			var xf := Transform3D.IDENTITY
-			var walk: Node = view
-			while walk != scene and walk != null:
-				if walk is Node3D:
-					xf = (walk as Node3D).transform * xf
-				walk = walk.get_parent()
-			found[String(view.name)] = true
-			_shared.append({"name": String(view.name), "mesh": mesh, "xform": xf})
-		valid = valid and found.size() == REQUIRED.size()
-		for required in REQUIRED:
-			valid = valid and found.has(required)
-		scene.free()
-		if not valid:
-			_shared.clear()
-	if _shared.is_empty():
-		push_warning("ambush_altar: %s missing or malformed; keeping greybox" % MODEL)
-	return _shared
-
-
-static func _model_part(parts: Array, part_name: String, parent: Node3D) -> MeshInstance3D:
-	for part in parts:
-		if part.name == part_name:
-			var view := MeshInstance3D.new()
-			view.name = part.name
-			view.mesh = part.mesh
-			view.transform = part.xform
-			parent.add_child(view)
-			return view
-	return null

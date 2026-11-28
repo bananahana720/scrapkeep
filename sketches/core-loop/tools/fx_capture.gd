@@ -6,6 +6,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const SIZE := Vector2i(640, 400)
@@ -45,7 +46,7 @@ func _initialize() -> void:
 			tint = Color(arg.trim_prefix("--tint="))
 		elif arg.begins_with("--only="):
 			only = Array(arg.trim_prefix("--only=").split(","))
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		quit(2)
 		return
 	DirAccess.make_dir_recursive_absolute(out)

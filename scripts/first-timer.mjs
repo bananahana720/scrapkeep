@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { binary } from "./sketch-smoke.mjs";
+import { requireGodotBinary } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches", "core-loop");
@@ -276,7 +276,7 @@ export function parseArgs(argv) {
   return args;
 }
 
-function probe(pilot, args) {
+function probe(pilot, args, binary) {
   const out = path.join(args.out, `probe-${pilot}-${args.seed}.json`);
   const argv = [
     "--headless",
@@ -310,13 +310,15 @@ function probe(pilot, args) {
 }
 
 async function runProbes(args) {
+  const binary = requireGodotBinary();
+  mkdirSync(args.out, { recursive: true });
   const queue = [...args.pilots];
   const probes = [];
   const worker = async () => {
     while (queue.length) {
       const pilot = queue.shift();
       console.log(`first-timer: probing ${pilot}`);
-      probes.push(await probe(pilot, args));
+      probes.push(await probe(pilot, args, binary));
     }
   };
   await Promise.all(Array.from({ length: Math.max(1, args.jobs) }, worker));
@@ -332,9 +334,9 @@ function readProbes(dir) {
 
 export async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
-  mkdirSync(args.out, { recursive: true });
   const probes = args.from ? readProbes(args.from) : await runProbes(args);
   if (!probes.length) throw new Error("first-timer: no probes");
+  mkdirSync(args.out, { recursive: true });
   const result = audit(probes);
   const page = markdown(result, probes);
   writeFileSync(

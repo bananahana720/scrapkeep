@@ -7,6 +7,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const TitleIntros := preload("res://src/presentation/title_intros.gd")
 const T := preload("res://tests/support/t.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 # The subject shows as a speck under the pointer's arrow; it must still be a measurable share of the frame.
 const MIN_SUBJECT_SCREEN_FRACTION := 0.01
@@ -49,7 +50,7 @@ func _run() -> void:
 	_picks()
 	var capture := OS.get_environment("TTL_CAPTURE_DIR")
 	if capture != "":
-		if DisplayServer.get_name() == "headless":
+		if AppShell.headless():
 			_t.check("capture requires a rendered display", false)
 			quit(_t.verdict())
 			return

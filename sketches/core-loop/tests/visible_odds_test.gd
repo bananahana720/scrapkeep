@@ -6,7 +6,6 @@ const Intent := preload("res://src/movement/intent.gd")
 const Activities := preload("res://src/world/activities.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
-const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Shop := preload("res://src/build/shop.gd")
 
@@ -169,7 +168,7 @@ func _frequencies() -> void:
 		# What Parts.roll can deliver: the table's rarities that hold a part for this class. A rarity
 		# with no part is not shown; a table with none shows nothing and rolls nothing.
 		var live := _avail(rarities)
-		var shown: Array = OddsReadout.odds_for(rarities, class_id)
+		var shown: Array = Parts.odds_for(rarities, class_id)
 		_t.check("%s: roll table shows what the pool holds %s" % [name, live], live.is_empty() == shown.is_empty() and (live.is_empty() or _matches_row(shown, live)), var_to_str(shown))
 		if live.is_empty():
 			_t.eq("%s: an empty table rolls nothing" % name, rolled.size(), 0)
@@ -222,7 +221,7 @@ func _shelf() -> void:
 	for offer in shop.shelf_offers():
 		var want := ItemGen.odds(tables.call(int(offer["index"])))
 		_t.eq("offer %d odds equal its table's" % offer["index"], offer.get("odds", []), want)
-		_t.eq("offer %d odds text is the readout's" % offer["index"], offer.get("odds_text", ""), OddsReadout.text(want))
+		_t.eq("offer %d odds text is the readout's" % offer["index"], offer.get("odds_text", ""), ItemGen.odds_text(want))
 	var top: Dictionary = shop.top_shelf()
 	_t.check("the top shelf has a part", not top.is_empty(), var_to_str(top))
 	if not top.is_empty():
@@ -261,7 +260,7 @@ func _stands() -> void:
 				var table: Array = shown.get("rarities", [])
 				var expected: Array = table if String(shown.get("named", "")) != "" else _avail(table)
 				var ok := part != "" and rarity in table and _matches_row(shown.get("odds", []), expected) \
-						and String(shown.get("text", "")) == OddsReadout.text(shown.get("odds", []))
+						and String(shown.get("text", "")) == ItemGen.odds_text(shown.get("odds", []))
 				if not ok:
 					_t.check("%s %s seed %d: shown table holds the paid rarity" % [kind, var_to_str(pay), i], false, "paid %s (%s), shown %s" % [part, rarity, var_to_str(shown)])
 				# A named part the table offers is paid as itself, so the stand shows its own tier.
@@ -280,15 +279,15 @@ func _stands() -> void:
 
 func _readout() -> void:
 	var odds := ItemGen.odds(["common", "rare"])
-	var text := OddsReadout.text(odds)
+	var text := ItemGen.odds_text(odds)
 	_t.check("the readout names each rarity and its percent", "FIELD KIT" in text and "FLEET GRADE" in text and "%d%%" % roundi(float(odds[0]["share"]) * 100.0) in text, text)
-	_t.check("a zero-weight rarity is not listed", not "EVOLVED" in OddsReadout.text(ItemGen.odds(["common", "evolved"])), OddsReadout.text(ItemGen.odds(["common", "evolved"])))
-	_t.eq("an empty table reads empty", OddsReadout.text([]), "")
+	_t.check("a zero-weight rarity is not listed", not "EVOLVED" in ItemGen.odds_text(ItemGen.odds(["common", "evolved"])), ItemGen.odds_text(ItemGen.odds(["common", "evolved"])))
+	_t.eq("an empty table reads empty", ItemGen.odds_text([]), "")
 	# A table whose rarity holds no part shows only the rarities that do (relic holds none here).
 	var class_id: String = _game.ctx.run.class_id()
-	_t.eq("a rarity with no part is not shown", OddsReadout.odds_for(["rare", "relic"], class_id).map(func(row): return row["rarity"]), _avail(["rare", "relic"]))
-	_t.eq("a table with no part shows nothing", OddsReadout.odds_for(["evolved"], class_id), [])
-	for row in OddsReadout.rows(odds):
+	_t.eq("a rarity with no part is not shown", Parts.odds_for(["rare", "relic"], class_id).map(func(row): return row["rarity"]), _avail(["rare", "relic"]))
+	_t.eq("a table with no part shows nothing", Parts.odds_for(["evolved"], class_id), [])
+	for row in ItemGen.odds_rows(odds):
 		_t.check("readout row %s has a colour, a label and a percent" % row["rarity"], row.has("color") and String(row["label"]) != "" and int(row["percent"]) > 0, var_to_str(row))
 
 

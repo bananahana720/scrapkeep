@@ -750,11 +750,27 @@ export function lintL12(file, rel, text, switches = FAULT_SWITCHES) {
 
 const displayNameRead = /\bDisplayServer\s*\.\s*get_name\s*\(/;
 
-export function lintL13(file, rel, text) {
-  if (rel === "src/core/app_shell.gd" || !text.includes("DisplayServer")) return [];
-  return codeLines(text)
-    .filter((line) => displayNameRead.test(line.raw))
-    .map((line) =>
+export const L13_ALLOWED = {
+  "tests/app_shell_test.gd": { sites: 2, why: "verifies AppShell.headless() and scan regex" },
+  "tests/destructibles_look_test.gd": { sites: 1, why: "prints display driver name" },
+  "tools/craft_sculptor_capture.gd": { sites: 1, why: "checks embedded display driver" },
+  "tools/look_harness.gd": { sites: 1, why: "forwards --display-driver to child process" },
+  "tools/offscreen_window.gd": { sites: 1, why: "checks Mac embedded display driver" },
+  "tools/perf_bench.gd": { sites: 1, why: "records display driver metadata" },
+  "tools/pilot_liveliness_capture.gd": { sites: 1, why: "checks embedded display driver" },
+  "tools/qa/snag_sweep.gd": { sites: 1, why: "records display driver metadata" },
+  "tools/stress_capture.gd": { sites: 1, why: "records display driver metadata" },
+  "tools/visual_capture.gd": { sites: 1, why: "records display driver metadata" },
+};
+
+export function lintL13(file, rel, text, allowed = L13_ALLOWED) {
+  if (rel === "src/core/app_shell.gd") return [];
+  const sites = text.includes("DisplayServer")
+    ? codeLines(text).filter((line) => displayNameRead.test(line.raw))
+    : [];
+  const listed = allowed[rel];
+  if (listed === undefined) {
+    return sites.map((line) =>
       finding(
         "L13",
         file,
@@ -762,6 +778,26 @@ export function lintL13(file, rel, text) {
         "raw DisplayServer.get_name() read; call AppShell.headless() (src/core/app_shell.gd) instead",
       ),
     );
+  }
+  if (sites.length === listed.sites) return [];
+  if (sites.length < listed.sites) {
+    return [
+      finding(
+        "L13",
+        file,
+        1,
+        `L13_ALLOWED lists ${listed.sites} DisplayServer.get_name() sites for ${rel}, found ${sites.length}: tighten or remove the entry`,
+      ),
+    ];
+  }
+  return sites.map((line) =>
+    finding(
+      "L13",
+      file,
+      line.number,
+      `${sites.length} DisplayServer.get_name() reads, L13_ALLOWED lists ${listed.sites}; call AppShell.headless() (src/core/app_shell.gd) instead`,
+    ),
+  );
 }
 
 export const L14_STATIC_VAR_BASELINE = new Set([
@@ -845,7 +881,6 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/combat/mind_hand.gd:_rim_masks",
   "src/combat/mind_hand.gd:_warned_models",
   "src/combat/miniboss.gd:_asset_warned",
-  "src/combat/miniboss.gd:_hazard_stripe",
   "src/combat/miniboss.gd:_shared",
   "src/combat/monster_heft.gd:_doc",
   "src/combat/netcaster.gd:_net_shader",
@@ -876,7 +911,6 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/combat/roster_dig.gd:_shared_capsule",
   "src/combat/splitter.gd:_parts",
   "src/combat/swarm_remnant.gd:_asset_warned",
-  "src/combat/swarm_remnant.gd:_hazard_stripe",
   "src/combat/swarm_remnant.gd:_shared",
   "src/combat/swatter.gd:_shared",
   "src/combat/swatter.gd:_warned_asset",
@@ -900,8 +934,6 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/core/beacon.gd:_shared_torus",
   "src/core/beacon.gd:_slot_materials",
   "src/core/build_stamp.gd:_stamp",
-  "src/core/content_registry.gd:_pass",
-  "src/core/content_registry.gd:_pass_depth",
   "src/core/palette.gd:_checkers",
   "src/core/palette.gd:_grain_normal",
   "src/core/palette.gd:_grain_rough",
@@ -1044,7 +1076,6 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/ui/class_card.gd:reduced_motion",
   "src/ui/class_preview.gd:reduced_motion",
   "src/ui/ending_sequence.gd:_highdraft_skies",
-  "src/ui/field_notes.gd:CONTROLS",
   "src/ui/icons.gd:_cache",
   "src/ui/icons.gd:_from_file",
   "src/ui/moss_bubble.gd:reduced_motion",
@@ -1058,12 +1089,6 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/world/activities.gd:_shared_graphs",
   "src/world/activities.gd:_wall",
   "src/world/activity_view.gd:_shared",
-  "src/world/ambush_altar.gd:_loaded",
-  "src/world/ambush_altar.gd:_shared",
-  "src/world/bet_crate.gd:_loaded",
-  "src/world/bet_crate.gd:_shared",
-  "src/world/cracked_cache.gd:_loaded",
-  "src/world/cracked_cache.gd:_shared",
   "src/world/director.gd:_parks",
   "src/world/events/natural.gd:_marks_job",
   "src/world/events/natural.gd:_plans",
@@ -1485,8 +1510,11 @@ export function lintSketch(sketch) {
   const testFiles = sources(path.join(directory, "tests"), new Set([".gd"]));
   for (const file of testFiles) {
     findings.push(...lintL1(file.path, file.text));
-    if (sketch === "core-loop")
-      findings.push(...lintL15(file.path, file.path.slice(relative.length + 1), file.text));
+    if (sketch === "core-loop") {
+      const rel = file.path.slice(relative.length + 1);
+      findings.push(...lintL15(file.path, rel, file.text));
+      findings.push(...lintL13(file.path, rel, file.text));
+    }
   }
   const lit = new Set();
   const batchDriverPath = path.join(directory, "tools", "test_batch_driver.gd");
@@ -1528,9 +1556,16 @@ export function lintSketch(sketch) {
     findings.words = { read: words.read, total: words.total };
   }
   const lintSelf = new Set(["scripts/sketch-lint.mjs", "scripts/sketch-lint.test.mjs"]);
+  const toolFiles = sources(path.join(directory, "tools"), SOURCE_EXTENSIONS);
+  if (sketch === "core-loop") {
+    for (const file of toolFiles) {
+      if (!file.path.endsWith(".gd")) continue;
+      findings.push(...lintL13(file.path, file.path.slice(relative.length + 1), file.text));
+    }
+  }
   const flagFiles = [
     ...testFiles,
-    ...sources(path.join(directory, "tools"), SOURCE_EXTENSIONS),
+    ...toolFiles,
     ...sources(path.join(root, "scripts"), SOURCE_EXTENSIONS).filter(
       (file) => !lintSelf.has(file.path) && launchesGame.test(file.text),
     ),

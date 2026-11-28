@@ -12,7 +12,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { scratchHomeEnv } from "./godot-home.mjs";
+import { GODOT_VERSION, resolveGodotBinary, scratchHomeEnv } from "./godot-home.mjs";
 
 export const DEFAULT_SKETCH = "sketches/core-loop";
 const STAMP = "scrapkeep-import.json";
@@ -25,7 +25,7 @@ function git(root, args, { trim = true } = {}) {
   return trim ? ran.stdout.trim() : ran.stdout.replace(/\r?\n$/, "");
 }
 
-export function godotIdentity(godotBin = process.env.GODOT_BIN) {
+export function godotIdentity(godotBin = resolveGodotBinary({ requireExplicit: true })) {
   if (!godotBin || !existsSync(godotBin)) return null;
   try {
     return `${path.basename(godotBin)}:${statSync(godotBin).size}`;
@@ -148,8 +148,9 @@ export function isCleanImportPass({ status, signal = null, output = "", uidCache
 }
 
 function runGodotImportPass(root, sketch) {
-  const godot = process.env.GODOT_BIN;
-  if (!godot || !existsSync(godot)) throw new Error("set GODOT_BIN to the Godot 4.7.2 editor");
+  const godot = resolveGodotBinary({ requireExplicit: true });
+  if (!godot || !existsSync(godot))
+    throw new Error(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor`);
   const scratchDir = mkdtempSync(path.join(os.tmpdir(), "import-stamp-"));
   try {
     return spawnSync(

@@ -7,6 +7,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const MAPS := {"park_dam": 1, "park_flume": 2}
 const MODES := ["beam", "silhouette"]
@@ -54,7 +55,7 @@ var _immune := 0
 
 func _initialize() -> void:
 	opts = parse_args(OS.get_cmdline_user_args())
-	if not opts["ok"] or DisplayServer.get_name() == "headless":
+	if not opts["ok"] or AppShell.headless():
 		printerr("map_sheet_capture: %s" % (opts.get("error", "") if not opts["ok"] else "needs a rendered display"))
 		quit(2)
 		return

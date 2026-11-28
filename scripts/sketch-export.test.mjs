@@ -42,8 +42,10 @@ import {
   winProofTimeoutMs,
   withIsolatedXdg,
   proofLibraries,
+  runLinuxExport,
   selfPlayPresetText,
 } from "./sketch-export.mjs";
+import { runCloudExport } from "./cloud/export-headless.mjs";
 
 test("proofLibraries picks each add-on's linux debug library and nothing else", () => {
   const files = [
@@ -636,15 +638,16 @@ test("only the park proof retries, up to 3 tries, and every try's outcome reache
     "win proof (park): won at stage 6 (try 1 of 3)",
   );
 
-  for (const file of ["./sketch-export.mjs", "./cloud/export-headless.mjs"])
-    assert.match(
-      readFileSync(new URL(file, import.meta.url), "utf8"),
-      /playProofTries\(proof, /,
-      file,
-    );
+  assert.match(
+    readFileSync(new URL("./sketch-export.mjs", import.meta.url), "utf8"),
+    /playProofTries\(proof, /,
+  );
+  const cloudSource = readFileSync(new URL("./cloud/export-headless.mjs", import.meta.url), "utf8");
+  assert.match(cloudSource, /runLinuxExport\(/);
+  assert.doesNotMatch(cloudSource, /--export-release|--export-pack|bot_run\.gd/);
 });
 
-test("every win proof's bot args carry its pilot and table, and the cloud export builds them the same way", () => {
+test("every win proof's bot args carry its pilot and table, and the cloud export shares the same runner", () => {
   for (const proof of WIN_PROOFS) {
     const args = winProofBotArgs(proof, "/x/run");
     assert.ok(args.includes("--seeds=" + proof.seed), proof.label);
@@ -658,7 +661,7 @@ test("every win proof's bot args carry its pilot and table, and the cloud export
     ).includes("--table=park"),
   );
   const cloud = readFileSync(new URL("./cloud/export-headless.mjs", import.meta.url), "utf8");
-  assert.match(cloud, /\.\.\.winProofBotArgs\(proof, out\)/);
+  assert.match(cloud, /runLinuxExport\(/);
   assert.doesNotMatch(cloud, /"--seeds=" \+/);
   const local = readFileSync(new URL("./sketch-export.mjs", import.meta.url), "utf8");
   assert.match(local, /\.\.\.winProofBotArgs\(proof, out\)/);
@@ -831,5 +834,304 @@ test("winProofEnv passes SCRAPKEEP_REPO_ROOT beside isolated XDG dirs and playWi
   );
 
   const source = readFileSync(new URL("./sketch-export.mjs", import.meta.url), "utf8");
-  assert.match(source, /env:\s*winProofEnv\(state\)/);
+  assert.match(source, /env:\s*winProofEnv\(state\b/);
+});
+
+test("runCloudExport without --win-proof runs the exact headless command sequence and writes cloud BUILD.txt", async () => {
+  const calls = [];
+  const logs = [];
+  const written = new Map();
+  const repoRoot = "/repo";
+  const projectDir = "/repo/sketches/core-loop";
+  const stamp = "20261127T120000";
+  const outDir = path.join(repoRoot, "artifacts/local/cloud-export", stamp);
+  const exe = path.join(outDir, "core-loop.x86_64");
+
+  const result = await runCloudExport([], {
+    binary: "/opt/godot",
+    projectDir,
+    repoRoot,
+    stamp,
+    env: { PATH: "/usr/bin", HOME: "/real/home" },
+    platform: "linux",
+    exists: (p) => p === "/opt/godot" || p === exe,
+    mkdirFn: async () => {},
+    writeFileFn: async (file, text) => written.set(file, text),
+    log: (line) => logs.push(line),
+    failFn: (msg) => {
+      throw new Error(msg);
+    },
+    runCmd: (command, args, options = {}) => {
+      calls.push({ command, args, options });
+      if (args.includes("res://tests/release_gate_placeholder_test.gd"))
+        return {
+          status: 0,
+          stdout: "release_gate_placeholder_test: PASS (3 checks)\n",
+          stderr: "",
+        };
+      if (command === "git") return { status: 0, stdout: "deadbeef1234\n", stderr: "" };
+      return { status: 0, stdout: "", stderr: "" };
+    },
+  });
+
+  assert.equal(result.exe, exe);
+  assert.deepEqual(
+    calls.map((c) => [c.command, c.args]),
+    [
+      ["/opt/godot", ["--headless", "--path", projectDir, "--editor", "--import"]],
+      [
+        "/opt/godot",
+        [
+          "--headless",
+          "--path",
+          projectDir,
+          "--script",
+          "res://tests/release_gate_placeholder_test.gd",
+        ],
+      ],
+      ["/opt/godot", ["--headless", "--path", projectDir, "--export-release", "Linux x64", exe]],
+      [exe, ["--headless", "--quit-after", "300"]],
+      [exe, ["--headless", "--table=park", "--quit-after", "600"]],
+      ["git", ["-C", repoRoot, "rev-parse", "HEAD"]],
+    ],
+  );
+  assert.equal(calls[1].options.env.SCRAPKEEP_RELEASE_GATE, "1");
+  assert.equal(calls[3].options.cwd, outDir);
+  assert.equal(calls[4].options.cwd, outDir);
+  assert.deepEqual(logs, [
+    "PASS editor import",
+    "PASS release gate",
+    "PASS export Linux x64",
+    "PASS boot 300 frames",
+    "PASS park table boot 600 frames",
+    "executable: " + exe,
+  ]);
+  assert.equal(
+    written.get(path.join(outDir, "BUILD.txt")),
+    [
+      "commit: deadbeef1234",
+      `built: ${stamp} in a cloud container (scripts/cloud/export-headless.mjs)`,
+      "godot: 4.7.2.stable",
+      "stems: none (ACE stems live on Andrew's machine)",
+      "boss smoke: not run (needs a Vulkan GPU)",
+      "win proof: not run",
+      "",
+    ].join("\n"),
+  );
+});
+
+test("runCloudExport with --win-proof exports proof pack, copies addons once, runs all WIN_PROOFS in order with isolated env, and supports park retries", async () => {
+  const runForPlatform = async (platform) => {
+    const calls = [];
+    const logs = [];
+    const addonCopies = [];
+    const written = new Map();
+    const repoRoot = "/repo";
+    const projectDir = "/repo/sketches/core-loop";
+    const stamp = "20261127T120000";
+    const outDir = path.join(repoRoot, "artifacts/local/cloud-export", stamp);
+    const exe = path.join(outDir, "core-loop.x86_64");
+    const proofDir = outDir + "-win-proof";
+    const pack = path.join(proofDir, "proof.pck");
+    let parkAttempt = 0;
+    const botRows = new Map();
+
+    await runCloudExport(["--win-proof"], {
+      binary: "/opt/godot",
+      projectDir,
+      repoRoot,
+      stamp,
+      env: { PATH: "/usr/bin", HOME: "/real/home" },
+      platform,
+      exists: (p) => p === "/opt/godot" || p === exe || botRows.has(p),
+      mkdirFn: async () => {},
+      copyAddons: async (src, dest) => addonCopies.push([src, dest]),
+      readFileFn: async (file) => botRows.get(file) ?? "",
+      writeFileFn: async (file, text) => written.set(file, text),
+      log: (line) => logs.push(line),
+      failFn: (msg) => {
+        throw new Error(msg);
+      },
+      runCmd: (command, args, options = {}) => {
+        calls.push({ command, args, options });
+        if (args.includes("res://tests/release_gate_placeholder_test.gd"))
+          return {
+            status: 0,
+            stdout: "release_gate_placeholder_test: PASS (3 checks)\n",
+            stderr: "",
+          };
+        if (args.includes("res://tools/bot_run.gd")) {
+          const outArg = args.find((a) => a.startsWith("--out=")).slice("--out=".length);
+          const isPark = args.includes("--table=park");
+          if (isPark) parkAttempt += 1;
+          const outcome = isPark && parkAttempt === 1 ? "stalled" : "won";
+          botRows.set(
+            path.join(outArg, "bots.ndjson"),
+            JSON.stringify({
+              outcome,
+              stage_reached: 6,
+              ticks: 1000,
+              wall_seconds: 12.5,
+            }) + "\n",
+          );
+          return { status: 0, stdout: "", stderr: "" };
+        }
+        if (command === "git") return { status: 0, stdout: "cafebabe5678\n", stderr: "" };
+        return { status: 0, stdout: "", stderr: "" };
+      },
+    });
+    return { calls, logs, addonCopies, written, outDir, exe, proofDir, pack };
+  };
+
+  const linux = await runForPlatform("linux");
+  assert.deepEqual(linux.addonCopies, [["/repo/sketches/core-loop", linux.proofDir]]);
+  const expectedCommands = [
+    ["/opt/godot", ["--headless", "--path", "/repo/sketches/core-loop", "--editor", "--import"]],
+    [
+      "/opt/godot",
+      [
+        "--headless",
+        "--path",
+        "/repo/sketches/core-loop",
+        "--script",
+        "res://tests/release_gate_placeholder_test.gd",
+      ],
+    ],
+    [
+      "/opt/godot",
+      [
+        "--headless",
+        "--path",
+        "/repo/sketches/core-loop",
+        "--export-release",
+        "Linux x64",
+        linux.exe,
+      ],
+    ],
+    [linux.exe, ["--headless", "--quit-after", "300"]],
+    [linux.exe, ["--headless", "--table=park", "--quit-after", "600"]],
+    [
+      "/opt/godot",
+      [
+        "--headless",
+        "--path",
+        "/repo/sketches/core-loop",
+        "--export-pack",
+        "Linux x64 proof",
+        linux.pack,
+      ],
+    ],
+    [
+      "/opt/godot",
+      [
+        "--headless",
+        "--fixed-fps",
+        "90",
+        "--main-pack",
+        linux.pack,
+        "--script",
+        "res://tools/bot_run.gd",
+        "--",
+        ...winProofBotArgs(WIN_PROOFS[0], path.join(linux.proofDir, "run")),
+      ],
+    ],
+    [
+      "/opt/godot",
+      [
+        "--headless",
+        "--fixed-fps",
+        "90",
+        "--main-pack",
+        linux.pack,
+        "--script",
+        "res://tools/bot_run.gd",
+        "--",
+        ...winProofBotArgs(WIN_PROOFS[1], path.join(linux.proofDir, "cannon", "run")),
+      ],
+    ],
+    [
+      "/opt/godot",
+      [
+        "--headless",
+        "--fixed-fps",
+        "90",
+        "--main-pack",
+        linux.pack,
+        "--script",
+        "res://tools/bot_run.gd",
+        "--",
+        ...winProofBotArgs(WIN_PROOFS[2], path.join(linux.proofDir, "tally", "run")),
+      ],
+    ],
+    [
+      "/opt/godot",
+      [
+        "--headless",
+        "--fixed-fps",
+        "90",
+        "--main-pack",
+        linux.pack,
+        "--script",
+        "res://tools/bot_run.gd",
+        "--",
+        ...winProofBotArgs(WIN_PROOFS[3], path.join(linux.proofDir, "park", "try-1", "run")),
+      ],
+    ],
+    [
+      "/opt/godot",
+      [
+        "--headless",
+        "--fixed-fps",
+        "90",
+        "--main-pack",
+        linux.pack,
+        "--script",
+        "res://tools/bot_run.gd",
+        "--",
+        ...winProofBotArgs(WIN_PROOFS[3], path.join(linux.proofDir, "park", "try-2", "run")),
+      ],
+    ],
+    ["git", ["-C", "/repo", "rev-parse", "HEAD"]],
+  ];
+  assert.deepEqual(
+    linux.calls.map((c) => [c.command, c.args]),
+    expectedCommands,
+  );
+  assert.deepEqual(linux.calls[6].options.env, {
+    PATH: "/usr/bin",
+    HOME: "/real/home",
+    XDG_DATA_HOME: path.join(linux.proofDir, "state", "data"),
+    XDG_CONFIG_HOME: path.join(linux.proofDir, "state", "config"),
+    XDG_CACHE_HOME: path.join(linux.proofDir, "state", "cache"),
+  });
+  assert.equal(linux.calls[6].options.cwd, linux.proofDir);
+  assert.equal(linux.calls[6].options.timeout, 900_000);
+  assert.equal(linux.calls[9].options.timeout, 1_800_000);
+  assert.match(
+    linux.written.get(path.join(linux.outDir, "BUILD.txt")),
+    /win proof \(park\): won at stage 6.*\(try 2 of 3; try 1: outcome stalled at stage 6, not won\)/,
+  );
+
+  const mac = await runForPlatform("darwin");
+  assert.deepEqual(mac.calls[6].options.env, {
+    PATH: "/usr/bin",
+    HOME: path.join(mac.proofDir, "state", "data"),
+    XDG_DATA_HOME: path.join(mac.proofDir, "state", "data"),
+    XDG_CONFIG_HOME: path.join(mac.proofDir, "state", "config"),
+    XDG_CACHE_HOME: path.join(mac.proofDir, "state", "cache"),
+  });
+});
+
+test("runLinuxExport in headless mode refuses a missing explicit GODOT_BIN", async () => {
+  await assert.rejects(
+    runLinuxExport({
+      headless: true,
+      env: {},
+      exists: () => false,
+      failFn: (msg) => {
+        throw new Error(msg);
+      },
+    }),
+    /set GODOT_BIN to the Godot 4\.7\.2 editor/,
+  );
 });

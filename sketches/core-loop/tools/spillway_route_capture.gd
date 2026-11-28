@@ -6,6 +6,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const Quality := preload("res://src/presentation/graphics_preset.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 var game
 var source := Intent.Scripted.new()
@@ -42,7 +43,7 @@ func _initialize() -> void:
 	if out.is_empty() or not section in ["dam", "flume", "bowl", "hook"] or DirAccess.make_dir_recursive_absolute(out) != OK:
 		quit(2)
 		return
-	drawn = DisplayServer.get_name() != "headless"
+	drawn = not AppShell.headless()
 	_run.call_deferred()
 
 

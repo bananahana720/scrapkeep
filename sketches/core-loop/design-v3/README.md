@@ -10,6 +10,7 @@
 - [HOOK-CHAIN.md](HOOK-CHAIN.md): Detailed chain contract and acceptance work.
 - [POLES-FLAILS.md](POLES-FLAILS.md): Wave 20 proposal for poles and flails on the harpoon.
 - [SIGHT-PERSONA.md](SIGHT-PERSONA.md): The look persona (9 Nov; year picked 10 Nov): the artist, her habits, how the four makers are told apart, the year, 2010, and how a model, clip or effect gets checked.
+- [ASSET-RIG-CRAFT-STANDARD.md](ASSET-RIG-CRAFT-STANDARD.md): Binding coordinate/scale, dual-pose T-pose/cockpit rest-pose rig hierarchy, watertight manifold topology, and PBR weathering craft standard for character rigs, heroes, wearables, weapons, enemies, and props.
 - [LEGIBILITY.md](LEGIBILITY.md): Accepted presentation grammar and measurement references.
 - [MACHINE-VFX.md](MACHINE-VFX.md): Enemy and boss effects, the specials' tell contract and their budget.
 - [TRAVERSAL.md](TRAVERSAL.md): Traversal measurements and definitions consumed by code and tests.
