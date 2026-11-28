@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 const SIDES := {"front": Vector3(8.5, 9.0, 0.0), "side": Vector3(0.0, 9.0, 8.5), "rear": Vector3(-8.5, 9.0, 0.0)}

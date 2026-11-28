@@ -39,7 +39,7 @@ The start mass reaches the run through the existing `--start-mass` launch flag. 
 
 The game reads its stage table through `ctx.stages`. After each `Game` is built the child replaces `ctx.stages` with a `Table` (an inner class of `posture_sweep.gd`) whose `of()` returns the slice row with `warden_plating` and a `posture` dictionary swapped in. No source file changes between cells. `combat.warden_spec` carries the row's `posture` to the Warden, which hands it to `BossPosture.new()`.
 
-Supported row keys: `curve`, `ram_shatters` and the plating (`warden_plating`). The rule accepts more (`base`, `smash_base`, `mult_min` and others, see `src/combat/boss_posture.gd`), but the boss plate (`src/ui/boss_plate.gd`) and the weak-point event (`src/combat/warden.gd`) still read the constants for the stagger length, so a row must not carry them yet.
+Supported row keys: `curve`, `ram_shatters` and the plating (`warden_plating`). The rule accepts more (`base`, `smash_base`, `mult_min` and others, see `src/core/boss_posture.gd`), but the boss plate (`src/ui/boss_plate.gd`) and the weak-point event (`src/combat/warden.gd`) still read the constants for the stagger length, so a row must not carry them yet.
 
 ## How a run is measured
 

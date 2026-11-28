@@ -2,7 +2,7 @@ extends SceneTree
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const BuildRead := preload("res://src/ui/build_read.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")

@@ -5,11 +5,11 @@ const Roster := preload("res://src/combat/roster.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Director := preload("res://src/world/director.gd")
-const DirectorCards := preload("res://src/world/director_cards.gd")
+const DirectorCards := preload("res://src/core/director_cards.gd")
 const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The Spillway roster (design-v3/SPILLWAY-ROSTER.md):

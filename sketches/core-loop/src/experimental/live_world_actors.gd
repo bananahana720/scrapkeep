@@ -4,7 +4,7 @@ extends Node3D
 const EnvTags := preload("res://src/experimental/env_tags.gd")
 const Ecology := preload("res://src/experimental/ecology_actors.gd")
 const AdversityDirector := preload("res://src/experimental/adversity_director.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const ActorCraft := preload("res://src/experimental/live_world_actor_craft.gd")
 const Comfort := preload("res://src/core/comfort.gd")

@@ -5,7 +5,7 @@
    "path": "res://assets/models/world_one/enemy_vault.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/vault.gd:87",
+   "loader": "src/combat/vault.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_vault.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",

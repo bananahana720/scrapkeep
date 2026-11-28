@@ -5,7 +5,7 @@
    "path": "res://assets/models/item_panels/panel_louvre.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -17,7 +17,7 @@
    "path": "res://assets/models/item_panels/panel_rivet.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -29,7 +29,7 @@
    "path": "res://assets/models/item_panels/panel_skirt.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -41,7 +41,7 @@
    "path": "res://assets/models/item_panels/panel_sight.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/PROMPTS.md (Range Sight, written spec)",
@@ -53,7 +53,7 @@
    "path": "res://assets/models/item_panels/panel_fin.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -65,7 +65,7 @@
    "path": "res://assets/models/item_panels/panel_drum.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -77,7 +77,7 @@
    "path": "res://assets/models/item_panels/panel_collar.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -89,7 +89,7 @@
    "path": "res://assets/models/item_panels/panel_spool.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -101,7 +101,7 @@
    "path": "res://assets/models/item_panels/panel_tank.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -113,7 +113,7 @@
    "path": "res://assets/models/item_panels/panel_bumper.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -125,7 +125,7 @@
    "path": "res://assets/models/item_panels/panel_tile.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -137,7 +137,7 @@
    "path": "res://assets/models/item_panels/panel_bracket.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",

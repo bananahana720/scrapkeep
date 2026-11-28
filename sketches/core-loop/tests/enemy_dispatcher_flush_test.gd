@@ -9,7 +9,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const Palette := preload("res://src/core/palette.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Dispatcher := preload("res://src/combat/dispatcher.gd")
 const T := preload("res://tests/support/t.gd")
 

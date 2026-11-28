@@ -5,7 +5,7 @@ enum { CHASER, LOBBER }
 const Roster := preload("res://src/combat/roster.gd")
 const Nemesis := preload("res://src/combat/nemesis.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")

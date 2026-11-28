@@ -4,7 +4,7 @@ const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const Director := preload("res://src/world/director.gd")
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The spawn director takes the stage's counter unlock level and ancient enemy from the

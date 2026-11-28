@@ -4,7 +4,7 @@ extends RefCounted
 const Objectives := preload("res://src/core/objectives.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Activities := preload("res://src/world/activities.gd")

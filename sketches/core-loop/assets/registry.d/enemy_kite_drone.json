@@ -5,7 +5,7 @@
    "path": "res://assets/models/world_three/enemy_kite_drone.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/kite_drone.gd:80",
+   "loader": "src/combat/kite_drone.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_three/enemy_kite_drone.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"

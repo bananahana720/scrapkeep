@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
 
 # KF2, the reactor relic's mountings (design-v3/wardens/reactor.md sections 3 and 4), in a

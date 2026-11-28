@@ -5,11 +5,10 @@ signal page_ready(page: Dictionary)
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const Worlds := preload("res://src/core/worlds.gd")
-const SafeStore := preload("res://src/core/safe_store.gd")
+const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
 
 const SCHEMA := 1
 const DIR := "scrapbook"
-const STORE_PATH := "res://src/core/scrapbook_store.gd"
 const MIN_PANELS := 4
 const MAX_PANELS := 6
 const SHOT_WIDTH := 480
@@ -272,7 +271,7 @@ func saved_path() -> String:
 
 func _save_later(page: Dictionary) -> void:
 	saved_path()
-	var store = load(STORE_PATH).new(storage_dir) if ResourceLoader.exists(STORE_PATH) else null
+	var store := ScrapbookStore.new(storage_dir)
 	var copy := page.duplicate(true)
 	var out := {}
 	_save_out = out
@@ -283,31 +282,11 @@ func _exit_tree() -> void:
 	saved_path()
 
 
-func save(page: Dictionary, store = null) -> String:
-	if store == null and ResourceLoader.exists(STORE_PATH):
-		store = load(STORE_PATH).new(storage_dir)
-	if store != null:
-		var saved := String(store.save(page))
-		if saved == "":
-			push_warning("run_moments: scrapbook refused the page: %s" % store.last_error)
-		return saved
-	var id := String(page.get("run_id", "")).validate_filename()
-	var dir := storage_dir.path_join(DIR)
-	if id == "" or DirAccess.make_dir_recursive_absolute(dir) != OK:
-		push_warning("run_moments: could not save page %s in %s" % [id, dir])
-		return ""
-	var doc := page.duplicate(true)
-	for i in doc["panels"].size():
-		var panel: Dictionary = doc["panels"][i]
-		var shot = page["panels"][i].get("shot")
-		panel["shot"] = ""
-		if shot is Image and (shot as Image).save_png(dir.path_join("%s_%d.png" % [id, i])) == OK:
-			panel["shot"] = "%s_%d.png" % [id, i]
-	var path := dir.path_join(id + ".json")
-	if SafeStore.write_atomic(path, JSON.stringify(doc, "\t")) != OK:
-		push_warning("run_moments: could not write %s" % path)
-		return ""
-	return path
+func save(page: Dictionary, store: ScrapbookStore) -> String:
+	var saved := String(store.save(page))
+	if saved == "":
+		push_warning("run_moments: scrapbook refused the page: %s" % store.last_error)
+	return saved
 
 
 func _offer(kind: String, score: float, facts: Dictionary, rare := false) -> void:

@@ -1,7 +1,7 @@
 extends Node3D
 
 
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const EnvTags := preload("res://src/experimental/env_tags.gd")

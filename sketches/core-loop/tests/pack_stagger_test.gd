@@ -18,7 +18,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Counter := preload("res://src/combat/counter.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const Companion := preload("res://src/core/companion.gd")
 const T := preload("res://tests/support/t.gd")
 

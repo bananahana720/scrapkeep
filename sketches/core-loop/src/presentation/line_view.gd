@@ -2,7 +2,7 @@ extends Node3D
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Augments := preload("res://src/movement/augments.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const HarpoonPhysicsRig := preload("res://src/presentation/harpoon_physics_rig.gd")
 
 
