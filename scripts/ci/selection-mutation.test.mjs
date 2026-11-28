@@ -49,6 +49,15 @@ test("selection mutation proof: a changed world script runs the folder guards th
     assert.ok(picked.has(guard), `expected ${guard} for src/world/camp_sandbox.gd`);
 });
 
+test("selection mutation proof: a changed world script runs a test that scans src through another test", () => {
+  const index = buildIndex(sketchDir);
+  const { picked } = selectTests(index, ["src/world/camp_sandbox.gd"]);
+  assert.ok(
+    picked.has("tests/sound_own_recipes_test.gd"),
+    "expected tests/sound_own_recipes_test.gd, which scans src through tests/sound_twins_test.gd",
+  );
+});
+
 test("selection mutation proof: park data change triggers map-standard PATH_RULES", () => {
   const index = buildIndex(sketchDir);
   const parkSel = selectTests(index, ["src/world/parks/dam.gd"]);

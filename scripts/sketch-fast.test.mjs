@@ -179,6 +179,42 @@ test("a changed script under src/ or tools/ picks every top-level test that scan
     assert.equal(selectTests(index, [rel]).picked.has("tests/ui_guard_test.gd"), false, rel);
 });
 
+test("a top-level test that reaches a folder scan through one other test file is a folder guard", () => {
+  const index = files({
+    ...GUARD,
+    "tests/support/scanner.gd": READER + 'SourceScan.sources(t, ["res://src/world"])',
+    "tests/through_helper_test.gd": 'const Scanner := preload("res://tests/support/scanner.gd")',
+    "tests/through_guard_test.gd": 'const Guard := preload("res://tests/folder_guard_test.gd")',
+    "tests/support/one_file.gd": READER + 'SourceScan.text(t, "res://src/core/flow.gd")',
+    "tests/through_one_file_test.gd": 'const One := preload("res://tests/support/one_file.gd")',
+  });
+  const { picked } = selectTests(index, ["src/world/anything.gd"]);
+  assert.deepEqual([...picked.keys()].sort(), [
+    "tests/folder_guard_test.gd",
+    "tests/through_guard_test.gd",
+    "tests/through_helper_test.gd",
+  ]);
+  assert.equal(
+    picked.get("tests/through_helper_test.gd").why,
+    "folder guard: src/world/anything.gd",
+  );
+});
+
+test("a top-level test that reaches a folder scan through two other test files is a folder guard", () => {
+  const index = files({
+    ...GUARD,
+    "tests/support/scanner.gd": READER + 'SourceScan.captures(t, ["res://src"], PATTERN)',
+    "tests/support/rows.gd": 'const Scanner := preload("res://tests/support/scanner.gd")',
+    "tests/two_hops_test.gd": 'const Rows := preload("res://tests/support/rows.gd")',
+    "tests/unrelated_test.gd": "",
+  });
+  const { picked } = selectTests(index, ["tools/anything_tool.gd"]);
+  assert.deepEqual([...picked.keys()].sort(), [
+    "tests/folder_guard_test.gd",
+    "tests/two_hops_test.gd",
+  ]);
+});
+
 test("the folder-guard selection fails when no top-level test scans folders through the shared reader", () => {
   const index = files({
     "tests/support/source_scan.gd": "",

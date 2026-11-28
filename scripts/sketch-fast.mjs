@@ -348,10 +348,19 @@ function expand(index, globs) {
 }
 
 export function folderGuards(index) {
-  const guards = index.tests.filter((test) => {
-    const text = index.files.get(test) ?? "";
+  const queue = [...index.files.keys()].filter((rel) => {
+    if (!/^tests\/.+\.gd$/.test(rel)) return false;
+    const text = index.files.get(rel);
     return text.includes(SOURCE_READER) && FOLDER_SCAN.test(text);
   });
+  const reached = new Set(queue);
+  while (queue.length > 0)
+    for (const file of referrers(index, queue.shift()))
+      if (!reached.has(file)) {
+        reached.add(file);
+        queue.push(file);
+      }
+  const guards = [...reached].filter(isTopLevelTest).sort();
   if (guards.length === 0)
     throw new Error(
       `no top-level test scans folders through ${SOURCE_READER}, so a changed script would run no folder guard`,
