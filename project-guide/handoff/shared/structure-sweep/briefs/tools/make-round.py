@@ -105,7 +105,7 @@ GODOT_CHECKS = (
     "Start every shell line with `export PATH=/opt/homebrew/bin:$PATH GODOT_BIN=\"$HOME/Applications/Godot_4.7.2.app/Contents/MacOS/Godot\"`, and run Godot only with `HOME` set to a scratch folder under `artifacts/local/` as the rules page says. "
     "After your last commit make one call of `npm run sketch:fast -- --base {base}`; it picks tests from the changed files and may wait several minutes for a machine slot before it starts: wait for it, and make one call rather than several. "
     "Then `npm run sketch:lint`, `npm test`, `npm run lint:js` and `npm run check:docs`. Known failures that are not yours: `tests/slice1_patch_and_w1_craft_test.gd` and `tests/stage_modifier_test.gd` are red on `main` on this machine; rerun any other red alone before you call it red, and call a red old only when it is red on `main`, not when it is red on the integration branch. "
-    "`tests/profile_purity_test.gd` guards whole folders and the call above does not pick it by itself: if you change or add a script under `src/movement`, `src/combat`, `src/build`, `src/world` or `src/boss`, run it by name in a second short call (`npm run sketch:fast -- --base {base} --test profile_purity_test`); it passes on the base."
+    "When you change or add a script under `sketches/core-loop/src` or `tools`, the call above also picks every test that scans whole folders through `tests/support/source_scan.gd` (`tests/profile_purity_test.gd` among them), so you need no second call for those."
 )
 
 UNITS = runpy.run_path(str(pathlib.Path(__file__).with_name(f"units-r{ROUND}.py")), init_globals=dict(BASE=BASE, DELETE=DELETE, NODE_CHECKS=NODE_CHECKS, GODOT_CHECKS=GODOT_CHECKS))["UNITS"]
