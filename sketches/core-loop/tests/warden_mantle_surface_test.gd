@@ -4,7 +4,7 @@ extends SceneTree
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const WardenDress := preload("res://src/presentation/warden_dress.gd")
 const Warden := preload("res://src/combat/warden.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("warden_mantle_surface_test")

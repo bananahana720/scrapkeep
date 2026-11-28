@@ -6,7 +6,7 @@ const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
 
 

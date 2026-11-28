@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Every active obeys Reduce flashes (#94; the sitting watch list's line on actives). A source

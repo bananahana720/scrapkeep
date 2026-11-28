@@ -5,7 +5,7 @@ const EventView := preload("res://src/world/event_view.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 
 

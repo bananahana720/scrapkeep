@@ -24,7 +24,7 @@ const Flow := preload("res://src/core/flow.gd")
 const StartCard := preload("res://src/ui/start_pick_card.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 
 # Re-pinned 2026-10-14 (coordinator): the KD2 flume merge c81cec4a changed stage 2's park data, so every
@@ -315,7 +315,7 @@ func _schedule(d, steps := 1200) -> Dictionary:
 	return {"schedule": schedule, "members": members, "cap": d.cap(), "interval": d.interval()}
 
 func _config(tier_value: int) -> Dictionary:
-	var tables: Dictionary = load("res://src/world/director_cards.gd").get_script_constant_map()
+	var tables: Dictionary = load("res://src/core/director_cards.gd").get_script_constant_map()
 	var tiers: Dictionary = tables.get("RUN_TIERS", {})
 	if not record:
 		t.check("owning tier row %d exists" % tier_value, tiers.has(tier_value))

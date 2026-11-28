@@ -2,7 +2,7 @@ extends SceneTree
 
 
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 

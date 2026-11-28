@@ -153,7 +153,7 @@ func _structure() -> void:
 	_test.check("counter releases its slot when the attack ends", counter_src.contains("AttackBudget.release(self)"))
 	var chaser_src := FileAccess.get_file_as_string("res://src/combat/chaser.gd")
 	_test.check("chaser asks and releases", chaser_src.contains("AttackBudget.ask(self)") and chaser_src.contains("AttackBudget.release(self)"))
-	for path in ["res://src/combat/warden.gd", "res://src/combat/boss_posture.gd"]:
+	for path in ["res://src/combat/warden.gd", "res://src/core/boss_posture.gd"]:
 		var src := FileAccess.get_file_as_string(path)
 		_test.check("%s is exempt" % path.get_file(), not src.contains("AttackBudget") and not src.contains("counter.gd"),
 			"names neither the budget nor counter.gd")

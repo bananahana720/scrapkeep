@@ -1,6 +1,6 @@
 extends RefCounted
 
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 
 const CAP := 100.0
