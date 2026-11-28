@@ -73,10 +73,11 @@ func _verify_player_configuration_and_cooldown() -> void:
 	var configured := Bank.configure_player(player, "pa_salvage_press_lockdown")
 	_t.check("configure_player returns true", configured, "pa_salvage_press_lockdown")
 	_t.check("player stream attached", player.stream is AudioStreamOggVorbis, str(player.stream))
-	_t.check("can trigger before mark", Bank.can_trigger("pa_salvage_press_lockdown", 10.0), "t=10.0")
-	Bank.mark_triggered("pa_salvage_press_lockdown", 10.0)
-	_t.check("blocked inside cooldown", not Bank.can_trigger("pa_salvage_press_lockdown", 12.0), "t=12.0")
-	_t.check("allowed after cooldown", Bank.can_trigger("pa_salvage_press_lockdown", 14.5), "t=14.5")
+	var last_trigger_s := {}
+	_t.check("can trigger before mark", Bank.can_trigger("pa_salvage_press_lockdown", 10.0, last_trigger_s), "t=10.0")
+	Bank.mark_triggered("pa_salvage_press_lockdown", 10.0, last_trigger_s)
+	_t.check("blocked inside cooldown", not Bank.can_trigger("pa_salvage_press_lockdown", 12.0, last_trigger_s), "t=12.0")
+	_t.check("allowed after cooldown", Bank.can_trigger("pa_salvage_press_lockdown", 14.5, last_trigger_s), "t=14.5")
 	_t.check("unknown event rejected", not Bank.configure_player(player, "missing_event"), "missing_event")
 	player.queue_free()
 

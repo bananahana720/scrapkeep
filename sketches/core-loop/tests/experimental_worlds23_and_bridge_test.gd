@@ -487,7 +487,7 @@ func _test_live_run_bridge_and_audio_bank() -> void:
 		str(attempt_cues[1]))
 	t.eq("a stage retry fires the same audio cues as the first attempt", attempt_cues[1], attempt_cues[0])
 	bridge.teardown()
-	t.eq("teardown clears the audio cooldowns", ExperimentalAudioBank.can_trigger("pa_hazard_squall_incoming", 0.0), true)
+	t.eq("teardown clears the audio cooldowns", ExperimentalAudioBank.can_trigger("pa_hazard_squall_incoming", 0.0, bridge.audio_cooldowns), true)
 
 	bridge.teardown()
 	root.remove_child(bridge)
