@@ -11,6 +11,7 @@ const BuildReadout := preload("res://src/ui/build_readout.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 
 # Shot bits in live combat (design-v3/ABILITY-MUTATIONS.md B1 to B4, units U1 and U2): the
 # build's held parts make the shot's bits, a player's own weapon press carries them, a proc
@@ -417,13 +418,13 @@ func _check_retry() -> void:
 # --- Unit U2: bounce, split, pull, tells and the pair rows -----------------------------
 
 # Two long walls facing each other across WALL_SITE, WALL_GAP ahead and behind, on the world
-# layer the bolts' ray reads (Bolts.WORLD_MASK). They hang off the tree root so the disabled
+# layer the bolts' ray reads (PhysicsLayers.WORLD_MASK). They hang off the tree root so the disabled
 # game does not take them out of the physics space.
 func _build_walls() -> void:
 	var at: Vector3 = Measurement.BALL + WALL_SITE
 	for side in [Vector3.FORWARD, Vector3.BACK]:
 		var wall := StaticBody3D.new()
-		wall.collision_layer = Bolts.WORLD_MASK
+		wall.collision_layer = PhysicsLayers.WORLD_MASK
 		var shape := CollisionShape3D.new()
 		var box := BoxShape3D.new()
 		box.size = Vector3(60.0, 8.0, 0.4)

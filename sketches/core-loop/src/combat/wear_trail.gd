@@ -2,6 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 
 const NODE_ID := "r_run_gun"
 const DAMAGE := 14.0
@@ -93,10 +94,7 @@ func _touch(patch: Dictionary, enemy) -> void:
 	var id: int = enemy.get_instance_id()
 	if _clock - float(_last_hit.get(id, -HIT_GAP)) < HIT_GAP:
 		return
-	var reach: float = RADIUS
-	var r = enemy.get("radius")
-	if r != null:
-		reach += float(r)
+	var reach: float = RADIUS + ActiveBase.enemy_girth(enemy, 0.0)
 	var offset: Vector3 = enemy.global_position - patch["at"]
 	offset.y = 0.0
 	if offset.length() > reach:

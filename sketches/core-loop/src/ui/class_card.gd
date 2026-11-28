@@ -438,8 +438,7 @@ func cycle_alt_loadout() -> String:
 		MetaOptions.clear_alt_loadout(_profile, String(def.id), String(slot))
 	if next != "":
 		MetaOptions.equip_alt_loadout(_profile, next, _sitting)
-	if _profile.can_save:
-		_profile.save()
+	_profile.save_if_allowed()
 	_show_alt()
 	return next
 
@@ -507,7 +506,7 @@ func cycle_paint() -> String:
 	var options := paint_options()
 	var next: String = options[(options.find(paint_shown()) + 1) % options.size()]
 	_profile.equip(def.id, "paint", next)
-	_profile.save()
+	_profile.save_if_allowed()
 	_show_paint()
 	return next
 

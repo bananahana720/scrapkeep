@@ -29,9 +29,9 @@ const AppShell := preload("res://src/core/app_shell.gd")
 # Re-pinned 2026-10-14 (coordinator): the KD2 flume merge c81cec4a changed stage 2's park data, so every
 # whole run moved. SG10 proved tier 0 equal to the pre-SG10 game on the old pins (b8b6605b passes them);
 # these are tier-0 replays at c81cec4a, without SG11, seeds 0..19, with the same script:
-# /home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
-# --headless --path sketches/core-loop --script /home/andrew/scratch/w13/sol/sg10-tier-r5/base_replay.gd
-# -- --record-base --section=runtime --seed=N  (log: /home/andrew/scratch/w13/runtier-repin.log)
+# $HOME/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
+# --headless --path sketches/core-loop --script $HOME/scratch/w13/sol/sg10-tier-r5/base_replay.gd
+# -- --record-base --section=runtime --seed=N  (log: $HOME/scratch/w13/runtier-repin.log)
 # 2026-10-16 wave-15 re-pin (ruling RT1): the schedule hash now leaves out each park row's presentation
 # fields (recipe, fit); KD1-DRESS's three recipe renames had moved all 20. Whole runs unchanged.
 # 2026-10-16 PARK-WIN re-pin: crown_apron at 730.5 -> 731.5 (PW2) and the islands Warden anchor y

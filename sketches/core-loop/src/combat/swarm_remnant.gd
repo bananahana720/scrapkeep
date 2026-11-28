@@ -163,7 +163,7 @@ func _dive_check(ball: Vector3) -> void:
 func _lead_into_pin() -> void:
 	if _knocked_speed() > Weapons.PIN_MIN_SPEED:
 		return
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(GROUP):
 		if enemy == self or enemy.get("kind") == "swarm_remnant" or not is_instance_valid(enemy) or enemy.is_dead():
 			continue
 		var to: Vector3 = enemy.global_position - global_position

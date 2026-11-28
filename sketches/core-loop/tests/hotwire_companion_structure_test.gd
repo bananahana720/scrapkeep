@@ -6,7 +6,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Companion := preload("res://src/core/companion.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 const Icons := preload("res://src/ui/icons.gd")
 

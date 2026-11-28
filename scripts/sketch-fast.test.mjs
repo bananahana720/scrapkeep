@@ -1124,12 +1124,17 @@ test("nodeTestsForPaths: a park prop recipe or file faces the far-mesh fault che
   ]);
   assert.deepEqual(nodeTestsForPaths(["tools/blender/park/props/kit.py", "src/game.gd"]), [
     "scripts/far-faults.test.mjs",
+    "scripts/palette-gd.test.mjs",
+    "tests/palette-kit.test.js",
   ]);
   assert.deepEqual(nodeTestsForPaths(["tools/model_audit.py"]), ["scripts/far-faults.test.mjs"]);
-  assert.deepEqual(nodeTestsForPaths(["src/core/palette.gd"]), ["scripts/palette-gd.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["src/core/palette.gd"]), [
+    "scripts/palette-gd.test.mjs",
+    "tests/palette-kit.test.js",
+  ]);
   assert.deepEqual(
     nodeTestsForPaths(["tools/icons/generate_icons.py", "tools/blender/common.py"]),
-    ["scripts/palette-gd.test.mjs"],
+    ["scripts/palette-gd.test.mjs", "tests/palette-kit.test.js"],
   );
   assert.deepEqual(
     nodeTestsForPaths(["src/world/park/park_dam.json", "assets/models/world_one/ambush_altar.glb"]),
@@ -1484,7 +1489,7 @@ test("selectStage1NodeTests keeps unbundled NODE_PATH_RULES and script tests und
     "scripts/palette-gd.test.mjs": "",
     "scripts/far-faults.test.mjs": "",
   };
-  const coveredByCi = ["scripts/sketch-lint.test.mjs"];
+  const coveredByCi = ["scripts/sketch-lint.test.mjs", "tests/palette-kit.test.js"];
   const args = {
     changedNode: ["scripts/sketch-lint.mjs", "scripts/audio-gate.mjs"],
     changedGodot: ["src/core/palette.gd", "assets/models/park/props/dam/barrel.glb"],
@@ -1497,6 +1502,7 @@ test("selectStage1NodeTests keeps unbundled NODE_PATH_RULES and script tests und
     "scripts/far-faults.test.mjs",
     "scripts/palette-gd.test.mjs",
     "scripts/sketch-lint.test.mjs",
+    "tests/palette-kit.test.js",
   ]);
   assert.deepEqual(selectStage1NodeTests({ ...args, ciGodotOnly: true, isPrimaryShard: true }), [
     "scripts/audio-gate.test.mjs",

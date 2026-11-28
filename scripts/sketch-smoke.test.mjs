@@ -103,12 +103,19 @@ test("parseArgs selects the bot tier with its own receipt label", () => {
 
 function copySmokeRuntime(dir) {
   mkdirSync(path.join(dir, "scripts/lib"), { recursive: true });
-  for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
+  for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs", "toolchain.json"])
     writeFileSync(
       path.join(dir, "scripts", module),
       readFileSync(new URL(`./${module}`, import.meta.url)),
     );
-  for (const module of ["godot-test-runner.mjs", "machine-lock.mjs", "proc.mjs", "receipt.mjs"])
+  for (const module of [
+    "cli.mjs",
+    "git.mjs",
+    "godot-test-runner.mjs",
+    "machine-lock.mjs",
+    "proc.mjs",
+    "receipt.mjs",
+  ])
     writeFileSync(
       path.join(dir, "scripts/lib", module),
       readFileSync(new URL(`./lib/${module}`, import.meta.url)),

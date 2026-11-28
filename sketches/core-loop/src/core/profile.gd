@@ -103,6 +103,12 @@ func save() -> bool:
 	return saved
 
 
+func save_if_allowed() -> bool:
+	if not can_save:
+		return true
+	return save()
+
+
 func disable_saving(reason: String) -> void:
 	can_save = false
 	_refusal = "not saving: %s" % reason

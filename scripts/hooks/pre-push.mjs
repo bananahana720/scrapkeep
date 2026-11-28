@@ -1,14 +1,22 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  KNOWN_FAILING_LEDGER,
+  isGodotPath,
+  isHandoffDocPath,
+  isPackagePath,
+  isSkillPath,
+} from "../ci/affected.mjs";
 import { filterFormatTargets } from "../ci/format-changed.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
+import { isMain } from "../lib/cli.mjs";
+import { REPO_ROOT } from "../lib/git.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const root = REPO_ROOT;
 const ZERO_SHA = "0000000000000000000000000000000000000000";
 export const HOOK_BUDGET_S = 9;
 export const HIGH_LOAD_RATIO = 0.5;
@@ -22,10 +30,6 @@ export function isHighLoad({ loadStart, loadEnd, cpus }) {
   return peak >= cpus * HIGH_LOAD_RATIO;
 }
 
-const KNOWN_FAILING_LEDGER = "project-guide/handoff/KNOWN-FAILING.tsv";
-const DOCS_OR_PKG =
-  /(?:\.md$|^package(?:-lock)?\.json$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.agents\/skills\/|^\.claude\/skills\/)/;
-const SKILLS_TRIGGER = /^(?:\.agents\/skills\/|\.claude\/skills\/|scripts\/check-skills\.mjs$)/;
 const BRIEFS_TRIGGER = /(?:^|\/)sound\/briefs\/|^scripts\/brief-check\.mjs$/;
 
 export function parsePushStdin(text) {
@@ -75,9 +79,11 @@ export function changedFilesForRange(
 
 export function planHookChecks(changedFiles, exists = (f) => existsSync(path.join(root, f))) {
   const jsFiles = filterFormatTargets(changedFiles, exists);
-  const hasSketch = changedFiles.some((f) => f.startsWith("sketches/core-loop/"));
-  const hasDocsOrPkg = changedFiles.some((f) => DOCS_OR_PKG.test(f));
-  const hasSkills = changedFiles.some((f) => SKILLS_TRIGGER.test(f));
+  const hasSketch = changedFiles.some(isGodotPath);
+  const hasDocsOrPkg = changedFiles.some(
+    (f) => isHandoffDocPath(f) || isPackagePath(f) || isSkillPath(f),
+  );
+  const hasSkills = changedFiles.some((f) => isSkillPath(f) || f === "scripts/check-skills.mjs");
   const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
   const hasKnownFailing = changedFiles.includes(KNOWN_FAILING_LEDGER);
   return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing };
@@ -269,16 +275,7 @@ export function parseHookArgs(argv) {
   return opts;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   const started = performance.now();
   const loadStart = os.loadavg()[0];
   const cpus = os.cpus().length;

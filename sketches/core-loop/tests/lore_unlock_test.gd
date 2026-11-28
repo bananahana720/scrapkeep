@@ -44,6 +44,9 @@ class FakeProfile:
 		seen.append(id)
 		return true
 
+	func save_if_allowed() -> bool:
+		return true
+
 var _t
 var _events
 var _codex

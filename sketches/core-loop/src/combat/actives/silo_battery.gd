@@ -106,7 +106,7 @@ func _land() -> void:
 		combat.effects.ring(at, RADIUS, ActiveFx.peak(COLOR))
 		ctx.break_props(at, RADIUS, "silo_battery")
 		var inside: Array = []
-		for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+		for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not enemy.is_dead() and ring.contains(enemy.global_position):
 				inside.append(enemy)
 		for shell in int(entry["shells"]):
@@ -124,7 +124,7 @@ func _land() -> void:
 func _centres(count: int) -> Array:
 	var ball: Vector3 = ctx.player.ball_position()
 	var out: Array = []
-	for target in combat._nearest_list(ball, LOCK_REACH, count):
+	for target in combat.nearest_enemies(ball, LOCK_REACH, count):
 		out.append(target.global_position)
 	var forward := flat_aim()
 	var side := forward.cross(Vector3.UP).normalized()

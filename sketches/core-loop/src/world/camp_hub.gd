@@ -5,6 +5,7 @@ const Recipes := preload("res://src/world/park/park_recipes.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const Layout := preload("res://src/world/camp_layout.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const Bindings := preload("res://src/core/bindings.gd")
@@ -448,7 +449,7 @@ func to_global_spawn() -> Vector3:
 
 func _place(stem: String, xf: Transform3D, with_shells := false, key := "") -> Node3D:
 	var path := ModelVariants.path(GLB_DIR + stem + ".glb")
-	var scenes := Recipes._load(path)
+	var scenes := Recipes.load_glb(path)
 	if scenes.is_empty():
 		push_warning("camp_hub: %s is missing, it stays out" % path)
 		return null
@@ -457,14 +458,14 @@ func _place(stem: String, xf: Transform3D, with_shells := false, key := "") -> N
 	holder.name = stem if key == "" else key
 	root.add_child(holder)
 	holder.transform = xf
-	var body := Recipes._body(holder)
-	Recipes._views(scene, holder, body, Transform3D.IDENTITY)
+	var body := Recipes.collider_body(holder)
+	Recipes.attach_views(scene, holder, body, Transform3D.IDENTITY)
 	if with_shells:
 		for k in 2:
-			var shell_scenes := Recipes._load(GLB_DIR + "%s_detail%d.glb" % [stem, k + 1])
+			var shell_scenes := Recipes.load_glb(GLB_DIR + "%s_detail%d.glb" % [stem, k + 1])
 			for shell: Node in shell_scenes:
-				for view in Recipes._views(shell, holder, body, Transform3D.IDENTITY):
-					Recipes._range(view, 0.0, SHELL_RANGES[k][0], SHELL_RANGES[k][1])
+				for view in Recipes.attach_views(shell, holder, body, Transform3D.IDENTITY):
+					Recipes.set_visibility_range(view, 0.0, SHELL_RANGES[k][0], SHELL_RANGES[k][1])
 				shell.free()
 	var markers := Node3D.new()
 	markers.name = "Sockets"
@@ -477,10 +478,10 @@ func _place(stem: String, xf: Transform3D, with_shells := false, key := "") -> N
 		var marker := Marker3D.new()
 		marker.name = node.name
 		markers.add_child(marker)
-		marker.transform = Recipes._relative(node, scene)
+		marker.transform = Recipes.relative_transform(node, scene)
 	scene.free()
 	if ON_PLAZA.has(stem):
-		Recipes._lift_drawn(holder, Recipes.SURFACE_LAYER_M)
+		Recipes.lift_drawn(holder, Recipes.SURFACE_LAYER_M)
 	if not _pieces.has(stem):
 		_pieces[stem] = holder
 	return holder
@@ -489,9 +490,9 @@ func _place(stem: String, xf: Transform3D, with_shells := false, key := "") -> N
 func _build_ground() -> void:
 	var ground := StaticBody3D.new()
 	ground.name = "CampGround"
-	ground.collision_layer = 0
-	ground.collision_mask = 0
-	ground.set_collision_layer_value(Recipes.WORLD_LAYER, true)
+	ground.collision_layer = PhysicsLayers.NONE
+	ground.collision_mask = PhysicsLayers.NONE
+	ground.set_collision_layer_value(PhysicsLayers.WORLD_LAYER, true)
 	root.add_child(ground)
 	var shape := CollisionShape3D.new()
 	var cylinder := CylinderShape3D.new()
@@ -608,7 +609,7 @@ func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	if solid and not views.is_empty():
 		var hull := solid_hull(views[0] as MeshInstance3D)
 		if hull != null:
-			var body := Recipes._body(holder)
+			var body := Recipes.collider_body(holder)
 			var shape := CollisionShape3D.new()
 			shape.shape = hull
 			body.add_child(shape)
@@ -621,7 +622,7 @@ static func solid_hull(view: MeshInstance3D) -> ConvexPolygonShape3D:
 	var tris := PackedVector3Array()
 	for v in view.mesh.get_faces():
 		tris.append(view.transform * v)
-	return Recipes._band_hull(tris, -INF, SOLID_TOP_M)
+	return Recipes.band_hull(tris, -INF, SOLID_TOP_M)
 
 
 func _build_lights() -> void:
@@ -680,9 +681,9 @@ func _station(id: String, stem: String, socket_name: String, label: String, key:
 func _make_zone(id: String, at: Vector3, radius: float) -> Area3D:
 	var area := Area3D.new()
 	area.name = "Zone_" + id
-	area.collision_layer = 0
-	area.collision_mask = 0
-	area.set_collision_mask_value(Recipes.BALL_LAYER, true)
+	area.collision_layer = PhysicsLayers.NONE
+	area.collision_mask = PhysicsLayers.NONE
+	area.set_collision_mask_value(PhysicsLayers.BALL_LAYER, true)
 	area.monitorable = false
 	area.monitoring = walking
 	var shape := CollisionShape3D.new()
@@ -798,7 +799,7 @@ func _refresh_prompts() -> void:
 		if String(zone.get("verb", "")) != "":
 			card.pressed.connect(press_station.bind(id))
 		else:
-			card.pressed.connect(game.screens._press.bind(glyph))
+			card.pressed.connect(game.screens.press_key.bind(glyph))
 		_prompt_box.add_child(card)
 		_prompt_buttons[id] = card
 

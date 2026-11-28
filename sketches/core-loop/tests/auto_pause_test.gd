@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const AutoPause := preload("res://src/ui/auto_pause.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # The game pauses itself when nobody is at the controls (auto_pause.gd). Focus changes arrive as
 # the engine sends them, propagated from the root; pad drops as Input's joy_connection_changed.

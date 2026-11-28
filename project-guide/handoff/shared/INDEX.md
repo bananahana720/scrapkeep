@@ -8,7 +8,7 @@ Reference copies that units read. The local Mac Studio coordinator owns them (`r
 | [alpha-status/attack-ids.md](alpha-status/attack-ids.md) | Historical wave 17 `#241` E-number claims (live table in `event_kinds.gd`, `telegraph_record.gd`, `LEGIBILITY.md`) |
 | [alpha-status/sitting-watch-list.md](alpha-status/sitting-watch-list.md) | Calls Andrew judges at the playtest sitting |
 | [alpha-status/intent-check/METHOD.md](alpha-status/intent-check/METHOD.md) | The every-park intentionality check. Its script is [scorecard.py](alpha-status/intent-check/scorecard.py) |
-| [gate/BOT-SHARDS.md](gate/BOT-SHARDS.md) | Bot-tier shard commands for the Gate lane |
+| [gate/BOT-SHARDS.md](gate/BOT-SHARDS.md) | Historical wave 18–21 `#241` cloud bot-shard split (superseded by [GATE.md](../GATE.md)) |
 | [ways-of-working/rieseberg-ambition-article.md](ways-of-working/rieseberg-ambition-article.md) | The article behind the ambition brief |
 | [tone/TONE-BIBLE.md](tone/TONE-BIBLE.md) | Pointer to the tone bible in `design-v3/` |
 | [music/SOUND-BIBLE.md](music/SOUND-BIBLE.md) | Pointer to the sound bible in `design-v3/` |

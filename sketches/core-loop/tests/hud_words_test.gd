@@ -25,7 +25,7 @@ const SummaryRows := preload("res://src/ui/summary_rows.gd")
 const Callouts := preload("res://src/ui/callouts.gd")
 const Attachments := preload("res://src/build/attachments.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 # Two tints of one icon must sit at least this far apart in RGB to tell the cards apart.
 const TINT_GAP := 0.3

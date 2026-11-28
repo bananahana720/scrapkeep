@@ -102,6 +102,7 @@ export const ALWAYS = [
   "tests/app_shell_test.gd",
   "tests/identity_value_lint_test.gd",
   "tests/asset_registry_test.gd",
+  "tests/test_tool_owners_test.gd",
 ];
 export const PATH_RULES = [
   {
@@ -155,8 +156,8 @@ export const NODE_PATH_RULES = [
   {
     name: "palette",
     match:
-      /^(src\/core\/palette\.gd|tools\/blender\/common\.py|tools\/palette_gd\.py|tools\/icons\/)/,
-    tests: ["scripts/palette-gd.test.mjs"],
+      /^(src\/core\/palette\.gd|tools\/blender\/common\.py|tools\/blender\/park\/props\/kit\.py|tools\/palette_gd\.py|tools\/icons\/)/,
+    tests: ["scripts/palette-gd.test.mjs", "tests/palette-kit.test.js"],
   },
 ];
 

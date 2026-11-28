@@ -1,6 +1,13 @@
 extends RefCounted
 
-const BUS_DB := {"Music": -1.0, "SFX": -6.0, "UI": -8.0, "Ambient": -7.0}
+const BUS_MASTER := "Master"
+const BUS_MUSIC := "Music"
+const BUS_SFX := "SFX"
+const BUS_UI := "UI"
+const BUS_AMBIENT := "Ambient"
+const BUS_STINGER := "StingerMusic"
+
+const BUS_DB := {BUS_MUSIC: -1.0, BUS_SFX: -6.0, BUS_UI: -8.0, BUS_AMBIENT: -7.0}
 
 const SFX_COMP := {"threshold_db": -16.0, "ratio": 3.0, "attack_us": 3000.0, "release_ms": 120.0, "gain_db": 0.0}
 const SFX_CEILING_DB := -2.0
@@ -8,19 +15,25 @@ const MASTER_COMP := {"threshold_db": -14.0, "ratio": 2.5, "attack_us": 8000.0, 
 const MASTER_CEILING_DB := -1.5
 
 const STATES := {
-	"menu": {"Music": -6.0, "Ambient": -14.0},
-	"camp": {"Music": -8.0, "Ambient": -6.0},
-	"roam": {"Music": -5.0},
-	"combat": {"Music": -1.5, "Ambient": -5.0},
-	"shop": {"Music": -8.0, "Ambient": -6.0},
-	"miniboss": {"Ambient": -10.0},
-	"boss_1": {"Music": -1.0, "Ambient": -14.0},
-	"boss_2": {"Music": -0.5, "Ambient": -14.0},
-	"boss_3": {"Ambient": -16.0},
-	"run_over": {"Music": -7.0, "Ambient": -16.0},
+	"menu": {BUS_MUSIC: -6.0, BUS_AMBIENT: -14.0},
+	"camp": {BUS_MUSIC: -8.0, BUS_AMBIENT: -6.0},
+	"roam": {BUS_MUSIC: -5.0},
+	"combat": {BUS_MUSIC: -1.5, BUS_AMBIENT: -5.0},
+	"shop": {BUS_MUSIC: -8.0, BUS_AMBIENT: -6.0},
+	"miniboss": {BUS_AMBIENT: -10.0},
+	"boss_1": {BUS_MUSIC: -1.0, BUS_AMBIENT: -14.0},
+	"boss_2": {BUS_MUSIC: -0.5, BUS_AMBIENT: -14.0},
+	"boss_3": {BUS_AMBIENT: -16.0},
+	"run_over": {BUS_MUSIC: -7.0, BUS_AMBIENT: -16.0},
 }
 const COMBAT_ON := 0.4
 const COMBAT_OFF := 0.25
+
+
+static func resolve_bus(preferred: String, fallback := BUS_MASTER) -> String:
+	if AudioServer.get_bus_index(preferred) >= 0:
+		return preferred
+	return fallback
 
 
 static func combat_after(was: bool, pressure: float) -> bool:
@@ -32,9 +45,9 @@ static func combat_after(was: bool, pressure: float) -> bool:
 const GLIDE_DOWN_DB_S := 30.0
 const GLIDE_UP_DB_S := 6.0
 
-const FOCUS := {"Music": -2.0, "Ambient": -8.0, "hold_s": 0.4}
+const FOCUS := {BUS_MUSIC: -2.0, BUS_AMBIENT: -8.0, "hold_s": 0.4}
 
-const DROP_ROOM := {"duck": {"SFX": -5.0}, "lift": {"Music": 3.0}}
+const DROP_ROOM := {"duck": {BUS_SFX: -5.0}, "lift": {BUS_MUSIC: 3.0}}
 const DROP_ROOM_BARS := 2
 const DROP_ROOM_LEAD_S := 0.1
 

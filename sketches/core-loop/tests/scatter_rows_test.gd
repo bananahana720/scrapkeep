@@ -467,7 +467,7 @@ func _plain_slopes() -> void:
 		# The chunks under the plain slopes' centres, every kit row.
 		var cells := {}
 		for row: Dictionary in plain:
-			var at: Vector2 = ParkMap._v2(row["at"])
+			var at: Vector2 = ParkMap.v2(row["at"])
 			cells[Vector2i(floori((at.x + ParkTerrain.HALF) / ParkTerrain.TILE_M), floori((at.y + ParkTerrain.HALF) / ParkTerrain.TILE_M))] = true
 		var on_plain := {}
 		var on_built := 0
@@ -491,7 +491,7 @@ func _plain_slopes() -> void:
 			var box := ParkStamps.bounds(ParkStamps.frame(row))
 			if not Rect2(box[0], box[1], box[2] - box[0], box[3] - box[1]).intersects(map.play_rect):
 				continue
-			if not on_plain.has(row["id"]) and not Scatter._kept_out(map.scatter["keep_out"], ParkMap._v2(row["at"])):
+			if not on_plain.has(row["id"]) and not Scatter._kept_out(map.scatter["keep_out"], ParkMap.v2(row["at"])):
 				problems.append("%s/%s has no scatter and nothing built on it" % [map_id, row["id"]])
 		if on_built > 0:
 			problems.append("%s %d pieces inside built footprints" % [map_id, on_built])
@@ -645,7 +645,7 @@ func _lane_mask_shape(map, graph, mask: Dictionary) -> void:
 	var rows := {}
 	for row: Dictionary in map.park["park_rows"]:
 		rows[row["id"]] = row
-	var lips: Vector2 = ParkMap._v2(rows["canal_lips"]["at"])
+	var lips: Vector2 = ParkMap.v2(rows["canal_lips"]["at"])
 	t.check("a routed grind row's chord midpoint is in the mask (dam canal_lips)", Scatter._in_lane(mask, lips.x, lips.y), str(lips))
 	var ends := 0
 	var marked := 0

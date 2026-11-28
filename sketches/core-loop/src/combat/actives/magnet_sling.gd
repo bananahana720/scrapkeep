@@ -91,7 +91,7 @@ func step(delta: float) -> void:
 		ring.set_progress(progress)
 		var at: Vector3 = b["at"]
 		var r: float = float(b["radius"])
-		for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+		for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not is_instance_valid(enemy) or enemy.is_dead():
 				continue
 			if not ring.contains(enemy.global_position):
@@ -123,7 +123,7 @@ func _snap(b: Dictionary) -> void:
 	var dmg: float = float(b["damage"])
 	combat.effects.ring(at, r, ActiveFx.peak(COLOR))
 	combat.effects.spark(at + Vector3.UP * 1.2, ActiveFx.peak(COLOR))
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if is_instance_valid(enemy) and not enemy.is_dead() and ring.contains((enemy as Node3D).global_position):
 			var inward: Vector3 = at - (enemy as Node3D).global_position
 			inward.y = 0.0

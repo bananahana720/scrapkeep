@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Worlds := preload("res://src/core/worlds.gd")
+const StageTable := preload("res://src/core/stage_table.gd")
 
 const BOSS := "brindle"
 const PICK_ON_CLASS_UP := false

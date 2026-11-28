@@ -111,7 +111,7 @@ func _launch(rack, row: Dictionary, bonus: int, scale: float, source_tag: String
 	elif ctx.build != null and ctx.build.get("field") != null:
 		ctx.build.field.apply(ELEMENT, at, PROC_SOURCE)
 	var dmg := impact_damage(scale)
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if is_instance_valid(enemy) and not enemy.is_dead() and ring.contains(enemy.global_position):
 			combat.deal_proc_hit(enemy, KIND, dmg, enemy.global_position - at, KNOCK, "", source_tag, IMPACT)
 	zones.append({
@@ -150,7 +150,7 @@ func step(delta: float) -> void:
 			combat.effects.ring(at, r, ActiveFx.peak(COLOR))
 			if ctx.build != null and ctx.build.get("field") != null:
 				ctx.build.field.apply(ELEMENT, at, PROC_SOURCE)
-			for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+			for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 				if is_instance_valid(enemy) and not enemy.is_dead() and ring.contains(enemy.global_position):
 					combat.deal_proc_hit(enemy, KIND, float(z["damage"]), enemy.global_position - at, 0.0, "", PROC_SOURCE, IMPACT)
 		if float(z["left"]) > 0.0:

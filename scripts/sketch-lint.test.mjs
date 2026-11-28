@@ -3,12 +3,14 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import "./lib/cli.test.mjs";
+import "./lib/game-defs.test.mjs";
+import "./lib/git.test.mjs";
+import "./lib/walk.test.mjs";
 import {
+  BASELINE_RULES,
   FAULT_SWITCHES,
-  ID_COMPARE_LEGACY,
   L13_ALLOWED,
-  L14_STATIC_VAR_BASELINE,
-  L15_HZ_BASELINE,
   applyBaseline,
   baselineFrom,
   buildScriptGraph,
@@ -30,6 +32,7 @@ import {
   lintL14,
   lintL15,
   lintL16,
+  lintL17,
   lintSketch,
   parseBatchDriverRefs,
   parseBatchDriverVars,
@@ -326,17 +329,32 @@ test("L11 flags StringName compares, match arms and ID prefix tests, and leaves 
   );
 });
 
-test("L11's frozen allow table matches the game source, and a planted branch in a listed file fails", () => {
-  for (const [rel, row] of Object.entries(ID_COMPARE_LEGACY)) {
+test("L11's baseline table matches the game source, and a planted branch in a listed file fails", () => {
+  const baseline = JSON.parse(
+    readFileSync(new URL("./sketch-lint.baseline.json", import.meta.url), "utf8"),
+  );
+  assert.ok(Object.keys(baseline.L11).length > 0);
+  for (const [file, sites] of Object.entries(baseline.L11)) {
+    const rel = file.replace(/^sketches\/core-loop\//, "");
     const text = readFileSync(path.join(sketchDir, rel), "utf8");
-    assert.deepEqual(lintL11(rel, rel, text), [], rel);
-    assert.equal(lintL11(rel, rel, text, {}).length, row.sites, rel);
+    const raw = lintL11(file, rel, text);
+    assert.equal(raw.length, sites, file);
+    assert.deepEqual(
+      applyBaseline(raw, { L11: { [file]: sites } }, () => true),
+      [],
+      file,
+    );
     for (const plant of [
       '\nfunc _planted(p):\n\tmatch p:\n\t\t"tarn":\n\t\t\tpass\n',
       '\nfunc _planted(p):\n\treturn p == &"tarn"\n',
       '\nfunc _planted(p):\n\treturn p == "tarn"\n',
     ]) {
-      assert.equal(lintL11(rel, rel, text + plant).length, row.sites + 1, `${rel} ${plant}`);
+      const regressed = lintL11(file, rel, text + plant);
+      assert.equal(
+        applyBaseline(regressed, { L11: { [file]: sites } }, () => true).length,
+        sites + 1,
+        `${rel} ${plant}`,
+      );
     }
   }
 });
@@ -690,6 +708,9 @@ test("the baseline silences listed offenders and shrinks only", () => {
     L2: [],
     L3: [],
     L4: [],
+    L11: {},
+    L14: [],
+    L15: {},
     L16: [],
     W1: {},
     W2: {},
@@ -698,6 +719,55 @@ test("the baseline silences listed offenders and shrinks only", () => {
     W7: {},
     S8: {},
   });
+});
+
+test("unified baseline registry round-trips baselineFrom -> applyBaseline and catches stale entries for L11, L14, and L15", () => {
+  assert.equal(BASELINE_RULES.L11.shape, "count");
+  assert.equal(BASELINE_RULES.L14.shape, "keys");
+  assert.equal(BASELINE_RULES.L15.shape, "count");
+
+  const raw = [
+    { rule: "L11", path: "sketches/core-loop/src/a.gd", line: 4, message: "id branch" },
+    { rule: "L11", path: "sketches/core-loop/src/a.gd", line: 9, message: "id branch" },
+    {
+      rule: "L14",
+      path: "sketches/core-loop/src/b.gd",
+      line: 3,
+      message: "static var _x",
+      key: "sketches/core-loop/src/b.gd:_x",
+    },
+    { rule: "L15", path: "sketches/core-loop/tests/c_test.gd", line: 7, message: "60 hz" },
+    { rule: "L15", path: "sketches/core-loop/tests/c_test.gd", line: 12, message: "60 hz" },
+  ];
+
+  const base = baselineFrom(raw);
+  assert.deepEqual(base.L11, { "sketches/core-loop/src/a.gd": 2 });
+  assert.deepEqual(base.L14, ["sketches/core-loop/src/b.gd:_x"]);
+  assert.deepEqual(base.L15, { "sketches/core-loop/tests/c_test.gd": 2 });
+  assert.deepEqual(
+    applyBaseline(raw, base, () => true),
+    [],
+  );
+
+  const reduced = [raw[0], raw[3]];
+  const stale = applyBaseline(reduced, base, (file) => file !== "sketches/core-loop/src/b.gd");
+  assert.deepEqual(stale.map((item) => `${item.rule} ${item.path}`).sort(), [
+    "BASELINE sketches/core-loop/src/a.gd",
+    "BASELINE sketches/core-loop/src/b.gd",
+    "BASELINE sketches/core-loop/tests/c_test.gd",
+  ]);
+  assert.match(
+    stale.find((item) => item.path === "sketches/core-loop/src/a.gd").message,
+    /L11 fell to 1 from 2: lower the baseline to 1/,
+  );
+  assert.match(
+    stale.find((item) => item.path === "sketches/core-loop/src/b.gd").message,
+    /L14 \(sketches\/core-loop\/src\/b\.gd:_x\) no longer offends \(file is gone\): remove from baseline/,
+  );
+  assert.match(
+    stale.find((item) => item.path === "sketches/core-loop/tests/c_test.gd").message,
+    /L15 fell to 1 from 2: lower the baseline to 1/,
+  );
 });
 
 const wardenDress = (light) => `func _dress_warden(warden) -> void:
@@ -976,15 +1046,21 @@ test("words: the count baseline holds a file at its count, fails it above, and a
   assert.deepEqual(baselineFrom([hit("a.gd"), hit("a.gd")]).W6, { "a.gd": 2 });
 });
 
-test("L14 passes the checked-out core-loop src tree and parses test_batch_driver refs", () => {
+test("L14 passes the checked-out core-loop src tree against baseline and parses test_batch_driver refs", () => {
   const driverText = readFileSync(path.join(sketchDir, "tools", "test_batch_driver.gd"), "utf8");
   const refs = parseBatchDriverRefs(driverText);
   assert.ok(refs.size >= 80, `expected >= 80 driver refs, got ${refs.size}`);
   assert.ok(refs.has("src/build/parts.gd"));
   assert.ok(refs.has("src/core/challenge_dials.gd"));
-  assert.ok(L14_STATIC_VAR_BASELINE.size > 0);
-  const findings = lintSketch("core-loop").filter((item) => item.rule === "L14");
-  assert.deepEqual(findings, []);
+  const baseline = JSON.parse(
+    readFileSync(new URL("./sketch-lint.baseline.json", import.meta.url), "utf8"),
+  );
+  assert.ok(baseline.L14.length > 0);
+  const raw = lintSketch("core-loop").filter((item) => item.rule === "L14");
+  assert.deepEqual(
+    applyBaseline(raw, { L14: baseline.L14 }, () => true),
+    [],
+  );
 });
 
 test("L14 blocks a new unwired static var and fails when a registered file adds a second unreset static var", () => {
@@ -1056,18 +1132,29 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
   );
 });
 
-test("L15 passes the checked-out core-loop tests tree and blocks a second 60 Hz literal in find_in_fight_test.gd", () => {
-  assert.ok(Object.keys(L15_HZ_BASELINE).length > 0);
-  assert.equal(L15_HZ_BASELINE["tests/find_in_fight_test.gd"], 1);
-  const findings = lintSketch("core-loop").filter((item) => item.rule === "L15");
-  assert.deepEqual(findings, []);
+test("L15 passes the checked-out core-loop tests tree against baseline and blocks a second 60 Hz literal in find_in_fight_test.gd", () => {
+  const baseline = JSON.parse(
+    readFileSync(new URL("./sketch-lint.baseline.json", import.meta.url), "utf8"),
+  );
+  assert.ok(Object.keys(baseline.L15).length > 0);
+  assert.equal(baseline.L15["sketches/core-loop/tests/find_in_fight_test.gd"], 1);
+  const raw = lintSketch("core-loop").filter((item) => item.rule === "L15");
+  assert.deepEqual(
+    applyBaseline(raw, { L15: baseline.L15 }, () => true),
+    [],
+  );
   const findRel = "tests/find_in_fight_test.gd";
+  const findPath = `sketches/core-loop/${findRel}`;
   const findText = readFileSync(path.join(sketchDir, findRel), "utf8");
   const regressed = `${findText}\nconst REGRESSED_FRAMES := int(ScreenBusy.FIND_HOLD * 60.0)\n`;
-  const bad = lintL15(`sketches/core-loop/${findRel}`, findRel, regressed);
+  const bad = applyBaseline(
+    lintL15(findPath, findRel, regressed),
+    { L15: { [findPath]: 1 } },
+    () => true,
+  );
   assert.equal(bad.length, 2);
   assert.match(bad[0].message, /Engine\.physics_ticks_per_second/);
-  assert.match(bad[0].message, /L15_HZ_BASELINE allows 1/);
+  assert.match(bad[0].message, /2 in this file, baseline 1/);
 });
 
 test("L15 blocks hardcoded 60 Hz physics frame math and passes Engine.physics_ticks_per_second", () => {
@@ -1108,7 +1195,7 @@ test("L15 blocks hardcoded 60 Hz physics frame math and passes Engine.physics_ti
   const ratcheted = lintL15(file, rel, badSrc, { [rel]: 2 });
   assert.equal(ratcheted.length, 3);
   assert.match(ratcheted[0].message, /Engine\.physics_ticks_per_second/);
-  assert.match(ratcheted[0].message, /L15_HZ_BASELINE allows 2/);
+  assert.match(ratcheted[0].message, /L15 baseline allows 2/);
 });
 
 test("L16 extracts edges from preload, load, extends, path constants, data rows and class_name, and skips self, prefixes, strings and comments", () => {
@@ -1261,4 +1348,33 @@ test("L16 reports one finding per file in a cycle with size and in-loop neighbou
     ["L16 sketches/core-loop/src/e.gd", "BASELINE sketches/core-loop/src/leaf.gd"],
   );
   assert.match(after[1].message, /L16 no longer offends: remove from baseline/);
+});
+
+test("L17 flags hardcoded /home/andrew paths in scripts and passes HOME-based paths", () => {
+  const clean = [
+    "from pathlib import Path",
+    'P = Path.home() / "scratch/w18"',
+    'GODOT="${GODOT:-$HOME/.local/share/godot/godot}"',
+    "# $HOME/scratch/log",
+  ].join("\n");
+  assert.deepEqual(lintL17("sketches/core-loop/tools/ok.py", clean), []);
+
+  const bad = [
+    'P = "/home/andrew/scratch/w18"',
+    "G=/home/andrew/.local/share/godot/godot",
+    "# /home/andrew/scratch/log",
+  ].join("\n");
+  const hits = lintL17("sketches/core-loop/tools/bad.py", bad);
+  assert.deepEqual(
+    hits.map((item) => `${item.rule} ${item.path}:${item.line}`),
+    [
+      "L17 sketches/core-loop/tools/bad.py:1",
+      "L17 sketches/core-loop/tools/bad.py:2",
+      "L17 sketches/core-loop/tools/bad.py:3",
+    ],
+  );
+  assert.match(hits[0].message, /hardcoded \/home\/andrew path/);
+
+  const realL17 = lintSketch("core-loop").filter((item) => item.rule === "L17");
+  assert.deepEqual(realL17, []);
 });

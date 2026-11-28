@@ -6,6 +6,7 @@ const Anchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const Word := preload("res://src/presentation/world_fx/world_fx_word.gd")
 const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 const RANK_SECONDS := 0.25
 const BURST_POOL := 2
@@ -271,7 +272,7 @@ func play(hook: String, at: Vector3, tint := Color.TRANSPARENT, size := 1.0) -> 
 			continue
 		p.amount_ratio = share
 		p.global_transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), at)
-		p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else Grain.tint(id, p.get_meta("grain", {})))
+		p.set_instance_shader_parameter(FxLibrary.TINT, tint if tint.a > 0.0 else Grain.tint(id, p.get_meta("grain", {})))
 		p.restart()
 		p.emitting = true
 	if row["word"] != "" and not reduced_motion:

@@ -76,13 +76,13 @@ const CraftPropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const ExperimentalSetpieceCraft := preload("res://src/presentation/craft/experimental_setpiece_craft.gd")
 const ExperimentalAudioBank := preload("res://src/presentation/experimental_audio_bank.gd")
-const LiveRunBridge := preload("res://src/experimental/live_run_bridge.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const World23ChunkCraft := preload("res://src/presentation/world23_chunk_craft.gd")
 const CraftShowcaseAssembly := preload("res://src/presentation/craft/craft_showcase_assembly.gd")
+const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -242,13 +242,13 @@ func _reset() -> void:
 	EnemyBossCraft.reset_for_tests()
 	ExperimentalSetpieceCraft.reset_for_tests()
 	ExperimentalAudioBank._reset()
-	LiveRunBridge._reset()
 	BossModel.reset_for_tests()
 	CampCraftMeshes.reset_for_tests()
 	ParkRecipes._reset()
 	ModelKit.reset_for_tests()
 	World23ChunkCraft._reset()
 	CraftShowcaseAssembly.reset_for_tests()
+	CraftLookdev.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"

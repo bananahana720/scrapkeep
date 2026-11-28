@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { fileURLToPath } from "node:url";
 import { profiles } from "./asset-profiles.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const fail = (message) => {
   throw new Error(message);
@@ -741,5 +741,4 @@ export function run(args) {
   }
   return report.status === "invalid" ? 1 : report.status === "over_budget" ? 2 : 0;
 }
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exitCode = run(process.argv.slice(2));
+if (isMain(import.meta.url)) process.exitCode = run(process.argv.slice(2));

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const DamageDoor := preload("res://src/combat/damage_door.gd")
+const Groups := preload("res://src/core/groups.gd")
 const SiltBoil := preload("res://src/combat/silt_boil.gd")
 
 static var plants: Array[String] = []
@@ -29,7 +30,7 @@ static func strike(tree: SceneTree, inside: Callable, source: String, damage: fl
 	if tree == null or planted("skip_enemies"):
 		return 0
 	var count := 0
-	for enemy in tree.get_nodes_in_group("enemy"):
+	for enemy in tree.get_nodes_in_group(Groups.ENEMY):
 		if DamageDoor.dead(enemy) or SiltBoil.set_piece(enemy) or struck.has(enemy.get_instance_id()):
 			continue
 		var feet: Vector3 = enemy.global_position - Vector3.UP * float(enemy.get("half_height") if enemy.get("half_height") != null else 0.0)

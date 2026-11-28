@@ -1,6 +1,8 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/cli.mjs";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { walkSync } from "./lib/walk.mjs";
 
 export const RAW_EXTENSIONS = ["bin", "dat", "csv", "txt", "tsv", "raw", "ndjson"];
 const literal = new RegExp(`"([^"\\n]*\\.(?:${RAW_EXTENSIONS.join("|")}))"`, "g");
@@ -55,14 +57,8 @@ export function uncoveredFiles({ files, include, exclude = [] }) {
   return files.filter((file) => !covered(file, exclude) && !covered(file, include));
 }
 
-function walk(dir, base, out) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const rel = base ? base + "/" + entry.name : entry.name;
-    if (entry.isDirectory()) {
-      if (entry.name !== ".godot") walk(path.join(dir, entry.name), rel, out);
-    } else out.push(rel);
-  }
-  return out;
+function walk(dir) {
+  return walkSync(dir, { prune: (entry) => entry.name === ".godot" }).map((entry) => entry.rel);
 }
 
 export function checkPreset({ sketch, presetText, presetName = "Linux x64" }) {
@@ -73,7 +69,7 @@ export function checkPreset({ sketch, presetText, presetName = "Linux x64" }) {
   const field = (name) => new RegExp(`^${name}=(.*)$`, "m").exec(block[0])?.[1] ?? '""';
   const include = filterList(field("include_filter"));
   const exclude = filterList(field("exclude_filter"));
-  const projectFiles = walk(sketch, "", []);
+  const projectFiles = walk(sketch);
   const literals = [];
   for (const rel of projectFiles.filter((file) => file.startsWith("src/") && file.endsWith(".gd")))
     literals.push(...rawLiterals(readFileSync(path.join(sketch, rel), "utf8")));
@@ -86,8 +82,8 @@ export function checkPreset({ sketch, presetText, presetName = "Linux x64" }) {
   return { problems, files };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+if (isMain(import.meta.url)) {
+  const root = REPO_ROOT;
   const sketch = path.join(root, "sketches/core-loop");
   const presets = process.argv.includes("--preset")
     ? [process.argv[process.argv.indexOf("--preset") + 1]]

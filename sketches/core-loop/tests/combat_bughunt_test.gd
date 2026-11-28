@@ -149,7 +149,7 @@ func _would_crush() -> void:
 # F009: a trick found in run 1 and again in run 2 is in run 2's log once.
 func _discovery_log() -> void:
 	var at: Vector3 = _game.player.ball_position()
-	_combat._discover("chain", at)
+	_combat.discover("chain", at)
 	_game.events.run_started.emit("rivet")
-	_combat._discover("chain", at)
+	_combat.discover("chain", at)
 	_report("F009 log", _combat.discovery_log == ["chain"], "run 2's discovery_log: %s" % [_combat.discovery_log])

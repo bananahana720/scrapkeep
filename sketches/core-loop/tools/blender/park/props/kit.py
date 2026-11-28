@@ -43,6 +43,7 @@ sys.path.insert(0, str(BLENDER.parent))
 import common
 import model_audit
 import cycles_device
+import palette_gd
 import polish
 
 SCHEMA = "scrapkeep-park-props-kit/1"
@@ -59,18 +60,18 @@ FLOOR_TOL = 0.02
 RESEAT_MAX = 0.15
 
 C = {
-    "sandstone": "c6a274", "sandstone_dark": "a98b60", "sandstone_pale": "d8c19a",
+    "sandstone": palette_gd.HEX["SANDSTONE"], "sandstone_dark": "a98b60", "sandstone_pale": "d8c19a",
     "concrete": "9a9a94", "concrete_dark": "6f706b", "concrete_light": "b8b7ae",
     "concrete_stain": "7d7a70",
     "timber": "8a6a46", "timber_dark": "5d4630", "timber_grey": "8e8470", "timber_pale": "a8885c",
     "canvas": "d9d2bc", "canvas_dark": "b9b095", "canvas_stain": "a79e83",
-    "cable": "2a3231", "charcoal": "242a28", "iron": "4a4e4c", "iron_light": "6b706c",
-    "verdigris": "5f8a7c", "rust": "8a5a44", "bone": "d2c5a5", "soil": "6a5a42",
+    "cable": palette_gd.HEX["CABLE"], "charcoal": palette_gd.HEX["CHARCOAL"], "iron": "4a4e4c", "iron_light": "6b706c",
+    "verdigris": "5f8a7c", "rust": "8a5a44", "bone": palette_gd.HEX["SAND"], "soil": "6a5a42",
     "leaf": "6f7f4a", "leaf_dark": "4f5e38", "dry_grass": "a39a64",
 }
-BANNED = {"ff5a3c", "9dff3c", "8bf0d3"}
+BANNED = {palette_gd.HEX["HAZARD"], palette_gd.HEX["ANCIENT"], palette_gd.HEX["ARC"]}
 BANNED_NEAR = 0.08
-WARN = {"e5a044", "b77843", "d9b44a"}
+WARN = {palette_gd.HEX["AMBER"], palette_gd.HEX["COPPER"], palette_gd.HEX["BRASS"]}
 
 
 def hexcolor(c):
@@ -128,7 +129,7 @@ BOARD_NEAR = 0.05
 SHADE_HUE = 0.03
 SHADE_SAT = 0.08
 SHADE_VAL_MIN, SHADE_VAL_MAX = 0.70, 1.25
-BRASS_HEX = "d9b44a"
+BRASS_HEX = palette_gd.HEX["BRASS"]
 BRASS_TAG_PARTS = 4
 BRASS_TAG_BOX = 0.6
 

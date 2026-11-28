@@ -9,6 +9,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Relics := preload("res://src/build/relics.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
@@ -208,7 +209,7 @@ func _record(id: String, detail: Dictionary) -> void:
 	last_swap["id"] = id
 
 
-func _overdrive_for(slot: String) -> float:
+func overdrive_for(slot: String) -> float:
 	if ctx == null or ctx.run == null:
 		return 1.0
 	var relic_id := String(Relics.held(ctx.run.parts).get(slot, ""))
@@ -278,7 +279,7 @@ func _spawn_arc_chord(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 		to_pt = from_pt + combat._flat_aim() * 6.0
 	if _arc_chords.size() >= ARC_CHORD_CAP:
 		_arc_chords.pop_front()
-	var od := _overdrive_for(AbilityState.LINE)
+	var od := overdrive_for(AbilityState.LINE)
 	var width := ARC_CHORD_WIDTH * (1.25 if od > 1.0 else 1.0)
 	var dmg: float = ARC_CHORD_DAMAGE * mult * od * combat._damage_mod(Weapons.ARC_CASTER)
 	var rec := {
@@ -382,7 +383,7 @@ func _queue_fan_burst(weapon: String, shot_desc: Dictionary, muzzle: Vector3, fo
 	var is_sixth: bool = bool(shot_desc.get("sixth_hot", false)) or _fan_shot_index == FAN_CYLINDER_ROUNDS
 	if is_sixth:
 		_fan_shot_index = 0
-	var od := _overdrive_for(AbilityState.WEAPON)
+	var od := overdrive_for(AbilityState.WEAPON)
 	var up_hint := Vector3.UP if absf(forward.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	var right := forward.cross(up_hint).normalized()
 	for i in 2:
@@ -577,12 +578,12 @@ func _cable_cluster_world(at: Vector3, fraction: float, mult: float) -> void:
 
 func _drop_wire_cluster(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 	var dropped := 0
-	var od := _overdrive_for(AbilityState.LINE)
+	var od := overdrive_for(AbilityState.LINE)
 	var count := CLUSTER_COUNT + (1 if od > 1.0 else 0)
 	var dmg: float = Weapons.MINI_DAMAGE * CLUSTER_DAMAGE_MULT * mult * od * combat._damage_mod(Weapons.STICKY_CHARGE)
 	for i in count:
 		var t: float = float(i + 1) / float(count + 1)
-		var spot: Vector3 = combat._floor_at(from_pt.lerp(to_pt, t) + Vector3.UP)
+		var spot: Vector3 = combat.floor_at(from_pt.lerp(to_pt, t) + Vector3.UP)
 		var charge: Dictionary = combat.sticky.drop(spot, dmg, Weapons.MINI_RADIUS, Weapons.MINI_FUSE, Weapons.MINI_ARM, 0.0, combat._clock)
 		charge["_source"] = "item_proc"
 		charge["_cluster"] = true
@@ -627,7 +628,7 @@ func _claw_whirl_body(target: Node3D, _fraction: float, mult: float) -> void:
 	offset.y = 0.0
 	var radius: float = clampf(offset.length(), WHIRL_RADIUS_MIN, WHIRL_RADIUS_MAX)
 	var start_angle: float = atan2(offset.z, offset.x) if offset.length() > 0.01 else 0.0
-	var od := _overdrive_for(AbilityState.LINE)
+	var od := overdrive_for(AbilityState.LINE)
 	var whirl := {
 		"enemy": weakref(target),
 		"eid": target.get_instance_id(),
@@ -689,7 +690,7 @@ func on_ledger_cast(point: Vector3, damage: float, _shot_desc: Dictionary) -> vo
 	var mut: String = String(ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", ""))
 	if not tape_echo_follows("weapon", mut):
 		return
-	var od := _overdrive_for(AbilityState.WEAPON)
+	var od := overdrive_for(AbilityState.WEAPON)
 	_tape_echoes.append({
 		"point": point,
 		"damage": damage * TAPE_ECHO_MULT * od,
@@ -711,7 +712,7 @@ func _step_tape_echoes(delta: float) -> void:
 		var pt: Vector3 = e["point"]
 		var dmg: float = float(e["damage"])
 		var hits := 0
-		for enemy in get_tree().get_nodes_in_group("enemy"):
+		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not _alive(enemy) or not combat.in_ring(pt, Weapons.BALANCE_RADIUS, enemy):
 				continue
 			combat._ledger_hit(enemy, dmg, pt, Weapons.LEDGER_KNOCK * 0.6, "item_proc")
@@ -724,7 +725,7 @@ func _step_tape_echoes(delta: float) -> void:
 
 func _mortar_geometry(f: float) -> Dictionary:
 	var reach := AbilityState.Gauge.scaled(f, MORTAR_REACH_MIN, MORTAR_REACH_MAX)
-	var centre: Vector3 = combat._floor_at(ctx.player.ball_position() + combat._flat_aim() * reach + Vector3.UP)
+	var centre: Vector3 = combat.floor_at(ctx.player.ball_position() + combat._flat_aim() * reach + Vector3.UP)
 	return ctx.player.yours({"kind": "ring", "centre": centre, "radius": MORTAR_RADIUS, "full_radius": MORTAR_RADIUS, "fill": f})
 
 
@@ -889,7 +890,7 @@ func _fire_snare_detonate(f: float, shape: Dictionary) -> void:
 	var ball_heft: float = ctx.player.heft()
 	var snared := 0
 	var dmg: float = SNARE_APEX_DAMAGE * combat._damage_mod(Weapons.STICKY_CHARGE)
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not _alive(enemy) or _protected(enemy):
 			continue
 		if Roster.heft_of(enemy) > ball_heft:

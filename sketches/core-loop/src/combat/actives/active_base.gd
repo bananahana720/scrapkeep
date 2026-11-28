@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Groups := preload("res://src/core/groups.gd")
+
 var ctx
 var combat
 

@@ -1228,6 +1228,13 @@ func _unseal() -> void:
 	ctx.events.beacon_charge_changed.emit(1.0)
 
 
+func force_unseal() -> bool:
+	if not in_stage():
+		return false
+	_unseal()
+	return true
+
+
 func _on_enemy_struck(enemy: Node3D, _kind: String, _force: float) -> void:
 	if sealed and enemy == warden:
 		_engage()

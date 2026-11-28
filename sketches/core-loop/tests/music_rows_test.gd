@@ -4,7 +4,6 @@ extends SceneTree
 # retain a valid synth theme silently. File lookup preserves source-first export sidecars.
 const Rows := preload("res://src/presentation/music_rows.gd")
 const Ace := preload("res://src/presentation/ace_sequencer.gd")
-const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const DefaultStages := preload("res://src/core/stage_defs.gd")
 const AlphaStages := preload("res://src/core/alpha_defs.gd")
 const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
@@ -35,13 +34,13 @@ func _initialize() -> void:
 			var pack := Rows.resolve(row)
 			_report("stage pack", _valid(pack), "%s: %s" % [row["name"], pack])
 			_report("stage theme preserved", pack["synth_theme"] == row["music"]["theme"], str(pack))
-			_report("synth uses rows", MusicEngine.stage_theme(row) == pack["synth_theme"], str(pack))
+			_report("synth uses rows", Rows.stage_theme(row) == pack["synth_theme"], str(pack))
 	for id in Rows.ROWS:
 		_report("table pack", _valid(Rows.resolve(id)), "%s: %s" % [id, Rows.resolve(id)])
 	_report("unknown id uses default", Rows.resolve("unknown") == Rows.resolve("default"), str(Rows.resolve("unknown")))
 	_report("empty stage uses default", Rows.resolve({}) == Rows.resolve("default"), str(Rows.resolve({})))
 	var spillway := Rows.resolve("1-1")
-	_report("Spillway keeps ACE name and theme", spillway["synth_theme"] == 0 and spillway["ace_manifest"] == Ace.resolve_manifest(Ace.MANIFEST), str(spillway))
+	_report("Spillway keeps ACE name and theme", spillway["synth_theme"] == 0 and spillway["ace_manifest"] == Rows.resolve_manifest(Ace.MANIFEST), str(spillway))
 	_report("Reach uses ACE with synth theme 1", Rows.resolve("1-2") == {"synth_theme": 1, "ace_manifest": Rows.resolve_manifest("res://assets/music_ace/cable_reach/manifest.json")}, str(Rows.resolve("1-2")))
 
 	var tracks := {"2-1": "dig_upper", "2-2": "dig_deep", "3-1": "highdraft", "3-2": "highdraft_crown"}
@@ -55,7 +54,7 @@ func _initialize() -> void:
 			and (band.ready() or band.missing.ends_with(".ogg")), zone)
 
 	var override := {"world": 1, "stage": 1, "music": {"theme": 2, "ace": ""}}
-	_report("override wins over Spillway", Rows.resolve(override) == {"synth_theme": 2, "ace_manifest": ""} and MusicEngine.stage_theme(override) == 2, str(Rows.resolve(override)))
+	_report("override wins over Spillway", Rows.resolve(override) == {"synth_theme": 2, "ace_manifest": ""} and Rows.stage_theme(override) == 2, str(Rows.resolve(override)))
 	var other := {"world": 1, "stage": 2, "music": {"theme": 0, "ace": "spillway"}}
 	_report("override selects existing ACE", Rows.resolve(other)["ace_manifest"] == spillway["ace_manifest"], str(Rows.resolve(other)))
 	_report("override leaves sources intact", Rows.ROWS["1-1"]["synth_theme"] == 0 and override["music"]["theme"] == 2, "table and stage row unchanged")

@@ -55,7 +55,7 @@ func _label(table) -> String:
 	return "park" if table == ParkDefs else "alpha"
 
 
-# combat.gd reads CLIP_CAP[_heft_index()], rivet_kit.gd CUTTER_WIDTH[class - 1] and
+# combat.gd reads CLIP_CAP[ultimate.heft_index()], rivet_kit.gd CUTTER_WIDTH[class - 1] and
 # warden_reactor.gd HEFT_CLASS_AT[class - 1]: one entry per heft class, or class V crashes.
 func _heft_tables() -> void:
 	var classes: int = RunState.HEFT_CLASS_AT.size()

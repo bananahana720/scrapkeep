@@ -5,7 +5,7 @@ const Game := preload("res://src/game.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const MechanicsDiagram := preload("res://src/ui/mechanics_diagram.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("help_mechanics_pictures_test")

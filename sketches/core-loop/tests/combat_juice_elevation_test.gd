@@ -13,7 +13,7 @@ const FxBudget := preload("res://src/presentation/fx_budget.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Density := preload("res://src/presentation/density.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 const FUSION_KEYS := ["arc+frost", "arc+kinetic", "frost+kinetic", "frost+heat", "arc+heat", "heat+kinetic"]
 

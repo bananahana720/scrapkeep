@@ -1,9 +1,12 @@
 extends Node
 
 const Grip := preload("res://src/movement/grip.gd")
+const Groups := preload("res://src/core/groups.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 
 const HANG := 5.0
 const YANK_SPEED := 16.0
@@ -90,7 +93,7 @@ func _take(node: Node3D) -> void:
 		node.remove_from_group(BUDGET_GROUP)
 	if node is CollisionObject3D:
 		_layer = node.collision_layer
-		node.collision_layer = 0
+		node.collision_layer = PhysicsLayers.NONE
 	if node is CharacterBody3D:
 		node.velocity = Vector3.ZERO
 
@@ -120,7 +123,7 @@ func _carry(delta: float, player) -> void:
 
 func _swing(player) -> void:
 	var scale := maxf(MIN_SPEED_SCALE, player.state.velocity.length() / player.tuning.tier_cruise())
-	for other in get_tree().get_nodes_in_group("enemy"):
+	for other in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if other == body or DamageDoor.dead(other):
 			continue
 		if not _touching(body, other):
@@ -152,9 +155,7 @@ func _strike(other: Node3D, scale: float) -> void:
 
 
 static func _touching(a: Node3D, b: Node3D) -> bool:
-	var ra = a.get("radius")
-	var rb = b.get("radius")
-	var reach := (float(ra) if ra != null else 1.0) + (float(rb) if rb != null else 1.0) + TOUCH
+	var reach := ActiveBase.enemy_girth(a, 1.0) + ActiveBase.enemy_girth(b, 1.0) + TOUCH
 	return a.global_position.distance_to(b.global_position) <= reach
 
 
@@ -191,7 +192,7 @@ func _fly(delta: float) -> void:
 		f["left"] -= delta
 		if f["left"] <= 0.0 or DamageDoor.dead(node):
 			continue
-		for other in get_tree().get_nodes_in_group("enemy"):
+		for other in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if other == node or other == body or not is_instance_valid(other) or f["hit"].has(other.get_instance_id()):
 				continue
 			if other.has_method("is_dead") and other.is_dead():

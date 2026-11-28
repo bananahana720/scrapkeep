@@ -2,11 +2,11 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # The pause menu, its settings and the title's help page (v2 W10), driven by real mouse
 # and key events pushed into the viewport, with the workshop armed as in play. Screen

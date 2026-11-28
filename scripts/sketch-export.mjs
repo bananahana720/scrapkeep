@@ -6,8 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
+import { isMain } from "./lib/cli.mjs";
 import {
   GODOT_VERSION,
+  TOOLCHAIN,
   resolveGodotBinary,
   scratchGodotEnv,
   withScratchGodotEnv,
@@ -478,7 +480,7 @@ function bossSmoke(crash) {
   return smoke;
 }
 
-export const EXPORT_TEMPLATE_REL = "godot/export_templates/4.7.2.stable/linux_release.x86_64";
+export const EXPORT_TEMPLATE_REL = `godot/export_templates/${TOOLCHAIN.godotTemplateVersion}/linux_release.x86_64`;
 
 export function resolveExportTemplate({
   env = process.env,
@@ -821,7 +823,7 @@ export async function runLinuxExport({
       buildStamp({
         sha,
         stamp,
-        godot: "4.7.2.stable",
+        godot: TOOLCHAIN.godotTemplateVersion,
         winProof: proofLine,
         headless: true,
       }),
@@ -845,7 +847,7 @@ export async function runLinuxExport({
       sha,
       dirty,
       stamp,
-      godot: "4.7.2.stable",
+      godot: TOOLCHAIN.godotTemplateVersion,
       stems: stemCount,
       stemsFrom,
       winProof: proofLine,
@@ -1025,5 +1027,4 @@ export async function playProofTries(proof, playOnce) {
   return { ok: true, line: last.line + note, outcomes };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  await main();
+if (isMain(import.meta.url)) await main();

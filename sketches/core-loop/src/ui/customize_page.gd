@@ -539,8 +539,7 @@ static func backfill(profile, progress) -> int:
 		if amount >= float(Achievements.row(id)["count"]):
 			progress._earn(id, Achievements.row(id))
 			granted += 1
-	if profile.can_save:
-		profile.save()
+	profile.save_if_allowed()
 	return granted
 
 

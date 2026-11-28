@@ -1,6 +1,7 @@
 extends Node
 
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Fleet := preload("res://src/combat/fleet.gd")
 const Combat := preload("res://src/combat/combat.gd")
@@ -103,8 +104,7 @@ static func mark_met(saved, kind: String) -> bool:
 	if saved == null or kind == "" or saved.stat(MET_PREFIX + kind) > 0.0:
 		return false
 	saved.set_stat(MET_PREFIX + kind, 1.0)
-	if saved.can_save:
-		saved.save()
+	saved.save_if_allowed()
 	return true
 
 
@@ -263,8 +263,8 @@ func clear() -> void:
 func _free(node: Node) -> void:
 	if not is_instance_valid(node):
 		return
-	node.remove_from_group("enemy")
-	node.remove_from_group("enemy_shot")
+	node.remove_from_group(Groups.ENEMY)
+	node.remove_from_group(Groups.ENEMY_SHOT)
 	if node.has_method("set_physics_process"):
 		node.set_physics_process(false)
 	node.queue_free()

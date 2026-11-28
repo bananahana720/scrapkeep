@@ -68,7 +68,7 @@ func finish_build() -> void:
 		for i in 2:
 			var p := FxLibrary.build("dig_grit")
 			p.name = "CutFaceGrit%d" % i
-			p.set_instance_shader_parameter("tint", FxLibrary.colour("dig_grit", "breach_opened"))
+			p.set_instance_shader_parameter(FxLibrary.TINT, FxLibrary.colour("dig_grit", "breach_opened"))
 			p.emitting = false
 			add_child(p)
 			grit.append(p)

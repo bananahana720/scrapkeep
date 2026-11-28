@@ -11,8 +11,10 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
 fi
 
 repo="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+# shellcheck source=../../tools/cloud/godot-version.env
+. "$repo/tools/cloud/godot-version.env"
 SCRAPKEEP_SETUP_STRICT=1 bash "$repo/tools/cloud/setup.sh"
-godot=/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64
+godot="/opt/scrapkeep-toolchain/Godot_v${GODOT_VERSION}_linux.x86_64"
 
 cd "$repo"
 # npm ci keeps package-lock.json untouched; npm install rewrites it and dirties the tree.

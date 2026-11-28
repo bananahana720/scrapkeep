@@ -1,14 +1,15 @@
 import { createHash } from "node:crypto";
 import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 import { checkLedger } from "./known-failing.mjs";
 import { checkWeekly } from "./gate/weekly.mjs";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { walkAsync } from "./lib/walk.mjs";
 import { checkWaveState } from "./wave-state.mjs";
 
-const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const scriptRoot = REPO_ROOT;
 const limits =
   "Structural documentation checks only. No build, runtime, browser or remote check is implied; link targets are checked for existence and anchors, not for content correctness.";
 
@@ -35,22 +36,6 @@ async function exists(file) {
   }
 }
 
-async function walk(root, directory, keep, skipDir = () => false) {
-  const files = [];
-  const absolute = path.join(root, directory);
-  if (!(await exists(absolute))) return files;
-  for (const item of await readdir(absolute, { withFileTypes: true })) {
-    const file = path.posix.join(directory, item.name);
-    if (item.isDirectory()) {
-      if (skipDir(file)) continue;
-      files.push(...(await walk(root, file, keep, skipDir)));
-    } else if (item.isFile() && keep(file)) {
-      files.push(file);
-    }
-  }
-  return files;
-}
-
 const PRUNE_EXACT_DIRS = new Set([
   "artifacts/local",
   "tests/fixtures",
@@ -71,8 +56,12 @@ function shouldSkipDir(dir) {
 }
 
 async function markdownFiles(root) {
-  const files = await walk(root, "", (file) => file.endsWith(".md"), shouldSkipDir);
-  return files.sort();
+  const entries = await walkAsync(root, {
+    filesOnly: true,
+    prune: (entry) => shouldSkipDir(entry.rel),
+    filter: (entry) => entry.name.endsWith(".md"),
+  });
+  return entries.map((entry) => entry.rel).sort();
 }
 
 function visibleLines(content, keepCodeText = false) {

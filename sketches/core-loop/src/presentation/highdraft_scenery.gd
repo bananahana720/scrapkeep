@@ -1058,7 +1058,7 @@ static func _line_view(label: String, lines: Array, width: float, colour: Color,
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.roughness = 0.7
 	material.metallic = metal
-	preload("res://src/presentation/world23_chunk_craft.gd").enrich_standard_pbr(material, 0.35, 0.40)
+	preload("res://src/presentation/craft/craft_lookdev.gd").enrich_standard_pbr(material, 0.35, 0.40)
 	mesh.surface_set_material(0, material)
 	var view := MeshInstance3D.new()
 	view.name = label
