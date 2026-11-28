@@ -799,7 +799,7 @@ func _refresh_prompts() -> void:
 		if String(zone.get("verb", "")) != "":
 			card.pressed.connect(press_station.bind(id))
 		else:
-			card.pressed.connect(game.screens._press.bind(glyph))
+			card.pressed.connect(game.screens.press_key.bind(glyph))
 		_prompt_box.add_child(card)
 		_prompt_buttons[id] = card
 
