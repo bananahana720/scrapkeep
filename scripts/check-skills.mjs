@@ -1,8 +1,9 @@
 import { access, lstat, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { walkAsync } from "./lib/walk.mjs";
 
-const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const scriptRoot = REPO_ROOT;
 
 const limits =
   "Existence and shape checks only, not correctness: a rename that keeps the " +
@@ -187,15 +188,8 @@ async function loadSkillFiles(root, name) {
 }
 
 async function walkFiles(root, dir) {
-  const results = [];
-  const absolute = path.join(root, dir);
-  if (!(await exists(absolute))) return results;
-  for (const entry of await readdir(absolute, { withFileTypes: true })) {
-    const relative = path.posix.join(dir, entry.name);
-    if (entry.isDirectory()) results.push(...(await walkFiles(root, relative)));
-    else if (entry.isFile()) results.push(relative);
-  }
-  return results;
+  const entries = await walkAsync(path.join(root, dir), { filesOnly: true });
+  return entries.map((entry) => path.posix.join(dir, entry.rel));
 }
 
 function parseFrontmatterFields(block) {

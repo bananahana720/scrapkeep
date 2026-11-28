@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const LocalMesh := preload("res://src/world/local_mesh.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const BayLap := preload("res://src/world/bay_lap.gd")
@@ -175,7 +176,7 @@ func _blocked(space: PhysicsDirectSpaceState3D, at: Vector3) -> bool:
 	box.size = Vector3(DECK_U * 2.0, 12.0, DECK_V * 2.0)
 	var q := PhysicsShapeQueryParameters3D.new()
 	q.shape = box
-	q.collision_mask = 1
+	q.collision_mask = PhysicsLayers.WORLD_MASK
 	q.transform = Transform3D(Basis(facing, Vector3.UP, facing.cross(Vector3.UP).normalized()), at + Vector3.UP * 2.0)
 	var own: Array[RID] = []
 	for body in _barge.find_children("*", "CollisionObject3D", true, false):

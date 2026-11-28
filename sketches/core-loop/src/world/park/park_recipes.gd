@@ -3,6 +3,7 @@ extends RefCounted
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Stamps := preload("res://src/world/park/park_stamps.gd")
@@ -25,8 +26,6 @@ const MOVING_GROUP := "park_row_moving"
 const SCATTER_DRESSED := "scatter"
 const SENSOR_ONLY := [LANDMARK_DRESSED, SCATTER_DRESSED]
 const COL_SUFFIX := "-col"
-const WORLD_LAYER := 1
-const BALL_LAYER := 2
 const COVER_META := "cover_kind"
 const COVER_HARD := "hard"
 const COVER_SOFT := "soft"
@@ -706,7 +705,7 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 	if baked and fits_seat(row) and DRAPED.has(String(row.get("recipe", ""))) and ground.is_valid():
 		drape(node, row, at_origin, ground)
 	if body.get_shape_owners().is_empty():
-		body.collision_layer = 0
+		body.collision_layer = PhysicsLayers.NONE
 	_sensor(node, row, publish)
 	tag_cover(node, row)
 	return node
@@ -834,9 +833,9 @@ static func _node(row: Dictionary, parent: Node3D, ground: Callable) -> Node3D:
 static func _body(node: Node3D) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.name = "Collider"
-	body.collision_layer = 0
-	body.collision_mask = 0
-	body.set_collision_layer_value(WORLD_LAYER, true)
+	body.collision_layer = PhysicsLayers.NONE
+	body.collision_mask = PhysicsLayers.NONE
+	body.set_collision_layer_value(PhysicsLayers.WORLD_LAYER, true)
 	node.add_child(body)
 	return body
 
@@ -901,9 +900,9 @@ static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
 	var size: Array = row["size"]
 	var area := Area3D.new()
 	area.name = "Ride"
-	area.collision_layer = 0
-	area.collision_mask = 0
-	area.set_collision_mask_value(BALL_LAYER, true)
+	area.collision_layer = PhysicsLayers.NONE
+	area.collision_mask = PhysicsLayers.NONE
+	area.set_collision_mask_value(PhysicsLayers.BALL_LAYER, true)
 	area.monitorable = false
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -1285,7 +1284,7 @@ static func shape_aabb(shape: Shape3D) -> AABB:
 	return shape.get_debug_mesh().get_aabb()
 
 
-static func cover_height(node: Node3D, layer_mask := 1 << (WORLD_LAYER - 1), stop_at := 0.0) -> float:
+static func cover_height(node: Node3D, layer_mask := PhysicsLayers.WORLD_MASK, stop_at := 0.0) -> float:
 	var lo := INF
 	var hi := -INF
 	var local_boxes := {}
@@ -1316,7 +1315,7 @@ static func cover_kind_of(node: Node3D, row: Dictionary = {}) -> String:
 		var explicit := String(row["cover"])
 		if COVER_KINDS.has(explicit):
 			return explicit
-	var h := cover_height(node, 1 << (WORLD_LAYER - 1), COVER_HARD_M)
+	var h := cover_height(node, PhysicsLayers.WORLD_MASK, COVER_HARD_M)
 	if h >= COVER_HARD_M:
 		return COVER_HARD
 	if h > 0.0:
@@ -1410,7 +1409,7 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 			lod_view.visibility_range_end_margin = 0.0
 			node.add_child(lod_view)
 	if body.get_shape_owners().is_empty():
-		body.collision_layer = 0
+		body.collision_layer = PhysicsLayers.NONE
 	node.set_meta("anchor_posts", posts.size())
 	node.set_meta("anchor_kit", kit)
 	tag_cover(node, row)

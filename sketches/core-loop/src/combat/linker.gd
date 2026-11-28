@@ -187,7 +187,7 @@ func cut_cable(how: String) -> void:
 func _find_partner() -> Node3D:
 	var best: Node3D = null
 	var best_score := -INF
-	for node in get_tree().get_nodes_in_group("enemy"):
+	for node in get_tree().get_nodes_in_group(GROUP):
 		var enemy := node as Node3D
 		if enemy == null or enemy == self or not _alive(enemy) or not _can_partner(enemy):
 			continue

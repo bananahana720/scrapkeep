@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 
 import { ensureNodeModules } from "./ensure-node-modules.mjs";
 import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import { isMain } from "./lib/cli.mjs";
 import {
   godotIdentity,
   hasValidUidCache,
@@ -903,16 +904,7 @@ function parseCliArgs(argv) {
   return { cmd, opts };
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const { cmd, opts } = parseCliArgs(process.argv.slice(2));
     if (cmd === "prepare") {

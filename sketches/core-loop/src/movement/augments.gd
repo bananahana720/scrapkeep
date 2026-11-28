@@ -3,6 +3,7 @@ extends RefCounted
 const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 const GRAPPLE := "grapple"
@@ -39,8 +40,8 @@ const AIM_BODY := 3
 const AIM_CAST := 90.0
 const ASSIST_RINGS := [0.34, 0.67, 1.0]
 const ASSIST_SPOKES := 16
-const WORLD_MASK := 1
-const STAKE_MASK := 128
+const WORLD_MASK := PhysicsLayers.WORLD_MASK
+const STAKE_MASK := PhysicsLayers.STAKE_MASK
 const STAKE_GROUP := "sable_stake"
 
 const MIN_ROPE := 2.5
@@ -78,7 +79,7 @@ const MOUNT_REPEL_KNOCK := 20.0
 const SLINGSHOT_CHARGE := 0.8
 const SLINGSHOT_FULL := 1.3
 const VAULT_GAIN := 1.8
-const ENEMY_MASK := 4
+const ENEMY_MASK := PhysicsLayers.ENEMY_MASK
 const VAULT_CAP := 45.0
 const MASS_FULL := 990.0
 const MASS_BONUS := 8.0

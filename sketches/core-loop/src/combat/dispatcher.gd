@@ -350,8 +350,8 @@ func _perch() -> void:
 func _build_mast(height: float) -> void:
 	mast = StaticBody3D.new()
 	mast.name = "DispatchMast"
-	mast.collision_layer = 1
-	mast.collision_mask = 0
+	mast.collision_layer = PhysicsLayers.WORLD_MASK
+	mast.collision_mask = PhysicsLayers.NONE
 	add_child(mast)
 	mast.position = Vector3(0.0, -FLOOR_DROP, 0.0)
 	var column := CollisionShape3D.new()

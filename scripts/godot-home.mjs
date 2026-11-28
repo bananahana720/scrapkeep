@@ -1,6 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
+export const TOOLCHAIN = JSON.parse(
+  readFileSync(new URL("./toolchain.json", import.meta.url), "utf8"),
+);
 
 // Godot on macOS ignores XDG_DATA_HOME and keeps user:// under $HOME/Library/Application Support
 // (platform/macos/os_macos.mm), so a scratch data home isolates a run there only when HOME moves
@@ -85,7 +89,7 @@ export async function withScratchGodotEnv(
   }
 }
 
-export const GODOT_VERSION = "4.7.2";
+export const GODOT_VERSION = TOOLCHAIN.godotNumericVersion;
 
 export function resolveGodotBinary({
   env = process.env,

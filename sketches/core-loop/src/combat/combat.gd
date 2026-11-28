@@ -19,6 +19,8 @@ const Bolts := preload("res://src/combat/bolts.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 const Effects := preload("res://src/combat/effects.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Ground := preload("res://src/combat/ground.gd")
 const WearTrail := preload("res://src/combat/wear_trail.gd")
@@ -74,7 +76,7 @@ const MASS_K_RADIUS := 0.25
 const MASS_K_SATURATION := 990.0
 const SYNERGY := "synergy"
 const DEBRIS := "debris"
-const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph", "ally_husk", "ally_zone"]
+const FIGHT_GROUPS := [Groups.ENEMY, Groups.ENEMY_SHOT, "telegraph", "ally_husk", "ally_zone"]
 const CHIP := 0.2
 const WARDEN_FALLBACK := [
 	{"warden_plating": 30.0, "warden_hp": 400.0},
@@ -905,7 +907,7 @@ func _assist_targets(shape: String, at: Vector3, ball: Vector3, dir: Vector3, ra
 	var found := []
 	var nearest: Node3D = null
 	var best := INF
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if DamageDoor.dead(enemy) or _fights_posture(enemy):
 			continue
 		var flat: Vector3 = enemy.global_position - at
@@ -981,7 +983,7 @@ func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
 
 func _primer_mesh(at: Vector3, struck_id: int, dealt: float) -> void:
 	var found := []
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.get_instance_id() == struck_id or enemy.is_dead() or _fights_posture(enemy):
 			continue
 		var distance: float = enemy.global_position.distance_to(at)
@@ -1459,7 +1461,7 @@ func _physics_process(delta: float) -> void:
 	_tick_upgrades(delta)
 	_step_micro_mutations(delta)
 	_step_escape_lane()
-	var enemies_pre := get_tree().get_nodes_in_group("enemy")
+	var enemies_pre := get_tree().get_nodes_in_group(Groups.ENEMY)
 	_step_consumables(delta, enemies_pre)
 	var intent = ctx.player.intent
 	var weapon := active_weapon()
@@ -1493,14 +1495,14 @@ func _physics_process(delta: float) -> void:
 	_step_line(intent, delta)
 	_step_active_buffer(intent, delta)
 	_step_cannon(delta)
-	var enemies := get_tree().get_nodes_in_group("enemy")
+	var enemies := get_tree().get_nodes_in_group(Groups.ENEMY)
 	_step_verb_items(enemies)
 	_step_cross_synergies(delta, enemies)
 	_step_grapple_mutations(delta, enemies)
 	_step_kinetic_pylon(delta, enemies)
 	_step_kest_fuse_trace(delta, enemies)
 	if relic_swaps != null: relic_swaps.step(delta, enemies)
-	var shells := get_tree().get_nodes_in_group("enemy_shot")
+	var shells := get_tree().get_nodes_in_group(Groups.ENEMY_SHOT)
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	bolts.step(delta, space, enemies, shells)
 	for charge in sticky.step(delta, space, enemies):
@@ -1525,7 +1527,7 @@ func _physics_process(delta: float) -> void:
 func _tint(enemies = null) -> void:
 	var punch := punch_now()
 	var ram := ram_punch_now()
-	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group("enemy")
+	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group(Groups.ENEMY)
 	for enemy in pool:
 		if not is_instance_valid(enemy) or not enemy.has_method("set_tint") or enemy.is_dead() or enemy.plating <= 0.0:
 			continue
@@ -1862,7 +1864,7 @@ func _lay_strip(item: String, from: Vector3, to: Vector3, width: float, damage: 
 
 func _strike_strip(strip: Dictionary, enemies = null) -> void:
 	var shape: Dictionary = strip["shape"]
-	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group("enemy")
+	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group(Groups.ENEMY)
 	for enemy in pool:
 		if not is_instance_valid(enemy):
 			continue
@@ -1996,7 +1998,7 @@ func _toll(bell: Dictionary, enemies = null) -> void:
 	var shape: Dictionary = bell["shape"]
 	var color: Color = shape["color"]
 	var hits := 0
-	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group("enemy")
+	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group(Groups.ENEMY)
 	if bell["mode"] == "gather":
 		_gather_pull(shape["centre"], float(shape["radius"]), pool)
 		effects.ring(shape["centre"], float(shape["radius"]), color)
@@ -2173,7 +2175,7 @@ func _aftershock(shock: Dictionary) -> void:
 	var at: Vector3 = shock["at"]
 	var radius: float = shock["radius"]
 	effects.shockwave(at, radius, ctx.player.class_color())
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		var reach: float = enemy.global_position.distance_to(at)
@@ -2479,7 +2481,7 @@ func _chain(first: Node3D, from: Vector3, bolt: Dictionary, knock_scale := 0.5) 
 func _nearest(at: Vector3, reach: float, exclude: Array) -> Node3D:
 	var best: Node3D = null
 	var best_distance := reach
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy in exclude or enemy.is_dead():
 			continue
 		var distance: float = enemy.global_position.distance_to(at)
@@ -2491,7 +2493,7 @@ func _nearest(at: Vector3, reach: float, exclude: Array) -> Node3D:
 
 func _nearest_list(at: Vector3, reach: float, limit: int) -> Array:
 	var found := []
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead():
 			continue
 		var distance: float = enemy.global_position.distance_to(at)
@@ -2774,7 +2776,7 @@ func _ground_under(at: Vector3) -> Vector3:
 
 func _floor_at(at: Vector3) -> Vector3:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at, at + Vector3.DOWN * 80.0, 1))
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at, at + Vector3.DOWN * 80.0, PhysicsLayers.WORLD_MASK))
 	return hit["position"] if not hit.is_empty() else _ground_under(at)
 
 
@@ -2849,7 +2851,7 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 	var seconds := AbilityState.Gauge.scaled(f, Weapons.CLAMP_SECONDS_MIN, Weapons.CLAMP_SECONDS_MAX)
 	var hit := 0
 	var pulled: Array = []
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not in_ring(centre, radius, enemy):
 			continue
 		_clamped[enemy.get_instance_id()] = _clock + seconds
@@ -2917,7 +2919,7 @@ func _step_cannon(delta: float) -> void:
 		ctx.player.indicator.clear(AbilityState.LINE)
 	if _cannon.is_empty():
 		return
-	var enemies := get_tree().get_nodes_in_group("enemy")
+	var enemies := get_tree().get_nodes_in_group(Groups.ENEMY)
 	var kept := []
 	for entry in _cannon:
 		var done := true
@@ -3199,7 +3201,7 @@ func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	var landing := _floor_at(at + Vector3.UP)
 	var target := landing + _flat_aim() * 6.0
 	var best := Weapons.RUSH_REACH
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.has_method("is_dead") and enemy.is_dead():
 			continue
 		var d := Vector2(enemy.global_position.x - landing.x, enemy.global_position.z - landing.z).length()
@@ -3626,7 +3628,7 @@ func _line_reel_body(target: Node3D, _fraction: float, mult: float) -> void:
 func _ult_volley(_beat: int, ball: Vector3, aim: Vector3, _heft_mult: float) -> int:
 	var picks: Array = []
 	var bias := deg_to_rad(Ultimate.VOLLEY_BIAS_DEG)
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if DamageDoor.dead(enemy):
 			continue
 		var gap: float = enemy.global_position.distance_to(ball)
@@ -3657,7 +3659,7 @@ func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	ctx.break_props(at, radius, "ultimate")
 	var hits := 0
 	var dealt := 0.0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if DamageDoor.dead(enemy):
 			continue
 		if enemy.global_position.distance_to(at) > radius:
@@ -3829,7 +3831,7 @@ func _step_plate(delta: float) -> void:
 
 
 func _gather_pull(at: Vector3, radius: float, enemies = null) -> void:
-	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group("enemy")
+	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group(Groups.ENEMY)
 	var pulled: Array = []
 	for enemy in pool:
 		if not is_instance_valid(enemy) or enemy.is_dead() or not _ordinary(enemy):
@@ -3932,7 +3934,7 @@ func _run_balance(point: Vector3, valid: bool, shot_desc := {}, source := "weapo
 	else:
 		damage = minf(Weapons.BALANCE_MAX, Weapons.BALANCE_BASE + Weapons.BALANCE_PER_SPEED * speed) * _damage_mod(Weapons.LEDGER_READER)
 	var hits := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not in_ring(point, Weapons.BALANCE_RADIUS, enemy):
 			continue
 		_ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, source)
@@ -4032,7 +4034,7 @@ func _step_clip_post() -> void:
 		return
 	var ids: Array = link_group["ids"]
 	var at: Vector3 = clip_post["at"]
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if ids.size() >= Weapons.CLIP_POST_MAX:
 			break
 		if not is_instance_valid(enemy) or enemy.is_dead() or ids.has(enemy.get_instance_id()):
@@ -4085,7 +4087,7 @@ func _clip_jump(from: Vector3, damage: float) -> void:
 	var ids: Array = link_group["ids"]
 	var best: Node3D = null
 	var best_gap := INF
-	for other in get_tree().get_nodes_in_group("enemy"):
+	for other in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(other) or DamageDoor.dead(other) or ids.has(other.get_instance_id()):
 			continue
 		var gap: float = other.global_position.distance_to(from)
@@ -4101,7 +4103,7 @@ func _clip_jump(from: Vector3, damage: float) -> void:
 
 func _book_ink(at: Vector3) -> void:
 	var reach: float = ctx.player.slam_radius()
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or DamageDoor.dead(enemy) or (enemy.global_position - at).length() > reach:
 			continue
 		var id: int = enemy.get_instance_id()
@@ -4200,7 +4202,7 @@ func _clear_tally_piece() -> void:
 
 
 func _tally_enemies() -> Array:
-	return get_tree().get_nodes_in_group("enemy").filter(func(e): return not DamageDoor.dead(e))
+	return get_tree().get_nodes_in_group(Groups.ENEMY).filter(func(e): return not DamageDoor.dead(e))
 
 
 static func _flat_gap(a: Vector3, b: Vector3) -> float:
@@ -4304,7 +4306,7 @@ func flail_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> voi
 
 func _audit_ground(ball: Vector3):
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(ball, ball + Vector3.DOWN * Weapons.AUDIT_GROUND_REACH, 1))
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(ball, ball + Vector3.DOWN * Weapons.AUDIT_GROUND_REACH, PhysicsLayers.WORLD_MASK))
 	return hit["position"] if not hit.is_empty() else null
 
 
@@ -4476,7 +4478,7 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 	var hit := 0
 	var from: Vector3 = shape["from"]
 	var to: Vector3 = shape["to"]
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not in_line(from, to, shape["width"], enemy.global_position, _hull(enemy)):
 			continue
 		if _knob("line_marks") > 0.0:
@@ -4543,7 +4545,7 @@ func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null, li
 
 func _nearest_in_ring(centre: Vector3, radius: float, limit: int) -> Array:
 	var found := []
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not enemy.is_dead() and in_ring(centre, radius, enemy):
 			found.append([enemy.global_position.distance_to(centre), enemy])
 	found.sort_custom(func(a, b): return a[0] < b[0])
@@ -4558,7 +4560,7 @@ func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.
 	var centre: Vector3 = shape.get("centre", at)
 	var pull: bool = _knob("blast_pull") and not _echoing
 	var hit := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not in_ring(centre, radius, enemy):
 			continue
 		var away: Vector3 = enemy.global_position - at
@@ -4681,7 +4683,7 @@ func _throw_landing(f: float, held_s := -1.0) -> Dictionary:
 		var reach := AbilityState.Gauge.scaled(f, Weapons.STICKY_THROW_MIN, p.range_m * ctx.tuning.mod("weapon_range"))
 		flat = ctx.player.ball_position() + _flat_aim() * reach
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(flat + Vector3.UP * 30.0, flat + Vector3.DOWN * 60.0, 1))
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(flat + Vector3.UP * 30.0, flat + Vector3.DOWN * 60.0, PhysicsLayers.WORLD_MASK))
 	if hit.is_empty():
 		return {"point": flat + Vector3.DOWN * 0.9, "blocked": true, "tail_drop": tail_drop}
 	return {"point": hit["position"], "blocked": false, "tail_drop": tail_drop}
@@ -4750,7 +4752,7 @@ func _detonate(charge: Dictionary, snapped := false) -> void:
 		knock *= Weapons.STICKY_SNAP_KNOCK_MULT
 	if _knob("sticky_grow"):
 		damage *= 1.0 + Weapons.GROW_PER_SECOND * minf(Weapons.GROW_MAX_SECONDS, _clock - float(charge.get("born", _clock)))
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead():
 			continue
 		if (enemy.global_position - at).length() - _hull(enemy) > radius * (1.0 + AbilityState.FORGIVENESS):
@@ -4835,7 +4837,7 @@ func _on_blink(from: Vector3, to: Vector3) -> void:
 	effects.ring(from, 2.5, ClassDef.KEST_COLOR)
 	_start_cloak()
 	if _knob("blink_cut"):
-		for enemy in get_tree().get_nodes_in_group("enemy"):
+		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not enemy.is_dead() and in_line(from, to, Weapons.BLINK_CUT_WIDTH, enemy.global_position, _hull(enemy)):
 				_hit(enemy, "sticky", _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), to - from, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "proc")
 	if _knob("smoke_cloud") > 0.0:
@@ -5251,7 +5253,7 @@ func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: 
 
 func _on_shell_returned(shell: Node3D) -> void:
 	var ring: Node3D = shell.ring
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not is_instance_valid(ring) or not ring.contains(enemy.global_position - Vector3.UP * enemy.half_height):
 			continue
 		var owned: bool = enemy == shell.lobber
@@ -5830,7 +5832,7 @@ func _on_world_fact_w47(kind: String, at: Vector3) -> void:
 		var knock := float(row.get("knock", 10.0))
 		effects.shockwave(at, radius, row.get("color", Palette.AMBER))
 		var hits := 0
-		for enemy in get_tree().get_nodes_in_group("enemy"):
+		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 				continue
 			var reach: float = enemy.global_position.distance_to(at)
@@ -5907,7 +5909,7 @@ func _on_thermobaric_slammed(at: Vector3, strength: float, _flatness: float) -> 
 	var launch_r := float(row.get("launch_radius_m", 10.0))
 	var nearby: Array = []
 	var has_heated := false
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		if enemy.global_position.distance_to(at) > launch_r:
@@ -6505,7 +6507,7 @@ func trigger_tether_slam() -> Dictionary:
 		var dv: Vector3 = to_mid.normalized() * spd - ctx.player.state.velocity
 		ctx.player.add_external_accel(dv * 60.0)
 	var yanked_target := false
-	if target != null and target.is_in_group("enemy") and not _fights_posture(target) and _target_class(target) != "boss":
+	if target != null and target.is_in_group(Groups.ENEMY) and not _fights_posture(target) and _target_class(target) != "boss":
 		var pull_dir := mid - target.global_position
 		if pull_dir.length_squared() > 0.01:
 			var weight = target.get("weight")
@@ -6615,7 +6617,7 @@ func _consume_grapple_mut_strike(hit: Dictionary) -> void:
 		effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, at + Vector3.UP * 0.5, Palette.AMBER)
 		effects.ring(at, 4.5, Palette.AMBER)
 		var arced_to: Node3D = null
-		for other in get_tree().get_nodes_in_group("enemy"):
+		for other in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if other == enemy or not is_instance_valid(other) or (other.has_method("is_dead") and other.is_dead()):
 				continue
 			if _fights_posture(other):
@@ -6786,7 +6788,7 @@ func _fire_cap_charge(at: Vector3) -> Dictionary:
 		ctx.destructibles.on_blast(at, radius, Consumables.CAP_CHARGE, 0, Destructibles.TIER_MAX)
 	var stripped := 0
 	var hits := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		if enemy.global_position.distance_to(at) > radius + _hull(enemy):
@@ -6814,7 +6816,7 @@ func _fire_nitro_siphon(at: Vector3) -> Dictionary:
 	var dur := float(row.get("duration_s", 6.0))
 	_nitro_left = maxf(_nitro_left, dur)
 	_post_consumable_buff("consumable_nitro_siphon", String(row["icon"]), row["color"], _nitro_left)
-	var ripped := _step_nitro_siphon(get_tree().get_nodes_in_group("enemy"))
+	var ripped := _step_nitro_siphon(get_tree().get_nodes_in_group(Groups.ENEMY))
 	effects.ring(at, 4.5, row.get("color", Palette.COPPER))
 	return {"duration_s": dur, "ripped": ripped}
 
@@ -6957,7 +6959,7 @@ func _fire_foreman_memo(at: Vector3) -> Dictionary:
 	forward = forward.normalized() if forward.length_squared() > 0.01 else Vector3.FORWARD
 	var right := forward.cross(Vector3.UP).normalized()
 	var targets: Array = []
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		var kind := String(enemy.get("kind")) if enemy.get("kind") != null else ""
@@ -7028,7 +7030,7 @@ func _fire_moss_patch(at: Vector3) -> Dictionary:
 	var radius := float(row.get("knock_radius_m", 12.0))
 	var force := float(row.get("knock_force", 18.0))
 	var knocked := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		if enemy.global_position.distance_to(at) > radius:
@@ -7144,7 +7146,7 @@ func ally_husk_hit(_husk: Node3D, enemy: Node3D, damage: float, origin: Vector3,
 	if ShotBits.has(shot_bits, ShotBits.bit("split")):
 		var best: Node3D = null
 		var best_d := 6.0
-		for other in get_tree().get_nodes_in_group("enemy"):
+		for other in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if other == enemy or not is_instance_valid(other) or DamageDoor.dead(other):
 				continue
 			var d: float = other.global_position.distance_to(enemy.global_position)
@@ -7439,7 +7441,7 @@ func _pick_ricochet_target(origin: Vector3, exclude: Array) -> Dictionary:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state if ctx != null and ctx.root != null and ctx.root.is_inside_tree() else null
 	var best := {}
 	var best_score := INF
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or DamageDoor.dead(enemy):
 			continue
 		if enemy.get_instance_id() in exclude:
@@ -7591,7 +7593,7 @@ func _detonate_cannon_piton() -> Dictionary:
 		broken = ctx.destructibles.on_piton_breach(anchor, radius, Weapons.CANNON_PITON_MAX_TIER, "cannon_piton_breach")
 	var dmg: float = Weapons.CANNON_PITON_BREACH_DAMAGE * mult * _damage_mod(Weapons.CANNON_LANE)
 	var hits := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if DamageDoor.dead(enemy) or not in_ring(anchor, radius, enemy):
 			continue
 		var push: Vector3 = enemy.global_position - anchor

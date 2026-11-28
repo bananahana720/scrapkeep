@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const SteamCycle := preload("res://src/world/steam_cycle.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const Activities := preload("res://src/world/activities.gd")
@@ -1216,8 +1217,8 @@ func _build_sluice_valve(spec: Dictionary) -> Dictionary:
 		holder.add_child(pay_device)
 		pay_device.setup(_resolve_ctx(), _resolve_interact(), {"id": id})
 	_range_tree(holder)
-	if not is_in_group("world_telegraphs"):
-		add_to_group("world_telegraphs")
+	if not is_in_group(Groups.WORLD_TELEGRAPHS):
+		add_to_group(Groups.WORLD_TELEGRAPHS)
 	return {
 		"spec": spec,
 		"holder": holder,

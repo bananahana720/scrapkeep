@@ -49,7 +49,9 @@ jobs:
       - name: Checkout selector script only
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          sparse-checkout: scripts/ci
+          sparse-checkout: |
+            scripts/ci
+            scripts/lib/cli.mjs
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -283,6 +285,7 @@ jobs:
             /tests/
             /scripts/check-build.mjs
             /scripts/ci/
+            /scripts/lib/cli.mjs
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -337,31 +340,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore Godot binary cache
-        id: godot-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}
-          key: ${{ runner.os }}-${{ runner.arch }}-godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}
-
-      - name: Install pinned Godot on cache miss
-        if: steps.godot-cache.outputs.cache-hit != 'true'
-        shell: bash
-        env:
-          GODOT_DIR: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}
-        run: |
-          set -euo pipefail
-          mkdir -p "$GODOT_DIR"
-          godot_bin="$GODOT_DIR/Godot_v${GODOT_VERSION}_linux.x86_64"
-          curl --fail --silent --show-error --location --retry 3 \
-            --output "$GODOT_DIR/editor.zip" \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-          printf '%s  %s\n' "$GODOT_ZIP_SHA512" "$GODOT_DIR/editor.zip" | sha512sum --check --quiet
-          python3 -I -c 'import sys, zipfile; from pathlib import Path; p = Path(sys.argv[2]); p.write_bytes(zipfile.ZipFile(sys.argv[1]).read(p.name)); p.chmod(0o755)' \
-            "$GODOT_DIR/editor.zip" "$godot_bin"
-          rm -f "$GODOT_DIR/editor.zip"
-          printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
-
       - name: Restore Godot import cache
         id: import-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -371,49 +349,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-
 
-      - name: Validate Godot import cache or run clean import
-        shell: bash
-        env:
-          GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
-          EVENT_NAME: ${{ github.event_name }}
-          CACHE_HIT: ${{ steps.import-cache.outputs.cache-hit }}
-        run: |
-          set -euo pipefail
-          if ! node scripts/import-stamp.mjs check; then
-            if [[ "$EVENT_NAME" == "push" && "$CACHE_HIT" != "true" ]]; then
-              echo "Asset hash changed on push; running clean import to seed immutable cache"
-              rm -rf sketches/core-loop/.godot
-              if [[ -d sketches/core-loop/assets ]]; then
-                find sketches/core-loop/assets -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
-              fi
-              node scripts/import-stamp.mjs import
-            else
-              if [[ -d sketches/core-loop/assets ]]; then
-                if [[ "$CACHE_HIT" == "true" ]]; then
-                  find sketches/core-loop/assets -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
-                elif [[ -f sketches/core-loop/.godot/scrapkeep-import.json ]]; then
-                  stamp_head="$(node -e 'try { const s = JSON.parse(require("node:fs").readFileSync("sketches/core-loop/.godot/scrapkeep-import.json", "utf8")); if (typeof s.head === "string" && /^[0-9a-f]{7,40}$/.test(s.head)) process.stdout.write(s.head); } catch {}')"
-                  if [[ -n "$stamp_head" ]] && git cat-file -e "${stamp_head}^{commit}" 2>/dev/null; then
-                    find sketches/core-loop/assets -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
-                    while IFS= read -r changed_file; do
-                      [[ -f "$changed_file" ]] && touch "$changed_file"
-                    done < <(git diff --no-renames --name-only "${stamp_head}..HEAD" -- sketches/core-loop/assets)
-                  fi
-                fi
-              fi
-              if [[ -d sketches/core-loop/.godot ]]; then
-                echo "Import cache miss or stamp mismatch; trying incremental import"
-                if ! node scripts/import-stamp.mjs import; then
-                  echo "Incremental import failed; running clean import"
-                  rm -rf sketches/core-loop/.godot
-                  node scripts/import-stamp.mjs import
-                fi
-              else
-                echo "Import cache miss; running clean import"
-                node scripts/import-stamp.mjs import
-              fi
-            fi
-          fi
+      - name: Setup pinned Godot and validate import cache
+        id: setup-godot
+        uses: ./.github/actions/setup-godot
+        with:
+          godot-version: ${{ env.GODOT_VERSION }}
+          godot-zip-sha512: ${{ env.GODOT_ZIP_SHA512 }}
+          godot-bin-sha256: ${{ env.GODOT_BIN_SHA256 }}
+          import-cache-hit: ${{ steps.import-cache.outputs.cache-hit }}
+          clean-on-push-miss: ${{ github.event_name == 'push' }}
 
       - name: Save Godot import cache
         if: github.event_name == 'push' && steps.import-cache.outputs.cache-hit != 'true'
@@ -425,7 +369,7 @@ jobs:
       - name: Run affected Godot tests (or seed cache on push)
         shell: bash
         env:
-          GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
+          GODOT_BIN: ${{ steps.setup-godot.outputs.godot-bin }}
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -469,31 +413,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore Godot binary cache
-        id: godot-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}
-          key: ${{ runner.os }}-${{ runner.arch }}-godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}
-
-      - name: Install pinned Godot on cache miss
-        if: steps.godot-cache.outputs.cache-hit != 'true'
-        shell: bash
-        env:
-          GODOT_DIR: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}
-        run: |
-          set -euo pipefail
-          mkdir -p "$GODOT_DIR"
-          godot_bin="$GODOT_DIR/Godot_v${GODOT_VERSION}_linux.x86_64"
-          curl --fail --silent --show-error --location --retry 3 \
-            --output "$GODOT_DIR/editor.zip" \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-          printf '%s  %s\n' "$GODOT_ZIP_SHA512" "$GODOT_DIR/editor.zip" | sha512sum --check --quiet
-          python3 -I -c 'import sys, zipfile; from pathlib import Path; p = Path(sys.argv[2]); p.write_bytes(zipfile.ZipFile(sys.argv[1]).read(p.name)); p.chmod(0o755)' \
-            "$GODOT_DIR/editor.zip" "$godot_bin"
-          rm -f "$GODOT_DIR/editor.zip"
-          printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
-
       - name: Restore Godot import cache
         id: import-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -503,44 +422,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-
 
-      - name: Validate Godot import cache or run clean import
-        shell: bash
-        env:
-          GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
-          CACHE_HIT: ${{ steps.import-cache.outputs.cache-hit }}
-        run: |
-          set -euo pipefail
-          if ! node scripts/import-stamp.mjs check; then
-            if [[ -d sketches/core-loop/assets ]]; then
-              if [[ "$CACHE_HIT" == "true" ]]; then
-                find sketches/core-loop/assets -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
-              elif [[ -f sketches/core-loop/.godot/scrapkeep-import.json ]]; then
-                stamp_head="$(node -e 'try { const s = JSON.parse(require("node:fs").readFileSync("sketches/core-loop/.godot/scrapkeep-import.json", "utf8")); if (typeof s.head === "string" && /^[0-9a-f]{7,40}$/.test(s.head)) process.stdout.write(s.head); } catch {}')"
-                if [[ -n "$stamp_head" ]] && git cat-file -e "${stamp_head}^{commit}" 2>/dev/null; then
-                  find sketches/core-loop/assets -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
-                  while IFS= read -r changed_file; do
-                    [[ -f "$changed_file" ]] && touch "$changed_file"
-                  done < <(git diff --no-renames --name-only "${stamp_head}..HEAD" -- sketches/core-loop/assets)
-                fi
-              fi
-            fi
-            if [[ -d sketches/core-loop/.godot ]]; then
-              echo "Import cache miss or stamp mismatch; trying incremental import"
-              if ! node scripts/import-stamp.mjs import; then
-                echo "Incremental import failed; running clean import"
-                rm -rf sketches/core-loop/.godot
-                node scripts/import-stamp.mjs import
-              fi
-            else
-              echo "Import cache miss; running clean import"
-              node scripts/import-stamp.mjs import
-            fi
-          fi
+      - name: Setup pinned Godot and validate import cache
+        id: setup-godot
+        uses: ./.github/actions/setup-godot
+        with:
+          godot-version: ${{ env.GODOT_VERSION }}
+          godot-zip-sha512: ${{ env.GODOT_ZIP_SHA512 }}
+          godot-bin-sha256: ${{ env.GODOT_BIN_SHA256 }}
+          import-cache-hit: ${{ steps.import-cache.outputs.cache-hit }}
 
       - name: Run duration-balanced Godot shard ${{ matrix.shard }}/8
         shell: bash
         env:
-          GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
+          GODOT_BIN: ${{ steps.setup-godot.outputs.godot-bin }}
         run: |
           set -euo pipefail
           tests="$(node scripts/ci/shard-plan.mjs --shard "${{ matrix.shard }}/8")"

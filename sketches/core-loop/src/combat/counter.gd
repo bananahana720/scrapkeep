@@ -372,7 +372,7 @@ func _on_ball_hit(_amount: float, _source: String) -> void:
 func _on_missed(_threat_kind: String, at: Vector3) -> void:
 	if not _noticing() or not _just_struck() or global_position.distance_to(at) > NOTICE_MISS:
 		return
-	for other in get_tree().get_nodes_in_group("enemy"):
+	for other in get_tree().get_nodes_in_group(GROUP):
 		if other != self and other.has_method("_just_struck") and other._just_struck() \
 				and other.global_position.distance_to(at) < global_position.distance_to(at):
 			return

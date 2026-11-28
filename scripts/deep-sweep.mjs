@@ -1,9 +1,8 @@
-import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/cli.mjs";
+import { REPO_ROOT, git as runGit } from "./lib/git.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = REPO_ROOT;
 const SRC = "sketches/core-loop/src/";
 const TOOLS = "sketches/core-loop/tools/";
 const WIDE_PARAMS = 6;
@@ -13,8 +12,7 @@ const GIANT_GROWTH = 100;
 const LEAK_FILES = 3;
 const KEY_OWNERS = [`${SRC}core/event_kinds.gd`];
 
-const git = (...args) =>
-  execFileSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+const git = (...args) => runGit(args, { cwd: root, maxBuffer: 256 * 1024 * 1024, trim: false });
 
 const strip = (line) => line.replace(/#.*$/, "").trimEnd();
 
@@ -257,10 +255,10 @@ function main(argv) {
   };
   const linesAt = (ref, file) => {
     try {
-      return execFileSync("git", ["show", `${ref}:${file}`], {
+      return runGit(["show", `${ref}:${file}`], {
         cwd: root,
-        encoding: "utf8",
         maxBuffer: 256 * 1024 * 1024,
+        trim: false,
         stdio: ["ignore", "pipe", "ignore"],
       }).split("\n").length;
     } catch {
@@ -282,5 +280,4 @@ function main(argv) {
   else process.stdout.write(text);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

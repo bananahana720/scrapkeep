@@ -5,6 +5,7 @@ extends SceneTree
 # --plant-lines makes the footings ignore the authored lines, so the line check goes red.
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Recipes := preload("res://src/world/park/park_recipes.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Footings := preload("res://src/world/park/footings.gd")
@@ -79,7 +80,7 @@ func _run() -> void:
 	for id: String in REACHES:
 		var reach := park.find_child("Park_" + id, true, false) as Node3D
 		var body := reach.get_node("Collider") as StaticBody3D
-		t.check(id + " is on the world collision layer", body.collision_layer & Recipes.WORLD_LAYER != 0)
+		t.check(id + " is on the world collision layer", body.collision_layer & PhysicsLayers.WORLD_MASK != 0)
 		body.collision_layer |= TEST_LAYER
 		var solid := body.get_node_or_null("Footings") as CollisionShape3D
 		if solid != null:

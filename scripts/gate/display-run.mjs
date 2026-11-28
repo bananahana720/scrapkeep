@@ -8,7 +8,7 @@ import path from "node:path";
 import { resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
 import { acquireSlot } from "../lib/machine-lock.mjs";
 import { runProcess } from "../lib/proc.mjs";
-import { root } from "./clean-head.mjs";
+import { REPO_ROOT as root } from "../lib/git.mjs";
 
 export const SKETCH = "sketches/core-loop";
 export const TIMEOUT_MS = 600_000;
