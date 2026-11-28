@@ -12,6 +12,13 @@
 # Receipts: ~/scratch/entropy-gate/w48-<head8>/. The tip's compare.md holds
 # every band against the base, run for run.
 # Safe to rerun: the gate runner skips a step that already finished.
+#
+# The tip may be a full SHA or a branch name on origin (for example
+# entropy/gate). A branch is read when the tip pass starts, so a long base pass
+# does not leave the tip pass testing a commit that has since been replaced.
+# The commit tested is written to ~/scratch/entropy-gate/tip.sha.
+# WAIT_PID=<pid> waits for that process (a base pass already running) first.
+# SKIP_BASE=1 skips the base pass and reuses its receipts.
 set -u
 base="$1"
 tip="$2"
@@ -33,5 +40,17 @@ gate() {
   echo "exit $?" >>"$log"
 }
 
-gate "$base" "$root/base.log"
-gate "$tip" "$root/tip.log" --base "$root/w48-$(printf %.8s "$base")" --tally
+if [ -n "${WAIT_PID:-}" ]; then
+  tail --pid="$WAIT_PID" -f /dev/null
+fi
+if [ -z "${SKIP_BASE:-}" ]; then
+  gate "$base" "$root/base.log"
+fi
+git fetch -q origin
+tip_sha="$(git rev-parse --verify -q "$tip^{commit}" || git rev-parse --verify -q "origin/$tip^{commit}")"
+if [ -z "$tip_sha" ]; then
+  echo "exit no such tip: $tip" >"$root/tip.log"
+  exit 2
+fi
+echo "$tip_sha" >"$root/tip.sha"
+gate "$tip_sha" "$root/tip.log" --base "$root/w48-$(printf %.8s "$base")" --tally
