@@ -1295,10 +1295,11 @@ export function lintSketch(sketch) {
   findings.push(...lintL4(tests, `${relative}/tests`));
   findings.push(
     ...lintL18(
-      git(["ls-files", "--", ...UID_FOLDERS], { cwd: directory })
+      git(["ls-files", "--", ...UID_FOLDERS.map((folder) => `${relative}/${folder}`)], {
+        cwd: root,
+      })
         .split("\n")
-        .filter(Boolean)
-        .map((file) => `${relative}/${file}`),
+        .filter(Boolean),
     ),
   );
   const quarantine = path.join(directory, "tests", "QUARANTINE.tsv");

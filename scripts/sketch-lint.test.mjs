@@ -1550,6 +1550,26 @@ test("L18 flags a script with no uid file and a uid file with no script, naming 
     ],
   );
   assert.equal(BASELINE_RULES.L18.shape, "keys");
+  const withoutGitDir = lintSketch("core-loop")
+    .filter((item) => item.rule === "L18")
+    .map((item) => item.path)
+    .sort();
+  const gitDir = spawnSync("git", ["rev-parse", "--git-dir"], {
+    cwd: path.join(sketchDir, "..", ".."),
+    encoding: "utf8",
+  }).stdout.trim();
+  const prevGitDir = process.env.GIT_DIR;
+  process.env.GIT_DIR = gitDir;
+  try {
+    const withGitDir = lintSketch("core-loop")
+      .filter((item) => item.rule === "L18")
+      .map((item) => item.path)
+      .sort();
+    assert.deepEqual(withGitDir, withoutGitDir);
+  } finally {
+    if (prevGitDir === undefined) delete process.env.GIT_DIR;
+    else process.env.GIT_DIR = prevGitDir;
+  }
 });
 
 test("readBaselineAt throws when a blob-less clone cannot fetch the base copy, and returns {} when the commit has no baseline file", () => {
