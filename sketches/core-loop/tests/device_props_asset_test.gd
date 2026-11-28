@@ -287,7 +287,7 @@ const SOURCE_PINS := {
 const INHERITED_PINS := {
 	# 2026-11-19: device and interactables re-pinned for the prompt drawing Interact's bound key or
 	# button in place of a fixed E (Wave 44 audit).
-	"device": "df8c6c95e0c30134840d77dd9070190071c9325f377d1ec29c5ab5458b96ba36",
+	"device": "9fb867d521205d036280e431b6c5fd2778709f0d375940b72e12438325c9eb03",
 	"interactables": "693003acc330eaffb583edf65056f45c13b09918795409fb3b2e7e7fa86b8713",
 	"interact": "4211c0ccb3631e6fd9dff62b929527f38a1bf1a99ae9dea7217e9f75470a0708",
 }

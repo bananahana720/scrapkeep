@@ -1,7 +1,7 @@
 extends Node3D
 
 const Interactables := preload("res://src/world/interactables.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Palette := preload("res://src/core/palette.gd")
 
