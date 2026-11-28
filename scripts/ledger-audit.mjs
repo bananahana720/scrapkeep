@@ -6,38 +6,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { coveredFiles, ROWS as MODEL_ROWS, syncCommit } from "./gate/model-receipts.mjs";
+import { LEDGER_FILE, parseLedger, pastReview } from "./known-failing.mjs";
 import { isMain } from "./lib/cli.mjs";
 import { primStandIns, scan as scanPlaceholders } from "./placeholder-gate.mjs";
 import { git, nulSeparated } from "./lib/git.mjs";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const KNOWN_FAILING_REL = path.join("project-guide", "handoff", "KNOWN-FAILING.tsv");
 const FORMAL_SKILL_REL = path.join(".agents", "skills", "scrapkeep-verify-formal");
-
-export function parseKnownFailingTsv(text, { today = new Date().toISOString().slice(0, 10) } = {}) {
-  const lines = String(text)
-    .split(/\r?\n/)
-    .map((line) => line.trimEnd())
-    .filter((line) => line.trim() !== "");
-  if (lines.length === 0) {
-    return { total: 0, reds: [], flakes: [], overdue: [], rows: [] };
-  }
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cells = lines[i].split("\t");
-    if (cells.length < 7) continue;
-    const [test, kind, cause, owner, added, review, check] = cells;
-    const isOverdue = /^\d{4}-\d{2}-\d{2}$/.test(review) && review < today;
-    rows.push({ test, kind, cause, owner, added, review, check, overdue: isOverdue });
-  }
-  return {
-    total: rows.length,
-    reds: rows.filter((r) => r.kind === "red"),
-    flakes: rows.filter((r) => r.kind === "flake"),
-    overdue: rows.filter((r) => r.overdue),
-    rows,
-  };
-}
 
 export function auditFormalSync(
   repoRoot = REPO_ROOT,
@@ -133,10 +108,15 @@ export function runLedgerAudit({
   spawn = spawnSync,
 } = {}) {
   const started = Date.now();
-  const knownFailingPath = path.join(repoRoot, KNOWN_FAILING_REL);
-  const knownFailing = existsSync(knownFailingPath)
-    ? parseKnownFailingTsv(readFileSync(knownFailingPath, "utf8"), { today })
-    : { total: 0, reds: [], flakes: [], overdue: [], rows: [] };
+  const knownFailingPath = path.join(repoRoot, LEDGER_FILE);
+  const { rows: ledgerRows, problems: ledgerProblems } = existsSync(knownFailingPath)
+    ? parseLedger(readFileSync(knownFailingPath, "utf8"))
+    : { rows: [], problems: [{ line: 0, message: `${LEDGER_FILE} was not found` }] };
+  const knownFailing = {
+    reds: ledgerRows.filter((row) => row.kind === "red"),
+    flakes: ledgerRows.filter((row) => row.kind === "flake"),
+    overdue: pastReview(ledgerRows, today),
+  };
 
   const sketchDir = path.join(repoRoot, sketchRel);
   const placeholderFindings = existsSync(sketchDir) ? scanPlaceholders(sketchDir) : [];
@@ -151,6 +131,7 @@ export function runLedgerAudit({
   const ms = Date.now() - started;
 
   const clean =
+    ledgerProblems.length === 0 &&
     knownFailing.reds.length === 0 &&
     knownFailing.overdue.length === 0 &&
     placeholderFindings.length === 0 &&
@@ -162,8 +143,10 @@ export function runLedgerAudit({
     today,
     ms,
     known_failing: {
-      path: KNOWN_FAILING_REL,
-      total: knownFailing.total,
+      path: LEDGER_FILE,
+      total: ledgerRows.length,
+      problem_count: ledgerProblems.length,
+      problems: ledgerProblems,
       red_count: knownFailing.reds.length,
       flake_count: knownFailing.flakes.length,
       overdue_count: knownFailing.overdue.length,
@@ -200,8 +183,11 @@ export function runLedgerAudit({
 export function formatLedgerAudit(report) {
   const lines = [
     `ledger-audit ${report.ok ? "CLEAN" : "ATTENTION"} (${report.ms}ms, as of ${report.today})`,
-    `  KNOWN-FAILING.tsv: total=${report.known_failing.total} red=${report.known_failing.red_count} flake=${report.known_failing.flake_count} overdue=${report.known_failing.overdue_count}`,
+    `  KNOWN-FAILING.tsv: total=${report.known_failing.total} problems=${report.known_failing.problem_count} red=${report.known_failing.red_count} flake=${report.known_failing.flake_count} overdue=${report.known_failing.overdue_count}`,
   ];
+  for (const problem of report.known_failing.problems) {
+    lines.push(`    problem: line ${problem.line}: ${problem.message}`);
+  }
   for (const r of report.known_failing.reds) {
     lines.push(`    red: ${r.test} (owner=${r.owner}, review=${r.review})`);
   }
