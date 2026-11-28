@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { execFile, spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { chmodSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os, { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { git as runGit } from "./lib/git.mjs";
 
 const execFileAsync = promisify(execFile);
 const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
@@ -27,12 +28,7 @@ function sketches(tree, names) {
 }
 
 function git(cwd, ...args) {
-  const result = spawnSync(
-    "git",
-    ["-c", "user.name=t", "-c", "user.email=t@example.com", "-C", cwd, ...args],
-    { encoding: "utf8" },
-  );
-  assert.equal(result.status, 0, result.stderr);
+  runGit(["-c", "user.name=t", "-c", "user.email=t@example.com", ...args], { cwd });
 }
 
 mkdirSync(main, { recursive: true });

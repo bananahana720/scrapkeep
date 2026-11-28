@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -24,6 +23,7 @@ import {
   median,
   summarizeRun,
 } from "./checkpoint.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 export const MAX_WALL_MS = 60 * 60_000;
 export const MAX_FLAKE_RATE = 0.01;
@@ -518,13 +518,7 @@ export async function runNightly(
 }
 
 function gitState() {
-  const git = (args) => {
-    const r = spawnSync("git", ["-C", root, ...args], {
-      encoding: "utf8",
-      timeout: 10_000,
-    });
-    return r.status === 0 ? r.stdout.trim() : null;
-  };
+  const git = (args) => gitOptional(args, { cwd: root, timeout: 10_000 });
   const status = git(["status", "--porcelain"]);
   return {
     head: git(["rev-parse", "HEAD"]),

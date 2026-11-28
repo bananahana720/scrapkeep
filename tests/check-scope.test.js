@@ -6,6 +6,7 @@ import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { git as runGit } from "../scripts/lib/git.mjs";
 
 const execFileAsync = promisify(execFile);
 const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
@@ -110,18 +111,9 @@ const contentCases = [
 ];
 
 async function git(cwd, ...args) {
-  const { stdout } = await execFileAsync("git", args, {
+  return runGit(["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", ...args], {
     cwd,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      GIT_AUTHOR_NAME: "fixture",
-      GIT_AUTHOR_EMAIL: "fixture@example.invalid",
-      GIT_COMMITTER_NAME: "fixture",
-      GIT_COMMITTER_EMAIL: "fixture@example.invalid",
-    },
   });
-  return stdout.trim();
 }
 
 async function commit(cwd, message) {

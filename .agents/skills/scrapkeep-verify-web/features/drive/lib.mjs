@@ -1,11 +1,11 @@
 // Shared by the web drives: one browser, one evidence folder, one row a step.
 import { chromium } from "playwright";
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { git } from "../../../../../scripts/lib/git.mjs";
 
-export const repo = execFileSync("git", ["-C", path.dirname(fileURLToPath(import.meta.url)), "rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+export const repo = git(["rev-parse", "--show-toplevel"], { cwd: path.dirname(fileURLToPath(import.meta.url)) });
 export const vite = `http://127.0.0.1:${process.env.VERIFY_WEB_VITE_PORT || 5199}`;
 export const kit = `http://127.0.0.1:${process.env.VERIFY_WEB_KIT_PORT || 8799}`;
 export const kitVerdicts = path.join(repo, "artifacts/local/verify-web/run/verdicts.json");
@@ -54,7 +54,7 @@ export async function drive(name, steps, { viewport = { width: 1440, height: 900
     await browser.close();
   }
   const failed = rows.filter((row) => !row.ok);
-  const head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const head = git(["rev-parse", "HEAD"], { cwd: repo });
   writeFileSync(path.join(out, "rows.json"), JSON.stringify({ name, commit: head, rows, pageErrors: errors, crashed }, null, 2) + "\n");
   writeFileSync(path.join(out, "identity.txt"), `commit ${head}\nfinished ${new Date().toISOString()}\nchecks ${rows.length} failed ${failed.length} page errors ${errors.length} crashed ${crashed ?? "no"}\n`);
   console.log(`${name}: ${rows.length - failed.length} of ${rows.length} checks held, ${errors.length} page error(s)${crashed ? ", stopped: " + crashed : ""}; evidence in ${out}`);

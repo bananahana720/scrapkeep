@@ -6,6 +6,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { findMentions } from "./no-caller.mjs";
+import { git } from "./lib/git.mjs";
 
 const cli = path.join(path.dirname(fileURLToPath(import.meta.url)), "no-caller.mjs");
 
@@ -31,8 +32,8 @@ function scratchRepo() {
     mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
     writeFileSync(path.join(dir, rel), text);
   }
-  spawnSync("git", ["init", "-q"], { cwd: dir });
-  spawnSync("git", ["add", "."], { cwd: dir });
+  git(["init", "-q"], { cwd: dir });
+  git(["add", "."], { cwd: dir });
   return dir;
 }
 
@@ -165,7 +166,7 @@ test("a tracked file whose name starts with two dots is inside the repository", 
   const dir = scratchRepo();
   try {
     writeFileSync(path.join(dir, "..dots.gd"), "extends Node\n");
-    spawnSync("git", ["add", "..dots.gd"], { cwd: dir });
+    git(["add", "..dots.gd"], { cwd: dir });
     const r = run(dir, "..dots.gd");
     assert.equal(r.status, 0, r.stderr);
     assert.equal(r.stdout, "..dots.gd: 0 mentions\n");

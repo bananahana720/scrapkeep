@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gitOptional } from "../../scripts/lib/git.mjs";
 
 const LIVE_SAVE_SEGMENT =
   /(?:\.local\/share\/godot\/app_userdata\/core-loop|Library\/Application Support\/godot\/app_userdata\/core-loop)(?:\b|\/|$)/i;
@@ -242,11 +243,11 @@ export function defaultInspectProjectGodot(
   if (!repoDir) return false;
   let repoRoot = findRepoRoot(repoDir);
   if (!repoRoot) {
-    const top = spawn("git", ["-C", repoDir, "rev-parse", "--show-toplevel"], {
-      encoding: "utf8",
-      timeout: GIT_TIMEOUT_MS,
-    });
-    repoRoot = top.status === 0 && top.stdout.trim() ? top.stdout.trim() : repoDir;
+    repoRoot =
+      gitOptional(["-C", repoDir, "rev-parse", "--show-toplevel"], {
+        spawn,
+        timeout: GIT_TIMEOUT_MS,
+      }) || repoDir;
   }
   const wtPath = path.join(repoRoot, "sketches/core-loop/project.godot");
   if (existsSync(wtPath)) {
@@ -254,17 +255,16 @@ export function defaultInspectProjectGodot(
     if (!wtText.includes("McpBridge")) return false;
     if (checkWorkingTree) return true;
   }
-  const diff = spawn(
-    "git",
+  const staged = gitOptional(
     ["-C", repoRoot, "diff", "--cached", "--name-only", "--", "sketches/core-loop/project.godot"],
-    { encoding: "utf8", timeout: GIT_TIMEOUT_MS },
+    { spawn, timeout: GIT_TIMEOUT_MS },
   );
-  if (diff.status === 0 && diff.stdout.trim()) {
-    const show = spawn("git", ["-C", repoRoot, "show", ":sketches/core-loop/project.godot"], {
-      encoding: "utf8",
+  if (staged) {
+    const show = gitOptional(["-C", repoRoot, "show", ":sketches/core-loop/project.godot"], {
+      spawn,
       timeout: GIT_TIMEOUT_MS,
     });
-    if (show.status === 0 && show.stdout.includes("McpBridge")) return true;
+    if (show?.includes("McpBridge")) return true;
   }
   return false;
 }

@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { readFile, realpath } from "node:fs/promises";
-import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./lib/cli.mjs";
+import { git } from "./lib/git.mjs";
 
 const defaults = {
   "documentation-only": ["docs", "project", "scenario-review"],
@@ -77,17 +77,11 @@ export async function checkReceipt(receipt, { root, receiptHash }) {
   let rootPath;
   try {
     rootPath = await realpath(root);
-    const head = execFileSync("git", ["-C", rootPath, "rev-parse", "HEAD"], {
-      encoding: "utf8",
-    }).trim();
+    const head = git(["rev-parse", "HEAD"], { cwd: rootPath });
     if (head !== r.integratedCommit)
       pending("integratedCommit", "checkout HEAD differs from tested commit");
-    const dirty = execFileSync(
-      "git",
-      ["-C", rootPath, "status", "--porcelain", "--untracked-files=no"],
-      { encoding: "utf8" },
-    );
-    if (dirty.trim()) pending("worktree", "tracked worktree is dirty");
+    if (git(["status", "--porcelain", "--untracked-files=no"], { cwd: rootPath }))
+      pending("worktree", "tracked worktree is dirty");
   } catch {
     pending("root", "cannot verify repository identity and tracked cleanliness");
   }
@@ -162,11 +156,10 @@ export async function checkReceipt(receipt, { root, receiptHash }) {
       rootPath
     ) {
       try {
-        execFileSync(
-          "git",
-          ["-C", rootPath, "merge-base", "--is-ancestor", predecessor.acceptedCommit, "HEAD"],
-          { stdio: "ignore" },
-        );
+        git(["merge-base", "--is-ancestor", predecessor.acceptedCommit, "HEAD"], {
+          cwd: rootPath,
+          stdio: "ignore",
+        });
       } catch {
         pending(
           field,

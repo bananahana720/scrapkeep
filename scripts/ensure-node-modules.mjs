@@ -6,6 +6,7 @@ import { existsSync, lstatSync, readFileSync, realpathSync, symlinkSync } from "
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./lib/cli.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -39,16 +40,15 @@ export function ensureNodeModules(worktreeRoot = root, opts = {}) {
     }
   }
 
-  const ran = spawn(
-    "git",
-    ["-C", worktree, "rev-parse", "--path-format=absolute", "--git-common-dir"],
-    { encoding: "utf8" },
-  );
-  if (ran.error || ran.status !== 0 || !ran.stdout.trim()) {
+  const common = gitOptional(["rev-parse", "--path-format=absolute", "--git-common-dir"], {
+    cwd: worktree,
+    spawn,
+  });
+  if (!common) {
     return { ok: false, linked: false, reason: "git_common_dir_failed" };
   }
 
-  const primary = path.dirname(ran.stdout.trim());
+  const primary = path.dirname(common);
   const worktreeReal = safeRealpath(worktree);
   const primaryReal = safeRealpath(primary);
   if (primaryReal === worktreeReal) {

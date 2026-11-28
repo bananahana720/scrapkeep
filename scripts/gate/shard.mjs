@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -42,6 +41,7 @@ import {
   writeImportStamp,
 } from "../import-stamp.mjs";
 import { resolveGodotBinary, withScratchGodotEnv } from "../godot-home.mjs";
+import { git } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -487,12 +487,6 @@ function parseArguments(argv) {
   return options;
 }
 
-function git(...args) {
-  const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr.trim()}`);
-  return result.stdout.trim();
-}
-
 function boxLine() {
   const cpus = os.cpus();
   return `${cpus.length} vCPU ${cpus[0]?.model ?? "unknown CPU"}, ${Math.round(os.totalmem() / 2 ** 30)} GB`;
@@ -555,16 +549,13 @@ function soloOutcome(out, name, logDir, test) {
 
 function checkoutGuard(head) {
   const problem = () => {
-    if (git("rev-parse", "HEAD") !== head) return "the checkout moved during the run";
-    if (git("status", "--porcelain", "--untracked-files=no"))
+    if (git(["rev-parse", "HEAD"], { cwd: root }) !== head)
+      return "the checkout moved during the run";
+    if (git(["status", "--porcelain", "--untracked-files=no"], { cwd: root }))
       return "the checkout has uncommitted changes; a gate shard runs a clean head";
     const extra = git(
-      "status",
-      "--porcelain",
-      "--untracked-files=all",
-      "--",
-      `${SKETCH}/tests`,
-      WEEKLY_FILE,
+      ["status", "--porcelain", "--untracked-files=all", "--", `${SKETCH}/tests`, WEEKLY_FILE],
+      { cwd: root },
     )
       .split("\n")
       .filter((line) => /^\?\? .*\.(gd|tsv)$/.test(line))
@@ -749,7 +740,7 @@ async function runRetime(options) {
       `not in the ${options.bots ? "bot" : "non-bot"} gate lists: ${unknown.join(", ")}`,
     );
   const godot = godotBinary();
-  const head = git("rev-parse", "HEAD");
+  const head = git(["rev-parse", "HEAD"], { cwd: root });
   const refuse = checkoutGuard(head);
   refuse();
   const threads = os.availableParallelism();
@@ -793,7 +784,7 @@ async function run(options) {
   );
   const godot = godotBinary();
   const scale = timeScale();
-  const head = git("rev-parse", "HEAD");
+  const head = git(["rev-parse", "HEAD"], { cwd: root });
   const refuse = checkoutGuard(head);
   refuse();
   const ledger = parseLedger(readFileSync(path.join(root, LEDGER_FILE), "utf8"));

@@ -18,36 +18,32 @@ export function cwdDecidesRepository(env = process.env) {
   return out;
 }
 
-export function git(
-  args,
-  { cwd = REPO_ROOT, maxBuffer = DEFAULT_MAX_BUFFER, trim = true, spawn = spawnSync, stdio } = {},
-) {
-  const ran = spawn("git", args, {
+function start(args, { cwd = REPO_ROOT, maxBuffer = DEFAULT_MAX_BUFFER, spawn, stdio, timeout }) {
+  return spawn("git", args, {
     cwd,
     env: cwdDecidesRepository(),
     encoding: "utf8",
     maxBuffer,
     ...(stdio ? { stdio } : {}),
+    ...(timeout ? { timeout } : {}),
   });
+}
+
+export function git(args, { trim = true, spawn = spawnSync, ...options } = {}) {
+  const ran = start(args, { spawn, ...options });
   if (ran.error) throw ran.error;
   if (ran.status !== 0) {
-    throw new Error(`git ${args.join(" ")} failed: ${(ran.stderr || ran.stdout || "").trim()}`);
+    throw Object.assign(
+      new Error(`git ${args.join(" ")} failed: ${(ran.stderr || ran.stdout || "").trim()}`),
+      { status: ran.status, stdout: ran.stdout ?? "", stderr: ran.stderr ?? "" },
+    );
   }
   const stdout = ran.stdout ?? "";
   return trim ? stdout.trim() : stdout;
 }
 
-export function gitOptional(
-  args,
-  { cwd = REPO_ROOT, maxBuffer = DEFAULT_MAX_BUFFER, trim = true, spawn = spawnSync, stdio } = {},
-) {
-  const ran = spawn("git", args, {
-    cwd,
-    env: cwdDecidesRepository(),
-    encoding: "utf8",
-    maxBuffer,
-    ...(stdio ? { stdio } : {}),
-  });
+export function gitOptional(args, { trim = true, spawn = spawnSync, ...options } = {}) {
+  const ran = start(args, { spawn, ...options });
   if (ran.error || ran.status !== 0) return null;
   const stdout = ran.stdout ?? "";
   return trim ? stdout.trim() : stdout.replace(/\r?\n$/, "");
@@ -72,20 +68,16 @@ export function gitState(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
 }
 
 export function cleanHead(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
-  const tracked = spawn("git", ["status", "--porcelain", "--untracked-files=no"], {
+  const tracked = git(["status", "--porcelain", "--untracked-files=no"], {
     cwd,
-    env: cwdDecidesRepository(),
-    encoding: "utf8",
-    maxBuffer: DEFAULT_MAX_BUFFER,
+    trim: false,
+    spawn,
   });
-  if (tracked.error) throw tracked.error;
-  if (tracked.status !== 0) throw new Error(`git status failed: ${tracked.stderr}`);
-  if (tracked.stdout.trim())
+  if (tracked.trim())
     throw new Error(
-      `refusing: uncommitted changes to tracked files, the check would judge no commit:\n${tracked.stdout}`,
+      `refusing: uncommitted changes to tracked files, the check would judge no commit:\n${tracked}`,
     );
-  const loose = spawn(
-    "git",
+  const loose = git(
     [
       "status",
       "--porcelain",
@@ -94,13 +86,11 @@ export function cleanHead(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
       "sketches/core-loop/src",
       "sketches/core-loop/assets",
     ],
-    { cwd, env: cwdDecidesRepository(), encoding: "utf8", maxBuffer: DEFAULT_MAX_BUFFER },
+    { cwd, trim: false, spawn },
   );
-  if (loose.error) throw loose.error;
-  if (loose.status !== 0) throw new Error(`git status failed: ${loose.stderr}`);
-  if (loose.stdout.trim())
+  if (loose.trim())
     throw new Error(
-      `refusing: untracked files under the game's src or assets, the check would judge no commit:\n${loose.stdout}`,
+      `refusing: untracked files under the game's src or assets, the check would judge no commit:\n${loose}`,
     );
   return git(["rev-parse", "HEAD"], { cwd, spawn });
 }

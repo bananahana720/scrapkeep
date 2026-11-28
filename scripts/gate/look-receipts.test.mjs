@@ -10,6 +10,7 @@ import * as render from "./model-render-receipt.mjs";
 import * as census from "./stand-ins-receipt.mjs";
 import * as display from "./display-run.mjs";
 import { groupLive } from "../lib/proc.mjs";
+import { git as runGit } from "../lib/git.mjs";
 
 const HEAD = "abc1234";
 const KINDS = render.KINDS;
@@ -24,15 +25,12 @@ function repo() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "look-receipts-git-"));
   tempDirs.push(dir);
   const git = (...args) =>
-    spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
-      cwd: dir,
-      encoding: "utf8",
-    });
+    runGit(["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: dir });
   git("init", "-q");
   writeFileSync(path.join(dir, "a.txt"), "one");
   git("add", "a.txt");
   git("commit", "-q", "-m", "one");
-  return { dir, head: git("rev-parse", "HEAD").stdout.trim() };
+  return { dir, head: git("rev-parse", "HEAD") };
 }
 
 function compareLog({
@@ -647,10 +645,8 @@ test("no-code-stand-ins: the producer runs the test then the plant, reads the pi
   const pinDir = path.join(dir, path.dirname(census.PIN));
   spawnSync("mkdir", ["-p", pinDir]);
   writeFileSync(path.join(dir, census.PIN), PIN_TEXT);
-  spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "add", "."], { cwd: dir });
-  spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "pin"], {
-    cwd: dir,
-  });
+  runGit(["-c", "user.name=t", "-c", "user.email=t@t", "add", "."], { cwd: dir });
+  runGit(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "pin"], { cwd: dir });
   const r = census.produce({ cwd: dir, run });
   assert.notEqual(r.head, head);
   assert.equal(r.pass, true);

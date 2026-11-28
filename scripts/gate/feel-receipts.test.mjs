@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -18,16 +17,14 @@ import {
   produce as feelProduce,
 } from "./core-feel-receipt.mjs";
 import { receiptRow } from "../world1-bands.mjs";
+import { git as runGit } from "../lib/git.mjs";
 
 const HEAD = "3adc2fd0e8563b13c87f921b2ae85763467fec03";
 
 function repoWith(files) {
   const repo = mkdtempSync(path.join(os.tmpdir(), "feel-receipts-git-"));
   const git = (...args) =>
-    spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
-      cwd: repo,
-      encoding: "utf8",
-    });
+    runGit(["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: repo });
   git("init", "-q");
   for (const [file, text] of Object.entries(files)) {
     mkdirSync(path.dirname(path.join(repo, file)), { recursive: true });
@@ -35,7 +32,7 @@ function repoWith(files) {
   }
   git("add", ".");
   git("commit", "-q", "-m", "one");
-  return { repo, head: git("rev-parse", "HEAD").stdout.trim() };
+  return { repo, head: git("rev-parse", "HEAD") };
 }
 
 const SETS = [

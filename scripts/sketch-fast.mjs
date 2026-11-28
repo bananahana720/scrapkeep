@@ -56,6 +56,7 @@ import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stam
 import { resolveGodotBinary, withScratchGodotEnv } from "./godot-home.mjs";
 import { discoverTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
 import { packDurationShards } from "./ci/shard-plan.mjs";
+import { git, gitOptional } from "./lib/git.mjs";
 
 const binary = resolveGodotBinary();
 
@@ -583,13 +584,6 @@ export function selectStage1NodeTests({
   return combined.filter((file) => !covered.has(file));
 }
 
-function git(args, cwd = root) {
-  const result = spawnSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
-  if (result.status !== 0 || result.error)
-    throw new Error(`git ${args.join(" ")}: ${(result.stderr || "").trim()}`);
-  return result.stdout.trim();
-}
-
 function readTimings() {
   try {
     return JSON.parse(readFileSync(TIMINGS_FILE, "utf8")).tests ?? {};
@@ -988,10 +982,7 @@ async function main() {
     namedMode && !options.baseCheck ? headSha : git(["merge-base", options.base, "HEAD"]);
   for (const pr of options.pre) {
     git(["fetch", "-q", "origin", `+refs/pull/${pr}/head:refs/remotes/pr/${pr}`]);
-    if (
-      spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", `refs/remotes/pr/${pr}`, "HEAD"])
-        .status !== 0
-    ) {
+    if (gitOptional(["merge-base", "--is-ancestor", `refs/remotes/pr/${pr}`, "HEAD"]) === null) {
       console.error(
         `--pre ${pr}: the head does not contain PR #${pr} at its current head. Merge it first: git merge --no-edit refs/remotes/pr/${pr}`,
       );
@@ -1039,7 +1030,8 @@ async function main() {
       );
     return baseTree;
   };
-  const diffBase = options.pre.length > 0 ? git(["rev-parse", "HEAD"], baseDir()) : mergeBase;
+  const diffBase =
+    options.pre.length > 0 ? git(["rev-parse", "HEAD"], { cwd: baseDir() }) : mergeBase;
   const changedPaths = namedMode
     ? []
     : git(["diff", "--name-only", diffBase, "HEAD"]).split("\n").filter(Boolean);
@@ -1052,7 +1044,7 @@ async function main() {
   if (namedMode) receipt.named_tests = options.tests;
   const finish = (code) => {
     receipt.wall_ms = Date.now() - started;
-    if (baseTree) spawnSync("git", ["-C", root, "worktree", "remove", "--force", baseTree]);
+    if (baseTree) gitOptional(["worktree", "remove", "--force", baseTree]);
     const file = writeJsonReceipt(
       runnerReceiptPath(root, options.receipt, receipt.head, startedAt),
       receipt,
@@ -1078,9 +1070,7 @@ async function main() {
         baseTop,
       ),
       ...bridgeFindings(
-        spawnSync("git", ["-C", root, "show", "HEAD:sketches/core-loop/project.godot"], {
-          encoding: "utf8",
-        }).stdout ?? "",
+        gitOptional(["show", "HEAD:sketches/core-loop/project.godot"], { trim: false }) ?? "",
       ),
     ];
     if (
@@ -1093,13 +1083,7 @@ async function main() {
       !options.dryRun
     )
       finish();
-    const show = (ref, file) => {
-      const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], {
-        encoding: "utf8",
-        maxBuffer: 64 * 1024 * 1024,
-      });
-      return r.status === 0 ? r.stdout : null;
-    };
+    const show = (ref, file) => gitOptional(["show", `${ref}:${file}`], { trim: false });
     receipt.checks_removed = checksRemoved(
       git(["diff", "--name-status", "-M", diffBase, "HEAD"]).split("\n"),
       show,
@@ -1131,9 +1115,7 @@ async function main() {
       .map((line) => line.split(" "))
       .filter(
         ([, , second]) =>
-          second &&
-          spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", second, mergeBase])
-            .status !== 0,
+          second && gitOptional(["merge-base", "--is-ancestor", second, mergeBase]) === null,
       )
       .map(([merge, , carried]) => ({
         merge,
@@ -1163,22 +1145,18 @@ async function main() {
     };
     if (merges.length > 0) {
       const heads = { prHeads: new Map(), branchHeads: new Map() };
-      const remote = spawnSync(
-        "git",
-        ["-C", root, "ls-remote", "origin", "refs/pull/*/head", "refs/heads/*"],
-        { encoding: "utf8", timeout: 60_000 },
-      );
-      for (const line of (remote.stdout || "").split("\n")) {
+      const remote = gitOptional(["ls-remote", "origin", "refs/pull/*/head", "refs/heads/*"], {
+        timeout: 60_000,
+      });
+      for (const line of (remote ?? "").split("\n")) {
         const pull = /^([0-9a-f]{40})\trefs\/pull\/(\d+)\/head$/.exec(line);
         if (pull) heads.prHeads.set(pull[2], pull[1]);
         const branch = /^([0-9a-f]{40})\trefs\/heads\/(.+)$/.exec(line);
         if (branch) heads.branchHeads.set(branch[2], branch[1]);
       }
       const isAncestor = (sha) => {
-        spawnSync("git", ["-C", root, "fetch", "-q", "origin", sha]);
-        return (
-          spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", sha, "HEAD"]).status === 0
-        );
+        gitOptional(["fetch", "-q", "origin", sha]);
+        return gitOptional(["merge-base", "--is-ancestor", sha, "HEAD"]) !== null;
       };
       const carried = carriedPrs(merges, heads, isAncestor);
       receipt.carried = carried;
