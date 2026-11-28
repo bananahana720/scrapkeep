@@ -31,6 +31,7 @@ import {
   parseArgs,
   batchable,
   resolveNamedTests,
+  unmatchedTestPatterns,
   runBootTask,
   seedBaseGodot,
   shardLanePlan,
@@ -1248,6 +1249,33 @@ test("seedBaseGodot copies head .godot into base without scrapkeep-import.json",
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("parseArgs refuses an argument it does not know, and a flag with no value", () => {
+  assert.throws(
+    () => parseArgs(["--test fx_library_test --test machine_fx_test"]),
+    /unknown argument "--test fx_library_test --test machine_fx_test".*one --test <name> per test/,
+  );
+  assert.throws(() => parseArgs(["fx_library_test"]), /unknown argument "fx_library_test"/);
+  assert.throws(() => parseArgs(["--tests", "fx_library_test"]), /unknown argument "--tests"/);
+  assert.throws(() => parseArgs(["--shuffle", "--base=origin/main"]), /unknown argument/);
+  for (const flag of ["--base", "--budget", "--receipt", "--width", "--pre"]) {
+    assert.throws(() => parseArgs([flag]), new RegExp(`${flag} requires a value`));
+  }
+  assert.deepEqual(parseArgs(["--test", "fx_library_test", "--test", "machine_fx_*"]).tests, [
+    "fx_library_test",
+    "machine_fx_*",
+  ]);
+});
+
+test("unmatchedTestPatterns names each pattern that matches no test, even beside one that does", () => {
+  const allTests = ["tests/fx_library_test.gd", "tests/machine_fx_test.gd"];
+  assert.deepEqual(unmatchedTestPatterns(allTests, ["fx_library_test", "machine_fx_*"]), []);
+  assert.deepEqual(
+    unmatchedTestPatterns(allTests, ["fx_library_test", "fx_libary_test", "tests/kill_*"]),
+    ["fx_libary_test", "tests/kill_*"],
+  );
+  assert.deepEqual(unmatchedTestPatterns(allTests, []), []);
 });
 
 test("resolveNamedTests strips prefixes/suffixes, matches globs, and plan allowBots keeps bot/solo tests direct", () => {

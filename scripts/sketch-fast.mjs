@@ -204,6 +204,12 @@ export function resolveNamedTests(allTests, patterns) {
     .sort();
 }
 
+export function unmatchedTestPatterns(allTests, patterns) {
+  return patterns.filter((pattern) => resolveNamedTests(allTests, [pattern]).length === 0);
+}
+
+const VALUE_FLAGS = new Set(["--base", "--budget", "--receipt", "--width", "--pre"]);
+
 export function parseArgs(argv) {
   const options = {
     base: "origin/main",
@@ -263,6 +269,13 @@ export function parseArgs(argv) {
       }
       options.seed = Math.trunc(Number(raw)) >>> 0;
     } else if (arg === "--pre" && argv[i + 1]) options.pre.push(argv[++i].replace(/^#/, ""));
+    else if (VALUE_FLAGS.has(arg)) throw new Error(`${arg} requires a value`);
+    else {
+      throw new Error(
+        `unknown argument "${arg}"; pass each flag and each value as its own argument, ` +
+          "one --test <name> per test",
+      );
+    }
   }
   options.baseCheck = explicitBaseCheck ?? options.tests.length === 0;
   if (!Number.isFinite(options.budgetS) || options.budgetS <= 0)
@@ -967,7 +980,13 @@ function sourceOf(sketchDir, test) {
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2));
+  let options;
+  try {
+    options = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(`sketch:fast: ${error.message}`);
+    process.exit(2);
+  }
   const startedAt = new Date().toISOString();
   const started = Date.now();
   const sketchDir = path.join(root, SKETCH);
@@ -1207,11 +1226,12 @@ async function main() {
   let selection;
   let lanePlan;
   if (namedMode) {
-    const matched = resolveNamedTests(index.tests, options.tests);
-    if (matched.length === 0) {
-      console.error(`sketch:fast: no tests/*.gd matched ${options.tests.join(", ")}`);
+    const unmatched = unmatchedTestPatterns(index.tests, options.tests);
+    if (unmatched.length > 0) {
+      console.error(`sketch:fast: no tests/*.gd matched ${unmatched.join(", ")}`);
       process.exit(2);
     }
+    const matched = resolveNamedTests(index.tests, options.tests);
     const picked = new Map(matched.map((test) => [test, { tier: 0, why: "named (--test)" }]));
     selection = { picked, hubs: [], unmapped: [], shards: new Map() };
     lanePlan = plan({
