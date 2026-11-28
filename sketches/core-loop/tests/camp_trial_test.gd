@@ -13,7 +13,7 @@ const FakeHub := preload("res://tests/support/camp_fake_hub.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Trial := preload("res://src/world/camp_trial.gd")
-const Records := preload("res://src/world/camp_records.gd")
+const Records := preload("res://src/core/camp_records.gd")
 const Profile := preload("res://src/core/profile.gd")
 
 var _t := T.new("camp_trial_test")

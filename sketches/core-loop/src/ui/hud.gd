@@ -1040,7 +1040,7 @@ func _on_world_entered(world: int) -> void:
 	var row := Worlds.row(world)
 	if row.is_empty():
 		return
-	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, game.run.stage, game.ctx.profile))
+	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, game.run.stage, _foreman_memo(game.run.stage)))
 	_world_card_at = Time.get_ticks_msec()
 
 
@@ -1098,9 +1098,15 @@ func _step_curse() -> void:
 
 func _card_for_stage(stage: int) -> void:
 	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
-	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage, game.ctx.profile))
+	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage, _foreman_memo(stage)))
 	if not modifier.is_empty() and game.player != null:
 		StageModifier.announce(game.player.shown_position())
+
+
+func _foreman_memo(stage: int) -> String:
+	if game.ctx.profile == null or game.run == null:
+		return ""
+	return PilotStory.foreman_stage_memo(int(game.run.run_seed), stage, game.ctx.profile, [], game.run)
 
 
 func _label(font_size: int) -> Label:

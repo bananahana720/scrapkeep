@@ -44,6 +44,8 @@ func _run() -> void:
 		await process_frame
 		frames += 1
 	_t.check("they are built a few frames after the menu", _built(played) and frames >= 6, "%d frames" % frames)
+	_t.check("the met-enemy watch is on", played.has_meta("met_watch"))
+	_t.check("the camp's enemy picker is loaded with the camp", ResourceLoader.has_cached("res://src/ui/camp_enemy_picker.gd"))
 	_t.check("the title is still up", played.flow.state_name() == "title")
 	played.free()
 

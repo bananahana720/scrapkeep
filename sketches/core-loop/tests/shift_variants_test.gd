@@ -271,6 +271,10 @@ func _physics_process(_delta: float) -> bool:
 			_t.check("night shift raises director crowd cap", _game.world.director.cap() > _base_cap, "%d vs %d" % [_game.world.director.cap(), _base_cap])
 			_t.check("night shift appears on stage 1 card line", StageModifier.card_line(_game.ctx.run, _game.world.terrain, 1).contains("Night Shift"))
 			_t.check("night shift does not appear on stage 2 card line", not StageModifier.card_line(_game.ctx.run, _game.world.terrain, 2).contains("Night Shift"))
+			for card_stage in [1, 2]:
+				var unmodified := StageModifier.for_stage(_game.ctx.run, _game.world.terrain, card_stage).is_empty()
+				_t.eq("stage %d card line carries a handed Foreman memo only with no modifier" % card_stage,
+					StageModifier.card_line(_game.ctx.run, _game.world.terrain, card_stage, "Foreman memo under test").contains("Foreman memo under test"), unmodified)
 
 			# Extra salvage cage on the dam: present, clear of yard-lock zone, flat ground, pays scrap once.
 			var night_cage = _game.world.rescue.cage(ShiftVariants.NIGHT_SHIFT_CAGE_QUEST)

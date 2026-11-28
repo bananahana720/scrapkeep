@@ -47,13 +47,14 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const MetRecord := preload("res://src/core/met_record.gd")
+const CampRecords := preload("res://src/core/camp_records.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
 const Opening := preload("res://src/presentation/opening.gd")
 const MENU_PATHS := [
 	"res://src/world/camp_hub.gd",
-	"res://src/ui/camp_enemy_picker.gd",
+	"",
 	"res://src/ui/workshop.gd",
 	"res://src/ui/pause_menu.gd",
 ]
@@ -254,6 +255,9 @@ func _ready() -> void:
 
 	_boot("modules")
 	world = _module(World)
+	world.activities.room_sites = func(map_id: String, sitting: bool) -> Array: return Secrets.stage_room_sites(map_id, ctx.profile, sitting)
+	world.activities.door_sites = func(map_id: String) -> Array: return Secrets.door_sites(map_id, ctx.profile)
+	world.activities.settle = progress.settle
 	_boot("world")
 	for row in ctx.stages.DEFS:
 		if row["map"] == "spillway":
@@ -268,6 +272,8 @@ func _ready() -> void:
 	combat = _module(Combat)
 	_boot("combat")
 	build = _module(Build)
+	build.shop.return_leaves = progress.return_leaves
+	build.shop.leaves_returned = progress.leaves_returned
 	events.run_started.connect(_apply_player_run_options)
 	if ResourceLoader.exists(BOSS_PATH):
 		boss = _module(load(BOSS_PATH))
@@ -385,7 +391,7 @@ func _menu_step_once() -> void:
 			camp_hub = hub
 			add_child(hub)
 			hub.setup(self)
-			hub.camp_store = ctx.profile
+			hub.camp_records = CampRecords.new(ctx.profile)
 		1:
 			MetRecord.watch(self)
 		2:
@@ -397,6 +403,8 @@ func _menu_step_once() -> void:
 
 func _menu_script(step: int) -> Script:
 	var path: String = MENU_PATHS[step]
+	if path == "":
+		return null
 	if _menu_requested == step:
 		_menu_requested = -1
 		var threaded: Script = ResourceLoader.load_threaded_get(path)
@@ -421,7 +429,7 @@ func _step_menu_modules_later() -> void:
 		if _menu_wait > 0:
 			return
 		_menu_requested = _menu_step
-		if ResourceLoader.load_threaded_request(MENU_PATHS[_menu_step], "", false) != OK:
+		if MENU_PATHS[_menu_step] == "" or ResourceLoader.load_threaded_request(MENU_PATHS[_menu_step], "", false) != OK:
 			_menu_requested = -1
 			_menu_step_once()
 			_menu_wait = MENU_MODULES_FRAMES_APART

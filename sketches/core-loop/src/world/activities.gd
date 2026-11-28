@@ -174,6 +174,9 @@ const AT_HAND_M := 80.0
 const LET_GO_M := 100.0
 
 var ctx
+var room_sites := Callable()
+var door_sites := Callable()
+var settle := Callable()
 var sites: Array = []
 var _keep_map
 var _keep_rows: Array = []
@@ -546,11 +549,11 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 	if _graph_map != "":
 		var tuning = ctx.get("tuning")
 		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
-		for room_spec in Secrets.stage_room_sites(_graph_map, ctx.get("profile"), sitting):
+		for room_spec in (room_sites.call(_graph_map, sitting) if room_sites.is_valid() else []):
 			out.append({"kind": "room", "id": "cracked_cache", "at": room_spec["at"], "spec": room_spec, "secret": String(room_spec["secret"])})
 		for find_spec in Secrets.find_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "field_finds"])):
 			out.append({"kind": "find", "id": "cracked_cache", "at": find_spec["at"], "spec": find_spec, "find": String(find_spec["find"])})
-		for door_spec in Secrets.door_sites(_graph_map, ctx.get("profile")):
+		for door_spec in (door_sites.call(_graph_map) if door_sites.is_valid() else []):
 			out.append({"kind": "door", "id": "cracked_cache", "at": door_spec["at"], "spec": door_spec})
 		for wire_spec in Secrets.patch_wire_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "patch_wires"]), ctx.get("codex")):
 			out.append({"kind": "patch_wire", "id": "cracked_cache", "at": wire_spec["at"], "spec": wire_spec, "patch_wire": String(wire_spec["patch_wire"])})
@@ -2262,8 +2265,8 @@ func _found_patch_wire(s: Site) -> void:
 		ctx.codex.mark_discovered(wire_id, s.pedestal)
 	ctx.events.world_fact.emit(wire_id, s.pedestal)
 	ctx.events.world_fact.emit("patch_wire_found", s.pedestal)
-	if ctx.get("progress") != null and ctx.progress.has_method("settle"):
-		ctx.progress.settle(wire_id)
+	if settle.is_valid():
+		settle.call(wire_id)
 
 
 func _found(s: Site) -> void:

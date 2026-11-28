@@ -4,7 +4,6 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const Records := preload("res://src/world/camp_records.gd")
 
 const PIECE := "camp_skee_lane"
 const BALLS := 9
@@ -100,7 +99,7 @@ static func points_for(id: String) -> int:
 
 func setup(hub_ref, records_ref = null) -> void:
 	hub = hub_ref
-	records = records_ref if records_ref != null else Records.new(_profile())
+	records = records_ref if records_ref != null else hub.camp_records
 	_lane_xf = hub.piece(PIECE).global_transform
 	for id in CUPS:
 		_sensors[id] = _sensor(id, float(CUPS[id]["radius"]))
@@ -111,10 +110,6 @@ func setup(hub_ref, records_ref = null) -> void:
 	hub.add_station("camp_skee", at, "Skee-ball: nine balls", "interact", 3.0, Callable(self, "start_game"))
 	if hub.has_signal("walk_left"):
 		hub.walk_left.connect(_on_walk_left)
-
-
-func _profile():
-	return hub.get("camp_store") if hub != null else null
 
 
 func _sensor(socket: String, radius: float) -> Area3D:

@@ -159,8 +159,32 @@ func _game() -> void:
 	_t.check("the camp counts the door", Secrets.WORLD_CODEX[1].has(codex_id))
 	game.flow.new_run()
 	_t.check("a restart from the door's run closes it", not Secrets.door_open(profile))
+	await _patch_wire(game, dam, profile)
 	game.queue_free()
 	await process_frame
+
+
+func _patch_wire(game, dam: int, profile) -> void:
+	game.ctx.codex.mark_known("patch.rogue.w1")
+	game.flow.enter_stage(dam + 1, Vector3.ZERO, false)
+	await physics_frame
+	await physics_frame
+	var wire = null
+	for s in game.world.activities.sites:
+		if is_instance_valid(s) and s.has_meta("patch_wire"):
+			wire = s
+	_t.check("the dam builds the revealed patch wire", wire != null)
+	if wire == null:
+		return
+	var wire_id := String(wire.get_meta("patch_wire"))
+	_t.eq("the dam's wire is world one's", wire_id, "patch.wire.w1")
+	_t.check("the wire is not settled before it breaks", not game.run.settled.has(wire_id) and not profile.is_settled(wire_id))
+	game.world.activities._break_wall(wire)
+	_t.check("a broken wire settles in the run", game.run.settled.has(wire_id), str(game.run.settled))
+	_t.check("and in the profile", profile.is_settled(wire_id))
+	var disk := Profile.new(profile.path)
+	disk.load_profile()
+	_t.check("and the settle is saved", disk.is_settled(wire_id), profile.path)
 
 
 func _dam_index(game) -> int:

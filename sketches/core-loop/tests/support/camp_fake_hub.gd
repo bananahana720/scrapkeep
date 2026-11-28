@@ -4,12 +4,15 @@ extends Node
 # camp features run against the real GLB collision at 90 physics ticks with no Game. The ball
 # is a plain RigidBody3D on layer 2 that mirrors the player ball's size, mass and gravity.
 
+const CampRecords := preload("res://src/core/camp_records.gd")
+
 signal walk_entered
 signal walk_left
 
 var root: Node3D
 var ball
 var game = null
+var camp_records = CampRecords.new()
 var pieces := {}
 var stations: Array = []
 
