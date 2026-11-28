@@ -1241,8 +1241,8 @@ func _on_gate_chosen(part_id: String) -> void:
 				ctx.run.expand_consumable_belt()
 			else:
 				var cid := Consumables.offer_consumable_id(part_id)
-				if cid != "" and not ctx.run.add_consumable(cid) and ctx.spawner != null and ctx.spawner.has_method("drop_consumable"):
-					ctx.spawner.drop_consumable(cid, ctx.player.ball_position())
+				if cid != "" and not ctx.run.add_consumable(cid) and ctx.spawner != null and ctx.spawner.get("consumables") != null:
+					ctx.spawner.consumables.drop_consumable(cid, ctx.player.ball_position())
 	elif not scrapless():
 		ctx.run.add_part(part_id, "gate")
 	ctx.events.reward_chosen.emit(part_id)

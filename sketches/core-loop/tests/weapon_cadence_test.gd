@@ -1531,7 +1531,7 @@ func _run_live() -> void:
 	_game.player.intent.fire_pressed = true
 	_game.player.intent.fire_held = true
 	combat._physics_process(DT)
-	var paint_pulse: Dictionary = combat.last_cannon_paint.duplicate()
+	var paint_pulse: Dictionary = combat.cannon.last_cannon_paint.duplicate()
 	_t.check("live Cannon press paints ground lane immediately in Cannon colour",
 		not paint_pulse.is_empty() and String(paint_pulse["stage"]) == WeaponDriver.SHOT_PULSE
 		and (paint_pulse["color"] as Color).is_equal_approx(ClassDef.CANNON_COLOR)
@@ -1540,7 +1540,7 @@ func _run_live() -> void:
 	_game.player.intent.fire_held = true
 	for _i in 20: # 0.333 s -> lock window open
 		combat._physics_process(DT)
-	var paint_rail: Dictionary = combat.last_cannon_paint.duplicate()
+	var paint_rail: Dictionary = combat.cannon.last_cannon_paint.duplicate()
 	_t.check("live Cannon brackets close flush (0.0) and turn mint inside lock window",
 		String(paint_rail["stage"]) == WeaponDriver.SHOT_RAIL
 		and (paint_rail["color"] as Color).is_equal_approx(Palette.ARC)
@@ -1549,7 +1549,7 @@ func _run_live() -> void:
 	_game.player.intent.clear()
 	_game.player.intent.fire_released = true
 	combat._physics_process(DT)
-	var rail_entry: Dictionary = combat._cannon.back()
+	var rail_entry: Dictionary = combat.cannon._cannon.back()
 	var rail_h = rail_entry["hazards"][0]
 	_t.check("live Cannon Rail release matches painted geometry exactly, draws bone, clears paint, and adds zero recoil",
 		is_equal_approx(rail_h.length, float(paint_rail["ahead"]))
@@ -1580,22 +1580,22 @@ func _run_live() -> void:
 	_game.player.intent.fire_held = true
 	for _i in 32: # 0.533 s -> Barrage
 		combat._physics_process(DT)
-	var paint_barrage: Dictionary = combat.last_cannon_paint.duplicate()
+	var paint_barrage: Dictionary = combat.cannon.last_cannon_paint.duplicate()
 	_t.check("live Cannon paint past 0.46 s turns slate with reopened brackets",
 		String(paint_barrage["stage"]) == WeaponDriver.SHOT_BARRAGE
 		and (paint_barrage["color"] as Color).is_equal_approx(Palette.SLATE)
 		and float(paint_barrage["bracket_gap"]) > 0.0, str(paint_barrage))
 	# Proc mid-paint fires plain Pulse (16.0) without touching painted lane or weapon_driver.
 	var c_snap_pre: Dictionary = combat.weapon_driver.state_snapshot()
-	var c_count_pre: int = combat._cannon.size()
+	var c_count_pre: int = combat.cannon._cannon.size()
 	combat._proc_volley(1.0)
-	var proc_lane: Dictionary = combat._cannon.back()
+	var proc_lane: Dictionary = combat.cannon._cannon.back()
 	_t.check("live Cannon item_proc fires plain Pulse (16.0) without touching painted lane or weapon_driver",
-		combat._cannon.size() == c_count_pre + 1 and is_equal_approx(float(proc_lane["damage"]), 16.0)
+		combat.cannon._cannon.size() == c_count_pre + 1 and is_equal_approx(float(proc_lane["damage"]), 16.0)
 		and not bool(proc_lane["options"].get("pierce_chip", false))
 		and combat.weapon_driver.state_snapshot() == c_snap_pre, str(proc_lane))
 	# Ultimate interrupt clears painted lane and indicator with zero shot fired.
-	var c_count_ult: int = combat._cannon.size()
+	var c_count_ult: int = combat.cannon._cannon.size()
 	_game.events.ultimate_started.emit("cannon_fire_mission", "arc", _game.player.ball_position(), _game.player.ball_position(), 1.0)
 	_game.player.intent.clear()
 	_game.player.intent.fire_released = true
@@ -1603,7 +1603,7 @@ func _run_live() -> void:
 	_t.check("live Cannon ultimate interrupt clears painted lane & indicator with zero shot fired",
 		not bool(combat.weapon_driver.state_snapshot()["painted"])
 		and not _game.player.indicator.shapes.has("cannon_paint")
-		and combat._cannon.size() == c_count_ult, str(combat.weapon_driver.state_snapshot()))
+		and combat.cannon._cannon.size() == c_count_ult, str(combat.weapon_driver.state_snapshot()))
 	_game.events.run_ended.emit(false)
 	_t.check("WC-1: run_ended returns Cannon to rest",
 		_is_at_rest(combat.weapon_driver.state_snapshot(), 0) and not bool(combat.weapon_driver.state_snapshot()["painted"]),

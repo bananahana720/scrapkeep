@@ -139,12 +139,12 @@ func _run() -> void:
 		and we.environment.glow_hdr_threshold >= Assembly.SELECTIVE_GLOW_THRESHOLD_MIN)
 
 	FlashGuard.on = true
-	Assembly.sync_accessibility(arena, true)
+	Assembly.assemble_into(arena)
 	var plasma_mat := Lookdev.preset_material("plasma_conduit_core")
 	_t.check("FlashGuard propagates reduce_flashes=true into CraftLookdev master weathering shaders",
 		plasma_mat != null and bool(plasma_mat.get_shader_parameter("reduce_flashes")) == true)
 	FlashGuard.on = false
-	Assembly.sync_accessibility(arena, false)
+	Assembly.assemble_into(arena)
 	_t.check("FlashGuard restores reduce_flashes=false cleanly",
 		plasma_mat != null and bool(plasma_mat.get_shader_parameter("reduce_flashes")) == false)
 

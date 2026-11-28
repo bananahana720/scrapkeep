@@ -3,6 +3,7 @@ extends RefCounted
 
 const EnvTags := preload("res://src/experimental/env_tags.gd")
 const PartResource := preload("res://src/experimental/part_resource.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 signal part_fired(receipt: Dictionary)
 signal synergy_emerged(synergy: Dictionary)
@@ -19,7 +20,6 @@ const HEAT_HOT_AT := 40.0
 const HEAT_REDLINE_AT := 80.0
 const BASE_VENT_HEAT_DUMP := 55.0
 
-const CRUISE_MPS := 14.0
 const VENT_MIN_SPEED_MPS := 12.0
 const STALL_SPEED_MPS := 6.0
 const AIRFLOW_COOL_CRUISE := 9.0
@@ -238,10 +238,10 @@ func step(dt: float, ball_speed_mps: float, ball_pos: Vector3 = Vector3.ZERO) ->
 		})
 
 	var cool_rate := AIRFLOW_COOL_STALL
-	if ball_speed_mps >= CRUISE_MPS:
+	if ball_speed_mps >= Tuning.CRUISE_MPS:
 		cool_rate = AIRFLOW_COOL_CRUISE
 	elif ball_speed_mps > STALL_SPEED_MPS:
-		var t := (ball_speed_mps - STALL_SPEED_MPS) / (CRUISE_MPS - STALL_SPEED_MPS)
+		var t := (ball_speed_mps - STALL_SPEED_MPS) / (Tuning.CRUISE_MPS - STALL_SPEED_MPS)
 		cool_rate = lerpf(AIRFLOW_COOL_STALL, AIRFLOW_COOL_CRUISE, t)
 
 	if band != BAND_REDLINE:
@@ -411,7 +411,7 @@ func dispatch(trigger: StringName, context: Dictionary = {}) -> Dictionary:
 						"trigger": PartResource.TRIG_ON_TAG_REACTION,
 						"context": {
 							"origin": cur_ctx.get("origin", Vector3.ZERO),
-							"ball_speed_mps": float(cur_ctx.get("ball_speed_mps", CRUISE_MPS)),
+							"ball_speed_mps": float(cur_ctx.get("ball_speed_mps", Tuning.CRUISE_MPS)),
 							"targets": cur_ctx.get("targets", []),
 							"source_reactions": outcome_reactions if not outcome_reactions.is_empty() else ctx_reactions,
 						},
@@ -519,7 +519,7 @@ func _execute_part(part: Resource, ctx: Dictionary) -> Dictionary:
 		dir = Vector3.FORWARD
 	else:
 		dir = dir.normalized()
-	var speed: float = float(ctx.get("ball_speed_mps", CRUISE_MPS))
+	var speed: float = float(ctx.get("ball_speed_mps", Tuning.CRUISE_MPS))
 	var scale := overclock_scale()
 	var reactions: Array[Dictionary] = []
 	var chain_hits: Array[Dictionary] = []

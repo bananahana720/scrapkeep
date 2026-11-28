@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -113,6 +114,28 @@ test("git hands a failed call's exit status and output on the error, and both he
     gitOptional(["status"], { spawn: () => ({ status: null, error: spawnError }) }),
     null,
   );
+});
+
+test("a git call that passes its time limit stops a child that ignores the first stop signal, and the caller returns", () => {
+  const standIn = 'trap "" TERM; echo $$; sleep 5 </dev/null >/dev/null 2>&1';
+  const ran = [];
+  const spawn = (_cmd, _args, opts) => {
+    const result = spawnSync("/bin/sh", ["-c", standIn], opts);
+    ran.push(result);
+    return result;
+  };
+  assert.throws(() => git(["fetch"], { spawn, timeout: 500 }), /ETIMEDOUT/);
+  assert.equal(gitOptional(["fetch"], { spawn, timeout: 500 }), null);
+  assert.equal(ran.length, 2);
+  for (const result of ran) {
+    assert.equal(result.signal, "SIGKILL");
+    const pid = Number(result.stdout.trim());
+    assert.ok(
+      Number.isInteger(pid) && pid > 0,
+      `the stand-in printed no process id: ${result.stdout}`,
+    );
+    assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+  }
 });
 
 test("git and gitOptional refuse a second argument that is not an options object, before starting git", () => {

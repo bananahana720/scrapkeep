@@ -3,6 +3,7 @@ extends Control
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const TYPES := ["kinetic", "frost", "arc"]
@@ -37,7 +38,6 @@ const CRIT_RIM_COLOUR := Palette.LEDGER_CREAM
 
 var project: Callable
 var keep_off: Callable
-var reduced_motion := false
 
 var _numbers: Array = []
 
@@ -84,8 +84,8 @@ static func crit_outline_style(size: int, crit: bool) -> Dictionary:
 	return {"ink_px": base + CRIT_OUTLINE_EXTRA, "rim_px": maxi(2, roundi(base * 0.5)), "rim_color": CRIT_RIM_COLOUR}
 
 
-static func pop_scale(age: float, value: float, crit := false, still := false) -> float:
-	if still or age < 0.0 or age >= POP_WINDOW_S:
+static func pop_scale(age: float, value: float, crit := false) -> float:
+	if Comfort.reduced_motion or age < 0.0 or age >= POP_WINDOW_S:
 		return 1.0
 	var peak := 1.0
 	if crit:
@@ -253,7 +253,7 @@ func _draw() -> void:
 		var crit: bool = bool(number["crit"])
 		var value: float = float(number["value"])
 		var base_size := font_size(value, crit)
-		var pop := pop_scale(age, value, crit, reduced_motion)
+		var pop := pop_scale(age, value, crit)
 		var draw_size := clampi(roundi(float(base_size) * pop), 1, roundi(float(MEGA_FONT) * BIG_CRIT_POP_PEAK))
 		var text := str(maxi(1, roundi(value)))
 		var font := UiFonts.mono()

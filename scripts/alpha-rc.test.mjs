@@ -36,6 +36,7 @@ import {
   verdict,
 } from "./alpha-rc.mjs";
 import { git as runGit } from "./lib/git.mjs";
+import { testGroups } from "./lib/test-groups.mjs";
 
 const createdTempDirs = [];
 const tmp = () => {
@@ -349,12 +350,16 @@ test("launch env drops GODOT_BIN and shadows each godot on PATH with a failing s
 
 function fake(dir, name, body) {
   const file = path.join(dir, name);
-  writeFileSync(file, `#!/bin/sh\n${body}\n`);
+  writeFileSync(file, `#!/bin/sh\nprintf '%s\\n' $$ >> "${path.join(dir, "groups")}"\n${body}\n`);
   chmodSync(file, 0o755);
   return file;
 }
 
+const fakeGroups = (t, dir) => testGroups(t, { from: path.join(dir, "groups") });
+
 const alive = processAlive;
+const GUARD_S = 30;
+const LATE_S = GUARD_S + 15;
 
 test("processAlive detects a live child on both Linux and macOS and clears once killed", async () => {
   const sleeper = spawn("sleep", ["30"], { stdio: "ignore" });
@@ -367,50 +372,65 @@ test("processAlive detects a live child on both Linux and macOS and clears once 
   assert.equal(alive(sleeper.pid), false);
 });
 
-test("cold launch: menu-ready line passes on a fresh XDG profile, and the profile and the game's process group go away", async () => {
-  const dir = tmp();
-  const pidFile = path.join(dir, "pid");
-  const before = readdirSync(os.tmpdir()).filter((n) => n.startsWith("scrapkeep-rc-home-")).length;
-  const ready = fake(
-    dir,
-    "ready.sh",
-    `sleep 30 & echo $! > ${pidFile}; echo "home=$HOME cfg=$XDG_CONFIG_HOME data=$XDG_DATA_HOME godot=$GODOT_BIN"; echo "${TITLE_INTERACTIVE} ms=700"; sleep 0.2; echo "${MENU_READY} ms=2500"; wait`,
-  );
-  const result = await launchAppImage(ready, {
-    seconds: 5,
-    env: { ...process.env, GODOT_BIN: "/opt/godot" },
-  });
-  assert.equal(result.status, "pass");
-  assert.match(result.note, /interactive title in \d\.\d s \(budget 5 s\), 3D title in \d\.\d s/);
-  assert.ok(result.titleMs !== null && result.menuMs >= result.titleMs);
-  const home = result.output.match(/home=(\S+)/)[1];
-  assert.match(home, /scrapkeep-rc-home-/);
-  assert.equal(result.output.match(/cfg=(\S+)/)[1], path.join(home, ".config"));
-  assert.equal(result.output.match(/data=(\S+)/)[1], path.join(home, ".local/share"));
-  assert.match(result.output, /godot=\n/);
-  assert.equal(existsSync(home), false);
-  assert.equal(
-    readdirSync(os.tmpdir()).filter((n) => n.startsWith("scrapkeep-rc-home-")).length,
-    before,
-  );
-  assert.equal(alive(Number(readFileSync(pidFile, "utf8"))), false);
-});
-
-describe("cold launch and process timeouts", { concurrency: true }, () => {
-  test("cold launch fails on an early exit, on silence, and outlasts a game that ignores SIGTERM", async () => {
+test(
+  "cold launch: menu-ready line passes on a fresh XDG profile, and the profile and the game's process group go away",
+  { timeout: GUARD_S * 1000 },
+  async (t) => {
     const dir = tmp();
+    const groups = fakeGroups(t, dir);
+    const pidFile = path.join(dir, "pid");
+    const before = readdirSync(os.tmpdir()).filter((n) =>
+      n.startsWith("scrapkeep-rc-home-"),
+    ).length;
+    const ready = fake(
+      dir,
+      "ready.sh",
+      `sleep ${LATE_S} & echo $! > ${pidFile}; echo "home=$HOME cfg=$XDG_CONFIG_HOME data=$XDG_DATA_HOME godot=$GODOT_BIN"; echo "${TITLE_INTERACTIVE} ms=700"; sleep 0.2; echo "${MENU_READY} ms=2500"; wait`,
+    );
+    const result = await launchAppImage(ready, {
+      seconds: GUARD_S,
+      env: { ...process.env, GODOT_BIN: "/opt/godot" },
+    });
+    groups.sweep();
+    assert.equal(result.status, "pass");
+    assert.match(
+      result.note,
+      /interactive title in \d+\.\d s \(budget 30 s\), 3D title in \d+\.\d s/,
+    );
+    assert.ok(result.titleMs !== null && result.menuMs >= result.titleMs);
+    const home = result.output.match(/home=(\S+)/)[1];
+    assert.match(home, /scrapkeep-rc-home-/);
+    assert.equal(result.output.match(/cfg=(\S+)/)[1], path.join(home, ".config"));
+    assert.equal(result.output.match(/data=(\S+)/)[1], path.join(home, ".local/share"));
+    assert.match(result.output, /godot=\n/);
+    assert.equal(existsSync(home), false);
+    assert.equal(
+      readdirSync(os.tmpdir()).filter((n) => n.startsWith("scrapkeep-rc-home-")).length,
+      before,
+    );
+    assert.equal(alive(Number(readFileSync(pidFile, "utf8"))), false);
+  },
+);
+
+describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD_S * 1000 }, () => {
+  test("cold launch fails on an early exit, on silence, and outlasts a game that ignores SIGTERM", async (t) => {
+    const dir = tmp();
+    const groups = fakeGroups(t, dir);
     const [crash, silent, noMenu, late, stubborn] = await Promise.all([
-      launchAppImage(fake(dir, "crash.sh", "exit 3"), { seconds: 5 }),
-      launchAppImage(fake(dir, "silent.sh", "exec sleep 30"), { seconds: 0.5 }),
-      launchAppImage(fake(dir, "nomenu.sh", `echo "${TITLE_INTERACTIVE} ms=900"; exec sleep 30`), {
-        seconds: 5,
-        menuWaitSeconds: 0.6,
-      }),
+      launchAppImage(fake(dir, "crash.sh", "exit 3"), { seconds: GUARD_S }),
+      launchAppImage(fake(dir, "silent.sh", `exec sleep ${LATE_S}`), { seconds: 0.5 }),
+      launchAppImage(
+        fake(dir, "nomenu.sh", `echo "${TITLE_INTERACTIVE} ms=900"; exec sleep ${LATE_S}`),
+        {
+          seconds: GUARD_S,
+          menuWaitSeconds: 0.6,
+        },
+      ),
       launchAppImage(
         fake(
           dir,
           "late.sh",
-          `sleep 0.8; echo "${TITLE_INTERACTIVE} ms=800"; echo "${MENU_READY} ms=900"; sleep 30`,
+          `sleep ${LATE_S}; echo "${TITLE_INTERACTIVE} ms=800"; echo "${MENU_READY} ms=900"; sleep ${LATE_S}`,
         ),
         { seconds: 0.4 },
       ),
@@ -418,28 +438,30 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
         seconds: 0.3,
       }),
     ]);
+    groups.sweep();
     assert.match(crash.note, /exited \(3\)/);
     assert.match(silent.note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.5 s/);
     assert.equal(noMenu.status, "fail");
     assert.match(
       noMenu.note,
-      /no SCRAPKEEP_MENU_READY line within 0.6 s \(title card at \d\.\d s\)/,
+      /no SCRAPKEEP_MENU_READY line within 0.6 s \(title card at \d+\.\d s\)/,
     );
     assert.equal(late.status, "fail");
     assert.match(late.note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.4 s/);
     assert.equal(stubborn.status, "fail");
   });
 
-  test("cold launch: a build that says it did not load fails at once, with the boot's reason, and does not wait out the menu", async () => {
+  test("cold launch: a build that says it did not load fails at once, with the boot's reason, and does not wait out the menu", async (t) => {
     const dir = tmp();
+    const groups = fakeGroups(t, dir);
     const [card, headless, held, quoted] = await Promise.all([
       launchAppImage(
         fake(
           dir,
           "card.sh",
-          `echo "${TITLE_INTERACTIVE} ms=300"; echo "${BOOT_FAILED} the game scene's script did not load"; sleep 10; echo "${MENU_READY} ms=10300"; exec sleep 30`,
+          `echo "${TITLE_INTERACTIVE} ms=300"; echo "${BOOT_FAILED} the game scene's script did not load"; sleep ${LATE_S}; echo "${MENU_READY} ms=${LATE_S}300"; exec sleep ${LATE_S}`,
         ),
-        { seconds: 5, menuWaitSeconds: 20 },
+        { seconds: GUARD_S, menuWaitSeconds: LATE_S },
       ),
       launchAppImage(
         fake(
@@ -447,23 +469,22 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
           "headless.sh",
           `echo "${BOOT_FAILED} res://scenes/main.tscn did not load"; exit 1`,
         ),
-        { seconds: 5 },
+        { seconds: GUARD_S },
       ),
       launchAppImage(
-        fake(dir, "held.sh", "(sleep 10; echo pipes closed) & echo last words; exit 3"),
-        {
-          seconds: 20,
-        },
+        fake(dir, "held.sh", `(sleep ${LATE_S}; echo pipes closed) & echo last words; exit 3`),
+        { seconds: GUARD_S },
       ),
       launchAppImage(
         fake(
           dir,
           "quoted.sh",
-          `echo "note: ${BOOT_FAILED} is the failure marker"; echo "${TITLE_INTERACTIVE} ms=300"; echo "${MENU_READY} ms=400"; exec sleep 30`,
+          `echo "note: ${BOOT_FAILED} is the failure marker"; echo "${TITLE_INTERACTIVE} ms=300"; echo "${MENU_READY} ms=400"; exec sleep ${LATE_S}`,
         ),
-        { seconds: 5 },
+        { seconds: GUARD_S },
       ),
     ]);
+    groups.sweep();
     assert.equal(card.status, "fail");
     assert.equal(
       card.note,
@@ -482,16 +503,39 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
     assert.equal(quoted.status, "pass");
   });
 
-  test("runProcess returns the exit, and a timeout kills the group and reads as killed", async () => {
+  test("cold launch: a title card that comes after its budget fails as too late", async (t) => {
     const dir = tmp();
+    const groups = fakeGroups(t, dir);
+    let reads = 0;
+    const clock = () => (reads++ === 0 ? 0 : 3_600_000);
+    const result = await launchAppImage(
+      fake(
+        dir,
+        "slow.sh",
+        `echo "${TITLE_INTERACTIVE} ms=800"; echo "${MENU_READY} ms=900"; exec sleep ${LATE_S}`,
+      ),
+      { seconds: GUARD_S, clock },
+    );
+    groups.sweep();
+    assert.equal(result.status, "fail");
+    assert.match(
+      result.note,
+      /^title card too late: interactive title in 3600\.0 s \(budget 30 s\), 3D title in 3600\.0 s/,
+    );
+  });
+
+  test("runProcess returns the exit, and a timeout kills the group and reads as killed", async (t) => {
+    const dir = tmp();
+    const groups = fakeGroups(t, dir);
     const pidFile = path.join(dir, "pid");
     const [ok, hung] = await Promise.all([
       runProcess({ command: fake(dir, "ok.sh", "echo hi; exit 4"), args: [] }),
       runProcess(
-        { command: fake(dir, "hang.sh", `sleep 30 & echo $! > ${pidFile}; wait`), args: [] },
+        { command: fake(dir, "hang.sh", `sleep ${LATE_S} & echo $! > ${pidFile}; wait`), args: [] },
         300,
       ),
     ]);
+    groups.sweep();
     assert.equal(ok.exit, 4);
     assert.equal(hung.exit, null);
     assert.equal(judgeCommand({ id: "smoke" }, hung).note, "timed out or killed");

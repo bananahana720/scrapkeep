@@ -2,6 +2,7 @@ extends Node3D
 
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const EnvTags := preload("res://src/experimental/env_tags.gd")
 const ChunkSockets := preload("res://src/experimental/arena_chunk_socket.gd")
@@ -16,8 +17,6 @@ signal prop_interaction_triggered(prop_id: String, interaction: String, world_or
 
 
 const WORLD_LAYER := 1
-const MIN_WARN_FLOOR_S := 0.6
-const DEFAULT_CRUISE_MPS := 14.0
 const BALL_CLEAR_HOLD_M := 4.6
 const MAX_ACTIVE_TAGS := 32
 
@@ -68,7 +67,7 @@ const PAD_FLIGHT_MAX_S := 3.0
 const PAD_DECK_CLEAR_M := 0.1
 const PAD_DEFAULT_BODY_RADIUS_M := 1.0
 
-var cruise_speed := DEFAULT_CRUISE_MPS
+var cruise_speed := Tuning.CRUISE_MPS
 var _rng := RandomNumberGenerator.new()
 var _berm_phase_offset := 0.0
 var _active_tags: Array[Dictionary] = []
@@ -106,7 +105,7 @@ func setup_from_chunk(chunk_root: Node, opts: Dictionary = {}) -> Dictionary:
 	teardown()
 	_exiting = false
 	name = "DynamicSetpieces"
-	cruise_speed = float(opts.get("cruise_speed", DEFAULT_CRUISE_MPS))
+	cruise_speed = float(opts.get("cruise_speed", Tuning.CRUISE_MPS))
 	_rng.seed = int(opts.get("seed", 20261126))
 	_berm_phase_offset = _rng.randf() * (PI / 3.0)
 
@@ -929,7 +928,7 @@ func _step_crane(delta: float, ball_local: Vector3, actors: Array, facts: Array[
 				rig.step(delta, Vector3.ZERO)
 			_crane["warn_elapsed"] = float(_crane["warn_elapsed"]) + delta
 			_crane["timer"] = float(_crane["timer"]) - delta
-			if float(_crane["timer"]) <= 0.0 and float(_crane["warn_elapsed"]) >= MIN_WARN_FLOOR_S:
+			if float(_crane["timer"]) <= 0.0 and float(_crane["warn_elapsed"]) >= EnvTags.MIN_TELL_S:
 				_crane["state"] = "sweep_active"
 				_crane["timer"] = CRANE_SWEEP_S
 				_crane["tag_cooldown"] = 0.0

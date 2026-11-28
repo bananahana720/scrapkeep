@@ -5,6 +5,7 @@ const EnvTags := preload("res://src/experimental/env_tags.gd")
 const Ecology := preload("res://src/experimental/ecology_actors.gd")
 const AdversityDirector := preload("res://src/experimental/adversity_director.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const ActorCraft := preload("res://src/experimental/live_world_actor_craft.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
@@ -385,7 +386,7 @@ func _clamp_to_floor(world: Vector3) -> Vector3:
 
 
 func _cruise() -> float:
-	return float(_ctx.tuning.f("cruise")) if _ctx != null and _ctx.tuning != null else 14.0
+	return float(_ctx.tuning.f("cruise")) if _ctx != null and _ctx.tuning != null else Tuning.CRUISE_MPS
 
 
 func _ball_speed() -> float:

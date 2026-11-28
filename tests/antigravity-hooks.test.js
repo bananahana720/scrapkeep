@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, test } from "node:test";
@@ -13,10 +13,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const hookScript = path.join(root, ".agents/hooks/safety-gate.mjs");
 const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
 
-function runHookCli(payloadOrRaw) {
+function runHookCli(payloadOrRaw, script = hookScript) {
   const input = typeof payloadOrRaw === "string" ? payloadOrRaw : JSON.stringify(payloadOrRaw);
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [hookScript], { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(process.execPath, [script], { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
@@ -27,6 +27,7 @@ function runHookCli(payloadOrRaw) {
     child.on("close", (status) => {
       try {
         assert.equal(status, 0, stderr);
+        assert.match(stdout, /^[^\n]+\n$/, "the hook prints exactly one line");
         resolve(JSON.parse(stdout));
       } catch (err) {
         reject(err);
@@ -515,4 +516,71 @@ test("decodes every percent code in a live save path, never throws on a malforme
     "allow",
     "a code encoded twice is decoded once, as a file:// reader does: it names a folder called Application%20Support",
   );
+});
+
+test("the hook prints an ask decision and exits 0 when a helper it loads is missing or throws, or when evaluating throws", async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-hook-broken-"));
+  const payload = { toolCall: { name: "run_command", args: { CommandLine: "ls" } }, cwd: dir };
+  const scratchHook = (name, helperFiles) => {
+    const top = path.join(dir, name);
+    mkdirSync(path.join(top, ".agents/hooks"), { recursive: true });
+    mkdirSync(path.join(top, "scripts/lib"), { recursive: true });
+    copyFileSync(hookScript, path.join(top, ".agents/hooks/safety-gate.mjs"));
+    for (const [rel, text] of Object.entries(helperFiles)) {
+      const target = path.join(top, "scripts/lib", rel);
+      if (text === null) copyFileSync(path.join(root, "scripts/lib", rel), target);
+      else writeFileSync(target, text);
+    }
+    return path.join(top, ".agents/hooks/safety-gate.mjs");
+  };
+  try {
+    const cases = [
+      [scratchHook("missing", {}), /could not run \(Cannot find module .*cli\.mjs/],
+      [
+        scratchHook("git-throws", {
+          "cli.mjs": null,
+          "git.mjs": 'throw new Error("broken git helper");\n',
+        }),
+        /could not run \(broken git helper\)/,
+      ],
+      [
+        scratchHook("cli-throws", {
+          "cli.mjs": 'throw new Error("broken cli helper");\n',
+          "git.mjs": null,
+        }),
+        /could not run \(broken cli helper\)/,
+      ],
+      [
+        scratchHook("git-syntax", { "cli.mjs": null, "git.mjs": "export const = ;\n" }),
+        /could not run \(.+\)/,
+      ],
+    ];
+    for (const [script, reason] of cases) {
+      const res = await runHookCli(payload, script);
+      assert.equal(res.decision, "ask", script);
+      assert.match(res.reason, reason, script);
+      assert.match(res.reason, /confirm manually\.$/, script);
+    }
+
+    const unconvertible = { toString: null };
+    assert.throws(
+      () =>
+        evaluateHook({
+          toolCall: { name: "run_command", args: { CommandLine: unconvertible } },
+          cwd: root,
+        }),
+      TypeError,
+    );
+    const thrown = await runHookCli({
+      toolCall: { name: "run_command", args: { CommandLine: unconvertible } },
+      cwd: root,
+    });
+    assert.equal(thrown.decision, "ask");
+    assert.match(
+      thrown.reason,
+      /^PreToolUse safety hook could not run \(Cannot convert object to primitive value\); confirm manually\.$/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { planHookChecks } from "../hooks/pre-push.mjs";
 import { cwdDecidesRepository, git } from "../lib/git.mjs";
-import { classifyAffected } from "./affected.mjs";
+import { classifyAffected, treeFiles } from "./affected.mjs";
 
 const affectedScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "affected.mjs");
 
@@ -202,4 +202,41 @@ test("CLI --stdin fails when git cannot list the head tree or it lists nothing",
     rmSync(plain, { recursive: true, force: true });
     rmSync(empty, { recursive: true, force: true });
   }
+});
+
+test("treeFiles reads each listed path with its mode and refuses an entry it cannot read", () => {
+  const oid = "a".repeat(40);
+  const listing =
+    (...entries) =>
+    () => ({ status: 0, stdout: entries.join("\0") + "\0" });
+  const files = treeFiles("HEAD", {
+    spawn: listing(
+      `100644 blob ${oid}\tREADME.md`,
+      `120000 blob ${oid}\tscripts/a b\nc.mjs`,
+      `160000 commit ${oid}\tvendor/sub`,
+      `100755 blob ${"b".repeat(64)}\ttools/a\tb.sh`,
+    ),
+  });
+  assert.deepEqual(
+    [...files],
+    [
+      ["README.md", "100644"],
+      ["scripts/a b\nc.mjs", "120000"],
+      ["vendor/sub", "160000"],
+      ["tools/a\tb.sh", "100755"],
+    ],
+  );
+  for (const entry of [
+    `100644 blob ${oid}\t`,
+    "100644\tREADME.md",
+    `100644 ${oid}\tREADME.md`,
+    `10064 blob ${oid}\tREADME.md`,
+    `100644 blob ${oid} README.md`,
+    `100644 blob ${oid.slice(1)}\tREADME.md`,
+  ])
+    assert.throws(
+      () => treeFiles("HEAD", { spawn: listing(entry) }),
+      /git ls-tree HEAD gave an entry it cannot read/,
+      JSON.stringify(entry),
+    );
 });

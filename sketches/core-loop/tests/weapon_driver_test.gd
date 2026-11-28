@@ -266,8 +266,9 @@ func _check_warm_batch_repeatability() -> void:
 func _check_structural_boundaries() -> void:
 	var driver_src := FileAccess.get_file_as_string("res://src/combat/weapon_driver.gd")
 	_t.check("weapon_driver.gd has zero static vars", not driver_src.contains("static var "), "")
-	var combat_src := FileAccess.get_file_as_string("res://src/combat/combat.gd")
-	_t.check("combat.gd never reaches into weapon_driver private members", not combat_src.contains("weapon_driver._"), "")
+	for combat_path in ["res://src/combat/combat.gd", "res://src/combat/hero_hooks.gd", "res://src/combat/consumable_runtime.gd", "res://src/combat/cannon_kit.gd"]:
+		var combat_src := FileAccess.get_file_as_string(combat_path)
+		_t.check("%s is read and never reaches into weapon_driver private members" % combat_path.get_file(), combat_src != "" and not combat_src.contains("weapon_driver._"), "")
 	var bot_src := FileAccess.get_file_as_string("res://tools/bot_driver.gd")
 	_t.check("bot_driver.gd never reaches into weapon_driver private members", not bot_src.contains("weapon_driver._"), "")
 

@@ -82,7 +82,7 @@ func _lane_at(latched: bool) -> Dictionary:
 	var from := _struck.size()
 	_game.combat._cooldown = 0.0
 	_game.combat.weapon_driver.reset()
-	_game.combat._free_cannon()
+	_game.combat.cannon.free_cannon()
 	player.abilities.refill()
 	var ticks := ceili(WAIT_S * Engine.physics_ticks_per_second)
 	for i in ticks:
@@ -130,7 +130,7 @@ func _forced_at(hang_m: float) -> Dictionary:
 	target.process_mode = Node.PROCESS_MODE_DISABLED
 	_game.combat._cooldown = 0.0
 	_game.combat.weapon_driver.reset()
-	_game.combat._free_cannon()
+	_game.combat.cannon.free_cannon()
 	player.abilities.refill()
 	var forced := false
 	var entries := 0
@@ -139,11 +139,11 @@ func _forced_at(hang_m: float) -> Dictionary:
 		_source.press = {"fire_pressed": true} if i == 0 else {}
 		_source.hold = {}
 		await physics_frame
-		for entry in _game.combat._cannon:
+		for entry in _game.combat.cannon._cannon:
 			entries += 1
 			if entry["options"].get("forced") == target:
 				forced = true
 	_unlatch()
-	_game.combat._free_cannon()
+	_game.combat.cannon.free_cannon()
 	target.remove_from_group("enemy")
 	return {"forced": forced, "entries": entries}
