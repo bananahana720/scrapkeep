@@ -404,14 +404,6 @@ static func cross_system_row(id: String) -> Dictionary:
 	return {}
 
 
-static func cross_system_active(held: Array, part_info: Callable, context := {}) -> Array:
-	var out: Array = []
-	for id in cross_system_ids(true):
-		if cross_system_awake(id, held, part_info, context):
-			out.append(id)
-	return out
-
-
 static func cross_system_awake(id: String, held: Array, part_info: Callable, context := {}) -> bool:
 	var row: Dictionary = cross_system_row(id)
 	if row.is_empty():

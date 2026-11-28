@@ -1,6 +1,5 @@
 extends "res://src/world/device.gd"
 
-const Altar := preload("res://src/world/ambush_altar.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")

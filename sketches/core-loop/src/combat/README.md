@@ -65,7 +65,7 @@ A weapon's volley is a `pattern.gd` Resource. Parts never touch weapon code; the
 
 - `ctx.spawner.register_part(part_id, transformer_ids: Array)` says a part applies these transformers. Call it from `build.setup(ctx)`, since combat is set up first. A part whose id is itself a transformer id needs no registration.
 - Each entry in `run.parts` applies its transformers once, so a part taken twice applies twice. Combat recomputes every pattern from `run.parts` on `part_gained`, `run_started` and `stage_entered`. The recompute is idempotent, so a retry restores the build exactly. Do not apply transformers yourself.
-- `transformer_ids()` lists the ids. `transformer_info(id)` returns `{label, text}` for gate and fabricator wording.
+- `transformer_ids()` lists the ids.
 - `pattern(weapon_id)` returns a copy of a weapon's current pattern. `active_transformers()` returns the ids the current parts apply.
 
 | Id | Label | Effect per stack |

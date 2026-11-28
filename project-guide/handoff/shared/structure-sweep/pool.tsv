@@ -19,7 +19,7 @@ CORE-17	core.md	G	low	landed	C2	Unify CLI flag parsing across `game.gd`, `boot.g
 CORE-18	core.md	G	low	open	C3 did part 1	Consolidate `signal_lifetime.gd` into `SignalWire` and replace `run.set_meta` with one extension mechanism Left after unit C3: part 2, the `run.set_meta` calls that want one extension mechanism.
 CORE-19	core.md	H	medium	open		Split input/gamepad routing and display-settings fan-out out of `src/game.gd` (1,375 lines)
 CORE-20	core.md	H	medium	open	C2 did part 1	Split data tables & codecs along existing seams in `pilot_story.gd` (1,834L) and `run_state.gd` (1,327L)
-WORLD-01	world.md	B	low	in flight	Z3	Dead stubs, zero-`src`-caller park/world modules, and 4 unused preloads
+WORLD-01	world.md	B	low	landed	Z3	Dead stubs, zero-`src`-caller park/world modules, and 4 unused preloads Unit Z3 deleted the two stub scripts and two unused preloads. The modules only tests load stay: each of those tests checks shipped maps or data through the module.
 WORLD-02	world.md	A	medium	open		Dual sluice-valve implementations fighting over the same `kind == "sluice_valve"` rows
 WORLD-03	world.md	C	low	landed	N1	`events/natural.gd` hijacks `ctx.events.world_fact` and calls private `presentation.audio._admit`/`_start`
 WORLD-04	world.md	A	low	landed	W1	Triplicated 70-line GLB slot/mesh loader across `ambush_altar.gd`, `bet_crate.gd` and `cracked_cache.gd`
@@ -48,8 +48,8 @@ COMBAT-08	combat.md	A	low	landed	M1	Factor out 4 duplicated helper patterns acro
 COMBAT-09	combat.md	C	medium	open		Unify 13 posture-target checks and direct `_apply_posture()` calls (including `rivet_kit.gd` bypassing `DamageDoor`)
 COMBAT-10	combat.md	A	low	landed	M2	Unify enemy hull-radius lookups across 7 combat files (three conflicting fallback defaults)
 COMBAT-11	combat.md	E	medium	open		Consolidate duplicated plating/shred math and document/reconcile parallel element & armour effectiveness tables
-COMBAT-12	combat.md	B	low	in flight	Z3	Remove dead write-only shared mutable state `Enemy.rim_color`
-COMBAT-13	combat.md	B	low	in flight	Z3	Delete 14 verified zero-caller functions across `src/combat/`
+COMBAT-12	combat.md	B	low	open	Z3 left it	Remove dead write-only shared mutable state `Enemy.rim_color` Unit Z3 could not delete `Enemy.rim_color`: the batch driver resets it and `tests/test_batch_reset_test.gd` checks the reset, `tests/status_marks_test.gd` also sets it, and `sketches/core-loop/CONTRACTS.md` still describes it as the colour of a drawn rim. The lead from unit Z3 about this field says what the delete takes; the unit that does it changes those four files together.
+COMBAT-13	combat.md	B	low	landed	Z3	Delete 14 verified zero-caller functions across `src/combat/` Unit Z3 deleted ten of the fourteen. `piece_parts` and four functions in `warden_swarm.gd` stay; each has a lead that says what deleting it takes.
 COMBAT-14	combat.md	C	medium	open		Invert remaining combat -> presentation & UI preloads (mesh craft, enemy visuals, audio, `Icons`, `WorldPrompt`, `Density`)
 COMBAT-15	combat.md	C	low	open		Break 10 `src/combat/` -> `src/boss/` preloads that violate optional-boss isolation
 COMBAT-16	combat.md	C	medium	open		Move pure data schemas out of `src/build/` & `src/world/` into `src/core/` to remove 27 cross-module preloads in combat
@@ -59,7 +59,7 @@ COMBAT-19	combat.md	D	low	open	M2 did items 2 and 3	Delete shallow pass-through 
 COMBAT-20	combat.md	E	low	landed	K1	Centralize scattered combat constants: `GRAVITY`, `"enemy"` group string, and raw physics layer literals
 BMB-01	boss-movement-build.md	C	low	landed	B1	`movement/` preloads `combat/` for movement constants, strike damage and enemy heft (6 upward edges; 3 trivial to cut)
 BMB-02	boss-movement-build.md	C	low	open		Pure `build/` economy and field modules depend upward on `ui/` and `presentation/` (`shop.gd`, `scrap_field.gd`, `element_field.gd`)
-BMB-03	boss-movement-build.md	B	low	in flight	Z3	Fifteen dead functions and a 27-line unreachable fallback branch with zero callers in `build/` and `movement/`
+BMB-03	boss-movement-build.md	B	low	landed	Z3	Fifteen dead functions and a 27-line unreachable fallback branch with zero callers in `build/` and `movement/` Unit Z3 deleted fourteen of the fifteen functions and the fallback that could not run. `add_scrapper_at` stays and has a lead.
 BMB-04	boss-movement-build.md	E	low	landed	B4	Maker-set thresholds, maker/pilot/rarity lists and grapple-mutation ownership are duplicated across `parts.gd`, `maker_sets.gd`, `relics.gd`, `item_gen.gd` and `part_def.gd`
 BMB-05	boss-movement-build.md	A	low	landed	B2	`BuildSheet.from_parts()` and `StatCache` duplicate the full part-counting, capping, leveling and folding pipeline
 BMB-06	boss-movement-build.md	C	low	landed	B4	Ten cross-module private (`_`) member reach-ins across `boss/`, `movement/` and `build/`
@@ -80,10 +80,10 @@ BMB-20	boss-movement-build.md	H	medium	landed	B4	Oversized `build/build.gd` (1,6
 UI-01	ui.md	B	low	landed	Z4	callouts.gd and meta_page.gd are dead in the game; only tests load them
 UI-02	ui.md	C	low	landed	U1	screens.gd reaches into radio_deck's private `_save()`
 UI-03	ui.md	C+H	medium	open		radio and jukebox rules live in screens.gd's key handler
-UI-04	ui.md	A+G	medium	open		twelve hand-listed page-visibility guards in screens.gd
+UI-04	ui.md	A+G	medium	in flight	O1	twelve hand-listed page-visibility guards in screens.gd
 UI-05	ui.md	C	medium	closed		core calls the HUD for the objective; the objective rule is assembled in hud.gd
 UI-06	ui.md	C	low	landed	U2	OddsReadout.odds_for is a build rule living in ui
-UI-07	ui.md	F	medium	open		two UiProfile objects write one ui-profile.json
+UI-07	ui.md	F	medium	in flight	O1	two UiProfile objects write one ui-profile.json
 UI-08	ui.md	E+F	medium	landed	Q1	reduced motion is copied into thirteen static vars, and combat reads the ui one Unit Q1 gave the setting one owner, `src/core/comfort.gd`, and deleted the copies. Two places still never receive the setting; they are a lead of their own.
 UI-09	ui.md	G	low	landed	U2	three panel systems and 24 hand-built StyleBoxFlat
 UI-10	ui.md	G	low	landed	U2	41 hand-built labels against an 11-site label helper
@@ -111,7 +111,7 @@ VF-15	visuals-fx.md	H	low	landed	V2	vfx.gd (1160 lines) mixes four pools, a gove
 VF-16	visuals-fx.md	E	low	landed	V2	Shader parameter names are bare strings in 10 files, across two separate particle shaders
 VF-17	visuals-fx.md	C	medium	open		fx_library.gd (the spawn owner) is preloaded by 18 combat, boss and world files for `burst`
 VM-01	visuals-meshes.md	A+E	low	landed	V1	Seven copies of the vertex-mask helper `_vc` re-implement `CraftLookdev.encode_mask`
-VM-02	visuals-meshes.md	A+G	medium	open	V1 did steps 1 and 2	Ten separate bevel-box builders, and three byte-identical `_uv_for` / `_add_tri` copies
+VM-02	visuals-meshes.md	A+G	medium	in flight	V3	Ten separate bevel-box builders, and three byte-identical `_uv_for` / `_add_tri` copies Unit V1 did steps 1 and 2; unit V3 has the rest.
 VM-03	visuals-meshes.md	C	medium	open		Presentation reads combat's and world's private members by string name
 VM-04	visuals-meshes.md	G+A	low	open		22 hand-rolled glb loaders, each with its own cache and warning; only 13 calls go through `ModelVariants`
 VM-05	visuals-meshes.md	A	low	landed	V2	experimental_setpiece_craft.gd is a fork of world23_chunk_craft.gd with drifted constants
@@ -124,7 +124,7 @@ VM-11	visuals-meshes.md	G	medium	open		Six material factories with overlapping j
 VM-12	visuals-meshes.md	D	low	landed	P1	camp_craft_meshes has two private forwarders to its own public calls
 VM-13	visuals-meshes.md	A	low	landed	P1	`_bolt_ring` exists twice with drifted constants
 VM-14	visuals-meshes.md	C	low	landed	V2	spillway_scenery calls craft_prop_meshes' private primitives
-VM-15	visuals-meshes.md	A	low	open		Two more torus and faceted-orb builders
+VM-15	visuals-meshes.md	A	low	in flight	V3	Two more torus and faceted-orb builders
 VM-16	visuals-meshes.md	H	medium	landed	V2	hero_assets.gd is 3348 lines with clear seams
 SOUND-01	sound.md	A	low	landed	H1	Conflicting duplicate `TRIM_DB`, file paths, WAV loaders, and 3D player factories across `foley_audio.gd`, `jolt_layer_audio.gd`, `sfx_bank.gd`, and `special_audio.gd` Unit H1 put the file and the level of every foley and jolt-layer cue in one table and one function builds a positional player. Where two tables gave one cue two levels, each playing path keeps the level it had; a test pins every level.
 SOUND-02	sound.md	C	low	landed	N1	`src/world/events/natural.gd` hijacks `audio.gd`'s `world_fact` signal connection and calls private `_audio._admit()` / `_audio._start()` directly
@@ -154,12 +154,12 @@ XD-08	experimental-dev.md	A	low	landed	X2	`DevConsole.LENS_RANGES` duplicates `D
 XD-09	experimental-dev.md	A	low	landed	X2	`DevConsole` duplicates `DevAgent`'s `--dev-run=` parser and fallback script runner with divergent defaults
 XD-10	experimental-dev.md	D	low	landed	X2	`LiveRunBridge._reset()` is a shallow forwarding stub that forces `test_batch_driver.gd` to `preload` `src/experimental/` and resets `ExperimentalAudioBank` twice
 XD-11	experimental-dev.md	C	medium	open		`src/experimental/` gameplay modules invert layer boundaries by preloading `src/ui/ui_tokens.gd` and `src/presentation/*`
-XD-12	experimental-dev.md	A	low	open		`EncounterEngine` duplicates `StageLocks`'s perimeter spring constants and force formula
+XD-12	experimental-dev.md	A	low	in flight	X4	`EncounterEngine` duplicates `StageLocks`'s perimeter spring constants and force formula
 XD-13	experimental-dev.md	A	low	landed	X2	`PartResource.VALID_MAKERS` duplicates `MakerSets` / `Relics.VALID_MAKERS`
 XD-14	experimental-dev.md	A	low	landed	X2	`DevConsole`'s `run` command duplicates `DevFight`'s `pilot` command
 XD-15	experimental-dev.md	A	low	landed	X2	`DevOverlay` and `DevInspect` run parallel 60-frame performance sampling loops every `_process` frame
 XD-16	experimental-dev.md	E	low	landed	X2	Stage aliases and boss arena map names are hardcoded in `dev_fight.gd` and `dev_inspect.gd` outside the owning stage/world tables
-XD-17	experimental-dev.md	E	low	open		Cruise speed fallback (`14.0`) and telegraph floor (`0.6 s`) are scattered across 7 `src/experimental/` files
+XD-17	experimental-dev.md	E	low	in flight	X4	Cruise speed fallback (`14.0`) and telegraph floor (`0.6 s`) are scattered across 7 `src/experimental/` files
 XD-18	experimental-dev.md	H	low	open	X3 did two of the three seams	Three oversized files (~1,420–1,530 lines) have clean, state-disjoint seams ready to split Left after unit X3: the split of `dynamic_setpieces.gd`; another unit held the file while X3 ran.
 XD-19	experimental-dev.md	F	low	open	X3 did the cooldown state	`ExperimentalAudioBank` stores global mutable cooldown state shared across `LiveRunBridge` instances, and `LiveRunBridge` bypasses `src/presentation/audio.gd` Left after unit X3: `LiveRunBridge` still plays sound without going through `src/presentation/audio.gd`.
 XD-20	experimental-dev.md	G	low	closed	X3	`src/dev/` mixes two command-return protocols (`!`-prefixed `String` vs `{ok, text, data}` `Dictionary`) and duplicates CLI flag parsing across `game.gd`, `live_run_bridge.gd`, and `dev_agent.gd` Unit X3 weighed both halves and left them; the reasons are on the page.
@@ -306,3 +306,5 @@ LEAD-86	leads	B	low	open		From unit Z3, the part of COMBAT-12 it could not do: `
 LEAD-87	leads	B	low	open		From unit Z3: the `recycle_commons` key stays in five rows of `HOTWIRED` in `sketches/core-loop/src/build/parts.gd` after the constant that read it was deleted. It is authored data nothing reads. Deleting it changes a data table a designer wrote, so it goes on the page's delete candidates first.
 LEAD-88	leads	C	low	open		From the reviews of units H1 and Q1, two guards that are narrower than the fact they protect. `tests/unit/positional_cue_rows_case.gd` looks for a cue's file name written out whole, so a second table that builds the name from parts passes. `tests/unit/comfort_owner_case.gd` fails on a new static copy of the reduced-motion setting and, by design, not on a new copy held by a live object.
 LEAD-89	leads	E	low	open		From the review of unit G9: on a Linux machine that has an unrelated `godot` on `PATH` beside the pinned binary, the helpers that ask `node scripts/godot-home.mjs --bin` now get the one on `PATH`, because `--bin` and `scripts/dev-console.mjs` look on `PATH` first while most Node scripts call `resolveGodotBinary()` without that step. `project-guide/handoff/DEVICES.md` should say which wins. The guard's pattern for a spelled-out Godot path also misses a Flatpak id, `godot4` and a name built from parts; none is in the tree.
+LEAD-90	leads	B	low	open		From the review of unit Z3: `piece_parts` and `PIECE_GLB` in `sketches/core-loop/src/combat/splitter.gd` have no caller. They stay only because the asset registry row `sketches/core-loop/assets/registry.d/enemy_splitter_piece.json` names `splitter.gd:piece_parts` as its loader, and no script checks that field for a row that ships. Deleting them means naming the real loader in that row and folding the registry again in the same unit.
+LEAD-91	leads	B	low	open		From the review of unit Z3: `add_scrapper_at` in `sketches/core-loop/src/build/fabricators.gd` has no caller, and the list it fills (`_scrappers`) is now written and never read. It is the only code that makes a `WorldScrapper` node, which `src/presentation/w50_asset_hooks.gd` dresses and the registry row `w50_stations.json` names. Whether scrappers placed in the world are still planned decides it: if not, the function, the list and the hook go together; if so, something has to call it.

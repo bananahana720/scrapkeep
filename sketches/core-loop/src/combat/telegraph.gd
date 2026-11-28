@@ -176,10 +176,6 @@ func contains(point: Vector3) -> bool:
 	return (flat - dir * along).length() <= width * 0.5
 
 
-func end_point() -> Vector3:
-	return center + dir * length
-
-
 func front_radius() -> float:
 	if type != Threat.Type.WAVE or age < warn_seconds:
 		return -1.0
