@@ -2,8 +2,8 @@
 gap list A from kicker_wedge_101.png: domed cheek rivets in two staggered rows, skirt bolts, a seam framing the riding
 plate, four plate corner bolts, cap bar bolts, rivets and a weld bead round the Redjaw patch plate, and paint wear
 (slate chips) at the stripes' low ends so the bands melt toward bare plate. One draw, class `detail`; colours from
-kicker_wedge.py's TONES; dropped by distance in the side rig (LAYER_RANGE). Every part over the riding plane stays
-within RIDE_PROUD of it, checked at export.
+kicker_wedge.py's TONES; dropped by distance by its shell row in ROWS (src/presentation/recipe_props.gd). Every part
+over the riding plane stays within RIDE_PROUD of it, checked at export.
 
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/kicker_wedge_detail1.py [-- --out-dir DIR]
 """
