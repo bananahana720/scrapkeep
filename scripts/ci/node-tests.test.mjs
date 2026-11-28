@@ -59,21 +59,21 @@ test("selectShardFiles balances known-heavy tests via LPT and preserves disjoint
 
   // Synthetic heavy-pair check: top two heavy tests must land on different shards.
   const heavy = [
-    "scripts/gate/sound-receipts.test.mjs",
-    "scripts/audio-gate.test.mjs",
+    "scripts/sketch-smoke.test.mjs",
+    "scripts/alpha-rc.test.mjs",
     "scripts/ci/selection-mutation.test.mjs",
     "scripts/sketch-lint.test.mjs",
     "a.test.mjs",
     "b.test.mjs",
   ];
-  assert.ok(estimateFileMs("scripts/gate/sound-receipts.test.mjs") > estimateFileMs("a.test.mjs"));
+  assert.ok(estimateFileMs("scripts/sketch-smoke.test.mjs") > estimateFileMs("a.test.mjs"));
   const h1 = selectShardFiles(heavy, { shard: "1/2" });
   const h2 = selectShardFiles(heavy, { shard: "2/2" });
   assert.equal(h1.length + h2.length, heavy.length);
   assert.deepEqual([...h1, ...h2].sort(), [...heavy].sort());
   assert.notEqual(
-    h1.includes("scripts/gate/sound-receipts.test.mjs"),
-    h1.includes("scripts/audio-gate.test.mjs"),
+    h1.includes("scripts/sketch-smoke.test.mjs"),
+    h1.includes("scripts/alpha-rc.test.mjs"),
     "top two heavy files should split across shards",
   );
 });
