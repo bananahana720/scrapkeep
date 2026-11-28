@@ -55,7 +55,6 @@ const QuietGun := preload("res://src/presentation/quiet_gun.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
-const Terrain := preload("res://src/world/terrain.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -214,7 +213,6 @@ func _reset() -> void:
 	HazardHits.reset_for_tests()
 	ParkTerrain.reset_for_tests()
 	StageMap.reset_for_tests()
-	Terrain.reset_for_tests()
 	Screens.reset_for_tests()
 	ArenaMindDress.reset_for_tests()
 	HighdraftScenery.reset_for_tests()
@@ -251,6 +249,7 @@ func _reset() -> void:
 	CraftLookdev.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
+	SimClock.threaded_in_bot_runs = false
 	Glyphs.device = "kbm"
 	SettingsPages.last_page = 0
 	StageLocks.active = true

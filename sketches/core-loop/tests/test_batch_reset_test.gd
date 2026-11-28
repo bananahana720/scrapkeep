@@ -63,7 +63,6 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
-const Terrain := preload("res://src/world/terrain.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
@@ -196,7 +195,7 @@ func _run() -> void:
 	StageMap.surface_shader_path = "res://assets/materials/__missing_workshop__.gdshader"
 	StageMap._surface_materials["fake"] = StandardMaterial3D.new()
 	StageMap._surface_warnings["fake"] = true
-	Terrain.threaded_in_bot_runs = true
+	SimClock.threaded_in_bot_runs = true
 	Screens._ready_announced = true
 	ArenaMindDress.dir = "res://assets/models/__missing_mind__/"
 	ArenaMindDress._sky_material = null
@@ -300,7 +299,7 @@ func _run() -> void:
 	t.check("StageMap resets shader path, material cache and warnings",
 		StageMap.surface_shader_path == StageMap.SURFACE_SHADER_PATH
 		and StageMap._surface_materials.is_empty() and StageMap._surface_warnings.is_empty())
-	t.check("Terrain.threaded_in_bot_runs resets to false", not Terrain.threaded_in_bot_runs)
+	t.check("SimClock.threaded_in_bot_runs resets to false", not SimClock.threaded_in_bot_runs)
 	t.check("Screens._ready_announced resets to false", not Screens._ready_announced)
 	t.check("ArenaMindDress resets dir, sky material, panorama task and kit cache",
 		ArenaMindDress.dir == ArenaMindDress.DIR and ArenaMindDress._sky_material == null
