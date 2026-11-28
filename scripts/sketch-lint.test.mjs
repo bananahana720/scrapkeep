@@ -32,6 +32,7 @@ import {
   lintL14,
   lintL15,
   lintL16,
+  lintL17,
   lintSketch,
   parseBatchDriverRefs,
   parseBatchDriverVars,
@@ -1347,4 +1348,33 @@ test("L16 reports one finding per file in a cycle with size and in-loop neighbou
     ["L16 sketches/core-loop/src/e.gd", "BASELINE sketches/core-loop/src/leaf.gd"],
   );
   assert.match(after[1].message, /L16 no longer offends: remove from baseline/);
+});
+
+test("L17 flags hardcoded /home/andrew paths in scripts and passes HOME-based paths", () => {
+  const clean = [
+    "from pathlib import Path",
+    'P = Path.home() / "scratch/w18"',
+    'GODOT="${GODOT:-$HOME/.local/share/godot/godot}"',
+    "# $HOME/scratch/log",
+  ].join("\n");
+  assert.deepEqual(lintL17("sketches/core-loop/tools/ok.py", clean), []);
+
+  const bad = [
+    'P = "/home/andrew/scratch/w18"',
+    "G=/home/andrew/.local/share/godot/godot",
+    "# /home/andrew/scratch/log",
+  ].join("\n");
+  const hits = lintL17("sketches/core-loop/tools/bad.py", bad);
+  assert.deepEqual(
+    hits.map((item) => `${item.rule} ${item.path}:${item.line}`),
+    [
+      "L17 sketches/core-loop/tools/bad.py:1",
+      "L17 sketches/core-loop/tools/bad.py:2",
+      "L17 sketches/core-loop/tools/bad.py:3",
+    ],
+  );
+  assert.match(hits[0].message, /hardcoded \/home\/andrew path/);
+
+  const realL17 = lintSketch("core-loop").filter((item) => item.rule === "L17");
+  assert.deepEqual(realL17, []);
 });

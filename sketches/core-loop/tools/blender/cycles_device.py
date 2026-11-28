@@ -39,7 +39,7 @@ import sys
 
 NVIDIA_DRIVER = "/proc/driver/nvidia/version"
 MODE_ENV = "SCRAPKEEP_CYCLES"
-CAPTURE_DIR = os.environ.get("SCRAPKEEP_CAPTURE_DIR", "/home/andrew/scratch/w18/gates")
+CAPTURE_DIR = os.environ.get("SCRAPKEEP_CAPTURE_DIR", os.path.expanduser("~/scratch/w18/gates"))
 CAPTURE_FILE = os.environ.get("SCRAPKEEP_CAPTURE_FILE", os.path.join(CAPTURE_DIR, "capture-active"))
 CAPTURE_LOCK = os.environ.get("SCRAPKEEP_CAPTURE_LOCK", os.path.join(CAPTURE_DIR, "timing.lock"))
 CAPTURE_CARD = "3060"

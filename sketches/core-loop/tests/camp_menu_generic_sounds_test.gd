@@ -6,7 +6,7 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Rows := preload("res://src/presentation/rows.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const MenuSounds := preload("res://src/presentation/menu_sounds.gd")
 
 # World 1's camp, every menu a pad moves through, and the three facts that shared generic sounds.

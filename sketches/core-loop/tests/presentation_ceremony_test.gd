@@ -11,7 +11,7 @@ const WordBudget := preload("res://src/core/word_budget.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
 const PartName := preload("res://src/ui/part_name.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 

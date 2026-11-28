@@ -14,7 +14,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # Each lever and the way a harder rung moves it: up (hits, waits before regen) or down (cadence, regen rate).
 const HARDER_UP := ["mobs.damage_mult", "warden.pulse_damage_mult", "brindle.damage_mult", "waking.damage_mult",
