@@ -5,7 +5,7 @@ const Game := preload("res://src/game.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const MechanicsDiagram := preload("res://src/ui/mechanics_diagram.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("help_mechanics_pictures_test")
@@ -32,7 +32,7 @@ func _run() -> void:
 	var controls_words: Dictionary = WordBudget.count(game.screens)
 	_t.check("controls page fits 40 words", controls_words.hud <= 40, "%d words: %s" % [controls_words.hud, controls_words.items])
 	var expected_keys := []
-	for row in FieldNotes.CONTROLS:
+	for row in ControlsDiagram.controls():
 		if row.has("caps") and row.has("short"):
 			expected_keys.append_array(row["caps"])
 	var shown_keys: Array = help.diagram.shown_keys()

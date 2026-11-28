@@ -8,6 +8,7 @@ const Synth := preload("res://src/presentation/synth.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Context := preload("res://src/core/context.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 # Test F (design-v3/HEFT-DESTRUCTIBLES.md sections 4.1, 9 and 10.2), unit C: the look of a heft destructible.
 # Proves, with a planted failing control beside every claim:
@@ -527,7 +528,7 @@ func _leaks() -> void:
 # ---- the GPU frame, when the run has a window -----------------------------------------------------
 
 func _gpu_frame() -> void:
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		t.skip("F: GPU break frame and the alpha-fade stall", "headless run: NEEDS: gpu, measure windowed on the Mac Studio and the 4080")
 		return
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)

@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const FPS := 30.0
@@ -34,7 +35,7 @@ func _initialize() -> void:
 			_out = arg.substr(6)
 		elif arg.begins_with("--human="):
 			_human = arg.trim_prefix("--human=") == "1"
-	if DisplayServer.get_name() == "headless" or _out == "":
+	if AppShell.headless() or _out == "":
 		printerr("brindle_beats_capture: needs a rendered display and -- --out=<absolute dir>")
 		quit(2)
 		return

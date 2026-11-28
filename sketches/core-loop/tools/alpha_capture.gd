@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const EVERY := 9.0
@@ -28,7 +29,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--") and "=" in arg:
 			settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
-	if DisplayServer.get_name() == "headless" or not settings.has("out"):
+	if AppShell.headless() or not settings.has("out"):
 		printerr("alpha_capture: needs a rendered display and -- --out=<absolute dir>")
 		quit(2)
 		return
@@ -115,10 +116,7 @@ func _physics_process(delta: float) -> bool:
 func _start_run() -> void:
 	_driver = BotDriver.new(_game, _policy, _seed)
 	_driver.tree_policy = ""
-	for child in _game.get_children():
-		var script = child.get_script()
-		if script != null and String(script.resource_path).ends_with("ui/workshop.gd"):
-			child.armed = true
+	_game.workshop().armed = true
 	var events = _game.events
 	events.tree_offered.connect(func(_c: String, depth: int, _choices: Array):
 		_pending.append({"at": _clock + 0.7, "name": "pick-depth%d" % depth, "then": func(): _press(KEY_1)}))

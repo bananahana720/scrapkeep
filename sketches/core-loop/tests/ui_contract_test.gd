@@ -5,10 +5,9 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Hud := preload("res://src/ui/hud.gd")
-const Callouts := preload("res://src/ui/callouts.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
@@ -116,9 +115,6 @@ func _check_wording() -> void:
 			and row.get("group", "") in EventKinds.GROUPS
 		for field in EventKinds.FIELDS:
 			ok = ok and row.has(field)
-		if kind.begins_with("callout_"):
-			var read := Callouts.plain(row["hud"])
-			ok = ok and WordBudget.words_in(read) > 0 and WordBudget.words_in(read) <= 4
 		if not ok:
 			bad_rows.append(kind)
 	_report("wording", long_toasts.is_empty() and long_objectives.is_empty() and bad_rows.is_empty() and Hud.toast_kinds() == EXPECTED_TOASTS,
@@ -134,8 +130,7 @@ func _check_prompt_parse() -> void:
 		and vault["title"] == "Vault" and vault["detail"] == "rare part + bonus core (plating 95)" \
 		and long["title"] == "Roll through the" and long["detail"] == "hoop for a part"
 	var fab: Dictionary = WorldPrompt.parse("Chain Arc\nArcs jump\nROLL THROUGH: 40 cogs")
-	ok = ok and gate["icon"] == "obj_gate" and vault["icon"] == "obj_vault" and fab["icon"] == "obj_fabricator" \
-		and Callouts.plain(EventKinds.UI_ROWS["callout_notes"]["hud"]) == "Hold Tab for notes"
+	ok = ok and gate["icon"] == "obj_gate" and vault["icon"] == "obj_vault" and fab["icon"] == "obj_fabricator"
 	_report("prompt parse", ok, "gate %s; vault %s; long first line %s; fabricator icon %s" % [gate, vault, long, fab["icon"]])
 
 

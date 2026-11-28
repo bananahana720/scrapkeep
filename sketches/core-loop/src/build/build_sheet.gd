@@ -1,6 +1,8 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
+const PartMutations := preload("res://src/build/part_mutations.gd")
+const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
@@ -28,37 +30,90 @@ var panel_punch := 0.0
 var adds := {}
 
 
-static func from_parts(held: Array) -> RefCounted:
-	var sheet: RefCounted = load("res://src/build/build_sheet.gd").new()
-	sheet.parts = held.duplicate()
-	var counted := {}
+static func counted_defs(held: Array) -> Array:
+	var out: Array = []
+	var copies := {}
 	for part_id in held:
 		var d: Resource = Parts.def(part_id)
 		if d == null:
 			continue
 		if not Synergies.evolution_live(part_id, held):
 			continue
-		counted[part_id] = counted.get(part_id, 0) + 1
+		copies[part_id] = copies.get(part_id, 0) + 1
 		if not d.levels.is_empty():
-			if counted[part_id] > 1:
+			if copies[part_id] > 1:
 				continue
 			d = Parts.def_at(part_id, Parts.level_of(part_id, held))
-		elif d.stack_rule != "hyperbolic" and d.stack_cap >= 1.0 and counted[part_id] > int(d.stack_cap):
+		elif d.stack_rule != "hyperbolic" and d.stack_cap >= 1.0 and copies[part_id] > int(d.stack_cap):
 			continue
-		sheet._fold(d.mods, d.patterns, d.elements)
-		sheet.cooldown_scale *= d.cooldown_scale
-		sheet.magnet *= d.magnet
-		sheet.kill_scrap *= d.kill_scrap
-		sheet.max_hp_bonus += d.max_hp_bonus
-		sheet.punch += d.punch
+		out.append(d)
+	return out
+
+
+static func from_parts(held: Array) -> RefCounted:
+	var sheet: RefCounted = load("res://src/build/build_sheet.gd").new()
+	sheet.parts = held.duplicate()
+	var counted := counted_defs(held)
 	sheet.synergies = Synergies.active(Parts.maker_counts(held))
-	for key in sheet.synergies:
-		sheet.fold_row(Synergies.ROWS[key])
+	var rows: Array = sheet.synergies.map(func(key): return Synergies.ROWS[key])
+	for category in PartDef.STAT_CATEGORIES:
+		sheet.refold_category(category, counted, rows)
 	return sheet
+
+
+func refold_category(category: String, counted: Array, rows: Array = []) -> void:
+	match category:
+		"mods":
+			mods = {}
+			for d in counted:
+				fold_mods(d.mods)
+			for row in rows:
+				fold_mods(row.get("mods", {}))
+		"patterns":
+			patterns = {}
+			for d in counted:
+				fold_patterns(d.patterns)
+			for row in rows:
+				fold_patterns(row.get("patterns", {}))
+		"elements":
+			triggers = {}
+			for d in counted:
+				fold_elements(d.elements)
+			for row in rows:
+				fold_elements(row.get("elements", {}))
+		"cooldown":
+			cooldown_scale = 1.0
+			for d in counted:
+				cooldown_scale *= d.cooldown_scale
+		"magnet":
+			magnet = 1.0
+			for d in counted:
+				magnet *= d.magnet
+		"kill_scrap":
+			kill_scrap = 1.0
+			for d in counted:
+				kill_scrap *= d.kill_scrap
+		"max_hp":
+			max_hp_bonus = 0.0
+			for d in counted:
+				max_hp_bonus += d.max_hp_bonus
+		"punch":
+			punch = 0.0
+			for d in counted:
+				punch += d.punch
+		"synergy":
+			transformers = []
+			dials = {}
+			for row in rows:
+				fold_synergy_effects(row)
 
 
 func fold_row(row: Dictionary) -> void:
 	_fold(row.get("mods", {}), row.get("patterns", {}), row.get("elements", {}))
+	fold_synergy_effects(row)
+
+
+func fold_synergy_effects(row: Dictionary) -> void:
 	for t in row.get("transformers", []):
 		if not t in transformers:
 			transformers.append(t)
@@ -68,10 +123,22 @@ func fold_row(row: Dictionary) -> void:
 
 
 func _fold(part_mods: Dictionary, part_patterns: Dictionary, part_elements: Dictionary) -> void:
+	fold_mods(part_mods)
+	fold_patterns(part_patterns)
+	fold_elements(part_elements)
+
+
+func fold_mods(part_mods: Dictionary) -> void:
 	for knob in part_mods:
 		mods[knob] = mods.get(knob, 1.0) * part_mods[knob]
+
+
+func fold_patterns(part_patterns: Dictionary) -> void:
 	for pattern in part_patterns:
 		patterns[pattern] = patterns.get(pattern, 0) + part_patterns[pattern]
+
+
+func fold_elements(part_elements: Dictionary) -> void:
 	for action in part_elements:
 		var list: Array = triggers.get(action, [])
 		var given = part_elements[action]
@@ -129,7 +196,7 @@ func power() -> float:
 	var bolt_power: float = pattern.damage / base.damage * mod("weapon_damage") * rate * pattern.volley_size() * chain
 	var vent_power := 0.0
 	if "gatling_heart" in ids:
-		var grow: Dictionary = Parts.micro_mutation("gatling_heart")
+		var grow: Dictionary = PartMutations.micro_mutation("gatling_heart")
 		if float(POWER_CONTRACT["distance_m"]) <= float(grow.get("radius_m", 5.5)):
 			var every := float(maxi(1, int(grow.get("every_shots", 12))))
 			vent_power = (rate / every) * (float(grow.get("damage_base", 18.0)) * mod("weapon_damage") / base.damage)

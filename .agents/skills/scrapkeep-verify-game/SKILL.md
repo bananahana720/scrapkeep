@@ -13,7 +13,7 @@ All commands run from the repository root. `S=.agents/skills/scrapkeep-verify-ga
 
 ## Launch
 
-1. Godot 4.7.2 must be found: `GODOT_BIN`, else `godot` on `PATH`, else `~/Applications/Godot_4.7.2.app/Contents/MacOS/Godot` on macOS, else `$HOME/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64` or `/opt/scrapkeep-toolchain/` on Linux (`tools/cloud/setup.sh`). (design choice)
+1. Godot 4.7.2 must be found: `GODOT_BIN`, else the binary `node scripts/godot-home.mjs --bin` prints (`resolveGodotBinary` in `scripts/godot-home.mjs` lists where it looks on each machine; the cloud's copy comes from `tools/cloud/setup.sh`). (design choice)
 2. Import once per checkout, and again after assets change: `node scripts/import-stamp.mjs import` (or `"$GODOT_BIN" --headless --path sketches/core-loop --import`). Run it up to three times and take the first exit 0 with no `SCRIPT ERROR` (`scripts/sketch-smoke.mjs` `importWithRetry`). (VGM-01)
 3. Each drive runs a short isolated game process: `$S/drive.sh [--offscreen] <steps file> [<evidence name>] [-- <game flags>]`. On Linux it draws under `xvfb-run` + `opengl3`; on macOS it runs offscreen (`--embedded --rendering-driver metal --debug --audio-driver Dummy`, zero Cocoa window, `HOME` isolated under `artifacts/local/`). Both run at `1280x720` and 30 fixed frames per game second. (VGM-02, VGM-06)
 4. Ready means `SCRAPKEEP_MENU_READY` in `<evidence>/game.log`, plus first steps `until clickable "Settings" 120` and `until read get_node_or_null("/root/Boot") == null 30`. (VGM-03)

@@ -5,6 +5,8 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, realpathSync, symlinkSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/cli.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -38,16 +40,15 @@ export function ensureNodeModules(worktreeRoot = root, opts = {}) {
     }
   }
 
-  const ran = spawn(
-    "git",
-    ["-C", worktree, "rev-parse", "--path-format=absolute", "--git-common-dir"],
-    { encoding: "utf8" },
-  );
-  if (ran.error || ran.status !== 0 || !ran.stdout.trim()) {
+  const common = gitOptional(["rev-parse", "--path-format=absolute", "--git-common-dir"], {
+    cwd: worktree,
+    spawn,
+  });
+  if (!common) {
     return { ok: false, linked: false, reason: "git_common_dir_failed" };
   }
 
-  const primary = path.dirname(ran.stdout.trim());
+  const primary = path.dirname(common);
   const worktreeReal = safeRealpath(worktree);
   const primaryReal = safeRealpath(primary);
   if (primaryReal === worktreeReal) {
@@ -91,16 +92,7 @@ export function parseEnsureArgs(argv) {
   return { worktree };
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const { worktree } = parseEnsureArgs(process.argv.slice(2));
     const result = ensureNodeModules(worktree, { log: (msg) => console.log(msg) });

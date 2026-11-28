@@ -2,6 +2,7 @@ extends RefCounted
 
 
 const Tuning := preload("res://src/movement/tuning.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const WORLD_MASK := 1
 const LARGE_M := 6.0
@@ -75,7 +76,7 @@ func pieces(root: Node, per_shape := false) -> Array:
 # mesh covers it. Under a headless display MultiMesh instance transforms read as the identity, so
 func index_drawn(roots: Array) -> void:
 	_meshes.clear()
-	multimesh_trusted = DisplayServer.get_name() != "headless"
+	multimesh_trusted = not AppShell.headless()
 	for holder in roots:
 		for g in holder.find_children("*", "GeometryInstance3D", true, false):
 			if not g.is_visible_in_tree() or g.visibility_range_begin > 0.0:

@@ -6,6 +6,7 @@ const EnemyBase := preload("res://src/combat/enemy.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const AllyHuskLook := preload("res://src/presentation/ally_husk_look.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
+const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 
 const GROUP := "ally_husk"
 const WRECK_SECONDS := 6.0
@@ -283,7 +284,7 @@ func record_wreck(enemy: Node3D) -> Dictionary:
 	var elite := bool(enemy.get_meta("elite_pack", false)) or enemy.has_meta("elite_affix")
 	var pos := _ground_point(enemy.global_position)
 	var prof := profile_for(kind)
-	var radius := float(enemy.get("radius")) if enemy.get("radius") != null else float(prof["radius"])
+	var radius := ActiveBase.enemy_girth(enemy, float(prof["radius"]))
 	var hh := float(enemy.get("half_height")) if enemy.get("half_height") != null else float(prof["half_height"])
 	var marker := AllyHuskLook.build_wreck_marker(ctx.root, pos, radius, elite)
 	var entry := {
@@ -677,14 +678,6 @@ func first_takeover_target(origin: Vector3, max_range := 26.0) -> HuskUnit:
 			best_d = d
 			best = h
 	return best
-
-
-func active_takeovers() -> Array:
-	var out: Array = []
-	for h in husks:
-		if is_instance_valid(h) and h.takeover_active:
-			out.append(h)
-	return out
 
 
 func begin_takeover(h: HuskUnit, source: Node, duration := TAKEOVER_WARN_SECONDS) -> bool:

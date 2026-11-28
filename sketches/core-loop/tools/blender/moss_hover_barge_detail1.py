@@ -3,7 +3,7 @@ the skin's origin, authored from gap list A (the approved picture moss_hover_bar
 rim bolts, an upper hull bolt row, bolted service hatches (the Switchback Enclaves habit: every panel comes off),
 plate seams, wheel clamps and axle stubs, the sign's marks and hinge pivot, a rim edge strip and corner plates.
 Nothing sits inside the 62 x 42 deck rectangle; colours are the base recipe's TONES. Class "detail" (1500 tris,
-3000 verts, 1 draw). The game drops it by distance (LAYER_RANGE in tools/w12_side_moss_hover_barge.gd).
+3000 verts, 1 draw). The game drops it by distance (its shell row in ROWS, src/presentation/recipe_props.gd).
 
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/moss_hover_barge_detail1.py [-- --out-dir DIR]
 """

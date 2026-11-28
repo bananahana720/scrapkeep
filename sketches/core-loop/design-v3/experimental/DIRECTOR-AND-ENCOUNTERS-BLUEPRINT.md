@@ -35,7 +35,7 @@ All three experimental tracks (`exp-builds-ecology`, `exp-director-events`, `exp
 | `&"coolant_brittle"` | `Brine-Coolant Scrubber`, `Corrosive Steam Squall` | Doubles (`2.0x`) Refurbished armor-plate shatter damage on vulnerable plates |
 | `&"soaked_conductive"` | `Brine-Coolant Scrubber`, `Corrosive Steam Squall` | Primes Fleet packs for single-step arc jumps (mirroring `overtime.gd` sluice soak) |
 
-**Canonical Payload Schema** (`RefurbishedElites.make_env_tag_payload`):
+**Canonical Payload Schema** (`EnvTags.make_payload`):
 ```gdscript
 {
     "tag": StringName,       # one of the 6 canonical tags above

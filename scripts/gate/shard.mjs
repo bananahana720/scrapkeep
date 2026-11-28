@@ -1,13 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  realpathSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,7 +15,6 @@ import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
 import {
   IMPORT_TRIES,
-  binary as smokeGodotBinary,
   failingLines,
   importTry,
   isBot,
@@ -34,7 +24,8 @@ import {
   testTimeoutMs,
   timeScale,
   withoutTeardownNoise,
-} from "../sketch-smoke.mjs";
+} from "../lib/godot-test-runner.mjs";
+import { runProcess } from "../lib/proc.mjs";
 import {
   checkImportStamp,
   godotIdentity,
@@ -42,12 +33,13 @@ import {
   isCleanImportPass,
   writeImportStamp,
 } from "../import-stamp.mjs";
-import { scratchHomeEnv } from "../godot-home.mjs";
+import { resolveGodotBinary, withScratchGodotEnv } from "../godot-home.mjs";
+import { git } from "../lib/git.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
-const CLOUD_GODOT = "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64";
 const IMPORT_TIMEOUT_MS = 900_000;
 const DEFAULT_CHUNK = 90;
 const DEFAULT_SOLO_RUNS = 2;
@@ -489,12 +481,6 @@ function parseArguments(argv) {
   return options;
 }
 
-function git(...args) {
-  const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr.trim()}`);
-  return result.stdout.trim();
-}
-
 function boxLine() {
   const cpus = os.cpus();
   return `${cpus.length} vCPU ${cpus[0]?.model ?? "unknown CPU"}, ${Math.round(os.totalmem() / 2 ** 30)} GB`;
@@ -508,20 +494,15 @@ export function importOutcome(exit, output) {
   });
 }
 
-function runToFile(command, args, file, env, timeoutMs) {
-  return new Promise((resolve) => {
-    const started = Date.now();
-    const chunksOut = [];
-    const child = spawn(command, args, { cwd: root, env });
-    const timer = timeoutMs ? setTimeout(() => child.kill("SIGKILL"), timeoutMs) : null;
-    child.stdout.on("data", (data) => chunksOut.push(data));
-    child.stderr.on("data", (data) => chunksOut.push(data));
-    child.on("close", (status, signal) => {
-      if (timer) clearTimeout(timer);
-      writeFileSync(file, Buffer.concat(chunksOut));
-      resolve({ exit: status ?? signal, seconds: Math.round((Date.now() - started) / 1000) });
-    });
+async function runToFile(command, args, file, env, timeoutMs) {
+  const res = await runProcess(command, args, {
+    cwd: root,
+    env,
+    timeoutMs,
+    logFile: file,
+    binaryOutput: true,
   });
+  return { exit: res.exit ?? res.signal, seconds: Math.round(res.ms / 1000) };
 }
 
 export function soloEnvironment(env, out, logDir) {
@@ -562,16 +543,13 @@ function soloOutcome(out, name, logDir, test) {
 
 function checkoutGuard(head) {
   const problem = () => {
-    if (git("rev-parse", "HEAD") !== head) return "the checkout moved during the run";
-    if (git("status", "--porcelain", "--untracked-files=no"))
+    if (git(["rev-parse", "HEAD"], { cwd: root }) !== head)
+      return "the checkout moved during the run";
+    if (git(["status", "--porcelain", "--untracked-files=no"], { cwd: root }))
       return "the checkout has uncommitted changes; a gate shard runs a clean head";
     const extra = git(
-      "status",
-      "--porcelain",
-      "--untracked-files=all",
-      "--",
-      `${SKETCH}/tests`,
-      WEEKLY_FILE,
+      ["status", "--porcelain", "--untracked-files=all", "--", `${SKETCH}/tests`, WEEKLY_FILE],
+      { cwd: root },
     )
       .split("\n")
       .filter((line) => /^\?\? .*\.(gd|tsv)$/.test(line))
@@ -740,9 +718,7 @@ export async function retime({
 }
 
 export function godotBinary(env = process.env, exists = existsSync) {
-  const godot =
-    env.GODOT_BIN ||
-    (exists(CLOUD_GODOT) ? CLOUD_GODOT : exists(smokeGodotBinary) ? smokeGodotBinary : null);
+  const godot = resolveGodotBinary({ env, exists });
   if (!godot || !exists(godot))
     throw new Error("Godot not found; run `bash tools/cloud/setup.sh` or set GODOT_BIN");
   return godot;
@@ -758,7 +734,7 @@ async function runRetime(options) {
       `not in the ${options.bots ? "bot" : "non-bot"} gate lists: ${unknown.join(", ")}`,
     );
   const godot = godotBinary();
-  const head = git("rev-parse", "HEAD");
+  const head = git(["rev-parse", "HEAD"], { cwd: root });
   const refuse = checkoutGuard(head);
   refuse();
   const threads = os.availableParallelism();
@@ -802,7 +778,7 @@ async function run(options) {
   );
   const godot = godotBinary();
   const scale = timeScale();
-  const head = git("rev-parse", "HEAD");
+  const head = git(["rev-parse", "HEAD"], { cwd: root });
   const refuse = checkoutGuard(head);
   refuse();
   const ledger = parseLedger(readFileSync(path.join(root, LEDGER_FILE), "utf8"));
@@ -876,28 +852,29 @@ async function run(options) {
     let imported = "failed";
     for (let pass = 1; pass <= IMPORT_TRIES; pass++) {
       const file = path.join(options.out, `import-${pass}.log`);
-      await step(`import-${pass}`, async () => {
-        const importEnv = {
-          ...env,
-          ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "gate-import-"))),
-        };
-        const ran = await runToFile(
-          godot,
-          ["--headless", "--path", sketchDir, "--import"],
-          file,
-          importEnv,
-          IMPORT_TIMEOUT_MS,
-        );
-        const output = readFileSync(file, "utf8");
-        const outcome = importOutcome(ran.exit, output);
-        const cleanPass = isCleanImportPass({
-          status: typeof ran.exit === "number" ? ran.exit : null,
-          signal: typeof ran.exit === "string" ? ran.exit : null,
-          output,
-          uidCacheValid: hasValidUidCache(root, SKETCH),
-        });
-        return { ...ran, outcome, cleanPass };
-      });
+      await step(`import-${pass}`, () =>
+        withScratchGodotEnv(
+          async (importEnv) => {
+            const ran = await runToFile(
+              godot,
+              ["--headless", "--path", sketchDir, "--import"],
+              file,
+              importEnv,
+              IMPORT_TIMEOUT_MS,
+            );
+            const output = readFileSync(file, "utf8");
+            const outcome = importOutcome(ran.exit, output);
+            const cleanPass = isCleanImportPass({
+              status: typeof ran.exit === "number" ? ran.exit : null,
+              signal: typeof ran.exit === "string" ? ran.exit : null,
+              output,
+              uidCacheValid: hasValidUidCache(root, SKETCH),
+            });
+            return { ...ran, outcome, cleanPass };
+          },
+          { prefix: "gate-import-", baseEnv: env, homeOnly: true },
+        ),
+      );
       const stepInfo = state.steps[`import-${pass}`];
       imported = stepInfo.outcome ?? "ok";
       if (imported !== "ok") console.log(`import ${pass} of ${IMPORT_TRIES}: ${imported}`);
@@ -1088,7 +1065,7 @@ async function main() {
   return run(options);
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = await main();
   } catch (error) {

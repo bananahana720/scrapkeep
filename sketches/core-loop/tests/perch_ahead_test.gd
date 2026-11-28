@@ -99,7 +99,7 @@ func _check_roof_floor(terrain, s: int, i: int) -> void:
 			var k: int = surface.cells[cell][0]
 			var p := Vector2((surface.vertices[k].x + surface.vertices[k + 1].x + surface.vertices[k + 2].x) / 3.0,
 				(surface.vertices[k].z + surface.vertices[k + 1].z + surface.vertices[k + 2].z) / 3.0)
-			var bare: float = Terrain._park_height(terrain._heights[i], terrain._holes[i], terrain._under[i], p.x, p.y)
+			var bare: float = Terrain.park_height(terrain._heights[i], terrain._holes[i], terrain._under[i], p.x, p.y)
 			if absf(terrain.height(p.x, p.y) - bare) > 0.01:
 				over += 1
 				if absf(ground.height(p.x, p.y) - terrain.height(p.x, p.y)) > 0.001:

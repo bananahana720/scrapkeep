@@ -4,9 +4,9 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Palette := preload("res://src/core/palette.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # FX-05 (effects critique E5): a hostile mark lands. When a hostile ground mark goes live it
 # leaves an ink crack ring and a dust kick at its edge, drawn from the committed descriptor,
@@ -142,9 +142,9 @@ func _check_dust() -> void:
 	var x1 := _far_x(late["tris"])
 	t.check("dust kicks out", x0 < 6.0 + Threat.DUST_SIZE + EPS and x1 > 6.0 + Threat.DUST_KICK and is_zero_approx(float(late["alpha"])),
 		"far edge %.2f m at the landing, %.2f m at the end, faded to %.2f" % [x0, x1, late["alpha"]])
-	EnemyMotion.motion_scale = 0.0
+	Comfort.reduced_motion = true
 	var still := _far_x(Threat.dust_at(puffs, Threat.DUST_SECONDS)["tris"])
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	t.check("reduced motion holds dust", still < 6.0 + Threat.DUST_SIZE * (1.0 + Threat.DUST_SWELL) + EPS,
 		"far edge %.2f m with Reduced motion" % still)
 

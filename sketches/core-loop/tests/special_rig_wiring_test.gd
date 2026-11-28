@@ -10,6 +10,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const KINDS := {"foreman": "idle", "dispatcher": "idle", "splitter": "crawl"}
 
 var game
@@ -88,13 +89,13 @@ func _run() -> void:
 		t.near(kind + " tell is at age 0", rig.player.current_animation_position, 0.0, 0.0001)
 		enemy.free()
 	# Reduced motion stills the loop and eases the pose home rather than snapping it.
-	EnemyMotion.motion_scale = 0.0
+	Comfort.reduced_motion = true
 	var calm = _spawn("dispatcher", 6)
 	var calm_rig = calm.get_node("SpecialRig")
 	t.check("reduced motion starts no loop", not calm_rig.player.is_playing())
 	await _frames(20)
 	t.check("reduced motion holds the body at rest", not calm_rig.player.is_playing())
 	calm.free()
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	EnemyMotion.headless_idle = false
 	quit(t.verdict())

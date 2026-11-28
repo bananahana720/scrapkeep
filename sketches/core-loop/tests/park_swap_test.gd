@@ -10,6 +10,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}, {"stage": 2, "world": 1, "map": "park_test"},
 	{"stage": 3, "world": 1, "map": "park_test"}]}
@@ -133,7 +134,7 @@ func _run() -> void:
 		row_frame_ms, row_step_ms, rows.slowest_step if rows != null else ""])
 	t.check("stage 2 places its park rows", rows != null and rows.is_ready() and rows.get_child_count() > 0, "%d extra frames" % row_frames)
 	# Headless (the dummy rasterizer, whose mesh RID owner is not thread-safe) the rows load on the main thread instead.
-	if DisplayServer.get_name() != "headless":
+	if not AppShell.headless():
 		t.check("stage 2's recipe GLBs and materials load on the loader thread", rows != null and rows.threaded_loads > 0, str(rows.threaded_loads if rows != null else -1))
 	else:
 		t.check("headless, stage 2's recipe GLBs and materials load on the main thread, none on the loader", rows != null and rows.threaded_loads == 0 and rows.get_child_count() > 0, str(rows.threaded_loads if rows != null else -1))

@@ -2,8 +2,10 @@
 
 set -u
 base="${1:-proto/alpha}"
-sketch="$(git rev-parse --show-toplevel)/sketches/core-loop"
-godot="${GODOT:-/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64}"
+repo="$(git rev-parse --show-toplevel)"
+sketch="$repo/sketches/core-loop"
+godot="${GODOT:-$(node "$repo/scripts/godot-home.mjs" --bin 2>/dev/null)}"
+command -v "$godot" >/dev/null || { echo "compile_check: no Godot found; set GODOT or GODOT_BIN" >&2; exit 2; }
 checked=0
 bad=0
 for f in $(git -C "$sketch" diff --name-only "$base"...HEAD -- . | grep '\.gd$'); do

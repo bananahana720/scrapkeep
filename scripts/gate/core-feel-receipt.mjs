@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { LEDGER_FILE, parseLedger } from "../known-failing.mjs";
-import { cleanHead, root } from "./clean-head.mjs";
+import { cleanHead, parseReceiptArgs, root, runReceiptCli } from "./receipt-cli.mjs";
 import { QUIET_FACTOR, QUIET_POLLS, QUIET_POLL_MS } from "./shard.mjs";
 import { runAlone } from "./solo-run.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const TESTS = [
   ["hit_stop_ticks_test", "hit-stop: a stop slows exactly its ticks and hands the time scale back"],
@@ -115,21 +115,11 @@ export async function produce({
   return buildReceipt({ runs, carried, plant, head, threads, maxLoad });
 }
 
-async function main(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
-  let receipt;
-  try {
-    receipt = await produce();
-  } catch (e) {
-    console.error(String(e.message ?? e));
-    return 2;
-  }
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) writeFileSync(args.out, text);
-  else process.stdout.write(text);
-  return receipt.pass ? 0 : 1;
+function main(argv) {
+  return runReceiptCli(async () => {
+    const args = parseReceiptArgs(argv);
+    return { receipt: await produce(), out: args.out };
+  });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exitCode = await main(process.argv.slice(2));
+if (isMain(import.meta.url)) process.exitCode = await main(process.argv.slice(2));

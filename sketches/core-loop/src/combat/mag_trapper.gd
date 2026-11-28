@@ -283,7 +283,7 @@ class PuntedDisc extends Node3D:
 	func _detonate() -> void:
 		var hits := 0
 		if is_inside_tree():
-			for enemy in get_tree().get_nodes_in_group("enemy"):
+			for enemy in get_tree().get_nodes_in_group(GROUP):
 				if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 					continue
 				var flat := Vector2(enemy.global_position.x - global_position.x, enemy.global_position.z - global_position.z).length()
@@ -314,7 +314,7 @@ func _nearest_pack_target(from: Vector3) -> Node3D:
 		return null
 	var best: Node3D = null
 	var best_d := PUNT_SEARCH_RANGE
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(GROUP):
 		if enemy == self or not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		var d := Vector2(enemy.global_position.x - from.x, enemy.global_position.z - from.z).length()

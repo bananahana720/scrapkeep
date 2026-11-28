@@ -3,6 +3,7 @@ extends RefCounted
 const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 const GRAPPLE := "grapple"
@@ -29,6 +30,7 @@ const SPECS := [
 	{"key": SLAM, "label": "Smash", "hint": "Ctrl while airborne; plants on flat, launches on slopes"},
 ]
 const SHARED := [SLAM]
+const BURST_ABILITIES := [SPRINT, BLINK, CLAW_PULL, SURGE, RECOIL]
 const DEFAULT_MOVEMENT := "grapple"
 
 const AIM_NONE := 0
@@ -38,8 +40,8 @@ const AIM_BODY := 3
 const AIM_CAST := 90.0
 const ASSIST_RINGS := [0.34, 0.67, 1.0]
 const ASSIST_SPOKES := 16
-const WORLD_MASK := 1
-const STAKE_MASK := 128
+const WORLD_MASK := PhysicsLayers.WORLD_MASK
+const STAKE_MASK := PhysicsLayers.STAKE_MASK
 const STAKE_GROUP := "sable_stake"
 
 const MIN_ROPE := 2.5
@@ -77,7 +79,7 @@ const MOUNT_REPEL_KNOCK := 20.0
 const SLINGSHOT_CHARGE := 0.8
 const SLINGSHOT_FULL := 1.3
 const VAULT_GAIN := 1.8
-const ENEMY_MASK := 4
+const ENEMY_MASK := PhysicsLayers.ENEMY_MASK
 const VAULT_CAP := 45.0
 const MASS_FULL := 990.0
 const MASS_BONUS := 8.0
@@ -96,6 +98,14 @@ const SURGE_SCALE := 1.3
 const RECOIL_SCALE := 1.3
 const RECOIL_LIFT := 1.5
 const SKID_KEEP := 0.6
+
+const KEST_AIR_DRAW_GRAVITY := 0.45
+const KEST_AIR_DRAW_MAX_S := 1.2
+const KEST_SPIRE_VAULT_UP := 13.5
+const KEST_WALL_KICK_MULT := 1.45
+const KEST_WALL_KICK_UP_MULT := 1.35
+const KEST_WALL_KICK_CAP := 36.0
+const KEST_WALL_KICK_LOCK_S := 1.2
 
 
 static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
@@ -185,16 +195,41 @@ static func _vault(kit, state, tuning, aim: Basis, body_state) -> void:
 	kit.facts.append(["dashed", [dir]])
 
 
-static func _burst_can_spend(kit) -> bool:
-	if kit.mounted:
-		return false
-	if kit.on(SPRINT):
-		return kit.abilities.ready(AbilityState.MOVEMENT) and not kit.sprinting
-	if kit.on(BLINK):
-		return kit.abilities.ready(AbilityState.MOVEMENT) or (kit.cloaked and kit.knob("cloak_free_blink"))
-	if kit.on(CLAW_PULL) or kit.on(SURGE) or kit.on(RECOIL):
-		return kit.abilities.ready(AbilityState.MOVEMENT)
+static func has_burst(kit) -> bool:
+	for key in BURST_ABILITIES:
+		if kit.on(key):
+			return true
 	return false
+
+
+static func burst_wait(kit) -> float:
+	if kit.mounted or not has_burst(kit):
+		return INF
+	if kit.on(SPRINT):
+		if kit.sprinting:
+			return INF
+		return _slot_wait(kit.abilities, AbilityState.MOVEMENT)
+	if kit.on(BLINK):
+		if kit.cloaked and kit.knob("cloak_free_blink"):
+			return 0.0
+		return _slot_wait(kit.abilities, AbilityState.MOVEMENT)
+	return _slot_wait(kit.abilities, AbilityState.MOVEMENT)
+
+
+static func _slot_wait(abilities, name: String) -> float:
+	if abilities.ready(name):
+		return 0.0
+	var s = abilities.slot(name)
+	if not s.available or abilities.silenced(name):
+		return INF
+	var cd: float = abilities.cooldown_of(name)
+	if cd <= 0.0:
+		return INF
+	return maxf(0.0, cd - s.recharge)
+
+
+static func burst_ready(kit) -> bool:
+	return burst_wait(kit) <= 0.0
 
 
 static func _sprint(kit, state, tuning, intent, aim: Basis, body_state, step: float) -> void:
@@ -529,7 +564,7 @@ static func _hold_plant(kit, state, intent, body_state, step: float) -> bool:
 		state.boost_buffer = Tuning.BOOST_BUFFER
 	var jump_cancel: bool = state.jump_buffer > 0.0 or intent.jump_pressed
 	var boost_cancel: bool = (intent.boost_pressed or state.boost_buffer > 0.0) and state.boost_cooldown <= 0.0
-	var burst_cancel: bool = (intent.movement_pressed or kit.movement_buffer > 0.0) and _burst_can_spend(kit)
+	var burst_cancel: bool = (intent.movement_pressed or kit.movement_buffer > 0.0) and burst_ready(kit)
 	var harpoon_cancel: bool = kit.hooked
 	if jump_cancel or boost_cancel or burst_cancel or harpoon_cancel:
 		kit.plant_time = 0.0
@@ -651,7 +686,7 @@ static func _mount_spot(kit, body_state) -> Dictionary:
 
 static func mount_face(kit, space: PhysicsDirectSpaceState3D, origin: Vector3) -> Dictionary:
 	var reach_scale: float = kit.knob("mount_reach")
-	var face := _steepest_face_at(space, origin, WORLD_MASK, reach_scale)
+	var face := steepest_face_at(space, origin, WORLD_MASK, reach_scale)
 	if not face.is_empty():
 		return face
 	if kit.hooked and kit.on(GRAPPLE) and not kit.on_body and absf(kit.anchor_normal.y) < FACE_MAX_TILT \
@@ -836,10 +871,10 @@ static func _haul(kit, tuning, intent, body_state, step: float) -> void:
 
 
 static func _steepest_face(body_state, mask := WORLD_MASK, reach_scale := 1.0) -> Dictionary:
-	return _steepest_face_at(body_state.get_space_state(), body_state.transform.origin, mask, reach_scale)
+	return steepest_face_at(body_state.get_space_state(), body_state.transform.origin, mask, reach_scale)
 
 
-static func _steepest_face_at(space: PhysicsDirectSpaceState3D, origin: Vector3, mask := WORLD_MASK, reach_scale := 1.0) -> Dictionary:
+static func steepest_face_at(space: PhysicsDirectSpaceState3D, origin: Vector3, mask := WORLD_MASK, reach_scale := 1.0) -> Dictionary:
 	var reach: float = Tuning.RADIUS + FACE_REACH * reach_scale
 	var best := {}
 	var flattest := 2.0

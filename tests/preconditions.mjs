@@ -7,16 +7,17 @@
 // The promotion run sets SCRAPKEEP_WHOLE_TESTS=1 (project-guide/handoff/GATE.md).
 // There a limit is an error and not a skip, so "npm test passed" means every
 // one of these tests ran.
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gitOptional } from "../scripts/lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const whole = process.env.SCRAPKEEP_WHOLE_TESTS === "1";
 
 function limit(applies, reason) {
   if (!applies) return false;
-  if (whole) throw new Error(`SCRAPKEEP_WHOLE_TESTS=1 needs a box with no limits, and this one ${reason}`);
+  if (whole)
+    throw new Error(`SCRAPKEEP_WHOLE_TESTS=1 needs a box with no limits, and this one ${reason}`);
   return reason;
 }
 
@@ -31,6 +32,6 @@ export const asRoot = limit(
 // snapshots name. With no git, or outside a repository, this is false and the
 // tests run and fail with git's own message.
 export const shallowClone = limit(
-  spawnSync("git", ["rev-parse", "--is-shallow-repository"], { cwd: root, encoding: "utf8" }).stdout?.trim() === "true",
+  gitOptional(["rev-parse", "--is-shallow-repository"], { cwd: root }) === "true",
   "is a shallow clone, which lacks the commits this test reads; run `git fetch --unshallow origin`",
 );

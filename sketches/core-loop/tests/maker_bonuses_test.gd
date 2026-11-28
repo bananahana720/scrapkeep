@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const Rockets := preload("res://src/combat/actives/scrap_rockets.gd")
+const MakerDefs := preload("res://src/build/maker_defs.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const MakerBonuses := preload("res://src/build/maker_bonuses.gd")
 const T := preload("res://tests/support/t.gd")
@@ -105,12 +106,12 @@ func _run() -> void:
 
 	# --- The racked active is a piece; Full Pressure (Spillway Works) ----------------------
 	_give(["quick_spool", "cap_relay"])
-	_t.eq("05 two Spillway parts alone are not a set", _build.maker_counts().get(MakerSets.SPILLWAY, 0), 2)
+	_t.eq("05 two Spillway parts alone are not a set", _build.maker_counts().get(MakerDefs.SPILLWAY, 0), 2)
 	_game.tuning.set_option("actives", "on")
 	await _sim(0.2)
 	var rack = _combat.get("actives")
 	_t.check("06 the racked Scrap Rocket Rack is the third Spillway piece",
-		rack.active_id == ActiveDefs.SCRAP_ROCKET and _build.maker_counts().get(MakerSets.SPILLWAY, 0) == 3 \
+		rack.active_id == ActiveDefs.SCRAP_ROCKET and _build.maker_counts().get(MakerDefs.SPILLWAY, 0) == 3 \
 		and "full_pressure" in _build.maker_bonuses(), str(_build.maker_counts()))
 	var near := _enemy(3.0, 0.0)
 	var far := _enemy(20.0, 0.0)
@@ -235,7 +236,7 @@ func _run() -> void:
 	swapped[swapped.find("rivet_seam")] = "gen:weapon:rare:arc:on_hit"
 	_game.ctx.run.parts.assign(swapped)
 	_t.check("29 swapping a piece out at the same part count (a retry, a sale) is recounted",
-		not "rounded_up" in _build.maker_bonuses() and _build.maker_counts().get(MakerSets.FLEET, 0) == 2, str(_build.maker_counts()))
+		not "rounded_up" in _build.maker_bonuses() and _build.maker_counts().get(MakerDefs.FLEET, 0) == 2, str(_build.maker_counts()))
 	ev.run_started.emit("pylon_engineer")
 	_t.eq("30 a new run clears the sets' firings", _build.makers.fires, {})
 	quit(_t.verdict())

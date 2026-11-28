@@ -9,6 +9,8 @@ import { fileURLToPath } from "node:url";
 import * as render from "./model-render-receipt.mjs";
 import * as census from "./stand-ins-receipt.mjs";
 import * as display from "./display-run.mjs";
+import { groupLive } from "../lib/proc.mjs";
+import { git as runGit } from "../lib/git.mjs";
 
 const HEAD = "abc1234";
 const KINDS = render.KINDS;
@@ -23,15 +25,12 @@ function repo() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "look-receipts-git-"));
   tempDirs.push(dir);
   const git = (...args) =>
-    spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
-      cwd: dir,
-      encoding: "utf8",
-    });
+    runGit(["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: dir });
   git("init", "-q");
   writeFileSync(path.join(dir, "a.txt"), "one");
   git("add", "a.txt");
   git("commit", "-q", "-m", "one");
-  return { dir, head: git("rev-parse", "HEAD").stdout.trim() };
+  return { dir, head: git("rev-parse", "HEAD") };
 }
 
 function compareLog({
@@ -354,14 +353,16 @@ test("display-run: releases the slot when the launch throws", async () => {
 });
 
 describe("display-run timeouts and signals", { concurrency: CONCURRENCY }, () => {
-  test("display-run: the timeout kills the whole run, a forked child or an exec, in under 2 s", async () => {
+  test("display-run: the timeout kills the whole run's group, a forked child or an exec", async () => {
     const { dir } = repo();
     await Promise.all(
       ["sleep 30 &\nwait\n", "exec sleep 30\n"].map(async (body) => {
         const fake = path.join(dir, `fake-${body.length}.sh`);
-        writeFileSync(fake, `#!/bin/sh\necho started "$@"\n${body}`, { mode: 0o755 });
+        const group = path.join(dir, `group-${body.length}`);
+        writeFileSync(fake, `#!/bin/sh\necho started "$@"\necho $$ > "${group}"\n${body}`, {
+          mode: 0o755,
+        });
         const events = [];
-        const t0 = Date.now();
         const r = await display.runWindowed({
           platform: "linux",
           cwd: dir,
@@ -371,8 +372,8 @@ describe("display-run timeouts and signals", { concurrency: CONCURRENCY }, () =>
           timeoutMs: 300,
           acquire: noSlot(events),
         });
-        assert.ok(Date.now() - t0 < 2000, `${body.trim()}: returned in ${Date.now() - t0} ms`);
         assert.equal(r.timedOut, true);
+        assert.equal(groupLive(Number(readFileSync(group, "utf8"))), false, body.trim());
         assert.equal(r.exit, null);
         assert.match(r.output, /^started --path .* --script res:\/\/x\.gd --/);
         assert.deepEqual(events, ["acquire", "release"]);
@@ -644,10 +645,8 @@ test("no-code-stand-ins: the producer runs the test then the plant, reads the pi
   const pinDir = path.join(dir, path.dirname(census.PIN));
   spawnSync("mkdir", ["-p", pinDir]);
   writeFileSync(path.join(dir, census.PIN), PIN_TEXT);
-  spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "add", "."], { cwd: dir });
-  spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "pin"], {
-    cwd: dir,
-  });
+  runGit(["-c", "user.name=t", "-c", "user.email=t@t", "add", "."], { cwd: dir });
+  runGit(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "pin"], { cwd: dir });
   const r = census.produce({ cwd: dir, run });
   assert.notEqual(r.head, head);
   assert.equal(r.pass, true);

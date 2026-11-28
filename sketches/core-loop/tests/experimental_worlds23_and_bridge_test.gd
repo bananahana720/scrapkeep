@@ -75,14 +75,15 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	LiveRunBridge._reset()
+	ExperimentalAudioBank._reset()
 	_test_worlds23_configs_elites_and_w4_clarity()
 	_test_worlds23_hazards_and_encounters()
 	_test_batch2_parts_and_cross_world_synergies()
 	await _test_live_run_bridge_and_audio_bank()
 	_test_graph_and_code_hygiene()
+	_test_env_tag_bounds_table()
 	_run_three_world_monte_carlo_proof()
-	LiveRunBridge._reset()
+	ExperimentalAudioBank._reset()
 	quit(t.verdict())
 
 
@@ -130,8 +131,8 @@ func _test_worlds23_configs_elites_and_w4_clarity() -> void:
 		var cue := String(spec.get("counterplay_cue", ""))
 		if cue == "" or String(spec.get("silhouette_cue", "")) == "" \
 				or String(spec.get("movement_cadence", "")) == "" \
-				or float(spec.get("tell_s", 0.0)) < RefurbishedElites.MIN_TELL_S \
-				or not RefurbishedElites.ENV_TAGS.has(StringName(spec.get("ability_tag", &""))):
+				or float(spec.get("tell_s", 0.0)) < EnvTags.MIN_TELL_S \
+				or not EnvTags.CANONICAL_TAGS.has(StringName(spec.get("ability_tag", &""))):
 			clarity_ok = false
 		for tok in raw_tokens:
 			if cue.contains(tok):
@@ -487,7 +488,7 @@ func _test_live_run_bridge_and_audio_bank() -> void:
 		str(attempt_cues[1]))
 	t.eq("a stage retry fires the same audio cues as the first attempt", attempt_cues[1], attempt_cues[0])
 	bridge.teardown()
-	t.eq("teardown clears the audio cooldowns", ExperimentalAudioBank.can_trigger("pa_hazard_squall_incoming", 0.0), true)
+	t.eq("teardown clears the audio cooldowns", ExperimentalAudioBank.can_trigger("pa_hazard_squall_incoming", 0.0, bridge.audio_cooldowns), true)
 
 	bridge.teardown()
 	root.remove_child(bridge)
@@ -502,28 +503,53 @@ func _test_live_run_bridge_and_audio_bank() -> void:
 
 
 func _test_graph_and_code_hygiene() -> void:
-	var dir_paths := ["res://src/experimental", "res://src/experimental/resources/director"]
+	var scan_root := "res://src/experimental"
 	var gd_files: Array[String] = []
-	for dpath in dir_paths:
+	var unopened_dirs: Array[String] = []
+	var pending_dirs: Array[String] = [scan_root]
+	while not pending_dirs.is_empty():
+		var dpath: String = pending_dirs.pop_back()
 		var dir := DirAccess.open(dpath)
 		if dir == null:
+			unopened_dirs.append(dpath)
 			continue
+		for sub in dir.get_directories():
+			pending_dirs.append(dpath.path_join(sub))
 		for fname in dir.get_files():
 			if fname.ends_with(".gd"):
 				gd_files.append(dpath.path_join(fname))
 	gd_files.sort()
+	t.eq("every folder under %s opens" % scan_root, unopened_dirs, [])
+	t.check("script walk of %s finds scripts" % scan_root, not gd_files.is_empty(), "found %d" % gd_files.size())
+	t.check("script walk of %s finds env_tags.gd" % scan_root, gd_files.has("res://src/experimental/env_tags.gd"), "found %d" % gd_files.size())
 
+	var preload_pattern := 'preload\\("([^"]+)"\\)'
 	var preload_re := RegEx.new()
-	preload_re.compile('preload\\("([^"]+)"\\)')
+	t.eq("regex compiles: %s" % preload_pattern, preload_re.compile(preload_pattern), OK)
+	var static_var_pattern := "(?m)^\\s*static\\s+var\\b"
 	var static_var_re := RegEx.new()
-	static_var_re.compile("(?m)^\\s*static\\s+var\\b")
+	t.eq("regex compiles: %s" % static_var_pattern, static_var_re.compile(static_var_pattern), OK)
+	var tag_const_pattern := "(?m)^\\s*const\\s+(ENV_TAGS|CANONICAL_TAGS|TAG_(ELECTRIFIED|BURNING|SLAG_COATED|MAGNETIC|COOLANT_BRITTLE|SOAKED_CONDUCTIVE))\\b"
+	var tag_const_re := RegEx.new()
+	t.eq("regex compiles: %s" % tag_const_pattern, tag_const_re.compile(tag_const_pattern), OK)
+	var never_brake_pattern := "(?m)^\\s*(static\\s+)?func\\s+_?never_brake\\w*\\b"
+	var never_brake_re := RegEx.new()
+	t.eq("regex compiles: %s" % never_brake_pattern, never_brake_re.compile(never_brake_pattern), OK)
 
 	var graph := {}
 	var static_vars: Array[String] = []
 	var comment_hits: Array[String] = []
+	var tag_decl_dups: Array[String] = []
+	var tag_vocab_dups: Array[String] = []
+	var never_brake_dups: Array[String] = []
+	var unreadable: Array[String] = []
 
 	for path in gd_files:
 		var text := FileAccess.get_file_as_string(path)
+		var read_error := FileAccess.get_open_error()
+		if read_error != OK or text == "":
+			unreadable.append("%s (error %d, %d chars)" % [path, read_error, text.length()])
+			continue
 		var deps: Array[String] = []
 		for m in preload_re.search_all(text):
 			var dep := String(m.get_string(1))
@@ -532,16 +558,97 @@ func _test_graph_and_code_hygiene() -> void:
 		graph[path] = deps
 		if static_var_re.search(text) != null:
 			static_vars.append(path)
+		if path != "res://src/experimental/env_tags.gd":
+			if tag_const_re.search(text) != null:
+				tag_decl_dups.append(path)
+			var all_tags_present := true
+			for tag_name in EnvTags.CANONICAL_TAGS:
+				if not text.contains('&"' + String(tag_name) + '"'):
+					all_tags_present = false
+					break
+			if all_tags_present:
+				tag_vocab_dups.append(path)
+		if never_brake_re.search(text) != null:
+			never_brake_dups.append(path)
 		var lines := text.split("\n")
 		for idx in lines.size():
 			var stripped := lines[idx].strip_edges()
 			if stripped.begins_with("#"):
 				comment_hits.append("%s:%d" % [path, idx + 1])
 
+	t.eq("every script under %s reads as text" % scan_root, unreadable, [])
 	var has_cycle := _has_directed_cycle(graph)
 	t.eq("zero circular preload dependencies in src/experimental", has_cycle, false)
 	t.eq("zero mutable static var in src/experimental", static_vars, [])
 	t.eq("zero # comment lines in src/experimental", comment_hits, [])
+	t.eq("env tag name constants declared only in env_tags.gd", tag_decl_dups, [])
+	t.eq("canonical env tag vocabulary declared only in env_tags.gd", tag_vocab_dups, [])
+	t.eq("zero duplicate never_brake helpers in src/experimental", never_brake_dups, [])
+
+
+func _test_env_tag_bounds_table() -> void:
+	var origin := Vector3(1.0, 2.0, 3.0)
+	var rows: Array[Dictionary] = [
+		{
+			"name": "default",
+			"bounds": EnvTags.BOUNDS_DEFAULT,
+			"in_i": 1.2, "in_t": 2.5,
+			"over_i": 10.0, "over_t": 3.0,
+			"zero_i": 0.0, "zero_valid": true,
+			"short_t": 0.01, "zero_ttl_valid": true,
+			"str_tag_valid": true, "ws_source_valid": false,
+		},
+		{
+			"name": "elite",
+			"bounds": EnvTags.BOUNDS_ELITE,
+			"in_i": 1.2, "in_t": 2.5,
+			"over_i": 15.0, "over_t": 3.0,
+			"zero_i": 0.0, "zero_valid": true,
+			"short_t": 0.1, "zero_ttl_valid": false,
+			"str_tag_valid": true, "ws_source_valid": true,
+		},
+		{
+			"name": "setpiece",
+			"bounds": EnvTags.BOUNDS_SETPIECE,
+			"in_i": 1.2, "in_t": 2.5,
+			"over_i": 2.0, "over_t": 3.0,
+			"zero_i": 0.05, "zero_valid": false,
+			"short_t": 0.05, "zero_ttl_valid": false,
+			"str_tag_valid": false, "ws_source_valid": false,
+		},
+	]
+	for row in rows:
+		var label: String = row["name"]
+		var bounds: Dictionary = row["bounds"]
+		var p_in := EnvTags.make_payload(EnvTags.TAG_BURNING, origin, 4.0, "src", 1.2, 2.5, bounds)
+		t.near("%s bounds in-range intensity" % label, float(p_in["intensity"]), float(row["in_i"]), 0.0001)
+		t.near("%s bounds in-range ttl" % label, float(p_in["ttl_s"]), float(row["in_t"]), 0.0001)
+		t.eq("%s bounds in-range valid" % label, EnvTags.is_valid_payload(p_in, bounds), true)
+
+		var p_over := EnvTags.make_payload(EnvTags.TAG_BURNING, origin, 4.0, "src", 15.0, 3.0, bounds)
+		t.near("%s bounds over-range intensity" % label, float(p_over["intensity"]), float(row["over_i"]), 0.0001)
+		t.near("%s bounds over-range ttl" % label, float(p_over["ttl_s"]), float(row["over_t"]), 0.0001)
+		t.eq("%s bounds over-range valid" % label, EnvTags.is_valid_payload(p_over, bounds), true)
+
+		var p_zero := EnvTags.make_payload(EnvTags.TAG_BURNING, origin, 4.0, "src", 0.0, 1.0, bounds)
+		t.near("%s bounds zero intensity clamp" % label, float(p_zero["intensity"]), float(row["zero_i"]), 0.0001)
+		t.eq("%s bounds zero intensity built payload valid" % label, EnvTags.is_valid_payload(p_zero, bounds), true)
+
+		var raw_zero_i := {"tag": EnvTags.TAG_BURNING, "origin": origin, "radius_m": 4.0, "source_id": "src", "intensity": 0.0, "ttl_s": 1.0}
+		t.eq("%s bounds raw zero intensity validation" % label, EnvTags.is_valid_payload(raw_zero_i, bounds), bool(row["zero_valid"]))
+
+		var p_short := EnvTags.make_payload(EnvTags.TAG_BURNING, origin, 4.0, "src", 1.0, 0.01, bounds)
+		t.near("%s bounds short ttl clamp" % label, float(p_short["ttl_s"]), float(row["short_t"]), 0.0001)
+		t.eq("%s bounds short ttl built payload valid" % label, EnvTags.is_valid_payload(p_short, bounds), true)
+
+		var raw_zero_ttl := {"tag": EnvTags.TAG_BURNING, "origin": origin, "radius_m": 4.0, "source_id": "src", "intensity": 1.0, "ttl_s": 0.0}
+		t.eq("%s bounds raw zero ttl validation" % label, EnvTags.is_valid_payload(raw_zero_ttl, bounds), bool(row["zero_ttl_valid"]))
+
+		var raw_str_tag := {"tag": "burning", "origin": origin, "radius_m": 4.0, "source_id": "src", "intensity": 1.0, "ttl_s": 1.0}
+		t.eq("%s bounds string tag validation" % label, EnvTags.is_valid_payload(raw_str_tag, bounds), bool(row["str_tag_valid"]))
+
+		var raw_ws_src := {"tag": EnvTags.TAG_BURNING, "origin": origin, "radius_m": 4.0, "source_id": "   ", "intensity": 1.0, "ttl_s": 1.0}
+		t.eq("%s bounds whitespace source_id validation" % label, EnvTags.is_valid_payload(raw_ws_src, bounds), bool(row["ws_source_valid"]))
 
 
 func _has_directed_cycle(graph: Dictionary) -> bool:

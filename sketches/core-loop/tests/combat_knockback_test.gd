@@ -72,7 +72,7 @@ func _knockback() -> void:
 		var enemy: Node3D = combat.spawn_enemy("chaser", _game.ctx.terrain.drop_point(at.x, at.z, 1.0))
 		enemy.hp = 1000.0
 		current[0] = id
-		combat._hit(enemy, kinds[id], DAMAGE, Vector3.RIGHT, shoves[id], "", "", sources.get(id, ""))
+		combat.deal_hit(enemy, kinds[id], DAMAGE, Vector3.RIGHT, shoves[id], "", "", sources.get(id, ""))
 		moved[id] = enemy._knocked_speed()
 		i += 1
 	_game.events.enemy_struck.disconnect(note)

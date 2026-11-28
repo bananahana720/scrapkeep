@@ -46,7 +46,7 @@ func _check_parts() -> void:
 	_t.check("the park table offers every alpha part", missing.is_empty() and ParkDefs.PARTS.size() == 71,
 		"%d parts, missing %s" % [ParkDefs.PARTS.size(), missing])
 	var before = Synergies.table
-	Synergies.table = ParkDefs
+	Synergies.set_table(ParkDefs)
 	var short: Array = []
 	for def in ClassDef.all():
 		var pool: Array = Parts.offer_pool(def.id, ItemGen.RARITIES)
@@ -54,13 +54,13 @@ func _check_parts() -> void:
 			var offered: Array = pool.filter(func(id): return Parts.maker_of(id) == maker)
 			if offered.size() < MakerSets.SETS[maker]["pieces"]:
 				short.append("%s for %s (%s)" % [maker, def.id, offered])
-	Synergies.table = before
+	Synergies.set_table(before)
 	_t.check("every maker set completes for every pilot from park offers", short.is_empty(), "short: %s" % [short])
 
 
 func _check_spare_frame() -> void:
 	var before = Synergies.table
-	Synergies.table = ParkDefs
+	Synergies.set_table(ParkDefs)
 	var without: Array = []
 	var relics := {}
 	for def in ClassDef.all():
@@ -68,7 +68,7 @@ func _check_spare_frame() -> void:
 		relics[def.id] = pool
 		if not "spare_frame" in pool:
 			without.append(def.id)
-	Synergies.table = before
+	Synergies.set_table(before)
 	_t.check("Spare Frame drops at relic tier for every pilot", without.is_empty() and Parts.row("spare_frame")["rarity"] == "relic",
 		"pilots without it: %s; relic pools %s" % [without, relics])
 

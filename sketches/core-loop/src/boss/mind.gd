@@ -3,6 +3,8 @@ extends "res://src/boss/stub_boss.gd"
 const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
+const BossAttacks := preload("res://src/boss/boss_attacks.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const MindDress := preload("res://src/boss/mind_dress.gd")
 const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
@@ -32,7 +34,6 @@ const HAND_STALL_SUMMON_PERIOD := 2.4
 const HAND_REST_DEFAULT := 3.0
 const HAND_REST_STALL := 1.8
 
-var attacks: Array = []
 var landings: Array = []
 var hands: Array = []
 var phase := 1
@@ -305,10 +306,8 @@ func _step_hand_timers(delta: float, accel: float) -> void:
 			continue
 		if "rest_seconds" in hand:
 			hand.rest_seconds = lerpf(HAND_REST_DEFAULT, HAND_REST_STALL, p)
-		if "_rest" in hand and float(hand._rest) > 0.0:
-			hand._rest = maxf(0.0, float(hand._rest) - bonus)
-		if "_takeover_cd" in hand and float(hand._takeover_cd) > 0.0:
-			hand._takeover_cd = maxf(0.0, float(hand._takeover_cd) - bonus)
+		if hand.has_method("reset_rest"):
+			hand.reset_rest(bonus)
 	if is_instance_valid(warden):
 		warden.advance_choir_clock(bonus)
 
@@ -431,9 +430,7 @@ func _hand_struck(hand: Node3D, kind: String, force: float) -> void:
 	if state != FIGHT or not hand.braced() or not kind in Rules.CONTACT_KINDS:
 		return
 	var frame := Engine.get_physics_frames()
-	var smash: bool = ctx.player.smash_landing == hand
-	var reel: bool = ctx.spawner.is_reel_impact(kind, smash) if ctx.spawner != null and ctx.spawner.has_method("is_reel_impact") \
-			else smash or (ctx.player.kit.hooked and ctx.player.kit.winching)
+	var reel := _is_reel_impact(hand, kind)
 	if reel and int(_reel_frame.get(id, -1)) == frame:
 		reel = false
 	var punch: float = ctx.spawner.punch_of(kind, force) if ctx.spawner != null and ctx.spawner.has_method("punch_of") else force
@@ -470,8 +467,8 @@ func _commit_attack(family := "") -> void:
 	var laid: Array = []
 	var aimed := false
 	for d in descriptors:
-		aimed = aimed or MindAttacks.covers(d, ball)
-		var h = MindAttacks.build(d)
+		aimed = aimed or BossAttacks.covers(d, ball)
+		var h = Hazard.from_def(d)
 		h.ground = Callable(self, "ground_height_at")
 		ctx.root.add_child(h)
 		laid.append(h)
@@ -530,18 +527,6 @@ func _free_hands() -> void:
 		if is_instance_valid(hand):
 			hand.queue_free()
 	hands.clear()
-
-
-func _clear_attacks() -> void:
-	for attack in attacks:
-		_free_hazards(attack)
-	attacks.clear()
-
-
-func _free_hazards(attack: Dictionary) -> void:
-	for h in attack["hazards"]:
-		if is_instance_valid(h):
-			h.queue_free()
 
 
 func _send_hand() -> void:

@@ -8,7 +8,6 @@ import {
   openSync,
   readFileSync,
   readdirSync,
-  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -16,14 +15,15 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { fileURLToPath } from "node:url";
 
 import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
 import { checkImportStamp, sketchState, stampPath, writeImportStamp } from "../import-stamp.mjs";
 import { defaultChallengeJobs } from "../challenge/lib.mjs";
-import { userDataEnv } from "../godot-home.mjs";
+import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
+import { REPO_ROOT, git as runGit } from "../lib/git.mjs";
+import { isMain } from "../lib/cli.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const root = REPO_ROOT;
 const SKETCH = "sketches/core-loop";
 export const BANDS_FILE = path.join(root, "scripts", "gate", "bands.json");
 const BOT_BLOCK = 5;
@@ -614,9 +614,7 @@ export function stepEnv({
   return {
     ...base,
     GODOT_BIN: godot,
-    ...userDataEnv(path.join(home, "data"), platform),
-    XDG_CONFIG_HOME: path.join(home, "config"),
-    XDG_CACHE_HOME: path.join(home, "cache"),
+    ...scratchGodotEnv(home, { platform }),
     SCRAPKEEP_LOCK_DIR: lockDir,
     SMOKE_SLOTS: String(SLOT_POOL),
     SMOKE_FULL: "1",
@@ -1035,9 +1033,7 @@ function parseArguments(argv) {
 }
 
 function git(...args) {
-  const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr.trim()}`);
-  return result.stdout.trim();
+  return runGit(args, { cwd: root });
 }
 
 function buildPlan(options) {
@@ -1060,9 +1056,11 @@ function buildPlan(options) {
 }
 
 async function run(options) {
-  const godot = process.env.GODOT_BIN;
+  const godot = resolveGodotBinary({ requireExplicit: true });
   if (!godot || !existsSync(godot))
-    throw new Error("GODOT_BIN must name the Godot 4.7.2 editor, and the file must exist");
+    throw new Error(
+      `GODOT_BIN must name the Godot ${GODOT_VERSION} editor, and the file must exist`,
+    );
   if (git("rev-parse", "HEAD") !== options.head)
     throw new Error(
       `this checkout is not at ${options.head.slice(0, 8)}; run pc.mjs from a checkout of the head, where the lists are counted`,
@@ -1083,13 +1081,7 @@ async function run(options) {
     owners,
     saveOwners: (map) => writeFileSync(ownersFile, JSON.stringify(map, null, 2) + "\n"),
     add: (dir) => {
-      const result = spawnSync(
-        "git",
-        ["-C", root, "worktree", "add", "--detach", dir, options.head],
-        { encoding: "utf8" },
-      );
-      if (result.status !== 0)
-        throw new Error(`git worktree add ${dir} failed: ${result.stderr.trim()}`);
+      runGit(["worktree", "add", "--detach", dir, options.head], { cwd: root });
       const siblings = readdirSync(wtDir, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
         .map((entry) => path.join(wtDir, entry.name))
@@ -1128,9 +1120,7 @@ async function run(options) {
     const loadStart = loadNow();
     let exit = 70;
     try {
-      const found = spawnSync("git", ["-C", wt, "rev-parse", "HEAD"], {
-        encoding: "utf8",
-      }).stdout.trim();
+      const found = runGit(["rev-parse", "HEAD"], { cwd: wt });
       if (found !== options.head) throw new Error(`${wt} is at ${found.slice(0, 8)}, not ${head8}`);
       exit = await kinds[step.kind](step, {
         wt,
@@ -1230,7 +1220,7 @@ async function main() {
   return run(options);
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = await main();
   } catch (error) {

@@ -1,14 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   buildNodeTestArgs,
+  discoverTestFiles,
   estimateFileMs,
+  EXCLUDED_TESTS,
   partitionDurationShards,
-  resolveTestFiles,
   selectShardFiles,
   shuffleFiles,
 } from "./node-tests.mjs";
+import { selectStage1NodeTests } from "../sketch-fast.mjs";
+import { git } from "../lib/git.mjs";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(here, "..", "..");
 
 test("selectShardFiles partitions files cleanly across shards with and without shuffle", () => {
   const input = [
@@ -39,8 +49,7 @@ test("selectShardFiles partitions files cleanly across shards with and without s
 });
 
 test("selectShardFiles balances known-heavy tests via LPT and preserves disjoint full union", () => {
-  const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
-  const allFiles = resolveTestFiles(pkg.scripts.test);
+  const allFiles = discoverTestFiles(repoRoot);
   const s1 = selectShardFiles(allFiles, { shard: "1/2", shuffle: true, seed: 12345 });
   const s2 = selectShardFiles(allFiles, { shard: "2/2", shuffle: true, seed: 12345 });
 
@@ -98,9 +107,157 @@ test("shuffleFiles is deterministic per seed and preserves exact file set", () =
   assert.deepEqual([...s1].sort(), input);
 });
 
-test("resolveTestFiles expands package.json globs into sorted concrete paths", () => {
-  const files = resolveTestFiles("node --test scripts/ci/*.test.mjs scripts/check-docs.mjs");
-  assert.ok(files.includes("scripts/ci/affected.test.mjs"));
-  assert.ok(files.includes("scripts/ci/check-budget.test.mjs"));
-  assert.ok(files.includes("scripts/check-docs.mjs"));
+function fixtureRepo(tracked, untracked = []) {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-node-tests-"));
+  git(["init", "-q"], { cwd: tmp });
+  for (const rel of [...tracked, ...untracked]) {
+    const full = path.join(tmp, rel);
+    mkdirSync(path.dirname(full), { recursive: true });
+    writeFileSync(full, "\n", "utf8");
+  }
+  if (tracked.length > 0) git(["add", "--", ...tracked], { cwd: tmp });
+  return tmp;
+}
+
+test("discoverTestFiles lists the three scopes from git, skips nested tests/ and excluded entries, and names each untracked file it runs", () => {
+  const tmp = fixtureRepo(
+    [
+      ".gitignore",
+      "tests/alpha.test.js",
+      "tests/helper.js",
+      "tests/legacy/leads.test.js",
+      "scripts/top.test.mjs",
+      "scripts/nested/deep.test.mjs",
+      "scripts/nested/skip-me.test.mjs",
+      "scripts/nested/not-a-test.mjs",
+      "project-guide/handoff/sitting-kit/serve.test.mjs",
+      "project-guide/handoff/sitting-kit/sub/ignored.test.mjs",
+    ],
+    ["scripts/new.test.mjs", "scripts/scratch/ignored.test.mjs"],
+  );
+  try {
+    writeFileSync(path.join(tmp, ".gitignore"), "scripts/scratch/\n", "utf8");
+    rmSync(path.join(tmp, "scripts/top.test.mjs"));
+    const lines = [];
+    const files = discoverTestFiles(tmp, {
+      excluded: { "scripts/nested/skip-me.test.mjs": "fixture exclusion reason" },
+      log: (line) => lines.push(line),
+    });
+    assert.deepEqual(files, [
+      "project-guide/handoff/sitting-kit/serve.test.mjs",
+      "scripts/nested/deep.test.mjs",
+      "scripts/new.test.mjs",
+      "scripts/top.test.mjs",
+      "tests/alpha.test.js",
+    ]);
+    assert.deepEqual(lines, ["node-tests: running untracked scripts/new.test.mjs"]);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("discoverTestFiles fails when git cannot list the files or lists none", () => {
+  const plain = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-node-tests-"));
+  const empty = fixtureRepo([], ["scripts/untracked.test.mjs"]);
+  try {
+    assert.throws(
+      () => discoverTestFiles(plain, { log: assert.fail }),
+      /git ls-files .* failed: .*not a git repository/i,
+    );
+    assert.throws(() => discoverTestFiles(empty, { log: assert.fail }), /lists no tracked files/);
+  } finally {
+    rmSync(plain, { recursive: true, force: true });
+    rmSync(empty, { recursive: true, force: true });
+  }
+});
+
+test("the runner refuses --test-name-pattern and names the form that works", () => {
+  for (const arg of [["--test-name-pattern=cold launch"], ["--test-name-pattern", "x"]]) {
+    const ran = spawnSync(
+      process.execPath,
+      [path.join(here, "node-tests.mjs"), ...arg, "--dry-run"],
+      {
+        encoding: "utf8",
+      },
+    );
+    assert.equal(ran.status, 2);
+    assert.match(ran.stderr, /node --test --test-name-pattern=<pattern> <file>/);
+  }
+});
+
+test("every tracked *.test.mjs and tests/*.test.js is either discovered or listed in EXCLUDED_TESTS with a reason", () => {
+  const trackedScriptTests = git(["ls-files", "--", "*.test.mjs", "tests/*.test.js"], {
+    cwd: repoRoot,
+  })
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((file) => file.endsWith(".test.mjs") || /^tests\/[^/]+\.test\.js$/.test(file))
+    .sort();
+  assert.ok(trackedScriptTests.length > 0);
+
+  const discovered = discoverTestFiles(repoRoot);
+  const discoveredSet = new Set(discovered);
+  const excludedEntries = Object.entries(EXCLUDED_TESTS);
+  const excludedSet = new Set(Object.keys(EXCLUDED_TESTS));
+  const trackedSet = new Set(trackedScriptTests);
+
+  assert.deepEqual(Object.keys(EXCLUDED_TESTS).sort(), [
+    "scripts/budget-audit.test.mjs",
+    "scripts/far-faults.test.mjs",
+  ]);
+
+  for (const [file, reason] of excludedEntries) {
+    assert.equal(typeof reason, "string", `${file} exclusion reason must be a string`);
+    assert.ok(reason.trim().length > 0, `${file} exclusion reason must be non-empty`);
+    assert.ok(trackedSet.has(file), `${file} in EXCLUDED_TESTS is not a tracked test`);
+    assert.ok(!discoveredSet.has(file), `${file} in EXCLUDED_TESTS must not also be discovered`);
+  }
+
+  const unaccounted = trackedScriptTests.filter(
+    (file) => !discoveredSet.has(file) && !excludedSet.has(file),
+  );
+  assert.deepEqual(unaccounted, []);
+
+  assert.ok(discoveredSet.has("tests/game.test.js"));
+  assert.ok(discoveredSet.has("scripts/ci/node-tests.test.mjs"));
+  assert.ok(discoveredSet.has("scripts/godot-home.test.mjs"));
+  assert.ok(discoveredSet.has("project-guide/handoff/sitting-kit/serve.test.mjs"));
+  assert.ok(!discoveredSet.has("tests/legacy/leads.test.js"));
+
+  const pkg = JSON.parse(readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+  assert.equal(pkg.scripts?.test, "node scripts/ci/node-tests.mjs");
+});
+
+test("budget-audit stays out of node-tests and is what sketch-fast --ci-godot-only runs for a registry change", () => {
+  const discovered = discoverTestFiles(repoRoot);
+  assert.ok(!discovered.includes("scripts/budget-audit.test.mjs"));
+  assert.deepEqual(
+    selectStage1NodeTests({
+      changedNode: [],
+      changedGodot: ["assets/registry.json"],
+      allNodeTests: discovered,
+      readText: () => "",
+      ciGodotOnly: true,
+      coveredByCi: discovered,
+      isPrimaryShard: true,
+    }),
+    ["scripts/budget-audit.test.mjs"],
+  );
+});
+
+test("far-faults stays out of node-tests and sketch-fast --ci-godot-only runs it, with the budget audit, for a park prop change", () => {
+  const discovered = discoverTestFiles(repoRoot);
+  assert.ok(!discovered.includes("scripts/far-faults.test.mjs"));
+  assert.deepEqual(
+    selectStage1NodeTests({
+      changedNode: [],
+      changedGodot: ["assets/models/park/props/dam/barrel.glb"],
+      allNodeTests: discovered,
+      readText: () => "",
+      ciGodotOnly: true,
+      coveredByCi: discovered,
+      isPrimaryShard: true,
+    }),
+    ["scripts/budget-audit.test.mjs", "scripts/far-faults.test.mjs"],
+  );
 });

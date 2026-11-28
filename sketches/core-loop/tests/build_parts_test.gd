@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
 const Elements := preload("res://src/build/elements.gd")
 
@@ -146,7 +147,7 @@ func _check_pools() -> void:
 	var pylon := Parts.offer_pool("pylon_engineer", every)
 	var runner := Parts.offer_pool("runner_gunner", every)
 	for i in 400:
-		for part_id in Parts.roll(rng, Parts.gate_rarities(i % 2), "pylon_engineer", [], 2):
+		for part_id in Parts.roll(rng, PartOffers.gate_rarities(i % 2), "pylon_engineer", [], 2):
 			if Parts.def(part_id).milestone_only or part_id == "runner_overclock":
 				leaks.append(part_id)
 	_report("offer pools", leaks.is_empty() and "pylon_capacitor" in pylon and not "runner_overclock" in pylon
@@ -182,7 +183,7 @@ func _check_trajectory() -> void:
 	for cores in [0, 1, 2]:
 		var total := 0.0
 		for i in 300:
-			total += Parts.def(Parts.roll(rng, Parts.gate_rarities(cores), "runner_gunner", [], 1)[0]).tier
+			total += Parts.def(Parts.roll(rng, PartOffers.gate_rarities(cores), "runner_gunner", [], 1)[0]).tier
 		mean[cores] = total / 300.0
 	_report("offers climb", mean[0] < mean[1] and mean[1] <= mean[2],
 		"mean offered tier at 0, 1 and 2 bonus cores: %.2f, %.2f, %.2f" % [mean[0], mean[1], mean[2]])

@@ -11,11 +11,6 @@ const EventDirector := preload("res://src/world/event_director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
-const Gorge := preload("res://src/world/map_gorge.gd")
-const Audio := preload("res://src/presentation/audio.gd")
-const Bank := preload("res://src/presentation/sfx_bank.gd")
-const Rows := preload("res://src/presentation/rows.gd")
-const Harmony := preload("res://src/presentation/harmony.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const StormSeek := preload("res://src/world/events/storm_seek.gd")
@@ -51,8 +46,6 @@ var _original_map
 var _overlay_map
 var _water_field := WaterField.new()
 var _original_flood
-var _audio
-var _world_sound := Callable()
 var _next_checked := false
 var hits_enemies := false
 var seek := StormSeek.new()
@@ -127,15 +120,6 @@ func setup(world_ref) -> void:
 	_plan_marks(planned)
 	hits_enemies = HazardHits.applies_to(world.ctx.get("run"))
 	world.terrain.flood = _water_field
-	var presentation = world.ctx.root.get("presentation")
-	if presentation != null:
-		_audio = presentation.audio
-		for connection in world.ctx.events.get_signal_connection_list("world_fact"):
-			if connection.callable.get_object() == _audio:
-				_world_sound = connection.callable
-				world.ctx.events.world_fact.disconnect(_world_sound)
-				world.ctx.events.world_fact.connect(_on_world_sound)
-				break
 
 
 static func plan(world, park: Dictionary) -> Dictionary:
@@ -156,7 +140,7 @@ static func plan(world, park: Dictionary) -> Dictionary:
 			geometry.yaw = 0.0
 		var entry := {"site": site, "at": at, "geometry": geometry}
 		if row.kind in ["flood_fill", "drain", "flash_flood"]:
-			entry.water = EventGround.project_surface(world, geometry, [EventGround._rectangle(-geometry.half, geometry.half)], Callable(), true, null, null, null, true)
+			entry.water = EventGround.project_surface(world, geometry, [EventGround.rectangle(-geometry.half, geometry.half)], Callable(), true, null, null, null, true)
 		if row.kind == "collapse":
 			geometry.crack_foot_x = _bench_face_foot(terrain, geometry)
 		if row.kind in ["collapse", "impact"] and not EventGround.kind_of_span(row):
@@ -282,12 +266,7 @@ static func _rows_hash(park: Dictionary) -> int:
 
 
 static func _root_key(terrain, index: int) -> int:
-	if not "_cave_roofs" in terrain or index < 1 or index > terrain.maps.size():
-		return 0
-	var i: int = index - 1
-	if not terrain._is_park[i] or terrain._roots[i] == null or terrain._heights[i].is_empty():
-		return 0
-	return terrain._roots[i].get_instance_id()
+	return terrain.stage_root_key(index) if terrain.has_method("stage_root_key") else 0
 
 
 static func _settle(key: int) -> void:
@@ -303,7 +282,7 @@ func _prepare_next() -> void:
 	if _next_checked or world == null:
 		return
 	var terrain = world.terrain
-	if not "_cave_roofs" in terrain or terrain.stage >= terrain.maps.size() or not terrain.is_ready(terrain.stage + 1):
+	if not terrain.has_method("stage_root_key") or terrain.stage >= terrain.maps.size() or not terrain.is_ready(terrain.stage + 1):
 		return
 	_next_checked = true
 	var next: int = terrain.stage + 1
@@ -449,12 +428,12 @@ func _process(_delta: float) -> void:
 		var half: Vector2 = state.geometry.half
 		var dust = state.mark.get_node("DustCurtain")
 		dust.mesh = _project_surface(state.geometry,
-			[_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)],
+			[EventGround.rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)],
 			func(local, _base): return float(spec.dust_height_m) * progress * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)).mesh
 		var foot: float = state.geometry.crack_foot_x
 		var crack = state.mark.get_node("CrawlingCrack")
 		crack.mesh = _project_surface(state.geometry,
-			[_rectangle(Vector2(foot - float(spec.crack_width_m), -half.y), Vector2(foot, lerpf(-half.y, half.y, progress)))]).mesh
+			[EventGround.rectangle(Vector2(foot - float(spec.crack_width_m), -half.y), Vector2(foot, lerpf(-half.y, half.y, progress)))]).mesh
 
 
 static func _bench_face_foot(terrain, geometry: Dictionary) -> float:
@@ -541,10 +520,6 @@ static func _ride_foam(state: Dictionary, churn: float) -> void:
 		a.set_level(lerpf(0.35, 1.0, clampf(churn, 0.0, 1.0)))
 
 
-func _rectangle(low: Vector2, high: Vector2) -> Array:
-	return [low, Vector2(high.x, low.y), high, Vector2(low.x, high.y)]
-
-
 func _project_surface(geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: WaterSurface = null) -> WaterSurface:
 	return EventGround.project_surface(world, geometry, shapes, offset, water, baseline, _overlay_map, ArrayMesh.new())
 
@@ -569,7 +544,7 @@ static func _collapse_surface(world, row: Dictionary, geometry: Dictionary, base
 		var upper: float = baseline.height(top)
 		var ramp := upper - depth_m * (half.x - local.x) / (2.0 * half.x)
 		return maxf(0.0, ramp - base)
-	return EventGround.project_surface(world, geometry, [EventGround._rectangle(-half, half)], offset, false, baseline, null, null, deferred)
+	return EventGround.project_surface(world, geometry, [EventGround.rectangle(-half, half)], offset, false, baseline, null, null, deferred)
 
 
 func _advance_collapse(row: Dictionary, progress: float) -> void:
@@ -728,8 +703,8 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 func _ground_as_planned(surfaces: Dictionary, own := "") -> bool:
 	var changed := []
 	var terrain = world.terrain
-	if "_cave_roofs" in terrain:
-		for roof in terrain._cave_roofs.get(terrain.stage - 1, {}).values():
+	if terrain.has_method("cave_roofs"):
+		for roof in terrain.cave_roofs(terrain.stage).values():
 			if roof.surface != roof.baseline:
 				changed.append(roof.baseline)
 	var m = terrain.map()
@@ -773,16 +748,16 @@ static func _mark_surfaces(world, row: Dictionary, geometry: Dictionary, landed:
 	var project := func(shape_list: Array, shape_offset: Callable) -> WaterSurface:
 		return EventGround.project_surface(world, geometry, shape_list, shape_offset, false, null, overlay_map, null, deferred)
 	if spec.get("pattern", "") == "dust_crack":
-		shapes = [EventGround._rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)]
+		shapes = [EventGround.rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)]
 		var initial := 1.0 if landed else 0.001
 		offset = func(local, _base): return float(spec.dust_height_m) * initial * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)
 		var foot: float = geometry.crack_foot_x
-		out.CrawlingCrack = project.call([EventGround._rectangle(Vector2(foot - float(spec.crack_width_m), -half.y), Vector2(foot, lerpf(-half.y, half.y, initial)))], Callable())
+		out.CrawlingCrack = project.call([EventGround.rectangle(Vector2(foot - float(spec.crack_width_m), -half.y), Vector2(foot, lerpf(-half.y, half.y, initial)))], Callable())
 	elif spec.shape == "cross":
-		shapes = [EventGround._rectangle(Vector2(-half.x, -0.15), Vector2(half.x, 0.15)),
-			EventGround._rectangle(Vector2(-0.15, -half.y), Vector2(0.15, half.y))]
+		shapes = [EventGround.rectangle(Vector2(-half.x, -0.15), Vector2(half.x, 0.15)),
+			EventGround.rectangle(Vector2(-0.15, -half.y), Vector2(0.15, half.y))]
 	elif spec.shape == "wave":
-		shapes = [EventGround._rectangle(-half, half)]
+		shapes = [EventGround.rectangle(-half, half)]
 		offset = func(local, _base): return 0.2 * (1.0 + sin((local.y / (half.y * 2.0) + 0.5) * TAU * 3.0))
 	else:
 		var segments := 32
@@ -796,10 +771,10 @@ static func _mark_surfaces(world, row: Dictionary, geometry: Dictionary, landed:
 	if row.kind != "lightning":
 		var inset := (half - Vector2.ONE * 0.3).max(Vector2.ZERO)
 		out.Footprint = project.call([
-			EventGround._rectangle(-half, Vector2(half.x, -inset.y)),
-			EventGround._rectangle(Vector2(-half.x, inset.y), half),
-			EventGround._rectangle(Vector2(-half.x, -inset.y), Vector2(-inset.x, inset.y)),
-			EventGround._rectangle(Vector2(inset.x, -inset.y), Vector2(half.x, inset.y))], Callable())
+			EventGround.rectangle(-half, Vector2(half.x, -inset.y)),
+			EventGround.rectangle(Vector2(-half.x, inset.y), half),
+			EventGround.rectangle(Vector2(-half.x, -inset.y), Vector2(-inset.x, inset.y)),
+			EventGround.rectangle(Vector2(inset.x, -inset.y), Vector2(half.x, inset.y))], Callable())
 	return out
 
 
@@ -808,19 +783,6 @@ func _show_landing(row: Dictionary, state: Dictionary) -> void:
 	state.mark = _mark(row, state.geometry, true)
 	if row.kind == "cave_in":
 		state.mark.position.y -= float(row.effect.depth_m) * float(_overlay_map.swaps[_prepared[row.id].swap].progress)
-
-
-func _on_world_sound(kind: String, at: Vector3) -> void:
-	var cues: Dictionary = world.events.PARK_LAND_FACTS
-	if not cues.has(kind) and not cues.values().has(kind):
-		_world_sound.call(kind, at)
-		return
-	var entry: Dictionary = Kinds.world_row(kind)
-	var sound := Rows.heard(entry, _audio.cue_context())
-	var pitch := Harmony.ratio(_audio.live_key())
-	if _audio._admit("world_fact", sound, pitch):
-		_audio._start("world_fact", sound, Bank.stream(sound),
-			Bank.trim_db(sound) + Audio.PRIORITY_DB[Rows.priority("world_fact")], pitch, "SFX")
 
 
 func _end(row: Dictionary) -> void:
@@ -844,9 +806,6 @@ func release() -> void:
 	for id in active.keys():
 		_end({"id": id})
 	if world != null:
-		if _world_sound.is_valid():
-			world.ctx.events.world_fact.disconnect(_on_world_sound)
-			world.ctx.events.world_fact.connect(_world_sound)
 		world.terrain.flood = _original_flood
 		if _overlay_map != null:
 			world.terrain.maps[world.terrain.stage - 1] = _original_map
@@ -854,6 +813,4 @@ func release() -> void:
 	_prepared.clear()
 	_overlay_map = null
 	_original_map = null
-	_audio = null
-	_world_sound = Callable()
 	world = null

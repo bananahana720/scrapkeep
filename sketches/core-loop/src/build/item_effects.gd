@@ -2,10 +2,10 @@ extends RefCounted
 
 const Triggers := preload("res://src/build/triggers.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartMutations := preload("res://src/build/part_mutations.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Palette := preload("res://src/core/palette.gd")
-const ElementField := preload("res://src/build/element_field.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 
@@ -128,8 +128,8 @@ func refresh(held: Array) -> void:
 	_held_parts = held.duplicate()
 	var index := 0
 	for part_id in order:
-		if Parts.MICRO_MUTATIONS.has(part_id) or Parts.FLAT_MICRO_MUTATIONS.has(part_id):
-			micro_mutations[part_id] = Parts.micro_mutation(part_id)
+		if PartMutations.MICRO_MUTATIONS.has(part_id) or PartMutations.FLAT_MICRO_MUTATIONS.has(part_id):
+			micro_mutations[part_id] = PartMutations.micro_mutation(part_id)
 		var d: Resource = Parts.def(part_id)
 		if d == null:
 			continue
@@ -191,7 +191,7 @@ func micro_mutation(part_id: String) -> Dictionary:
 
 
 func active_micro_mutations() -> Array:
-	return Parts.active_micro_mutations(_held_parts)
+	return PartMutations.active_micro_mutations(_held_parts)
 
 
 func active_grapple_mutations() -> Dictionary:
@@ -199,16 +199,12 @@ func active_grapple_mutations() -> Dictionary:
 
 
 func has_grapple_mutation(mut_id: String) -> bool:
-	return grapple_mutation_ids.has(Parts.grapple_mutation_id_of(mut_id))
+	return grapple_mutation_ids.has(PartMutations.grapple_mutation_id_of(mut_id))
 
 
 func grapple_mutation(mut_id: String) -> Dictionary:
-	var mid := Parts.grapple_mutation_id_of(mut_id)
+	var mid := PartMutations.grapple_mutation_id_of(mut_id)
 	return (grapple_mutation_ids.get(mid, {}) as Dictionary).duplicate(true)
-
-
-func grapple_mutation_for_slot(slot: String) -> Dictionary:
-	return (grapple_mutations.get(slot, {}) as Dictionary).duplicate(true)
 
 
 static func part_synergy_info(part_id: String) -> Dictionary:
@@ -218,16 +214,8 @@ static func part_synergy_info(part_id: String) -> Dictionary:
 	return {"tags": d.tags, "bits": d.bits}
 
 
-func cross_synergies(context := {}) -> Array:
-	return Synergies.cross_system_active(_held_parts, Callable(self, "part_synergy_info"), context)
-
-
 func has_cross_synergy(id: String, context := {}) -> bool:
 	return Synergies.cross_system_awake(id, _held_parts, Callable(self, "part_synergy_info"), context)
-
-
-func cross_synergy_row(id: String) -> Dictionary:
-	return Synergies.cross_system_row(id)
 
 
 func part_copies(part_id: String) -> int:
@@ -735,7 +723,7 @@ func _soften(c) -> void:
 func _burst(at: Vector3, radius: float, damage: float, element: String, min_impact: float, c) -> bool:
 	if c.kind == Triggers.Kind.ON_LAND and c.amount < min_impact:
 		return false
-	var color: Color = Palette.ARC if element == "arc" else (ElementField.ICE if element == "frost" else Palette.AMBER)
+	var color: Color = Palette.ARC if element == "arc" else (Palette.ICE if element == "frost" else Palette.AMBER)
 	build.field.flash_ring(at, radius, color)
 	for enemy in build.enemies_near(at, radius, 6):
 		build.item_hit(enemy, damage, "")

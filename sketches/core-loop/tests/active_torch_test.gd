@@ -107,14 +107,14 @@ func _run() -> void:
 	# --- Guide line, then the beam on the same lane -----------------------------------------
 	_player.reset_to(_ground(0.0) + Vector3.UP)
 	await _sim(0.2)
-	var aim: Vector3 = _torch._aim()
+	var aim: Vector3 = _torch.flat_aim()
 	var side := aim.cross(Vector3.UP).normalized()
 	var front := _enemy(aim * 6.0)
 	var behind := _enemy(-aim * 6.0)
 	var off_side := _enemy(side * 5.0)
 	var plated := _enemy(aim * 9.0 + side * 0.3, 40.0)
 	var heavy := _enemy(aim * 11.0, 119.0)
-	var hull: float = _combat._hull(front)
+	var hull: float = _combat.hull_radius(front)
 	var edge := WIDTH_HALF * (1.0 + FORGIVENESS) + hull
 	var edge_in := _enemy(aim * 3.5 + side * (edge - 0.1))
 	var edge_out := _enemy(aim * 3.5 - side * (edge + 0.4))

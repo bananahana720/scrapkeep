@@ -3,13 +3,15 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
 const LiveRunBridge := preload("res://src/experimental/live_run_bridge.gd")
+const ExperimentalAudioBank := preload("res://src/presentation/experimental_audio_bank.gd")
 const DynamicSetpieces := preload("res://src/experimental/dynamic_setpieces.gd")
 const LiveWorldActors := preload("res://src/experimental/live_world_actors.gd")
+const ActorCraft := preload("res://src/experimental/live_world_actor_craft.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 const AdversityDirector := preload("res://src/experimental/adversity_director.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const DeathCause := preload("res://src/core/death_cause.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const BALL_RADIUS_M := 1.0
 const BALL_GRAVITY_SCALE := 26.0 / 9.8
@@ -102,7 +104,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	LiveRunBridge._reset()
+	ExperimentalAudioBank._reset()
 	await _test_piers_are_solid()
 	await _test_pads_launch_onto_decks()
 	_test_chunk_site_clearance()
@@ -111,7 +113,7 @@ func _run() -> void:
 	await _test_default_game_stays_clean()
 	await _test_opt_in_game()
 	await _test_park_table_siting()
-	LiveRunBridge._reset()
+	ExperimentalAudioBank._reset()
 	quit(_t.verdict())
 
 
@@ -598,11 +600,11 @@ func _check_live_squall(game) -> void:
 	await _physics(3)
 	_t.check("the squall ramps", director.hazard_phase in [AdversityDirector.HazardPhase.RAMP, AdversityDirector.HazardPhase.PEAK], str(director.hazard_phase))
 	_t.eq("an active squall shows wind streaks", int(bridge.live_actors.snapshot()["streaks_visible"]), LiveWorldActors.STREAK_COUNT)
-	var was: bool = UiTokens.reduced_motion
-	UiTokens.reduced_motion = true
+	var was: bool = Comfort.reduced_motion
+	Comfort.reduced_motion = true
 	await _physics(2)
 	_t.eq("reduced motion hides the wind streaks", int(bridge.live_actors.snapshot()["streaks_visible"]), 0)
-	UiTokens.reduced_motion = was
+	Comfort.reduced_motion = was
 
 
 func _check_live_lockdown(game) -> void:
@@ -787,7 +789,7 @@ static func _contrast(a: Color, b: Color, mode: String) -> float:
 
 
 func _test_rig_contrast() -> void:
-	for trim in LiveWorldActors.RIG_TRIM:
+	for trim in ActorCraft.RIG_TRIM:
 		for mode in ["rgb", "rec709 grey", "deuteranopia"]:
 			var worst := INF
 			var against := ""
@@ -798,17 +800,16 @@ func _test_rig_contrast() -> void:
 					against = name
 			_t.check("rig trim #%s holds %.1f:1 on every chunk floor and wall in %s" % [trim.to_html(false), CONTRAST_FLOOR, mode],
 				worst >= CONTRAST_FLOOR, "%.2f:1 against %s" % [worst, against])
-	var actors = LiveWorldActors.new()
+	var craft = ActorCraft.new()
 	var seen := {}
-	for mesh: ArrayMesh in [actors.foreman_body_mesh(), actors.foreman_plate_mesh()]:
+	for mesh: ArrayMesh in [craft.foreman_body_mesh(), craft.foreman_plate_mesh()]:
 		for i in mesh.get_surface_count():
 			var mat := mesh.surface_get_material(i) as ShaderMaterial
 			if mat != null:
 				seen[(mat.get_shader_parameter("base_albedo") as Color).to_html(false)] = true
 				seen[(mat.get_shader_parameter("emissive_color") as Color).to_html(false)] = true
-	for trim in [LiveWorldActors.RIG_BONE, LiveWorldActors.RIG_CHEVRON, LiveWorldActors.RIG_CORE, LiveWorldActors.RIG_BEACON]:
+	for trim in [ActorCraft.RIG_BONE, ActorCraft.RIG_CHEVRON, ActorCraft.RIG_CORE, ActorCraft.RIG_BEACON]:
 		_t.check("the Foreman Rig is dressed in #%s" % trim.to_html(false), seen.has(trim.to_html(false)), str(seen.keys()))
-	actors.free()
 
 
 func _test_death_lines() -> void:

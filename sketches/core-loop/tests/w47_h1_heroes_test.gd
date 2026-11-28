@@ -15,6 +15,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Augments := preload("res://src/movement/augments.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
@@ -95,7 +96,7 @@ func _switch_pilot(class_id: String, at: Vector3) -> void:
 	var def: Resource = ClassDef.by_id(class_id)
 	_game.run.class_def = def
 	_player.fit_class(def)
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 	_combat.weapon_driver.reset(_combat.pattern(def.weapon_id))
 	_player.body().freeze = true
 	_player.reset_to(at, Vector3.ZERO)
@@ -353,7 +354,7 @@ func _test_kest() -> void:
 	_player.intent.fire_held = true
 	_player._rigid.external_accel = Vector3.ZERO
 	_player._step_kest_air_draw(DT)
-	var want_accel := float(_player.tuning.f("gravity")) * (1.0 - Weapons.KEST_AIR_DRAW_GRAVITY)
+	var want_accel := float(_player.tuning.f("gravity")) * (1.0 - Augments.KEST_AIR_DRAW_GRAVITY)
 	_t.check("Air-Draw Glide Hang activates while holding sticky_charge airborne", _player.air_draw_active)
 	_t.near("Air-Draw applies 0.45x net gravity counter-accel (0.55g up)", _player._rigid.external_accel.y, want_accel, 0.02)
 	# Exhaust 1.2 s budget -> ends cleanly!
@@ -370,8 +371,8 @@ func _test_kest() -> void:
 	_player.grapple_to(spire_pt, Vector3.LEFT, null)
 	_combat.ultimate.cable_world(spire_pt, 1.0, 1.0)
 	_t.check("cable_charge spire latch launches Kest cleanly upward and refreshes 1.2 s Air-Draw",
-		_player.state.velocity.y >= Weapons.KEST_SPIRE_VAULT_UP - 0.01
-		and is_equal_approx(_player.air_draw_left, Weapons.KEST_AIR_DRAW_MAX_S)
+		_player.state.velocity.y >= Augments.KEST_SPIRE_VAULT_UP - 0.01
+		and is_equal_approx(_player.air_draw_left, Augments.KEST_AIR_DRAW_MAX_S)
 		and _player.state.velocity.x >= 15.9,
 		"vel=%s draw=%.2f" % [str(_player.state.velocity), _player.air_draw_left])
 	_combat.ultimate.clear_payloads()
@@ -389,7 +390,7 @@ func _test_kest() -> void:
 	var jump_spd := float(_player.tuning.f("jump_speed"))
 	_t.check("Kest baseline high wall-kick launches vertically off steep canyon wall",
 		not _player.last_kest_wall_kick.is_empty()
-		and _player.state.velocity.y >= jump_spd * Weapons.KEST_WALL_KICK_UP_MULT - 0.05
+		and _player.state.velocity.y >= jump_spd * Augments.KEST_WALL_KICK_UP_MULT - 0.05
 		and _player.state.velocity.x < -2.0,
 		"vel=%s kick=%s" % [str(_player.state.velocity), str(_player.last_kest_wall_kick)])
 	canyon_wall.free()

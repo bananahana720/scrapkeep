@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -191,7 +192,7 @@ func reroll_offers(rng: RandomNumberGenerator, class_id: String, held: Array) ->
 			var pd: Resource = Parts.def(id)
 			return pd != null and int(pd.tier) >= min_tier and not (id in used) and not Parts.maxed(id, held))
 		if min_tier >= 2:
-			var impact_pool: Array = pool.filter(func(id): return Parts.is_high_impact(id))
+			var impact_pool: Array = pool.filter(func(id): return PartOffers.is_high_impact(id, Parts.def))
 			if not impact_pool.is_empty():
 				pool = impact_pool
 		if not pool.is_empty():
@@ -363,10 +364,10 @@ static func rarity_color(rarity: String) -> Color:
 
 
 static func roll_cobalt_boss_picks(rng: RandomNumberGenerator, class_id: String, held: Array, count := 2, stage := 1) -> Array:
-	var plain: Array = Parts.offer_pool(class_id, ["rare"]).filter(func(key): return not Parts.changes_behaviour(key))
-	var picks: Array = Parts.roll_for_stage(rng, ["rare"], class_id, held, count, stage, plain, {}, true)
+	var plain: Array = Parts.offer_pool(class_id, ["rare"]).filter(func(key): return not PartOffers.changes_behaviour(key, Parts.def))
+	var picks: Array = PartOffers.roll_for_stage(rng, ["rare"], class_id, held, count, stage, plain, {}, true, Parts.offer_ops())
 	if picks.size() < count:
-		var more: Array = Parts.roll_for_stage(rng, ["rare"], class_id, held, count - picks.size(), stage, picks, {}, true)
+		var more: Array = PartOffers.roll_for_stage(rng, ["rare"], class_id, held, count - picks.size(), stage, picks, {}, true, Parts.offer_ops())
 		picks.append_array(more)
 	return picks
 

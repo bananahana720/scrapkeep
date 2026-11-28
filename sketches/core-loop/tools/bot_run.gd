@@ -6,9 +6,8 @@ const BotProfile := preload("res://tools/bot_profile.gd")
 const BotAudit := preload("res://tools/bot_audit.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
-const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
-const Terrain := preload("res://src/world/terrain.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
 const SignalTimer := preload("res://tools/signal_timer.gd")
@@ -54,7 +53,7 @@ var _qa
 func _initialize() -> void:
 	_settings = _parse(OS.get_cmdline_user_args())
 	SimClock.ticks = _settings.get("wall-clock", "0") != "1"
-	Terrain.threaded_in_bot_runs = _settings.get("threaded-stages", "0") == "1"
+	SimClock.threaded_in_bot_runs = _settings.get("threaded-stages", "0") == "1"
 	StageLocks.active = _settings.get("locks", "1") != "0"
 	_bot_options = BotOptions.new(_settings, self)
 	BotProfile.enabled = _settings.get("bot-profile", "0") == "1"
@@ -247,7 +246,7 @@ func _physics_process(delta: float) -> bool:
 			_plants.attach(_game, _driver, BotPlants.parse(String(_settings["plant"])))
 		_game.presentation.audio.bake_opening_now()
 		if _settings.get("warm-band", "0") == "1":
-			MusicEngine.prepare_rest()
+			MusicPrebake.prepare_rest()
 			_game.presentation.audio.engine.warm_stingers = true
 		_game.run.run_seed_override = _seeds[_index]
 		var run_tier := int(_settings.get("run-tier", "0"))

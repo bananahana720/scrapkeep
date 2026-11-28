@@ -19,7 +19,7 @@ The fast lane also runs the sweep on each pull request's own lines and puts the 
 
 ## Steps for the sweep worker
 
-1. On `origin/main`, run `node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-<tag>.md`. With no `--base` it compares against the parent commit on `main`. It lists leads, not defects:
+1. On `origin/main`, run `node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-<tag>.md`. With no `--base` it compares a merge commit against its first parent, a branch commit against its merge base with `origin/main`, and a commit on `main` against its parent. It lists leads, not defects:
    - D1 a new public function whose whole body forwards its own parameters to one other call;
    - D2 new code that touches another object's underscore member (`boss._phase`, `w.get("_state")`, or through a chain, `game.flow.warden._age`), read in `tools/` as well as `src/`;
    - D3 a new function with six or more parameters, or three or more bools;
@@ -37,5 +37,7 @@ The fast lane also runs the sweep on each pull request's own lines and puts the 
 - Give a string key repeated across files one owner (a `const` on the schema module) and read it from there.
 - Replace a run of bool parameters with one options dictionary or a named enum, only where callers pass more than two.
 - Split a giant file only along a seam that already exists (a group of functions that share private state nobody else reads).
+
+The larger pass that works through a surveyed list of the whole repository is [STRUCTURE-SWEEP.md](STRUCTURE-SWEEP.md).
 
 Leave alone: the invariant and state-machine guards from #616-#625, and the boss.gd content pin in `tests/boss_pickup_asset_test.gd` (re-pin it in the same PR if boss.gd logic moves).

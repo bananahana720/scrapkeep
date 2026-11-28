@@ -2600,7 +2600,7 @@ func _pass_bite_blocked(target: Node3D) -> bool:
 
 
 func _bite_passes(target: Node3D) -> bool:
-	if Augments.anchor_line(target) or Grip.of(target, game.player.heft(), game.player.tuning.pole_flail()) in ["pole", "flail"]:
+	if Augments.anchor_line(target) or Grip.of(target, game.player.heft(), game.player.enemy_heft(target), game.player.tuning.pole_flail()) in ["pole", "flail"]:
 		return false
 	var radius = target.get("radius")
 	var passing: float = Augments.MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0)
@@ -4495,15 +4495,15 @@ func _card_hands() -> void:
 
 func _tally_gather_hands() -> void:
 	var combat = game.get("combat")
-	if combat == null or _cast_phase != "" or _set_piece_up() or not combat.has_method("_card_aim"):
+	if combat == null or _cast_phase != "" or _set_piece_up() or not combat.has_method("card_aim"):
 		return
-	var aim: Dictionary = combat._card_aim()
+	var aim: Dictionary = combat.card_aim()
 	if not aim["valid"]:
 		return
 	var ordinary := 0
 	for node in game.get_tree().get_nodes_in_group("enemy"):
 		if node is Node3D and is_instance_valid(node) and not (node.has_method("is_dead") and node.is_dead()) \
-				and combat._ordinary(node) and node.global_position.distance_to(aim["point"]) <= TALLY_GATHER_RADIUS:
+				and combat.is_ordinary(node) and node.global_position.distance_to(aim["point"]) <= TALLY_GATHER_RADIUS:
 			ordinary += 1
 	if ordinary >= TALLY_PLATE_CROWD:
 		_cast(2)

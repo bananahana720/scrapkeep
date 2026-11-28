@@ -1,19 +1,14 @@
 #!/usr/bin/env node
 
-import { spawn, spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { binary as GODOT } from "./sketch-smoke.mjs";
+import { requireGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import { pool, runProcess as runChild } from "./lib/proc.mjs";
+import { gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, "..");
@@ -444,36 +439,10 @@ export function formatSitting(runs, verdicts) {
   return out.join("\n");
 }
 
-function git(args) {
-  const r = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  return r.status === 0 ? r.stdout.trim() : null;
-}
-
-function runProcess(command, args, options = {}) {
-  return new Promise((resolve) => {
-    const child = spawn(command, args, {
-      ...options,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let output = "";
-    child.stdout.on("data", (d) => (output += d));
-    child.stderr.on("data", (d) => (output += d));
-    child.on("error", (e) => resolve({ code: -1, output: String(e) }));
-    child.on("close", (code) => resolve({ code, output }));
-  });
-}
-
-async function pool(jobs, width) {
-  const results = new Array(jobs.length);
-  let next = 0;
-  const workers = Array.from({ length: Math.min(width, jobs.length) }, async () => {
-    while (next < jobs.length) {
-      const i = next++;
-      results[i] = await jobs[i]();
-    }
-  });
-  await Promise.all(workers);
-  return results;
+async function runProcess(command, args, options = {}) {
+  const res = await runChild(command, args, options);
+  if (res.error) return { code: -1, output: String(res.error) };
+  return { code: res.exit, output: res.output };
 }
 
 function readNdjson(file) {
@@ -503,15 +472,13 @@ export function readRecordedBots(file) {
   return grouped;
 }
 
-async function runBots(outDir, seedCount) {
+async function runBots(outDir, seedCount, godot) {
   const jobs = [];
   for (const policy of ["completionist", "skipper", "camper"]) {
     for (let seed = 1; seed <= seedCount; seed++) {
       const dir = path.join(outDir, "bots", `${policy}-${seed}`);
       mkdirSync(dir, { recursive: true });
-      const env = { ...process.env };
-      for (const kind of ["DATA", "CONFIG", "CACHE"])
-        env[`XDG_${kind}_HOME`] = path.join(dir, "state", kind.toLowerCase());
+      const env = scratchGodotEnv(path.join(dir, "state"), { baseEnv: process.env });
       jobs.push(async () => {
         const args = [
           "--headless",
@@ -527,7 +494,7 @@ async function runBots(outDir, seedCount) {
           `--seeds=${seed}`,
           `--table=${TABLE}`,
         ];
-        const result = await runProcess(GODOT, args, { env, cwd: root });
+        const result = await runProcess(godot, args, { env, cwd: root });
         writeFileSync(path.join(dir, "log.txt"), result.output);
         const bot = readNdjson(path.join(dir, "bots.ndjson"))[0];
         const lines = readNdjson(path.join(dir, "runs.ndjson"));
@@ -552,18 +519,18 @@ async function runBots(outDir, seedCount) {
   return { grouped, failed };
 }
 
-function ensureImported() {
+function ensureImported(godot) {
   if (existsSync(path.join(sketch, ".godot", "imported"))) return;
-  spawnSync(GODOT, ["--headless", "--editor", "--import", "--quit", "--path", sketch], {
+  spawnSync(godot, ["--headless", "--editor", "--import", "--quit", "--path", sketch], {
     encoding: "utf8",
     timeout: 600_000,
   });
 }
 
-async function runPerf(outDir) {
+async function runPerf(outDir, godot) {
   const out = path.join(outDir, "perf.json");
   const args = [
-    GODOT,
+    godot,
     "--audio-driver",
     "Dummy",
     "--path",
@@ -614,12 +581,19 @@ function newestDirOutput() {
 }
 
 async function before(options) {
+  let godot;
+  try {
+    godot = requireGodotBinary();
+  } catch (error) {
+    console.error(error.message);
+    return 2;
+  }
   const outDir = newestDirOutput();
-  ensureImported();
+  ensureImported(godot);
   const seedCount = options.quick ? BANDS.quickSeeds : BANDS.seeds;
   const loadAtStart = os.loadavg();
   const rows = [];
-  const { grouped, failed } = await runBots(outDir, seedCount);
+  const { grouped, failed } = await runBots(outDir, seedCount, godot);
   rows.push(...evaluateBots(grouped, options.baseline));
   for (const f of failed)
     rows.push({
@@ -637,7 +611,7 @@ async function before(options) {
       pass: null,
     });
   } else {
-    perf = await runPerf(outDir);
+    perf = await runPerf(outDir, godot);
     rows.push(...evaluatePerf(perf.bench));
   }
   const defs = readFileSync(path.join(sketch, "src", "core", "slice_defs.gd"), "utf8");
@@ -645,7 +619,7 @@ async function before(options) {
   rows.push(
     evaluateSweep(existsSync(sweepFile) ? readFileSync(sweepFile, "utf8") : "", sliceCell(defs)),
   );
-  const head = git(["rev-parse", "HEAD"]);
+  const head = gitOptional(["rev-parse", "HEAD"], { cwd: root });
   rows.push(evaluateReceipt(readReceipts(), head));
   rows.push(...BY_HAND);
 
@@ -694,7 +668,7 @@ function recorded(options) {
       {
         mode: "recorded",
         file: options.file,
-        head: git(["rev-parse", "HEAD"]),
+        head: gitOptional(["rev-parse", "HEAD"], { cwd: root }),
         ok,
         rows,
         bots: grouped,
@@ -777,4 +751,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

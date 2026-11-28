@@ -164,7 +164,7 @@ func _run() -> void:
 		waited += won.get_process_delta_time()
 	t.check("the bot closes the ending page", not won.screens.ending_open(), "open after %.2f s" % waited)
 	t.check("the summary title reads RUN COMPLETE", won.screens._title.text.contains("RUN COMPLETE"), won.screens._title.text)
-	t.check("the summary body holds the Mind's epitaph", won.screens._body.text.contains(String(Worlds.BOSSES["mind"]["epitaph"])), won.screens._body.text)
+	t.check("the summary body holds the Mind's epitaph", won.screens.said_body().contains(String(Worlds.BOSSES["mind"]["epitaph"])), won.screens.said_body())
 	var profile = won.ctx.profile
 	t.check("first_win earned once", profile.earned("first_win") and earns.count("first_win") == 1, "earned %s count %d" % [profile.earned("first_win"), earns.count("first_win")])
 	t.check("first_win unlocks paint_kest_dusk", profile.has_cosmetic("paint_kest_dusk")

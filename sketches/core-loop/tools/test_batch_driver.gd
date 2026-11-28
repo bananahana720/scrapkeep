@@ -2,13 +2,14 @@ extends RefCounted
 
 const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
-const Game := preload("res://src/game.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Density := preload("res://src/presentation/density.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const WarningBound := preload("res://src/combat/warning_bound.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd")
@@ -24,6 +25,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const WorldFxGrain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldFxSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
+const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const ThreadGuard := preload("res://src/core/thread_guard.gd")
@@ -32,7 +34,7 @@ const ParkProps := preload("res://src/presentation/park_props.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Projectile := preload("res://src/combat/projectile.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
 const Synergies := preload("res://src/build/synergies.gd")
@@ -55,7 +57,6 @@ const QuietGun := preload("res://src/presentation/quiet_gun.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
-const Terrain := preload("res://src/world/terrain.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -76,12 +77,25 @@ const CraftPropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const ExperimentalSetpieceCraft := preload("res://src/presentation/craft/experimental_setpiece_craft.gd")
 const ExperimentalAudioBank := preload("res://src/presentation/experimental_audio_bank.gd")
-const LiveRunBridge := preload("res://src/experimental/live_run_bridge.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
 const World23ChunkCraft := preload("res://src/presentation/world23_chunk_craft.gd")
 const CraftShowcaseAssembly := preload("res://src/presentation/craft/craft_showcase_assembly.gd")
+const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
+const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
+const BotProfile := preload("res://tools/bot_profile.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
+const TraversalLine := preload("res://tools/traversal_line.gd")
+const BotFairness := preload("res://tools/bot_fairness.gd")
+const RampFlipper := preload("res://src/combat/ramp_flipper.gd")
+const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
+const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
+const ContentRegistry := preload("res://tests/support/content_registry.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -177,13 +191,14 @@ func _reset() -> void:
 	Engine.max_fps = max_fps
 	ChallengeDials.reset()
 	BuffLedger.reset_for_tests()
-	Game.set_motion_statics(false)
+	Comfort.reduced_motion = false
 	FlashGuard.on = false
 	GraphicsPreset.reset_for_tests()
 	Density.reset_for_tests()
 	PickQuiet.reset_for_tests()
 	UiFonts.reset_for_tests()
 	Parts.reset_for_tests()
+	PartOffers.reset_for_tests()
 	WarningBound.reset_for_tests()
 	DigScenery.reset_for_tests()
 	ArenaWakingDress.reset_for_tests()
@@ -199,6 +214,7 @@ func _reset() -> void:
 	MechaMotion.reset_for_tests()
 	WorldFxGrain.reset_for_tests()
 	WorldFxSound.reset_for_tests()
+	FoleyAudio.reset_for_tests()
 	WorldFxAnchor.reset_for_tests()
 	ClassPreview.reset_for_tests()
 	ThreadGuard.reset_for_tests()
@@ -213,7 +229,6 @@ func _reset() -> void:
 	HazardHits.reset_for_tests()
 	ParkTerrain.reset_for_tests()
 	StageMap.reset_for_tests()
-	Terrain.reset_for_tests()
 	Screens.reset_for_tests()
 	ArenaMindDress.reset_for_tests()
 	HighdraftScenery.reset_for_tests()
@@ -241,30 +256,44 @@ func _reset() -> void:
 	EnemyBossCraft.reset_for_tests()
 	ExperimentalSetpieceCraft.reset_for_tests()
 	ExperimentalAudioBank._reset()
-	LiveRunBridge._reset()
 	BossModel.reset_for_tests()
 	CampCraftMeshes.reset_for_tests()
 	ParkRecipes._reset()
+	ModelKit.reset_for_tests()
 	World23ChunkCraft._reset()
 	CraftShowcaseAssembly.reset_for_tests()
+	CraftLookdev.reset_for_tests()
+	BotProfile.reset_for_tests()
+	SkillBand.reset_for_tests()
+	TraversalLine.reset_for_tests()
+	BotFairness.reset_for_tests()
+	RampFlipper.reset_for_tests()
+	CosmeticArt.reset_for_tests()
+	TeardownNoise.reset_for_tests()
+	ContentRegistry.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
+	SimClock.threaded_in_bot_runs = false
 	Glyphs.device = "kbm"
 	SettingsPages.last_page = 0
 	StageLocks.active = true
-	Synergies.table = null
+	Synergies.reset_for_tests()
 	EnemyMotion.headless_idle = false
 	EnemyClips.headless = false
 	Enemy.rim_color = Palette.ARC
 	WorldFx.current = null
 	WorldFxWord.quiet(false)
-	Synth.score_transpose = 0
 	Footings.plant_ignore_lines = false
 	RescueSite.model_path = RescueSite.MODEL
 	RescueSite.scarf_path = RescueSite.SCARF
 	MusicRows.stem_dir = ""
 	HighdraftFx.shader_dir = HighdraftFx.SHADER_DIR
 	QuietGun.housing_path = QuietGun.HOUSING
+	Synth.reset_for_tests()
+	SfxBank.reset_for_tests()
+	MusicEngine.reset_for_tests()
+	MusicPrebake.reset_for_tests()
+	VoiceSynth.reset_for_tests()
 
 
 static func _clear_dir(path: String) -> void:

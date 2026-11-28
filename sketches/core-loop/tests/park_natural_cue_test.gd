@@ -61,10 +61,13 @@ func _run() -> void:
 			t.eq(kind + " row chooses sound", cue[1], Rows.heard(spec, audio.cue_context()))
 			t.near(kind + " bank and priority level", cue[5], Bank.trim_db(cue[1]) + Audio.PRIORITY_DB[Rows.priority(cue[0])])
 			t.near(kind + " follows live key", cue[4], Harmony.ratio(LIVE_KEY))
-		var original: Callable = handler.get("_world_sound") if handler.get("_world_sound") != null else Callable()
+		var audio_connected := func() -> bool:
+			return w.ctx.events.get_signal_connection_list("world_fact").any(func(c): return c.callable.get_object() == audio)
+		var handler_connected := func() -> bool:
+			return w.ctx.events.get_signal_connection_list("world_fact").any(func(c): return c.callable.get_object() == handler)
+		t.check(kind + " leaves world_fact owned by audio", audio_connected.call() and not handler_connected.call())
 		handler.release()
-		t.check(kind + " releases sound listener", not w.ctx.events.world_fact.is_connected(Callable(handler, "_on_world_sound")))
-		t.check(kind + " restores original listener", original.is_valid() and w.ctx.events.world_fact.is_connected(original))
+		t.check(kind + " keeps audio listener after release", audio_connected.call() and not handler_connected.call())
 		w.free()
 	t.check("seven natural, alternate forms and shared family cue paths checked", cases.size() == 13)
 	quit(t.verdict())

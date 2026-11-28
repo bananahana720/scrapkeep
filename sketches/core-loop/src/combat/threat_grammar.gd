@@ -1,17 +1,18 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 enum Type { INSTANT, WAVE, PROJECTILE, LANE }
 
 const UNSET := -1
 const KINDS := ["threat_instant", "threat_wave", "threat_projectile", "threat_lane"]
-const GROUP := "threat"
+const GROUP := Groups.THREAT
 
 const PRIORITY := 40
 const LIVE_PRIORITY := PRIORITY + 1
@@ -133,6 +134,7 @@ static func reset_for_tests() -> void:
 	Painter._materials.clear()
 	Painter.materials_built = 0
 	Painter._warmed = false
+	Painter._hazard_stripe = null
 
 
 static func striped() -> bool:
@@ -1051,6 +1053,7 @@ class Painter:
 	var _driven_values := {}
 
 	static var _stripes := {}
+	static var _hazard_stripe: StandardMaterial3D
 	# Godot frees a shader when its last material referencing it is freed (~5 ms compile hitch).
 	static var _held_looks := {}
 	static var _look := ""
@@ -1195,6 +1198,15 @@ class Painter:
 			image.generate_mipmaps()
 			_stripes[tape] = ImageTexture.create_from_image(image)
 		return _stripes[tape]
+
+	static func hazard_stripe() -> StandardMaterial3D:
+		if _hazard_stripe == null:
+			_hazard_stripe = StandardMaterial3D.new()
+			_hazard_stripe.albedo_texture = stripe_texture()
+			_hazard_stripe.uv1_triplanar = true
+			_hazard_stripe.uv1_scale = Vector3.ONE / (STRIPE_PITCH * sqrt(2.0))
+			_hazard_stripe.roughness = 0.6
+		return _hazard_stripe
 
 	func paint(all: Array, layers: Array) -> void:
 		var heights := _heights_under(all, layers)
@@ -1601,6 +1613,6 @@ static func flash_life(fill: bool, crack: bool, dust: bool) -> float:
 
 static func dust_at(puffs: Array, age: float) -> Dictionary:
 	var t := clampf(age / DUST_SECONDS, 0.0, 1.0)
-	var throw := (1.0 - (1.0 - t) * (1.0 - t)) * EnemyMotion.motion_scale
+	var throw := (1.0 - (1.0 - t) * (1.0 - t)) * Comfort.motion_scale()
 	var grounded: bool = not puffs.is_empty() and (puffs[0] as Array).size() > 2
 	return _mark("dust", "dust", DUST_TONE, dust_tris(puffs, throw, t), {"alpha": DUST_ALPHA * (1.0 - t), "abs": grounded})

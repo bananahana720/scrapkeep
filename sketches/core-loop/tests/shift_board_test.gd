@@ -16,6 +16,7 @@ const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Parts := preload("res://src/build/parts.gd")
+const Items := preload("res://src/build/items.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const T := preload("res://tests/support/t.gd")
@@ -74,7 +75,7 @@ func _pilots() -> Array:
 
 
 func _rows() -> void:
-	_t.eq("the board validates", ShiftBoard.validate(ShiftBoard.RUNGS, Achievements.ROWS, TuneRows.ids()), [])
+	_t.eq("the board validates", ShiftBoard.validate(ShiftBoard.RUNGS, Achievements.ROWS, TuneRows.ids(), Items.TABLE), [])
 	_t.eq("achievements validate with the mark rows", Achievements.validate(Achievements.ROWS, Achievements.bus_signals(), _pilots(), Cosmetics.ids()), [])
 	var marked := {}
 	for id in ShiftBoard.ids():
@@ -100,16 +101,16 @@ func _validate_controls() -> void:
 	for label in cases:
 		var rows := ShiftBoard.RUNGS.duplicate(true)
 		cases[label].call(rows)
-		_t.check("validate refuses %s" % label, not ShiftBoard.validate(rows, Achievements.ROWS, TuneRows.ids()).is_empty(), str(ShiftBoard.validate(rows, Achievements.ROWS, TuneRows.ids())))
+		_t.check("validate refuses %s" % label, not ShiftBoard.validate(rows, Achievements.ROWS, TuneRows.ids(), Items.TABLE).is_empty(), str(ShiftBoard.validate(rows, Achievements.ROWS, TuneRows.ids(), Items.TABLE)))
 	var grants := Achievements.ROWS.duplicate(true)
 	grants["brindle_mark_sable"]["pilot"] = "nobody"
 	_t.check("achievements refuse a mark for no pilot", not Achievements.validate(grants, Achievements.bus_signals(), _pilots(), Cosmetics.ids()).is_empty(), "")
 	grants = Achievements.ROWS.duplicate(true)
 	grants["brindle_mark_sable"]["reward"] = {"item": "not_an_item"}
-	_t.check("the board refuses an item reward naming no item", not ShiftBoard.validate(ShiftBoard.RUNGS, grants, TuneRows.ids()).is_empty(), "")
+	_t.check("the board refuses an item reward naming no item", not ShiftBoard.validate(ShiftBoard.RUNGS, grants, TuneRows.ids(), Items.TABLE).is_empty(), "")
 	grants = Achievements.ROWS.duplicate(true)
 	grants["stray_item"] = {"name": "Stray", "text": "Nothing.", "on": "jumped", "count": 1, "reward": {"item": "fan_spread"}}
-	_t.check("the board refuses an item reward no rung reads", not ShiftBoard.validate(ShiftBoard.RUNGS, grants, TuneRows.ids()).is_empty(), "")
+	_t.check("the board refuses an item reward no rung reads", not ShiftBoard.validate(ShiftBoard.RUNGS, grants, TuneRows.ids(), Items.TABLE).is_empty(), "")
 
 
 # A first run that does everything at once stamps every kind of rung: the summary says it as one
@@ -259,16 +260,16 @@ func _time_card() -> void:
 
 func _pool() -> void:
 	var before = Synergies.table
-	Synergies.table = ParkDefs
-	Parts.opened_items = {}
+	Synergies.set_table(ParkDefs)
+	Parts.set_opened_items({})
 	var pool := Parts.offer_pool(SABLE, ["common", "rare", "relic"])
 	_t.check("a fresh profile's pool holds no board item", not ShiftBoard.all_items().any(func(id): return pool.has(id)), str(pool))
-	Parts.opened_items = {"strike_pocket": true}
+	Parts.set_opened_items({"strike_pocket": true})
 	pool = Parts.offer_pool(SABLE, ["common", "rare", "relic"])
 	_t.check("an opened item joins the park pool", pool.has("strike_pocket"), str(pool))
 	_t.check("an unopened one does not", not pool.has("clean_break"), str(pool))
-	Parts.opened_items = {}
-	Synergies.table = before
+	Parts.set_opened_items({})
+	Synergies.set_table(before)
 
 
 func _seeds() -> void:

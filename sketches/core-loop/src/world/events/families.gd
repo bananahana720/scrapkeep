@@ -29,7 +29,7 @@ static func build(world, director) -> Dictionary:
 
 static func release(director, handlers: Dictionary) -> void:
 	if director != null:
-		director._park_families.clear()
+		director.clear_families()
 	for handler in handlers.values():
 		handler.release()
 		if handler is Node:

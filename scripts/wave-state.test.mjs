@@ -18,6 +18,7 @@ import {
   renderWaveFacts,
   replaceWaveFacts,
 } from "./wave-state.mjs";
+import { git as runGit } from "./lib/git.mjs";
 
 const script = fileURLToPath(new URL("./wave-state.mjs", import.meta.url));
 const facts = {
@@ -148,11 +149,7 @@ test("replacing the table leaves the rest of the page alone", () => {
 
 function repo() {
   const root = mkdtempSync(path.join(os.tmpdir(), "wave-state-"));
-  const git = (...args) => {
-    const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-    assert.equal(result.status, 0, result.stderr);
-    return result.stdout.trim();
-  };
+  const git = (...args) => runGit(args, { cwd: root });
   git("init", "-q", "-b", "main");
   git("config", "user.email", "test@example.invalid");
   git("config", "user.name", "Test");

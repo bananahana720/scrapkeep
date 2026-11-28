@@ -14,6 +14,8 @@ const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const RunMoments := preload("res://src/core/run_moments.gd")
 const Profile := preload("res://src/core/profile.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
+const CliFlags := preload("res://src/core/cli_flags.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 const Progress := preload("res://src/core/progress.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
@@ -30,7 +32,6 @@ const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const TuningPanel := preload("res://src/ui/tuning_panel.gd")
 const World := preload("res://src/world/world.gd")
@@ -38,20 +39,10 @@ const Combat := preload("res://src/combat/combat.gd")
 const Build := preload("res://src/build/build.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
 const Bindings := preload("res://src/core/bindings.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
-const AbilityBar := preload("res://src/ui/ability_bar.gd")
-const AimReticle := preload("res://src/ui/aim_reticle.gd")
-const BossPlate := preload("res://src/ui/boss_plate.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const RewardView := preload("res://src/ui/reward_view.gd")
-const MossBubble := preload("res://src/ui/moss_bubble.gd")
-const ClassCard := preload("res://src/ui/class_card.gd")
-const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
-const ClassPreview := preload("res://src/ui/class_preview.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
@@ -76,6 +67,7 @@ const HIT_STOP_SCALE := 0.05
 const SLOW_MOTION_FLOOR := 0.1
 const SEED := 20260926
 const SimClock := preload("res://src/core/sim_clock.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const BOSS_PATH := "res://src/boss/boss.gd"
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -236,7 +228,7 @@ func _ready() -> void:
 	camera.apply_look_settings(settings_store())
 	codex = Codex.new()
 	add_child(codex)
-	codex.setup(events, run, flow, storage_dir)
+	codex.setup(events, run, flow, storage_dir, func(id: String) -> bool: var d: Resource = Parts.def(id); return d != null and d.rarity == "relic")
 	codex.declare_story_entries(PilotStory.codex_declarations())
 	codex.set_story_hooks(PilotStory.entry_visible, PilotStory.synthesis_margin)
 	ctx.codex = codex
@@ -246,7 +238,7 @@ func _ready() -> void:
 	ctx.run_log = run_log
 	run_moments = RunMoments.new()
 	add_child(run_moments)
-	run_moments.setup(events, run, player, flow, ctx.stages, storage_dir)
+	run_moments.setup(events, run, player, flow, ctx.stages, storage_dir, func(id: String) -> Dictionary: var d: Resource = Parts.def(id); return {"tier": d.tier if d != null else 1, "name": Parts.display_name(id)}, preload("res://src/combat/roster.gd").warden_name)
 	ctx.profile = Profile.new(storage_dir.path_join("profile.json"))
 	if not ctx.profile.load_profile():
 		push_warning("profile: %s" % ctx.profile.last_error)
@@ -293,7 +285,7 @@ func _ready() -> void:
 			return false
 		return ctx.spawner.would_crush(enemy, kind, force)
 
-	flow.setup(ctx, beacon)
+	flow.setup(ctx, beacon, Build.Panels.draw)
 	if not test_mode or run_store_path != "":
 		flow.store = RunStore.new(run_store_path if run_store_path != "" else storage_dir.path_join("run.json"))
 	events.flow_changed.connect(_on_flow_changed)
@@ -465,10 +457,7 @@ func _attach_experimental() -> void:
 static func _experimental_asked() -> bool:
 	if OS.get_environment(EXPERIMENTAL_ENV) != "":
 		return true
-	for arg in OS.get_cmdline_args() + OS.get_cmdline_user_args():
-		if arg.begins_with(EXPERIMENTAL_FLAG):
-			return true
-	return false
+	return CliFlags.has_prefix(EXPERIMENTAL_FLAG, true)
 
 
 func _on_experimental_fact(fact: Dictionary) -> void:
@@ -476,10 +465,7 @@ func _on_experimental_fact(fact: Dictionary) -> void:
 
 
 func _start_self_play() -> void:
-	var script_path := SELF_PLAY
-	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--self-play-script="):
-			script_path = arg.trim_prefix("--self-play-script=")
+	var script_path := CliFlags.value_of("--self-play-script=", SELF_PLAY)
 	if not ResourceLoader.exists(script_path):
 		push_error("game: --self-play needs a pack with tools/ (npm run sketch:export -- --self-play)")
 		get_tree().quit(2)
@@ -501,7 +487,7 @@ func _listen_for_tunes() -> void:
 func _on_tune_heard(id: String) -> void:
 	if not ctx.profile.hear_tune(id):
 		return
-	if ctx.profile.can_save and not ctx.profile.save():
+	if not ctx.profile.save_if_allowed():
 		push_warning("game: tune %s heard but not saved: %s" % [id, ctx.profile.last_error])
 	hud.tune_found(String(TuneRows.row(id).get("name", id)))
 
@@ -509,11 +495,7 @@ func _on_tune_heard(id: String) -> void:
 func _chosen_table():
 	var id := table
 	if id.is_empty():
-		var args := OS.get_cmdline_args()
-		args.append_array(OS.get_cmdline_user_args())
-		for arg in args:
-			if arg.begins_with("--table="):
-				id = arg.trim_prefix("--table=")
+		id = CliFlags.value_of("--table=", "", true)
 	if id.is_empty():
 		return StageDefs if test_mode else TABLES[LAUNCH_TABLE]
 	if not TABLES.has(id):
@@ -539,16 +521,16 @@ func continue_refusal() -> String:
 
 func sitting_save_guard() -> void:
 	if tuning != null and tuning.sitting() and ctx.profile != null:
-		ctx.profile._refuse("sitting profile: this session does not save")
+		ctx.profile.disable_saving("sitting profile: this session does not save")
 		Secrets.open_for_sitting(ctx.profile)
 
 
 func open_board_items() -> void:
-	Parts.opened_items = {}
-	if bot_driven or ctx.profile == null:
-		return
-	for id in ShiftBoard.opened_items(ctx.profile):
-		Parts.opened_items[id] = true
+	var opened := {}
+	if not bot_driven and ctx.profile != null:
+		for id in ShiftBoard.opened_items(ctx.profile):
+			opened[id] = true
+	Parts.set_opened_items(opened)
 
 
 func _apply_player_run_options(class_id: String) -> void:
@@ -666,7 +648,7 @@ func restart_hold_fraction() -> float:
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	player.kit.aim = Harpoon.target(player.kit, tuning, get_world_3d().direct_space_state,
 		get_tree().get_nodes_in_group("enemy"), from, forward, player.ball_position())
-	Grip.mark(player.kit.aim, player.heft(), tuning.pole_flail())
+	Grip.mark(player.kit.aim, player.heft(), player.enemy_heft(player.kit.aim.get("body")), tuning.pole_flail())
 	return player.kit.aim
 
 
@@ -734,12 +716,10 @@ func dump_tuning() -> String:
 		"boost_cooldown_scale": tuning.boost_cooldown_scale,
 	}
 	var path := "user://tuning-%d.json" % int(Time.get_unix_time_from_system())
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		push_warning("tuning dump failed: %s" % error_string(FileAccess.get_open_error()))
+	var err := SafeStore.write_atomic(path, JSON.stringify(record, "  "))
+	if err != OK:
+		push_warning("tuning dump failed: %s" % error_string(err))
 		return ""
-	file.store_string(JSON.stringify(record, "  "))
-	file.close()
 	var shown := ProjectSettings.globalize_path(path)
 	print("tuning saved to ", shown)
 	return shown
@@ -997,11 +977,11 @@ func _register_actions() -> void:
 
 
 func apply_saved_bindings() -> void:
-	var store := SettingsStore.new(storage_dir)
+	var store = settings_store()
 	for action in Bindings.actions():
 		if store.binding(action).is_empty() or not InputMap.has_action(action):
 			continue
-		var decoded := store.binding_events(action)
+		var decoded: Array = store.binding_events(action)
 		if decoded.is_empty():
 			continue
 		apply_binding(action, decoded)
@@ -1043,11 +1023,11 @@ func settings_store():
 
 
 func apply_saved_display(args: Array = []) -> void:
-	var launch: Array = args if not args.is_empty() else Array(OS.get_cmdline_user_args())
-	var saved := SettingsStore.new(storage_dir)
+	var launch: Array = args if not args.is_empty() else Array(CliFlags.args())
+	var saved = settings_store()
 	if not launch.any(func(arg): return String(arg).begins_with("--preset=") and GraphicsPreset.PRESETS.has(String(arg).trim_prefix("--preset="))):
 		set_quality(saved.quality())
-	if launches_fullscreen(saved.fullscreen(), Array(OS.get_cmdline_args() + OS.get_cmdline_user_args())):
+	if launches_fullscreen(saved.fullscreen(), Array(CliFlags.args(true))):
 		set_fullscreen(true)
 	set_reduced_motion(saved.reduced_motion())
 	set_reduce_flashes(saved.reduce_flashes())
@@ -1062,21 +1042,8 @@ func set_quality(level: int) -> void:
 
 
 static func set_motion_statics(on: bool) -> void:
-	EnemyMotion.motion_scale = 0.0 if on else 1.0
-	HighdraftFx.preferred = on
-	AbilityBar.reduced_motion = on
-	UiTokens.reduced_motion = on
-	AimReticle.reduced_motion = on
-	RewardView.reduced_motion = on
-	MossBubble.reduced_motion = on
-	preload("res://src/ui/caller_tile.gd").reduced_motion = on
-	ClassCard.reduced_motion = on
-	PilotAntics.reduced_motion = on
-	ClassPreview.reduced_motion = on
-	BossPlate.reduced_motion = on
-	WorldFx.preferred = on
+	Comfort.reduced_motion = on
 	preload("res://src/presentation/spillway_scenery.gd").set_water_calm(on)
-	preload("res://src/presentation/flourish_player.gd").reduced_motion = on
 
 
 func set_reduced_motion(on: bool) -> void:
@@ -1085,12 +1052,6 @@ func set_reduced_motion(on: bool) -> void:
 		WorldFx.current.set_quality(WorldFx.current.low, on)
 	if presentation != null and presentation.get("juice") != null:
 		presentation.juice.set_reduced_motion(on)
-		presentation.player_fx.reduced_motion = on
-	elif camera != null:
-		camera.reduced_motion = on
-	for node in find_children("*", "Node3D", true, false):
-		if node.get_script() == HighdraftFx:
-			node.reduced_motion = on
 
 
 func set_reduce_flashes(on: bool) -> void:
@@ -1103,9 +1064,9 @@ func set_reduce_flashes(on: bool) -> void:
 func set_frame_smoothing(on: bool) -> void:
 	frame_smoothing = on
 	var smooth := on and not test_mode and _windowed()
-	for arg in OS.get_cmdline_args() + OS.get_cmdline_user_args():
-		if arg == "--smoothing=0" or arg == "--smoothing=1":
-			smooth = arg == "--smoothing=1"
+	for raw in CliFlags.values_of("--smoothing=", true):
+		if raw == "0" or raw == "1":
+			smooth = raw == "1"
 	_smooth(smooth)
 
 
@@ -1121,7 +1082,7 @@ func set_wide_picture(on: bool) -> void:
 
 func _fit_picture() -> void:
 	var window := get_tree().root
-	var fill := wide_fills(wide_picture, not test_mode and _windowed(), OS.get_cmdline_args() + OS.get_cmdline_user_args(), window.size)
+	var fill := wide_fills(wide_picture, not test_mode and _windowed(), Array(CliFlags.args(true)), window.size)
 	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND if fill else Window.CONTENT_SCALE_ASPECT_KEEP
 
 
@@ -1291,15 +1252,14 @@ func _boot(step: String) -> void:
 
 
 static func _self_play_save() -> String:
-	for arg in OS.get_cmdline_user_args():
-		var folder := arg.trim_prefix("--self-play-save=")
-		if arg.begins_with("--self-play-save=") and folder.is_valid_filename() and not folder.contains("."):
+	for folder in CliFlags.values_of("--self-play-save="):
+		if folder.is_valid_filename() and not folder.contains("."):
 			return folder
 	return str(OS.get_process_id())
 
 
 static func _launch_flag(flag: String) -> bool:
-	return flag in OS.get_cmdline_args() or flag in OS.get_cmdline_user_args()
+	return CliFlags.has_flag(flag, true)
 
 
 func _screen_key(key: int) -> bool:

@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const T := preload("res://tests/support/t.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 var _t := T.new("title_stage_test")
 var _capture_dir := ""
@@ -15,7 +16,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_capture_dir = OS.get_environment("TTL_CAPTURE_DIR")
 	if _capture_dir != "":
-		if DisplayServer.get_name() == "headless":
+		if AppShell.headless():
 			_t.check("capture requires coordinator's rendered display", false)
 			quit(_t.verdict())
 			return

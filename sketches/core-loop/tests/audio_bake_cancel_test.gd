@@ -1,3 +1,4 @@
+# smoke: solo (needs a cold sound bank: it leaves the tree while the startup bake still runs, and a warm batch has already baked it)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

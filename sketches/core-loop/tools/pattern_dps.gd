@@ -91,7 +91,7 @@ static func prepare(game, class_index := 1) -> void:
 	game.process_mode = Node.PROCESS_MODE_DISABLED
 	game.player.reset_to(BALL)
 	game.player.body().global_position = BALL
-	game.player.active_body().freeze = true
+	game.player.body().freeze = true
 	game.camera.cam.get_parent().global_position = BALL
 	game.camera.cam.global_basis = Basis.IDENTITY
 	for group in ["enemy", "enemy_shot"]:
@@ -151,10 +151,10 @@ static func _measure_one(game, scenario: Dictionary, distance: float, neighbours
 		build.sheet.transformers.erase("storm_lattice")
 		build.sheet.synergies.erase("storm_lattice")
 		build.sheet.patterns["chain_arc"] = maxi(0, build.sheet.pattern_level("chain_arc") - 1)
-	combat._rebuild_patterns()
+	combat.rebuild_patterns()
 	if scenario.get("no_lattice", false):
 		for weapon in Weapons.ALL:
-			combat._patterns[weapon] = Weapons.base(weapon).transformed(combat.active_transformers())
+			combat.set_pattern(weapon, Weapons.base(weapon).transformed(combat.active_transformers()))
 	var targets: Array = []
 	var positions: Array = []
 	for i in neighbours + 1:
@@ -168,7 +168,7 @@ static func _measure_one(game, scenario: Dictionary, distance: float, neighbours
 	combat.volleys = 0
 	var active_w: String = combat.active_weapon()
 	combat.weapon_driver.reset(combat.pattern(active_w))
-	combat._reset_ledger()
+	combat.reset_ledger()
 	for _tick in roundi(WARMUP / DT):
 		_drive_cadence(game)
 		_tick_combat(game)

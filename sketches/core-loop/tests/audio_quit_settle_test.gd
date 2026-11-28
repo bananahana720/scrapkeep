@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
-const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -47,7 +47,7 @@ func _process(_delta: float) -> bool:
 	_t.check("QS-2 the band bake was abandoned, not waited out", _wobbles() == 0, "%d wobbles: the bake ran to its end" % _wobbles())
 	_game.free()
 	_game = null
-	MusicEngine.prepare_rest()
+	MusicPrebake.prepare_rest()
 	_t.check("QS-3 a later bake renders what was abandoned", _wobbles() > 0, "no wobble after a full bake")
 	quit(_t.verdict())
 	return true

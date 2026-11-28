@@ -82,15 +82,15 @@ func _check_table() -> void:
 			total += _want(kit, world)
 		_report("world %d rows" % world, rows.size() == total and KITS.all(func(k): return per_kit.get(k, 0) == _want(k, world)) and per_kit.size() == KITS.size(),
 			"%d rows, per kit %s" % [rows.size(), per_kit])
-		for pilot in Relics.PILOTS:
+		for pilot in Relics.pilots():
 			var pool := Relics.eligible(pilot, {}, null, world)
 			var own: bool = pool.size() == _want(pilot, world) and pool.all(func(i): return int(Relics.row(i)["world"]) == world)
 			_report("world %d pool for %s" % [world, pilot], own, "%s" % [pool])
-	for pilot in Relics.PILOTS:
+	for pilot in Relics.pilots():
 		_report("world 0 is every world for " + pilot, Relics.eligible(pilot, {}, null, 0) == Relics.eligible(pilot, {})
 			and Relics.eligible(pilot, {}).size() == 6 + int(WORLD_ONE_EXTRA.get(pilot, 0)), "%s" % [Relics.eligible(pilot, {})])
 	var first := []
-	for pilot in Relics.PILOTS:
+	for pilot in Relics.pilots():
 		for id in Relics.eligible(pilot, {}, null, 1):
 			if not id in first:
 				first.append(id)

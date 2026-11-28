@@ -8,6 +8,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const ImpactFrame := preload("res://src/presentation/impact_frame.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
@@ -15,6 +16,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var t := T.new("player_fx_test")
 var _game
@@ -593,7 +595,7 @@ func _run() -> void:
 
 	# A synthetic rect on the edge reaches the shader as a uniform, and the shader's test (written
 	# out in GDScript) discards inside the rect plus the margin and keeps a pixel on its edge.
-	var margin: float = PlayerFx.ImpactFrame.YIELD_MARGIN_PX
+	var margin: float = ImpactFrame.YIELD_MARGIN_PX
 	var left_edge := Rect2(0.0, 380.0, 150.0, 320.0)
 	frame.apply_rects([left_edge])
 	var mat: ShaderMaterial = frame.material
@@ -601,12 +603,12 @@ func _run() -> void:
 	t.eq("one rect: the count uniform", mat.get_shader_parameter("rect_count"), 1)
 	t.eq("the margin uniform is the yield margin", mat.get_shader_parameter("margin"), margin)
 	t.eq("the rect uniform is x, y, w, h", (mat.get_shader_parameter("rects") as PackedVector4Array)[0], Vector4(0.0, 380.0, 150.0, 320.0))
-	var yields := func(p: Vector2) -> bool: return PlayerFx.ImpactFrame._yields(p, [left_edge], 1, margin)
+	var yields := func(p: Vector2) -> bool: return ImpactFrame._yields(p, [left_edge], 1, margin)
 	t.check("a point inside the rect is discarded", yields.call(Vector2(60.0, 500.0)))
 	t.check("a point inside the margin is discarded", yields.call(Vector2(150.0 + margin - 0.5, 500.0)) and yields.call(Vector2(60.0, 380.0 - margin + 0.5)))
 	t.check("a point on the margin's edge stays", not yields.call(Vector2(150.0 + margin, 500.0)) and not yields.call(Vector2(60.0, 380.0 - margin)))
 	t.check("a point just outside the margin stays", not yields.call(Vector2(150.0 + margin + 0.5, 500.0)) and not yields.call(Vector2(60.0, 700.0 + margin + 0.5)))
-	t.check("only the first count rects count", not PlayerFx.ImpactFrame._yields(Vector2(60.0, 500.0), [left_edge], 0, margin))
+	t.check("only the first count rects count", not ImpactFrame._yields(Vector2(60.0, 500.0), [left_edge], 0, margin))
 
 	# A real telegraph whose ground footprint projects into the edge band.
 	var cam: Camera3D = fx.camera.cam
@@ -623,7 +625,7 @@ func _run() -> void:
 		t.check("a live telegraph has a screen rect", rects.size() >= 1, str(rects.size()))
 		var band_hit := false
 		for r in rects:
-			band_hit = band_hit or r.position.x < minf(vp.x, vp.y) * PlayerFx.ImpactFrame.BAND
+			band_hit = band_hit or r.position.x < minf(vp.x, vp.y) * ImpactFrame.BAND
 		t.check("that rect reaches the edge band", band_hit, str(rects))
 		frame.hide_now()
 		fx._last_frame = -1.0e9
@@ -638,7 +640,7 @@ func _run() -> void:
 			matched = matched and uniforms[k] == Vector4(sent[k].position.x, sent[k].position.y, sent[k].size.x, sent[k].size.y)
 		t.check("the uniforms are the real telegraph's rects", matched and sent.size() >= 1, "%d sent, %d held" % [sent.size(), frame._rects.size()])
 		var inside: Vector2 = sent[0].get_center() if not sent.is_empty() else Vector2(-1.0, -1.0)
-		t.check("the shader test discards the telegraph's centre", PlayerFx.ImpactFrame._yields(inside, frame._rects, frame._rects.size(), margin))
+		t.check("the shader test discards the telegraph's centre", ImpactFrame._yields(inside, frame._rects, frame._rects.size(), margin))
 		await _frames(1)
 		t.check("the draw drew the frame", frame.drawn > 0, str(frame.drawn))
 		warn.queue_free()
@@ -659,13 +661,13 @@ func _run() -> void:
 		await _frames(1)
 		t.check("the hazard is not in group telegraph", not hazard.is_in_group("telegraph") and hazard.is_in_group(Threat.GROUP))
 		var hz := PlayerFx.warning_rects(root.get_tree(), cam, 0.0)
-		t.check("a hostile boss hazard has a screen rect", hz.size() == 1 and hz[0].position.x < minf(vp.x, vp.y) * PlayerFx.ImpactFrame.BAND, str(hz))
+		t.check("a hostile boss hazard has a screen rect", hz.size() == 1 and hz[0].position.x < minf(vp.x, vp.y) * ImpactFrame.BAND, str(hz))
 		frame.hide_now()
 		fx._last_frame = -1.0e9
 		fx.impact_frame(Vector3(hit.x + 30.0, 0.0, hit.z), 1.0)
 		var hz_uniform: PackedVector4Array = frame.material.get_shader_parameter("rects")
 		t.check("the frame sends a boss hazard's rect to the shader", frame._rects.size() == 1 and int(frame.material.get_shader_parameter("rect_count")) == 1 and hz_uniform[0] == Vector4(hz[0].position.x, hz[0].position.y, hz[0].size.x, hz[0].size.y), str(hz_uniform[0]))
-		t.check("the shader test discards the hazard's centre", PlayerFx.ImpactFrame._yields(hz[0].get_center(), frame._rects, 1, margin))
+		t.check("the shader test discards the hazard's centre", ImpactFrame._yields(hz[0].get_center(), frame._rects, 1, margin))
 		hazard.queue_free()
 	# Dunk charge: the coil on the collar's rear arc shows the held record in the class colour,
 	# its pips go dark as the window runs down, and it clears on spend and on expiry.
@@ -720,7 +722,7 @@ func _sable_halo(fx) -> void:
 	t.near("the tap floor is the casters' least charged bolt", ChargeHalo.TAP_FLOOR, float(Weapons.BASE[Weapons.ARC_CASTER]["charge_min"]))
 	t.check("frost is ice blue, never the old works' green", PlayerFx.ELEMENT_COLORS["frost"] == Palette.ICE and PlayerFx.ELEMENT_COLORS["frost"] != Palette.ANCIENT)
 	t.check("a frost part's mote is ice blue", PlayerFx.part_color("frost_vane") in [Palette.ICE, Palette.ICE.lerp(Color.WHITE, 0.25)], str(PlayerFx.part_color("frost_vane")))
-	fx.reduced_motion = false
+	Comfort.reduced_motion = false
 	_hold_charge(0.0)
 	await _settle(0.15)
 	t.check("no halo before a charge", fx.halo() == null or fx.halo().hoops_shown() == 0)
@@ -808,13 +810,13 @@ func _sable_halo(fx) -> void:
 	await _settle(0.3)
 
 	# Reduce motion: the hoops hold still and throw no sparks; Reduce flashes cuts the full-charge swell.
-	fx.reduced_motion = true
+	Comfort.reduced_motion = true
 	_hold_charge(0.5)
 	await _frames(2)
 	var spin: float = halo._spin
 	await _settle(0.2)
 	t.check("reduced motion: the hoops do not spin and no sparks fly", is_equal_approx(halo._spin, spin) and halo.spark_ratio() == 0.0 and halo.hoops_shown() == 3)
-	fx.reduced_motion = false
+	Comfort.reduced_motion = false
 	_hold_charge(0.0)
 	await _settle(0.2)
 	var FlashGuard := load("res://src/presentation/flash_guard.gd")
@@ -864,7 +866,7 @@ func _rivet_fire(fx) -> void:
 	_game.player.pod_mount().add_child(ring)
 	fx._marker_wait.clear()
 	fx._rivet_shots = 0
-	fx.reduced_motion = false
+	Comfort.reduced_motion = false
 	var from: Vector3 = _game.player.shown_position()
 	var dir := Vector3(0, 0, -1)
 	fx._rivet_shot(from, dir)
@@ -893,10 +895,10 @@ func _rivet_fire(fx) -> void:
 	await _settle(0.35)
 	t.eq("a casing lives 0.35 s", fx.casings_alive(), 0)
 	t.check("a casing falls under gravity", fx._casing_v[0].y < 0.0, str(fx._casing_v[0]))
-	fx.reduced_motion = true
+	Comfort.reduced_motion = true
 	fx._rivet_shot(from, dir)
 	t.check("reduced motion keeps the flash and throws no casing", fx.flashes_alive() == 1 and fx.casings_alive() == 0)
-	fx.reduced_motion = false
+	Comfort.reduced_motion = false
 	ring.free()
 	fx._marker_wait.clear()
 
@@ -919,7 +921,7 @@ static func _old_shapes(rect: Vector2, focus_in: Vector2, strength: float, heat:
 	var ink_base := PlayerFx.INK
 	if heat > 0.0:
 		var dark := Color(ink_base.r, ink_base.g, ink_base.b, 0.8 * heat)
-		var hot := Color(PlayerFx.HEAT_COLOR.r, PlayerFx.HEAT_COLOR.g, PlayerFx.HEAT_COLOR.b, PlayerFx.FlashGuard.alpha(0.4 * heat))
+		var hot := Color(ImpactFrame.HEAT_COLOR.r, ImpactFrame.HEAT_COLOR.g, ImpactFrame.HEAT_COLOR.b, PlayerFx.FlashGuard.alpha(0.4 * heat))
 		var clear := Color(hot.r, hot.g, hot.b, 0.0)
 		for ring in [[0.0, band * 0.6, dark, hot], [band * 0.6, band, hot, clear]]:
 			var o := [Vector2(ring[0], ring[0]), Vector2(rect.x - ring[0], ring[0]), rect - Vector2(ring[0], ring[0]), Vector2(ring[0], rect.y - ring[0])]
@@ -950,7 +952,7 @@ static func _old_shapes(rect: Vector2, focus_in: Vector2, strength: float, heat:
 		var ink := ink_base
 		ink.a = 0.75 + 0.2 * heat
 		if accent:
-			ink = Color(1, 1, 1, 0.5).lerp(Color(PlayerFx.HEAT_COLOR.r, PlayerFx.HEAT_COLOR.g, PlayerFx.HEAT_COLOR.b, 0.9), heat)
+			ink = Color(1, 1, 1, 0.5).lerp(Color(ImpactFrame.HEAT_COLOR.r, ImpactFrame.HEAT_COLOR.g, ImpactFrame.HEAT_COLOR.b, 0.9), heat)
 			ink.a = PlayerFx.FlashGuard.alpha(ink.a)
 		out.append({"poly": PackedVector2Array([tip, outer + side, outer - side]), "color": ink})
 	return out

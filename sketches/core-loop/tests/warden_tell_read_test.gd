@@ -1,7 +1,7 @@
 extends SceneTree
 
 # The Warden pulse's body wind-up must read by the tell floor. hero_assets.gd starts each
-# kind's charge clip (WARDEN_BODY_CHARGE) with its WARDEN_BODY_BLENDS cross-fade from idle;
+# kind's charge clip (WardenDress.BODY_CHARGE) with its WardenDress.BODY_BLENDS cross-fade from idle;
 # a cross-fade as long as the whole tell holds the pose back, so the stacks or lens are
 # still half way when the player must already be moving. At TELL_FLOOR seconds before the
 # strike (PULSE_TELEGRAPH - TELL_FLOOR, DECISIONS section 5) the body's displacement from
@@ -14,7 +14,7 @@ extends SceneTree
 # The cross-fade must not pop either: no step of the blended charge moves the body more than
 # POP_SHARE times the largest step of the unblended clip or of the idle.
 
-const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const WardenDress := preload("res://src/presentation/warden_dress.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 # The Warden recipes key at 30 fps (tools/blender/warden_reactor.py FPS).
@@ -37,10 +37,10 @@ var checks := 0
 func _initialize() -> void:
 	var read_at: float = Warden.PULSE_TELEGRAPH - ChallengeDials.TELL_FLOOR
 	_check(read_at > 0.0, "the read moment %.2f s lies inside the %.2f s tell" % [read_at, Warden.PULSE_TELEGRAPH])
-	for kind in HeroAssets.WARDEN_BODY_CHARGE:
-		var clip: String = HeroAssets.WARDEN_BODY_CHARGE[kind]
-		var blend: float = HeroAssets.WARDEN_BODY_BLENDS[kind].get(clip, -1.0)
-		var path: String = HeroAssets.WARDEN_BODIES[kind]["body"]
+	for kind in WardenDress.BODY_CHARGE:
+		var clip: String = WardenDress.BODY_CHARGE[kind]
+		var blend: float = WardenDress.BODY_BLENDS[kind].get(clip, -1.0)
+		var path: String = WardenDress.BODIES[kind]["body"]
 		for phase in IDLE_PHASES:
 			var ref := _share(path, clip, 0.0, read_at, phase)
 			var got := _share(path, clip, blend, read_at, phase)
@@ -51,7 +51,7 @@ func _initialize() -> void:
 			var limit := maxf(_max_step(path, clip, 0.0, phase, true), _max_step(path, "idle", 0.0, phase))
 			_check(steps <= POP_SHARE * limit,
 				"%s %s from idle %.1f s: the blend's largest step %.4f is within %.1f x the clip's or idle's %.4f" % [kind, clip, phase, steps, POP_SHARE, limit])
-	var control_path: String = HeroAssets.WARDEN_BODIES["reactor"]["body"]
+	var control_path: String = WardenDress.BODIES["reactor"]["body"]
 	var ref_c := _share(control_path, "pulse_warn", 0.0, read_at, IDLE_PHASES[1])
 	var slow := _share(control_path, "pulse_warn", Warden.PULSE_TELEGRAPH, read_at, IDLE_PHASES[1])
 	_check(slow < READ_SHARE * ref_c,

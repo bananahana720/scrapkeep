@@ -172,6 +172,23 @@ func state_name() -> String:
 	return "charging" if _charging else "idle"
 
 
+func is_charging() -> bool:
+	return _charging
+
+
+func pulse_clock() -> float:
+	return _pulse_clock
+
+
+func visual_rig() -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	if _look != null:
+		out.append(_look)
+	if _kit != null:
+		out.append(_kit)
+	return out
+
+
 func knock(_direction: Vector3, _force: float) -> void:
 	pass
 
@@ -621,7 +638,7 @@ static func hardpoints_for(spec_in: Dictionary) -> Array:
 	var offsets: Array = []
 	if offsets_in is Array:
 		for entry in offsets_in:
-			var point = _offset_of(entry)
+			var point = parse_point(entry)
 			if point != null:
 				offsets.append(point)
 	if offsets.is_empty():
@@ -629,7 +646,7 @@ static func hardpoints_for(spec_in: Dictionary) -> Array:
 	return offsets
 
 
-static func _offset_of(entry):
+static func parse_point(entry):
 	if entry is Vector3:
 		return entry
 	if entry is Array and entry.size() == 3:

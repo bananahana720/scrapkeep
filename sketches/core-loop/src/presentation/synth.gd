@@ -13,6 +13,11 @@ static var score_transpose := 0
 const HOLD := 90000
 
 
+static func reset_for_tests() -> void:
+	score_step = Harmony.STEP
+	score_transpose = 0
+
+
 static func _cached(key: String) -> Variant:
 	_lock.lock()
 	var hit = _notes.get(key)
@@ -799,6 +804,18 @@ static func wob(midi: int, period: int, vowel := "wub") -> PackedFloat32Array:
 		buf[i] = tanh(y * 1.6) * (0.55 + 0.45 * lfo)
 	declick(normalize(buf, 0.7), 48, 96)
 	_store(key, buf)
+	return buf
+
+
+static func steam_whistle(midi: int, n: int) -> PackedFloat32Array:
+	var buf := buffer(n)
+	var phase := 0.0
+	var step_hz := TAU * Harmony.hz(midi) / Harmony.RATE
+	var bend := Harmony.ratio(2)
+	var rng := _rng(0x57EA)
+	for i in n:
+		phase += step_hz * lerpf(1.0, bend, float(i) / n)
+		buf[i] = sin(phase) + 0.12 * rng.randf_range(-1.0, 1.0)
 	return buf
 
 

@@ -5,7 +5,6 @@ const Bindings := preload("res://src/core/bindings.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
-const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
@@ -315,19 +314,19 @@ func _readers() -> void:
 	for key in "wasd":
 		allowed.append("key_" + key)
 
-	var rows: Array = FieldNotes.CONTROLS
+	var rows: Array = ControlsDiagram.controls()
 	var verb_rows_ok := true
 	var detail := PackedStringArray()
-	for i in FieldNotes.VERB_ROWS.size():
-		var verb: String = FieldNotes.VERB_ROWS[i][0]
+	for i in ControlsDiagram.VERB_ROWS.size():
+		var verb: String = ControlsDiagram.VERB_ROWS[i][0]
 		var row: Dictionary = rows[i]
 		var caps_ok: bool = row["caps"] == [Bindings.glyph(verb)] or (verb == "roll" and row["caps"] == ["key_w", "key_a", "key_s", "key_d"]) \
 			or (verb == "select" and row["caps"] == ["key_1", "key_2", "key_3"])
 		if row["keys"] != Bindings.label(verb) or not caps_ok:
 			verb_rows_ok = false
 			detail.append("%s: keys %s caps %s" % [verb, row["keys"], row["caps"]])
-	_t.check("the field notes list the ten verbs with their table keys, in order", verb_rows_ok and FieldNotes.VERB_ROWS.size() == 10
-		and not FieldNotes.VERB_ROWS.any(func(r): return r[0] == "special"), "; ".join(detail))
+	_t.check("the field notes list the ten verbs with their table keys, in order", verb_rows_ok and ControlsDiagram.VERB_ROWS.size() == 10
+		and not ControlsDiagram.VERB_ROWS.any(func(r): return r[0] == "special"), "; ".join(detail))
 	var c_is_consumable: bool = KEY_C in Bindings.EXTRA_ACTIONS.get(Bindings.CONSUMABLE_ACTION, {}).get("keys", [])
 	var named: Array = []
 	for row in rows:

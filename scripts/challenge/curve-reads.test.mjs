@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { flumeOpening } from "./flume-opening.mjs";
 import { fightMaxHp, worstWindows } from "./worst-window.mjs";
 
 const rows = [
@@ -67,14 +66,4 @@ test("worstWindows divides each fight by the max hull at that fight, not at the 
     { hull: 50 / 200, hp: 50 / 200, from: "window" },
     { hull: 120 / 240, hp: 120 / 240, from: "run_end" },
   ]);
-});
-
-test("flumeOpening subtracts only the fight's first 45 s and falls back to exit time with no hit", () => {
-  const { head } = flumeOpening(rows);
-  assert.equal(head.n, 2);
-  assert.deepEqual(head.firstHit, [12, 300]);
-  assert.equal(head.noHit, 1);
-  assert.deepEqual(head.dmgOutside, [60, 20]);
-  assert.deepEqual(head.maxHp, [160, 140]);
-  assert.deepEqual(head.hits, [9, 2]);
 });

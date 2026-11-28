@@ -2,6 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const GAP_XS := 4
@@ -28,11 +29,20 @@ const ALERT := Palette.HAZARD
 const COLORS := [INK, TEXT, ACCENT, LINE, ALERT]
 const THEME_PATH := "res://assets/ui/scrapkeep_theme.tres"
 
+const TAG_INK := Color("121514")
+const COMIC_INK := Color("242a28")
+const BONE := Color("f3ecdc")
+const GLASS_WARM := Color("2a2420")
+const FLEET_FILL := Color("3e2219")
+const OLD_WORKS_FILL := Color("10262a")
+const OLD_WORKS_EDGE := Color("4d8088")
+const OLD_WORKS_INK := Color("e6eeea")
+const ROGUE_FILL := Color("161918")
+
 const PLATE_ALPHA := 0.92
 const DISABLED_ALPHA := 0.45
 const TARGET := 56.0
 const RADIUS := 6
-static var reduced_motion := false
 const EDGE := 2
 const FOCUS_EDGE := 3
 
@@ -53,18 +63,18 @@ enum Hand { KEEPER, FLEET, OLD_WORKS, ROGUE }
 const HANDS := {
 	Hand.KEEPER: {"fill": Palette.CHARCOAL, "edge": Palette.COPPER, "ink": Palette.LEDGER_CREAM, "quiet": Palette.SAND,
 		"caption": CAPTION, "tilt": 0.012, "trans": Tween.TRANS_BACK},
-	Hand.FLEET: {"fill": Color("3e2219"), "edge": Palette.BRASS, "ink": Palette.SAND, "quiet": Palette.BRASS,
+	Hand.FLEET: {"fill": FLEET_FILL, "edge": Palette.BRASS, "ink": Palette.SAND, "quiet": Palette.BRASS,
 		"caption": CAPTION, "tilt": 0.0, "trans": Tween.TRANS_QUAD},
-	Hand.OLD_WORKS: {"fill": Color("10262a"), "edge": Color("4d8088"), "ink": Color("e6eeea"), "quiet": Palette.STEEL,
+	Hand.OLD_WORKS: {"fill": OLD_WORKS_FILL, "edge": OLD_WORKS_EDGE, "ink": OLD_WORKS_INK, "quiet": Palette.STEEL,
 		"seam": Palette.ANCIENT, "kindness_seam": Palette.KINDNESS, "caption": CAPTION, "tilt": 0.0, "trans": Tween.TRANS_LINEAR},
-	Hand.ROGUE: {"fill": Color("161918"), "edge": Palette.SAND, "ink": Palette.SAND, "quiet": Palette.STEEL,
+	Hand.ROGUE: {"fill": ROGUE_FILL, "edge": Palette.SAND, "ink": Palette.SAND, "quiet": Palette.STEEL,
 		"caption": CAPTION, "tilt": 0.0, "trans": Tween.TRANS_LINEAR},
 }
 
 
 static func hand(which: int) -> Dictionary:
 	var row: Dictionary = HANDS[which].duplicate()
-	if reduced_motion:
+	if Comfort.reduced_motion:
 		row.tilt = 0.0
 		row.trans = Tween.TRANS_LINEAR
 	return row

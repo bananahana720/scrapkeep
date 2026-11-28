@@ -1,8 +1,9 @@
 import { access, lstat, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { walkAsync } from "./lib/walk.mjs";
 
-const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const scriptRoot = REPO_ROOT;
 
 const limits =
   "Existence and shape checks only, not correctness: a rename that keeps the " +
@@ -32,7 +33,6 @@ const FORBIDDEN_PORTABLE_TOKENS = [
   "npm run",
   "Andrew",
 ];
-const LAB_SKILL_DIR = "scrapkeep-lab";
 
 const FRONTMATTER_VERB_ALLOWLIST = new Set([
   "Use",
@@ -187,15 +187,8 @@ async function loadSkillFiles(root, name) {
 }
 
 async function walkFiles(root, dir) {
-  const results = [];
-  const absolute = path.join(root, dir);
-  if (!(await exists(absolute))) return results;
-  for (const entry of await readdir(absolute, { withFileTypes: true })) {
-    const relative = path.posix.join(dir, entry.name);
-    if (entry.isDirectory()) results.push(...(await walkFiles(root, relative)));
-    else if (entry.isFile()) results.push(relative);
-  }
-  return results;
+  const entries = await walkAsync(path.join(root, dir), { filesOnly: true });
+  return entries.map((entry) => path.posix.join(dir, entry.rel));
 }
 
 function parseFrontmatterFields(block) {
@@ -407,6 +400,7 @@ async function checkPaths(findings, root, file, gitignorePatterns) {
         if (await exists(path.join(root, stripped))) continue;
         if (skillDir !== null && (await exists(path.join(root, skillDir, stripped)))) continue;
         if (isGitignored(gitignorePatterns, stripped)) {
+          if (stripped.endsWith("/")) continue;
           findings.warn(
             "paths",
             file.relative,
@@ -559,9 +553,7 @@ function parseLessons(content) {
     const loose = /^- \*\*([^*]+)\*\*/.exec(line);
     if (loose) {
       const header =
-        /^- \*\*((?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)\*\*\s*·\s*status:\s*(\S+)/.exec(
-          line,
-        );
+        /^- \*\*((?:RML|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)\*\*\s*·\s*status:\s*(\S+)/.exec(line);
       if (header) {
         current = {
           id: header[1],
@@ -584,20 +576,6 @@ function parseLessons(content) {
     if (overturned) current.overturned = overturned[1].trim();
   }
   return { lessons, sectionFound: true, malformed };
-}
-
-function parseOriginMapIds(content) {
-  const lines = content.split("\n");
-  const start = lines.findIndex((line) => line.trim() === "## RML origin map");
-  if (start === -1) return null;
-  let end = start + 1;
-  while (end < lines.length && !/^##\s/.test(lines[end])) end++;
-  const ids = new Set();
-  for (let index = start + 1; index < end; index++) {
-    const match = /^\|\s*(RML-\d+)\s*\|/.exec(lines[index]);
-    if (match) ids.add(match[1]);
-  }
-  return ids;
 }
 
 function parseChangelogDates(content) {
@@ -643,9 +621,8 @@ function checkChangelog(findings, file, lessons) {
   }
 }
 
-function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
+function checkLessonLedgers(findings, ledgerFiles) {
   const global = new Map();
-  const allLessons = [];
   for (const file of ledgerFiles) {
     const { lessons, sectionFound, malformed } = parseLessons(file.content);
     if (!sectionFound) findings.fail("lessons", file.relative, 0, 'no "## Lessons" section');
@@ -658,7 +635,6 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
       );
     checkChangelog(findings, file, lessons);
     for (const lesson of lessons) {
-      allLessons.push({ ...lesson, file: file.relative });
       const previous = global.get(lesson.id);
       if (previous)
         findings.fail(
@@ -685,16 +661,6 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
           lesson.line,
           lesson.id + ": RML- ids belong only in " + PORTABLE_SKILL_DIR,
         );
-      if (
-        lesson.id.startsWith("SKL-") &&
-        !file.relative.startsWith(".agents/skills/" + LAB_SKILL_DIR + "/")
-      )
-        findings.fail(
-          "lessons",
-          file.relative,
-          lesson.line,
-          lesson.id + ": SKL- ids belong only in " + LAB_SKILL_DIR,
-        );
 
       if (!LESSON_STATUSES.has(lesson.status))
         findings.fail(
@@ -718,37 +684,12 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
     }
   }
 
-  if (skillDirs.includes(LAB_SKILL_DIR)) {
-    const originMapFile = ".agents/skills/" + LAB_SKILL_DIR + "/references/lessons.md";
-    const originMapFull = ledgerFiles.find((file) => file.relative === originMapFile);
-    const originIds = originMapFull ? parseOriginMapIds(originMapFull.content) : null;
-    for (const lesson of allLessons) {
-      if (!lesson.id.startsWith("RML-")) continue;
-      if (originIds === null) {
-        findings.fail(
-          "lessons",
-          originMapFile,
-          0,
-          'no "## RML origin map" table in ' + originMapFile,
-        );
-        break;
-      }
-      if (!originIds.has(lesson.id))
-        findings.fail(
-          "lessons",
-          lesson.file,
-          lesson.line,
-          lesson.id + " is missing from the scrapkeep-lab origin map",
-        );
-    }
-  }
-
   return global;
 }
 
 function checkLessonCitations(findings, file, lessonIds) {
   for (const match of file.content.matchAll(
-    /\(((?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+(?:,\s*(?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)*)\)/g,
+    /\(((?:RML|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+(?:,\s*(?:RML|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)*)\)/g,
   )) {
     const line = lineAt(file.content, match.index);
     for (const id of match[1].split(",").map((entry) => entry.trim()))
@@ -790,6 +731,59 @@ async function checkPortabilityFull(findings, root, skillDirs) {
       continue;
     }
     checkPortability(findings, { relative, content });
+  }
+}
+
+async function checkSkillsReadmeIndex(findings, root, skillDirs) {
+  const readmeRel = ".agents/skills/README.md";
+  const readmePath = path.join(root, readmeRel);
+  if (!(await exists(readmePath))) return;
+  const content = await readNormalized(readmePath);
+  const lines = content.split("\n");
+  const headerIdx = lines.findIndex((line) => /^\|\s*Skill\s*\|/i.test(line));
+  if (headerIdx === -1) {
+    findings.fail("index", readmeRel, 1, 'no "| Skill |" table found in .agents/skills/README.md');
+    return;
+  }
+  const indexed = new Map();
+  for (let i = headerIdx + 1; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!line.startsWith("|")) break;
+    if (/^\|\s*-{3,}/.test(line)) continue;
+    const rawCell = line.split("|")[1]?.trim() ?? "";
+    const name = rawCell.replace(/^`|`$/g, "").trim();
+    if (!name) continue;
+    if (indexed.has(name)) {
+      findings.fail(
+        "index",
+        readmeRel,
+        i + 1,
+        "duplicate skill entry " + JSON.stringify(name) + " in .agents/skills/README.md",
+      );
+      continue;
+    }
+    indexed.set(name, i + 1);
+  }
+  const dirSet = new Set(skillDirs);
+  for (const dir of skillDirs) {
+    if (!indexed.has(dir)) {
+      findings.fail(
+        "index",
+        readmeRel,
+        headerIdx + 1,
+        "skill directory " + JSON.stringify(dir) + " is missing from .agents/skills/README.md",
+      );
+    }
+  }
+  for (const [name, line] of indexed.entries()) {
+    if (!dirSet.has(name)) {
+      findings.fail(
+        "index",
+        readmeRel,
+        line,
+        "indexed skill " + JSON.stringify(name) + " has no directory under .agents/skills/",
+      );
+    }
   }
 }
 
@@ -856,10 +850,11 @@ async function main() {
   }
   await checkPortabilityFull(findings, options.root, skillDirs);
 
-  const lessonIds = checkLessonLedgers(findings, ledgerFiles, skillDirs);
+  const lessonIds = checkLessonLedgers(findings, ledgerFiles);
   for (const file of allFiles) checkLessonCitations(findings, file, lessonIds);
 
   await checkVerbsStatic(findings, options.root, allFiles);
+  await checkSkillsReadmeIndex(findings, options.root, skillDirs);
 
   const failures = findings.list.filter((finding) => finding.level === "failure");
   if (options.json) {

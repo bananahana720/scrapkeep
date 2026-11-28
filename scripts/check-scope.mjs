@@ -1,6 +1,6 @@
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { git, gitOptional } from "./lib/git.mjs";
 
 const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const uiPaths = [/^index\.html$/, /^orchard\.html$/, /^src\//, /^public\//];
@@ -108,11 +108,9 @@ function parseArguments(argv) {
 }
 
 function changedFiles(root, base, candidate) {
-  const git = spawnSync("git", ["-C", root, "diff", "--name-only", base, candidate, "--"], {
-    encoding: "utf8",
-  });
-  if (git.status !== 0) throw new Error("git diff failed: " + git.stderr.trim());
-  return git.stdout.split("\n").filter(Boolean);
+  return git(["diff", "--name-only", base, candidate, "--"], { cwd: root })
+    .split("\n")
+    .filter(Boolean);
 }
 
 function classify(file) {
@@ -120,12 +118,10 @@ function classify(file) {
 }
 
 function readJsonAtRevision(root, revision, file) {
-  const git = spawnSync("git", ["-C", root, "show", revision + ":" + file], {
-    encoding: "utf8",
-  });
-  if (git.status !== 0) return null;
+  const text = gitOptional(["show", revision + ":" + file], { cwd: root, trim: false });
+  if (text === null) return null;
   try {
-    return JSON.parse(git.stdout);
+    return JSON.parse(text);
   } catch {
     return null;
   }

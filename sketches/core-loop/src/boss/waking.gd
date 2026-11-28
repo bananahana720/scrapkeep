@@ -7,7 +7,7 @@ const WakingFloors := preload("res://src/boss/waking_floors.gd")
 const WakingDress := preload("res://src/boss/waking_dress.gd")
 const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd")
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
-const MindAttacks := preload("res://src/boss/mind_attacks.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
 const FloorRule := preload("res://src/combat/floor_rule.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -76,7 +76,6 @@ var _dropped_at := -INF
 var _breach_floors := {}
 var _dress
 var _arena_dress
-var attacks: Array = []
 var landings: Array = []
 var attack_count := 0
 var phase := 1
@@ -240,9 +239,19 @@ func _end_combo() -> void:
 	_combo_left = -1
 
 
+func arena_center() -> Vector3:
+	return _center
+
+
+func is_dropping() -> int:
+	return _dropping
+
+
 func _planar_speed() -> float:
 	if ctx == null or ctx.player == null:
 		return 0.0
+	if ctx.player.has_method("body_planar_speed"):
+		return float(ctx.player.body_planar_speed())
 	var body = ctx.player.body() if ctx.player.has_method("body") else null
 	if body == null:
 		return 0.0
@@ -284,7 +293,8 @@ func _pulse_due() -> bool:
 	if not is_instance_valid(warden) or warden.staggered() or warden.state_name() == "charging":
 		return false
 	var due: float = Warden.pulse_cycle(warden.stage) - Warden.pulse_telegraph(warden.stage)
-	return warden._pulse_clock >= due - GAP and warden._pulse_clock < due + GAP and warden.flat_to_ball().length() <= warden.reach
+	var pc: float = warden.pulse_clock()
+	return pc >= due - GAP and pc < due + GAP and warden.flat_to_ball().length() <= warden.reach
 
 
 func _read_pulse() -> void:
@@ -334,7 +344,7 @@ func _lay_pending() -> void:
 		return
 	var item: Dictionary = _pending.pop_front()
 	var d: Dictionary = item["desc"]
-	var h = MindAttacks.build(d)
+	var h = Hazard.from_def(d)
 	h.ground = Callable(self, "ground_height_at")
 	ctx.root.add_child(h)
 	(item["attack"]["hazards"] as Array).append(h)
@@ -491,16 +501,8 @@ func _set_plating() -> void:
 
 
 func _clear_attacks() -> void:
-	for attack in attacks:
-		_free_hazards(attack)
-	attacks.clear()
+	super()
 	_pending.clear()
-
-
-func _free_hazards(attack: Dictionary) -> void:
-	for h in attack["hazards"]:
-		if is_instance_valid(h):
-			h.queue_free()
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
@@ -825,10 +827,7 @@ func _crew_struck(f: Node3D, kind: String) -> void:
 			continue
 		if state != FIGHT or f.fit_state != f.State.FITTING or not kind in Rules.CONTACT_KINDS:
 			return
-		var smash: bool = ctx.player.smash_landing == f
-		var reel: bool = ctx.spawner.is_reel_impact(kind, smash) if ctx.spawner != null and ctx.spawner.has_method("is_reel_impact") \
-				else smash or (ctx.player.kit.hooked and ctx.player.kit.winching)
-		if not reel:
+		if not _is_reel_impact(f, kind):
 			return
 		_uncount(c)
 		f.dislodge(f.global_position - ctx.player.ball_position())

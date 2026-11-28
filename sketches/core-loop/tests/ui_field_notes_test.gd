@@ -3,10 +3,10 @@ extends SceneTree
 const ClassDef := preload("res://src/core/class_def.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # Tab's field notes as pictures (v3 W12, playtest entry 8: "a whole essay of text").
 # For each class, in a real run with Tab held:

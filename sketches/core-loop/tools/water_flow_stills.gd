@@ -20,6 +20,7 @@ extends SceneTree
 const OffscreenWindow := preload("res://tools/offscreen_window.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Scenery := preload("res://src/presentation/spillway_scenery.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SIZE := Vector2i(1280, 720)
 # Gaps short enough that a sheet's fall (2.4 m/s, about 86 px/s in the close view) moves its 3.9 m
@@ -59,7 +60,7 @@ func _initialize() -> void:
 			printerr("water_flow_stills: unknown option %s" % arg)
 			quit(2)
 			return
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		printerr("water_flow_stills: needs --out=<absolute dir> and a display")
 		quit(2)
 		return

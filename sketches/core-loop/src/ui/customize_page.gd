@@ -9,12 +9,12 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const SettingsStore := preload("res://src/ui/settings_store.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const WorldGrade := preload("res://src/presentation/world_grade.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 signal back_requested
@@ -63,7 +63,6 @@ var back: Button
 var pilot := "pylon_engineer"
 var assets := Cosmetics.asset_paths()
 var resolver := Cosmetics.new()
-var reduced_motion := false
 var slot := "paint"
 var trying := {}
 var heft_pinned := 1
@@ -413,7 +412,7 @@ func refresh_preview(animate := true) -> void:
 	var shell_id := look("shell")
 	var variant := String(Cosmetics.row(shell_id).get("asset", "")) if shell_id != "" else ""
 	var key := "%s|%s" % [pilot, variant]
-	var moving: bool = animate and not reduced_motion and is_visible_in_tree()
+	var moving: bool = animate and not Comfort.reduced_motion and is_visible_in_tree()
 	if key != _look_key or _rec.is_empty():
 		var hop: bool = _look_key != "" and not _look_key.begins_with(pilot + "|")
 		_decal_view._decal = {}
@@ -436,7 +435,7 @@ func refresh_preview(animate := true) -> void:
 			var seat: Vector3 = _rec.pilot.position
 			_rec.pilot.position = seat + Vector3(0.0, 0.5, 0.0)
 			_rec.pilot.create_tween().tween_property(_rec.pilot, "position", seat, HOP_SECONDS).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		if not _intro_shown.has(variant) and not reduced_motion and is_visible_in_tree():
+		if not _intro_shown.has(variant) and not Comfort.reduced_motion and is_visible_in_tree():
 			_intro_shown[variant] = true
 			_intro_class = 1
 			_intro_left = STEP_SECONDS
@@ -449,7 +448,7 @@ func refresh_preview(animate := true) -> void:
 	if _rec.get("pilot") != null:
 		_painter.fit_outfit(_rec.pilot, look("outfit"), tints)
 	_decal_view._apply_decal(_rec, resolver.resolve(look("decal"), assets) if look("decal") != "" and not Cosmetics.is_pending(look("decal")) else {})
-	if reduced_motion and is_visible_in_tree():
+	if Comfort.reduced_motion and is_visible_in_tree():
 		_container.modulate.a = 0.4
 		create_tween().tween_property(_container, "modulate:a", 1.0, CROSSFADE_SECONDS)
 
@@ -461,7 +460,7 @@ func preview_rec() -> Dictionary:
 func _hover_heft(n: int) -> void:
 	if _rec.is_empty():
 		return
-	_painter.set_heft_class(_rec, n if n > 0 else heft_pinned, not reduced_motion)
+	_painter.set_heft_class(_rec, n if n > 0 else heft_pinned, not Comfort.reduced_motion)
 
 
 func pin_heft(n: int) -> void:
@@ -470,7 +469,7 @@ func pin_heft(n: int) -> void:
 	for i in _pips.size():
 		_pips[i].button_pressed = i + 1 == heft_pinned
 	if not _rec.is_empty():
-		_painter.set_heft_class(_rec, heft_pinned, not reduced_motion)
+		_painter.set_heft_class(_rec, heft_pinned, not Comfort.reduced_motion)
 
 
 func _stop_intro() -> void:
@@ -483,8 +482,6 @@ func _stop_intro() -> void:
 func _open_from_camp() -> void:
 	var screens = _camp.get_parent().get_parent()
 	_game = screens.game
-	if _game.get("storage_dir") != null:
-		reduced_motion = SettingsStore.new(_game.storage_dir).reduced_motion()
 	open(_game.ctx.profile, _game.progress)
 
 
@@ -515,7 +512,7 @@ func open(profile, progress = null) -> void:
 	refresh()
 	focus("pilot")
 	if is_inside_tree():
-		if reduced_motion:
+		if Comfort.reduced_motion:
 			modulate.a = 0.0
 			create_tween().tween_property(self, "modulate:a", 1.0, CROSSFADE_SECONDS)
 		else:
@@ -539,8 +536,7 @@ static func backfill(profile, progress) -> int:
 		if amount >= float(Achievements.row(id)["count"]):
 			progress._earn(id, Achievements.row(id))
 			granted += 1
-	if profile.can_save:
-		profile.save()
+	profile.save_if_allowed()
 	return granted
 
 
@@ -726,7 +722,7 @@ func click_card(card) -> bool:
 	_stop_intro()
 	if card.state in ["locked", "hidden"]:
 		_hover.text = hover_text(card)
-		if not reduced_motion and card.is_inside_tree():
+		if not Comfort.reduced_motion and card.is_inside_tree():
 			var rest: Vector2 = card.position
 			var tween: Tween = card.create_tween()
 			for dx in [SHAKE_PX, -SHAKE_PX, SHAKE_PX * 0.5, 0.0]:
@@ -740,7 +736,7 @@ func click_card(card) -> bool:
 		_seen_dirty = true
 	refresh()
 	var worn := card_for(card.id)
-	if worn != null and not reduced_motion and worn.is_inside_tree():
+	if worn != null and not Comfort.reduced_motion and worn.is_inside_tree():
 		worn.scale = Vector2(0.9, 0.9)
 		worn.create_tween().tween_property(worn, "scale", Vector2.ONE, POP_SECONDS).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	return true
@@ -753,7 +749,7 @@ func _select_slot(id: String) -> void:
 	trying = {}
 	_seen_clock.clear()
 	_build_cards()
-	if reduced_motion or not is_inside_tree():
+	if Comfort.reduced_motion or not is_inside_tree():
 		return
 	_grid.modulate.a = 0.0
 	create_tween().tween_property(_grid, "modulate:a", 1.0, SWAP_SECONDS)
@@ -929,7 +925,7 @@ func _on_resize() -> void:
 func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
-	if not reduced_motion and not _dragging and _pivot != null:
+	if not Comfort.reduced_motion and not _dragging and _pivot != null:
 		if _spin_wait > 0.0:
 			_spin_wait = maxf(0.0, _spin_wait - delta)
 		else:

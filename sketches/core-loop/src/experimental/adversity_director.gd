@@ -1,14 +1,16 @@
 extends RefCounted
 
 
+const EventDirector := preload("res://src/world/event_director.gd")
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const DEFAULT_CONFIG_PATH := "res://src/experimental/resources/director/spillway_adversity_config.tres"
 const DIG_CONFIG_PATH := "res://src/experimental/resources/director/dig_adversity_config.tres"
 const HIGHDRAFT_CONFIG_PATH := "res://src/experimental/resources/director/highdraft_adversity_config.tres"
 const MIN_SPAWN_GAP_M := 25.0
 const ARRIVAL_TELL_S := 1.0
-const HAZARD_TELL_FLOOR_S := 0.6
 
 enum HazardPhase { IDLE, WARNING, RAMP, PEAK, RECEDE, COOLDOWN }
 
@@ -268,7 +270,7 @@ func compute_magnetic_force(
 	if not hdefs.has(&"magnetic_storm"):
 		return Vector3.ZERO
 	var def: Dictionary = hdefs[&"magnetic_storm"]
-	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var cruise := float(_cfg("default_cruise_mps", Tuning.CRUISE_MPS)) if cruise_mps <= 0.0 else cruise_mps
 	var fast_ratio := float(_cfg("fast_speed_ratio", 0.85))
 	var radius := float(def["radius_m"])
 	var to_pole := Vector3(hazard_origin.x - entity_pos.x, 0.0, hazard_origin.z - entity_pos.z)
@@ -299,7 +301,7 @@ func compute_magnetic_force(
 				var boost_scale := 0.0 if speed >= cruise * 1.65 else 1.0
 				var raw := lateral * float(def["pull_strength"]) * 0.55 * falloff \
 					+ forward * float(def["slingshot_boost"]) * falloff * boost_scale
-				return RefurbishedElites.never_brake(raw, entity_vel)
+				return EventDirector.never_brake(raw, entity_vel)
 			return (inward * float(def["pull_strength"]) * 0.45 + swirl * float(def["swirl_strength"]) * 0.25) * falloff
 		_:
 			return Vector3.ZERO
@@ -323,7 +325,7 @@ func compute_crosswind_force(
 	var dist := Vector2(entity_pos.x - hazard_origin.x, entity_pos.z - hazard_origin.z).length()
 	if dist > radius:
 		return Vector3.ZERO
-	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var cruise := float(_cfg("default_cruise_mps", Tuning.CRUISE_MPS)) if cruise_mps <= 0.0 else cruise_mps
 	var fast_ratio := float(_cfg("fast_speed_ratio", 0.85))
 	var strength := float(def.get("crosswind_strength", 13.5)) * intensity
 	var wind_dir := Vector3(0.0, 0.0, 1.0) if int(hazard_cycles_completed) % 2 == 0 else Vector3(1.0, 0.0, 0.0)
@@ -340,7 +342,7 @@ func compute_crosswind_force(
 				var lateral := wind_dir - forward * wind_dir.dot(forward)
 				var boost_scale := 0.0 if speed >= cruise * 1.65 else 1.0
 				var raw := lateral * strength * 0.45 + forward * float(def.get("slingshot_boost", 11.5)) * intensity * boost_scale
-				return RefurbishedElites.never_brake(raw, entity_vel)
+				return EventDirector.never_brake(raw, entity_vel)
 			return wind_dir * strength * 0.55
 		_:
 			return Vector3.ZERO
@@ -363,14 +365,14 @@ func compute_tremor_force(
 	var dist := Vector2(entity_pos.x - hazard_origin.x, entity_pos.z - hazard_origin.z).length()
 	if dist > radius:
 		return Vector3.ZERO
-	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var cruise := float(_cfg("default_cruise_mps", Tuning.CRUISE_MPS)) if cruise_mps <= 0.0 else cruise_mps
 	var fast_ratio := float(_cfg("fast_speed_ratio", 0.85))
 	var pulse_sign := 1.0 if sin(hazard_elapsed_s * 5.0) >= 0.0 else -1.0
 	var lateral_dir := Vector3(pulse_sign, 0.0, -pulse_sign * 0.5).normalized()
 	var raw := lateral_dir * float(def.get("tremor_lateral_accel", 11.5)) * intensity
 	var flat_v := Vector3(entity_vel.x, 0.0, entity_vel.z)
 	if flat_v.length() >= cruise * fast_ratio:
-		return RefurbishedElites.never_brake(raw * 0.35, entity_vel)
+		return EventDirector.never_brake(raw * 0.35, entity_vel)
 	return raw
 
 
@@ -381,7 +383,7 @@ func advance(
 		alive_count: int,
 		cruise_mps: float = -1.0,
 		grounded: bool = true) -> Dictionary:
-	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var cruise := float(_cfg("default_cruise_mps", Tuning.CRUISE_MPS)) if cruise_mps <= 0.0 else cruise_mps
 	var result := {
 		"facts": [],
 		"due_spawns": [],
@@ -706,7 +708,7 @@ func _step_hazard(
 							"kind": "hazard_announced",
 							"id": chosen,
 							"display_name": String(def["display_name"]),
-							"warning_s": maxf(HAZARD_TELL_FLOOR_S, float(def["warning_s"])),
+							"warning_s": maxf(EnvTags.MIN_TELL_S, float(def["warning_s"])),
 							"at": hazard_origin,
 						})
 		HazardPhase.COOLDOWN:
@@ -716,7 +718,7 @@ func _step_hazard(
 				hazard_phase_changed.emit(&"", hazard_phase)
 		HazardPhase.WARNING:
 			var def: Dictionary = hdefs[active_hazard_id]
-			var warn_s := maxf(HAZARD_TELL_FLOOR_S, float(def["warning_s"]))
+			var warn_s := maxf(EnvTags.MIN_TELL_S, float(def["warning_s"]))
 			hazard_elapsed_s += delta
 			if hazard_elapsed_s >= warn_s:
 				hazard_phase = HazardPhase.RAMP
@@ -817,22 +819,24 @@ func _emit_hazard_tags(def: Dictionary, out_tags: Array) -> void:
 	var intensity := maxf(0.4, hazard_intensity())
 	var radius := float(def["radius_m"])
 	var id_str := String(def["id"])
-	out_tags.append(RefurbishedElites.make_env_tag_payload(
+	out_tags.append(EnvTags.make_payload(
 		StringName(def["primary_tag"]),
 		hazard_origin,
 		radius,
 		"hazard:%s" % id_str,
 		intensity,
-		2.5
+		2.5,
+		EnvTags.BOUNDS_ELITE
 	))
 	if def.has("secondary_tag") and StringName(def["secondary_tag"]) != &"":
-		out_tags.append(RefurbishedElites.make_env_tag_payload(
+		out_tags.append(EnvTags.make_payload(
 			StringName(def["secondary_tag"]),
 			hazard_origin,
 			radius * 0.85,
 			"hazard:%s#secondary" % id_str,
 			intensity * 0.85,
-			2.5
+			2.5,
+			EnvTags.BOUNDS_ELITE
 		))
 
 

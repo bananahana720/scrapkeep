@@ -9,6 +9,14 @@ const AT := 2
 
 static var table = null
 
+
+static func set_table(next) -> void:
+	table = next
+
+
+static func reset_for_tests() -> void:
+	table = null
+
 const ROWS := {
 	"ballast_rig": {
 		"name": "Ballast Rig", "maker": "spillway_works", "tags": ["frost"], "color": Palette.RUST,
@@ -394,14 +402,6 @@ static func cross_system_row(id: String) -> Dictionary:
 	if CROSS_SYSTEM_W50.has(id):
 		return (CROSS_SYSTEM_W50[id] as Dictionary).duplicate(true)
 	return {}
-
-
-static func cross_system_active(held: Array, part_info: Callable, context := {}) -> Array:
-	var out: Array = []
-	for id in cross_system_ids(true):
-		if cross_system_awake(id, held, part_info, context):
-			out.append(id)
-	return out
 
 
 static func cross_system_awake(id: String, held: Array, part_info: Callable, context := {}) -> bool:

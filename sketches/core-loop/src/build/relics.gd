@@ -3,13 +3,12 @@ extends RefCounted
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const MakerDefs := preload("res://src/build/maker_defs.gd")
 
 const PREFIX := "relic:"
 const MAX_NAME_WORDS := 3
 const MAX_TEXT_WORDS := 8
 const MIN_PER_PILOT := 2
-const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
-const VALID_MAKERS := ["waking", "spillway_works", "fleet_surplus", "highdraft_roosts", "mind_glass", "redjaw", "moss"]
 const VALID_WORLDS := [1, 2, 3]
 const RIVET := ["runner_gunner"]
 const SUFFIX := {AbilityState.WEAPON: "_weapon", AbilityState.MOVEMENT: "_move",
@@ -156,12 +155,6 @@ static func alt_ids(world := 0) -> Array:
 	if world == 0:
 		return ALT_ROWS.keys()
 	return ALT_ROWS.keys().filter(func(id): return int(ALT_ROWS[id]["world"]) == world)
-
-
-static func world_swap_ids(world := 0) -> Array:
-	if world == 0:
-		return WORLD_SWAPS.keys()
-	return WORLD_SWAPS.keys().filter(func(id): return int(WORLD_SWAPS[id]["world"]) == world)
 
 
 static func all_rows() -> Dictionary:
@@ -313,10 +306,20 @@ static func _kit_slot(pilot: String, slot: String) -> String:
 		AbilityState.SPECIAL: def.special_id, AbilityState.SMASH: def.smash_id, AbilityState.LINE: def.line_id}.get(slot, "")
 
 
+static func pilots() -> Array:
+	return ClassDef.all().map(func(d): return String(d.id))
+
+
+static func valid_makers() -> Array:
+	return MakerDefs.SETS.keys()
+
+
 static func validate(rows = null) -> Array:
 	var table: Dictionary = all_rows() if rows == null else rows
 	var bad := []
 	var per_pilot := {}
+	var known_pilots := pilots()
+	var known_makers := valid_makers()
 	for id in table:
 		var r: Dictionary = table[id]
 		var name_words := String(r.get("name", "")).split(" ", false).size()
@@ -326,7 +329,7 @@ static func validate(rows = null) -> Array:
 		if text_words < 1 or text_words > MAX_TEXT_WORDS:
 			bad.append("%s: text has %d words" % [id, text_words])
 		var maker := String(r.get("maker", ""))
-		if not maker in VALID_MAKERS:
+		if not maker in known_makers:
 			bad.append("%s: maker %s is not valid" % [id, maker])
 		var world := int(r.get("world", 0))
 		if not world in VALID_WORLDS:
@@ -345,14 +348,14 @@ static func validate(rows = null) -> Array:
 			bad.append("%s: knob out of range" % id)
 		if r.get("pilots", []).size() != 1:
 			bad.append("%s: a relic fits exactly one pilot" % id)
-		var pilots: Array = r.get("pilots", [])
-		if pilots.is_empty():
+		var row_pilots: Array = r.get("pilots", [])
+		if row_pilots.is_empty():
 			bad.append("%s: no pilot" % id)
-		for pilot in pilots:
-			if not pilot in PILOTS or _kit_slot(pilot, slot) == "":
+		for pilot in row_pilots:
+			if not pilot in known_pilots or _kit_slot(pilot, slot) == "":
 				bad.append("%s: pilot %s has no %s slot" % [id, pilot, slot])
 			per_pilot[pilot] = int(per_pilot.get(pilot, 0)) + 1
-	for pilot in PILOTS:
+	for pilot in known_pilots:
 		if int(per_pilot.get(pilot, 0)) < MIN_PER_PILOT:
 			bad.append("%s: fewer than %d relics" % [pilot, MIN_PER_PILOT])
 	return bad

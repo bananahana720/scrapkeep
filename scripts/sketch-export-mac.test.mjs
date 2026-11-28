@@ -21,13 +21,10 @@ import {
   templatesDir,
 } from "./sketch-export-mac.mjs";
 import { parsePresets, selfPlayPresetText } from "./sketch-export.mjs";
+import { git as runGit } from "./lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const committed = (rel) => {
-  const shown = spawnSync("git", ["-C", root, "show", "HEAD:" + rel], { encoding: "utf8" });
-  assert.equal(shown.status, 0, shown.stderr);
-  return shown.stdout;
-};
+const committed = (rel) => runGit(["show", "HEAD:" + rel], { cwd: root, trim: false });
 const presetsText = committed("sketches/core-loop/export_presets.cfg");
 const projectText = committed("sketches/core-loop/project.godot");
 
@@ -212,7 +209,7 @@ test("withSwappedFiles restores the file when the process gets SIGTERM", async (
 
 test("swapFilesProblem refuses to start when a swapped file differs from git", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "swap-repo-"));
-  const git = (...args) => spawnSync("git", ["-C", repo, ...args], { encoding: "utf8" });
+  const git = (...args) => runGit(args, { cwd: repo, trim: false });
   git("init", "-q");
   for (const rel of SWAPPED_FILES) {
     mkdirSync(path.dirname(path.join(repo, rel)), { recursive: true });
@@ -220,9 +217,26 @@ test("swapFilesProblem refuses to start when a swapped file differs from git", (
   }
   git("add", ".");
   git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base");
-  assert.equal(swapFilesProblem(git("status", "--porcelain", "--", ...SWAPPED_FILES).stdout), null);
+  assert.equal(swapFilesProblem(git("status", "--porcelain", "--", ...SWAPPED_FILES)), null);
   writeFileSync(path.join(repo, SWAPPED_FILES[0]), astcProjectText("[rendering]\n"));
-  const problem = swapFilesProblem(git("status", "--porcelain", "--", ...SWAPPED_FILES).stdout);
+  const problem = swapFilesProblem(git("status", "--porcelain", "--", ...SWAPPED_FILES));
   assert.match(problem, /sketches\/core-loop\/project\.godot differ from git/);
   assert.doesNotMatch(problem, /export_presets/);
 });
+
+test(
+  "sketch-export-mac states plainly that GODOT_BIN is not set when unset",
+  { skip: process.platform !== "darwin" },
+  () => {
+    const env = { ...process.env };
+    delete env.GODOT_BIN;
+    const result = spawnSync(process.execPath, ["scripts/sketch-export-mac.mjs"], {
+      cwd: root,
+      encoding: "utf8",
+      env,
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /GODOT_BIN is not set/);
+    assert.doesNotMatch(result.stderr, /: null\b/);
+  },
+);

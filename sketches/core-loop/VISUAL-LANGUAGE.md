@@ -7,7 +7,7 @@ This is the style sheet for the v2 greybox as it grows into its real look (TRACK
 | Fact | Source row |
 | --- | --- |
 | A colour's value | `src/core/palette.gd` |
-| A colour's meaning, and the code that must never draw it | `src/core/colour_meanings.gd` (checked by `tests/colour_meanings_test.gd`) |
+| A colour's meaning, and the code that must never draw it | `tests/support/colour_meanings.gd` (checked by `tests/colour_meanings_test.gd`) |
 | A class's colour, shape and sound | the class row in `src/core/class_def.gd` |
 | An event's colour, shape, sound, wording and priority | `src/core/event_kinds.gd` |
 | A threat type's fill, motion and sound | `src/combat/threat_grammar.gd` (W2) |
@@ -373,7 +373,7 @@ This section makes "legible workshop instrumentation" concrete (AD-08, AC-15).
 ## 8. Motion and timing
 
 - **Easing follows function.** Anything that measures time or distance moves linearly: cooldown sweeps, gauge fills, telegraph fills, a wave's leading edge. Arrivals ease out (cubic). Departures ease in. A back-out overshoot (1.2) is reserved for player-owned success (ready pulse, pickup, synergy), so bounce means good news.
-- **Hit-stop.** Hit-stop belongs to the player's own strike, and the ball's motion never stops: a roll, a dodge, a reward or a beacon asks for none, and damage taken never gets one (`juice.gd` `STRIKE_STOP_FACTS`). An ordinary hit stops 12 to 40 ms by its damage (the `enemy_struck` row in `event_kinds.gd`), and a heavier impact profile stops longer, up to the 60 ms cap (`juice.gd` `SPINE_CAP_MS`). Stops keep a 90 ms gap and share a 60 ms budget per 300 ms and 100 ms per second (`event_kinds.gd` `STOP_*`). Those rows own the numbers; this line only names the rule.
+- **Hit-stop.** Hit-stop belongs to the player's own strike, and the ball's motion never stops: a roll, a dodge, a reward or a beacon asks for none, and damage taken never gets one (`juice.gd` `STRIKE_STOP_FACTS`). An ordinary hit stops 12 to 40 ms by its damage (the `enemy_struck` row in `event_juice.gd`), and a heavier impact profile stops longer, up to the 60 ms cap (`event_juice.gd` `SPINE_CAP_MS`). Stops keep a 90 ms gap and share a 60 ms budget per 300 ms and 100 ms per second (`event_juice.gd` `STOP_*`). Those rows own the numbers; this line only names the rule.
 - **One bold animation per event.** Each event row owns one hero motion that matches its shape, such as the arc slam's ring or Kest's line of starbursts. Everything else in that event runs at 30% or less of its scale and brightness. Two events in one frame play by priority from `event_kinds`, and the lower one drops to its sound.
 - **Reduced motion (RR-11).** Motion that measures time or position is information and stays. Motion that celebrates is cosmetic and goes.
 

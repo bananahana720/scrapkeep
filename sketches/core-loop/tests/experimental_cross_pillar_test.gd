@@ -21,35 +21,33 @@ func _initialize() -> void:
 	_test_schema_parity_and_emitter_subtag_rules()
 	_test_setpieces_builds_ecology_live_composition()
 	_test_director_elites_encounters_builds_ecology_composition()
-	EnvTags.reset()
-	PartResource.reset()
-	JuryRig.reset()
-	Ecology.reset()
 	quit(_t.verdict())
 
 
 func _test_schema_parity_and_emitter_subtag_rules() -> void:
-	_t.eq("EnvTags and DynamicSetpieces share exact 6 canonical tags",
-		EnvTags.CANONICAL_TAGS.size() == DynamicSetpieces.ENV_TAGS.size()
-			and DynamicSetpieces.ENV_TAGS.all(func(tag: StringName) -> bool: return EnvTags.is_canonical_tag(tag)),
-		true)
-	_t.eq("EnvTags and RefurbishedElites share exact 6 canonical tags",
-		EnvTags.CANONICAL_TAGS.size() == RefurbishedElites.ENV_TAGS.size()
-			and RefurbishedElites.ENV_TAGS.all(func(tag: StringName) -> bool: return EnvTags.is_canonical_tag(tag)),
+	var tag_names: Array[String] = []
+	for tag in EnvTags.CANONICAL_TAGS:
+		tag_names.append(String(tag))
+	_t.eq("EnvTags lists exactly the six canonical tags", tag_names,
+		["electrified", "burning", "slag_coated", "magnetic", "coolant_brittle", "soaked_conductive"])
+	_t.eq("EnvTags knows each canonical tag and refuses an unknown one",
+		EnvTags.CANONICAL_TAGS.all(func(tag: StringName) -> bool: return EnvTags.is_canonical_tag(tag))
+			and not EnvTags.is_canonical_tag(&"not_a_tag"),
 		true)
 
-	var p_setpiece := DynamicSetpieces.make_env_tag(
-		DynamicSetpieces.TAG_MAGNETIC, Vector3(1, 2, 3), 10.0, "crane_test", 1.2, 2.0
+	var p_setpiece := EnvTags.make_payload(
+		EnvTags.TAG_MAGNETIC, Vector3(1, 2, 3), 10.0, "crane_test", 1.2, 2.0, EnvTags.BOUNDS_SETPIECE
 	)
-	_t.eq("DynamicSetpieces payload validates cleanly in EnvTags", EnvTags.validate_payload(p_setpiece), [])
+	_t.eq("a setpiece-bounds payload validates cleanly in EnvTags", EnvTags.validate_payload(p_setpiece), [])
 
-	var p_elite := RefurbishedElites.make_env_tag_payload(
-		&"slag_coated", Vector3(4, 0, 5), 6.0, "elite_test", 1.1, 3.0
+	var p_elite := EnvTags.make_payload(
+		&"slag_coated", Vector3(4, 0, 5), 6.0, "elite_test", 1.1, 3.0, EnvTags.BOUNDS_ELITE
 	)
-	_t.eq("RefurbishedElites payload validates cleanly in EnvTags", EnvTags.validate_payload(p_elite), [])
-	_t.eq("EnvTags payload validates cleanly in RefurbishedElites",
-		RefurbishedElites.is_valid_env_tag_payload(
-			EnvTags.make_payload(EnvTags.TAG_COOLANT_BRITTLE, Vector3.ZERO, 5.0, "part:test", 1.0, 4.0)
+	_t.eq("an elite-bounds payload validates cleanly in EnvTags", EnvTags.validate_payload(p_elite), [])
+	_t.eq("a default-bounds payload is valid in EnvTags",
+		EnvTags.is_valid_payload(
+			EnvTags.make_payload(EnvTags.TAG_COOLANT_BRITTLE, Vector3.ZERO, 5.0, "part:test", 1.0, 4.0),
+			EnvTags.BOUNDS_ELITE
 		), true)
 
 	var field := EnvTags.new()

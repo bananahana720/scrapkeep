@@ -1,6 +1,5 @@
 extends RefCounted
 
-const Parts := preload("res://src/build/parts.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 
 
@@ -50,10 +49,10 @@ static func offered_tiers(profile) -> Array:
 	return range(RunTier.top_unlocked(profile) + 1)
 
 
-static func list_for(pilot: String) -> Array:
+static func list_for(pilot: String, part_info := Callable()) -> Array:
 	var out := []
 	for spec in LISTS.get(pilot, []):
-		out.append(_resolve(spec))
+		out.append(_resolve(spec, part_info))
 	return out
 
 
@@ -64,21 +63,28 @@ static func ids_for(pilot: String) -> Array:
 	return out
 
 
-static func row(pilot: String, id: String) -> Dictionary:
-	for r in list_for(pilot):
-		if r["id"] == id:
-			return r
+static func _spec(pilot: String, id: String) -> Dictionary:
+	for spec in LISTS.get(pilot, []):
+		var spec_id: String = spec["part"] if spec["do"] == "part" else spec["do"]
+		if spec_id == id:
+			return spec
 	return {}
 
 
-static func _resolve(spec: Dictionary) -> Dictionary:
+static func row(pilot: String, id: String, part_info := Callable()) -> Dictionary:
+	var spec := _spec(pilot, id)
+	return _resolve(spec, part_info) if not spec.is_empty() else {}
+
+
+static func _resolve(spec: Dictionary, part_info: Callable) -> Dictionary:
 	var r := spec.duplicate()
 	match String(spec["do"]):
 		"part":
 			r["id"] = spec["part"]
-			r["name"] = Parts.display_name(spec["part"])
-			r["icon"] = Parts.icon_of(spec["part"])
-			r["effect"] = String(Parts.row(spec["part"]).get("verb", ""))
+			var info: Dictionary = part_info.call(spec["part"]) if part_info.is_valid() else {}
+			r["name"] = String(info.get("name", spec["part"]))
+			r["icon"] = String(info.get("icon", ""))
+			r["effect"] = String(info.get("effect", ""))
 		"cogs":
 			r["id"] = "cogs"
 			r["amount"] = START_COGS
@@ -108,14 +114,14 @@ static func draw(pilot: String, run_seed: int, roll: int) -> Array:
 
 
 static func apply(run, pilot: String, id: String) -> bool:
-	var r := row(pilot, id)
-	if r.is_empty():
+	var spec := _spec(pilot, id)
+	if spec.is_empty():
 		return false
-	match String(r["do"]):
+	match String(spec["do"]):
 		"part":
-			run.add_part(String(r["part"]), SOURCE)
+			run.add_part(String(spec["part"]), SOURCE)
 		"cogs":
-			run.add_cogs(int(r["amount"]))
+			run.add_cogs(START_COGS)
 		"core":
 			run.add_core(SOURCE, Vector3.ZERO)
 	return true

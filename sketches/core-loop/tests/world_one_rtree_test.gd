@@ -135,7 +135,7 @@ func _take(picks: Array) -> bool:
 	for id in picks:
 		tree.open_checkpoint()
 		ok = tree.pick(id) and ok
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 	return ok
 
 
@@ -323,7 +323,7 @@ func _trail_checks() -> void:
 	var ball: Vector3 = _player.ball_position()
 	var on_path := true
 	for patch in _trail.patches:
-		on_path = on_path and patch["at"].is_equal_approx(_combat._floor_at(ball)) and ball.y - patch["at"].y <= WearTrail.FLOOR_REACH and patch["at"].y < ball.y
+		on_path = on_path and patch["at"].is_equal_approx(_combat.floor_at(ball)) and ball.y - patch["at"].y <= WearTrail.FLOOR_REACH and patch["at"].y < ball.y
 	_check("one patch per unit of wear, one sputter each", lost == 3.0 and _trail.patches.size() == 3 and heard.size() == 3 and on_path,
 		"%.0f units worn, %d patches, %d sputters, on the ball's ground %s" % [lost, _trail.patches.size(), heard.size(), on_path])
 	# Cap of six, oldest retired.

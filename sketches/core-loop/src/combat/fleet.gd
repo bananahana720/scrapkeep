@@ -7,7 +7,6 @@ const Swarm := preload("res://src/combat/swarm.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
-const Terrain := preload("res://src/world/terrain.gd")
 
 const SCRIPTS := {
 	"mag_trapper": preload("res://src/combat/mag_trapper.gd"),
@@ -108,7 +107,7 @@ func make(kind: String) -> Node3D:
 
 # Godot main-thread load() stalls ~420 ms on first spawn; skip threaded warm-up in deterministic bot runs.
 func _warm_scripts() -> void:
-	if SimClock.ticks and not Terrain.threaded_in_bot_runs:
+	if SimClock.ticks and not SimClock.threaded_in_bot_runs:
 		return
 	for kind in Roster.ROWS.keys():
 		if _loaded.has(kind) or SCRIPTS.has(kind) or not Roster.row(kind).has("script") or not Roster.built(kind):
@@ -169,7 +168,7 @@ func spawn_guard(home: Vector3, at: Vector3, kind := "swarm_remnant") -> Object:
 func on_swarm_scattered(swarm, at: Vector3, drones: int) -> void:
 	scatters += 1
 	ctx.events.swarm_scattered.emit(at, drones)
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Enemy.GROUP):
 		if enemy.has_method("on_guard_scattered"):
 			enemy.on_guard_scattered(swarm, at)
 
@@ -185,7 +184,7 @@ func mind_adapt(habit: String, icon: String, at: Vector3) -> void:
 
 
 func discover(id: String, at: Vector3) -> void:
-	combat._discover(id, at)
+	combat.discover(id, at)
 
 
 func build_read() -> Dictionary:

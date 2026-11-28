@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Worlds := preload("res://src/core/worlds.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The ending page (prog-G5): a win over the final world's boss opens the summary on
@@ -100,7 +100,7 @@ func _run() -> void:
 	_t.check("Space after the hold closes the page", not screens.ending_open(), "still open")
 	_t.eq("closing leaves the state in summary", flow.state_name(), "summary")
 	_t.check("the summary reads RUN COMPLETE", screens._title.text.contains("RUN COMPLETE"), screens._title.text)
-	_t.check("the summary holds the Mind's epitaph", screens._body.text.contains(String(mind["epitaph"])), screens._body.text)
+	_t.check("the summary holds the Mind's epitaph", screens.said_body().contains(String(mind["epitaph"])), screens.said_body())
 	_t.check("the summary actions are back", screens._actions.visible and screens._actions.get_child_count() > 0, "hidden")
 	_t.check("the comic row is back", screens._comic_row.visible, "hidden")
 	_t.eq("run_ended fired once", _ended, 1)
@@ -128,7 +128,7 @@ func _run() -> void:
 
 	# Brindle beaten on the alpha table, with the run ending at stage 2.
 	_end_at(2, true)
-	_t.eq("brindle at stage 2: the victory row was Brindle's", String(screens._body.text).contains(String(Worlds.BOSSES["brindle"]["epitaph"])), true)
+	_t.eq("brindle at stage 2: the victory row was Brindle's", screens.said_body().contains(String(Worlds.BOSSES["brindle"]["epitaph"])), true)
 	_t.check("brindle at stage 2: no ending page", not screens.ending_open(), "open")
 
 	# A world-1 win on the slice table.

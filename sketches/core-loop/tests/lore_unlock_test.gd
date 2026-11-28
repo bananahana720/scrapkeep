@@ -8,6 +8,7 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const Codex := preload("res://src/core/codex.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const Parts := preload("res://src/build/parts.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Field notes unlock one per lore moment (the seven below), exchange rows on zone entry.
@@ -44,6 +45,9 @@ class FakeProfile:
 		seen.append(id)
 		return true
 
+	func save_if_allowed() -> bool:
+		return true
+
 var _t
 var _events
 var _codex
@@ -68,7 +72,7 @@ func _fresh(dir: String):
 	DirAccess.remove_absolute(dir.path_join(Codex.STATE_FILE))
 	_events = GameEvents.new()
 	_codex = Codex.new()
-	_codex.setup(_events, null, FakeFlow.new(), dir)
+	_codex.setup(_events, null, FakeFlow.new(), dir, func(id: String) -> bool: var d: Resource = Parts.def(id); return d != null and d.rarity == "relic")
 	_found = []
 	_codex.lore_found.connect(func(id: String): _found.append(id))
 

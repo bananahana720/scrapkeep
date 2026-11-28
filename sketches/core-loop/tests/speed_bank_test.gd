@@ -4,6 +4,7 @@ extends SceneTree
 const GameEvents := preload("res://src/core/game_events.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
+const SpeedBank := preload("res://src/movement/speed_bank.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
@@ -226,8 +227,8 @@ func _step(delta: float) -> void:
 			if _run["stop_ticks"] >= 2:
 				_run["stopped_grounded"] = true
 				_check("%s slide stop consumes" % _run["pilot"],
-					_source.hold.get("brake_held", false) and _player._speed_bank_chosen == _player.BankMove.NONE and _player.speed_bank.is_empty(),
-					"move held, brake held, grounded at %.2f m/s; eligibility=%d, bank=%s" % [_planar(), _player._speed_bank_chosen, _player.speed_bank])
+					_source.hold.get("brake_held", false) and _player.speed_bank_move() == SpeedBank.BankMove.NONE and _player.speed_bank.is_empty(),
+					"move held, brake held, grounded at %.2f m/s; eligibility=%d, bank=%s" % [_planar(), _player.speed_bank_move(), _player.speed_bank])
 				_run["resumed"] = true
 				_source.hold["move"] = Vector2(0.0, 1.0)
 				_source.hold.erase("brake_held")
@@ -243,8 +244,8 @@ func _step(delta: float) -> void:
 			_run["gentle_landed"] = true
 			var gentle: bool = _landing_count == _run["landings_before"]
 			if run == "gentle_drop":
-				_check("%s gentle landing consumes" % _run["pilot"], gentle and _planar() < Tuning.BANK_ARM * _tuning.f("cruise") and _player._speed_bank_chosen == _player.BankMove.NONE and _player.speed_bank.is_empty(),
-					"first probe landing %.2f m/s, impact events=%d, eligibility=%d, bank=%s" % [_planar(), _landing_count - _run["landings_before"], _player._speed_bank_chosen, _player.speed_bank])
+				_check("%s gentle landing consumes" % _run["pilot"], gentle and _planar() < Tuning.BANK_ARM * _tuning.f("cruise") and _player.speed_bank_move() == SpeedBank.BankMove.NONE and _player.speed_bank.is_empty(),
+					"first probe landing %.2f m/s, impact events=%d, eligibility=%d, bank=%s" % [_planar(), _landing_count - _run["landings_before"], _player.speed_bank_move(), _player.speed_bank])
 				_run["gentle_no_impact"] = gentle
 				_run["airborne"] = false
 			else:

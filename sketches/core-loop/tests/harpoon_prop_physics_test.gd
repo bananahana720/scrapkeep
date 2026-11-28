@@ -8,9 +8,9 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const FRAME := 1.0 / 60.0
 
@@ -37,7 +37,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_t = T.new("harpoon_prop_physics_test")
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	FlashGuard.on = false
 	HarpoonPhysicsRig.reset_for_tests()
 
@@ -50,7 +50,7 @@ func _run() -> void:
 	_check_prop_motion_rig()
 	_check_reduced_motion_and_flash_guard()
 
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	FlashGuard.on = false
 	HarpoonPhysicsRig.reset_for_tests()
 	quit(_t.verdict())
@@ -452,7 +452,7 @@ func _check_prop_motion_rig() -> void:
 
 
 func _check_reduced_motion_and_flash_guard() -> void:
-	EnemyMotion.motion_scale = 0.0
+	Comfort.reduced_motion = true
 	FlashGuard.on = true
 
 	var solver := HarpoonPhysicsRig.CableSolver.new(20)

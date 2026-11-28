@@ -2,8 +2,8 @@ class_name PilotLiveliness
 extends SkeletonModifier3D
 
 
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const NODE_NAME := "PilotLiveliness"
 
@@ -81,7 +81,7 @@ func is_reduced_motion() -> bool:
 		return true
 	if reduced_motion_override == 0:
 		return false
-	return UiTokens.reduced_motion
+	return Comfort.reduced_motion
 
 
 func profile() -> Dictionary:

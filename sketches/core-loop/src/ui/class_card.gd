@@ -14,6 +14,7 @@ const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const MetaOptions := preload("res://src/core/meta_options.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const KEY_H := 28.0
@@ -75,7 +76,6 @@ class Swatch extends Control:
 			clicked.emit()
 			accept_event()
 
-static var reduced_motion := false
 
 var def: Resource
 var key := ""
@@ -438,8 +438,7 @@ func cycle_alt_loadout() -> String:
 		MetaOptions.clear_alt_loadout(_profile, String(def.id), String(slot))
 	if next != "":
 		MetaOptions.equip_alt_loadout(_profile, next, _sitting)
-	if _profile.can_save:
-		_profile.save()
+	_profile.save_if_allowed()
 	_show_alt()
 	return next
 
@@ -507,7 +506,7 @@ func cycle_paint() -> String:
 	var options := paint_options()
 	var next: String = options[(options.find(paint_shown()) + 1) % options.size()]
 	_profile.equip(def.id, "paint", next)
-	_profile.save()
+	_profile.save_if_allowed()
 	_show_paint()
 	return next
 
@@ -806,7 +805,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	_shake = maxf(0.0, _shake - delta)
-	rotation = 0.0 if reduced_motion else sin(_shake * 70.0) * 0.035 * (_shake / SHAKE)
+	rotation = 0.0 if Comfort.reduced_motion else sin(_shake * 70.0) * 0.035 * (_shake / SHAKE)
 	openness = move_toward(openness, 1.0 if is_open() else 0.0, delta * RATE * (0.35 + openness))
 	if _swatch != null:
 		_swatch.mouse_filter = Control.MOUSE_FILTER_STOP if openness > 0.5 else Control.MOUSE_FILTER_IGNORE

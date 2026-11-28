@@ -5,7 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 # The Scuttle tells a light build what to do. Phase 3's hull plating is 110 and a light
 # build's punch is about 37, so its hits are turned and the only way in is a stun: a charge

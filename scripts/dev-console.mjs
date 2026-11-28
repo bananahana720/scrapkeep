@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import {
   closeSync,
@@ -9,21 +9,27 @@ import {
   openSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   renameSync,
   rmSync,
   unlinkSync,
   watch as watchFs,
   writeFileSync,
 } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
 
+import {
+  GODOT_VERSION,
+  resolveGodotBinary as resolveSharedGodotBinary,
+  scratchGodotEnv,
+  whichTool,
+} from "./godot-home.mjs";
 import { formatLedgerAudit, runLedgerAudit } from "./ledger-audit.mjs";
+import { runProcess as runChild } from "./lib/proc.mjs";
 import { buildVisualQaPack } from "./visual-qa-pack.mjs";
 import { materializeSandbox, releaseSlotLock, validateSlotName } from "./worktree-sandbox.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SKETCH_DIR = path.join(REPO_ROOT, "sketches", "core-loop");
@@ -163,50 +169,14 @@ export function parseSize(sizeText = "1280x720") {
   return { width, height, text: `${width}x${height}` };
 }
 
-export function whichTool(toolName, env = process.env) {
-  const found = spawnSync("which", [toolName], { env, encoding: "utf8" });
-  if (found.status === 0) {
-    const resolved = found.stdout.trim().split(/\r?\n/)[0];
-    if (resolved) return resolved;
-  }
-  return null;
-}
-
-export function resolveGodotBinary({
-  env = process.env,
-  platform = process.platform,
-  homeDir = os.homedir(),
-  existsFn = existsSync,
-  whichFn = (name) => whichTool(name, env),
-} = {}) {
-  if (env.GODOT_BIN && env.GODOT_BIN.trim() !== "") {
-    return env.GODOT_BIN.trim();
-  }
-  if (platform === "darwin") {
-    const macApp = path.join(
-      homeDir,
-      "Applications",
-      "Godot_4.7.2.app",
-      "Contents",
-      "MacOS",
-      "Godot",
+export function resolveGodotBinary(options = {}) {
+  const found = resolveSharedGodotBinary(options);
+  if (!found) {
+    throw new Error(
+      `Could not locate Godot binary. Set GODOT_BIN or install Godot ${GODOT_VERSION} before running dev-console.`,
     );
-    if (existsFn(macApp)) return macApp;
   }
-  const onPath = whichFn("godot");
-  if (onPath && existsFn(onPath)) return onPath;
-
-  const fallbacks = [
-    "/usr/bin/godot",
-    "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64",
-    "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64",
-  ];
-  for (const candidate of fallbacks) {
-    if (existsFn(candidate)) return candidate;
-  }
-  throw new Error(
-    "Could not locate Godot binary. Set GODOT_BIN or install Godot 4.7.2 before running dev-console.",
-  );
+  return found;
 }
 
 export function assertUnderArtifactsLocal(targetPath, repoRoot = REPO_ROOT) {
@@ -230,21 +200,7 @@ export function scratchEnv(
   const requested =
     targetPath ?? path.join(repoRoot, "artifacts", "local", "dev-console", makeRunId(), "home");
   const { resolved: home } = assertUnderArtifactsLocal(requested, repoRoot);
-  const data = path.join(home, "data");
-  const config = path.join(home, "config");
-  const cache = path.join(home, "cache");
-  if (create) {
-    mkdirSync(data, { recursive: true });
-    mkdirSync(config, { recursive: true });
-    mkdirSync(cache, { recursive: true });
-  }
-  const env = {
-    ...baseEnv,
-    HOME: home,
-    XDG_DATA_HOME: data,
-    XDG_CONFIG_HOME: config,
-    XDG_CACHE_HOME: cache,
-  };
+  const env = scratchGodotEnv(home, { baseEnv, forceHome: true, create, platform });
   if (platform === "linux") {
     env.SDL_AUDIODRIVER = "dummy";
   }
@@ -862,71 +818,26 @@ export async function sendMailboxRequest(
   });
 }
 
-function runProcess(command, args, { env, cwd, timeoutMs }) {
-  return new Promise((resolve) => {
-    let stdout = "";
-    let stderr = "";
-    let timedOut = false;
-    let child;
-    const started = Date.now();
-    try {
-      child = spawn(command, args, { env, cwd, stdio: ["ignore", "pipe", "pipe"] });
-    } catch (error) {
-      resolve({
-        exitCode: 1,
-        signal: null,
-        stdout: "",
-        stderr: String(error?.message ?? error),
-        timedOut: false,
-        ms: Date.now() - started,
-      });
-      return;
-    }
-
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk;
-    });
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try {
-        child.kill("SIGTERM");
-      } catch {}
-      setTimeout(() => {
-        try {
-          child.kill("SIGKILL");
-        } catch {}
-      }, 2000).unref();
-    }, timeoutMs);
-
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      stderr += String(error?.message ?? error);
-      resolve({
-        exitCode: 1,
-        signal: null,
-        stdout,
-        stderr,
-        timedOut,
-        ms: Date.now() - started,
-      });
-    });
-
-    child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      resolve({
-        exitCode: timedOut ? 124 : (code ?? 1),
-        signal,
-        stdout,
-        stderr,
-        timedOut,
-        ms: Date.now() - started,
-      });
-    });
-  });
+async function runProcess(command, args, { env, cwd, timeoutMs }) {
+  const res = await runChild(command, args, { env, cwd, timeoutMs, killGraceMs: 2000 });
+  if (res.error) {
+    return {
+      exitCode: 1,
+      signal: null,
+      stdout: res.stdout,
+      stderr: res.stderr + String(res.error?.message ?? res.error),
+      timedOut: res.timedOut,
+      ms: res.ms,
+    };
+  }
+  return {
+    exitCode: res.timedOut ? 124 : (res.exit ?? 1),
+    signal: res.signal,
+    stdout: res.stdout,
+    stderr: res.stderr,
+    timedOut: res.timedOut,
+    ms: res.ms,
+  };
 }
 
 export function parseArgs(argv) {
@@ -1784,16 +1695,7 @@ export async function main(argv = process.argv.slice(2)) {
   return 2;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   main()
     .then((code) => {
       process.exitCode = code;

@@ -1,11 +1,16 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
 
-import { withoutTeardownNoise } from "../sketch-smoke.mjs";
+import { withoutTeardownNoise } from "../lib/godot-test-runner.mjs";
+import {
+  COMMIT_SHA_RE,
+  formatJsonReceipt,
+  parseReceiptArgs,
+  writeJsonReceipt,
+} from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
-export const COMMIT = /^[0-9a-f]{7,40}$/;
+export const COMMIT = COMMIT_SHA_RE;
 export const MAX_SKIP = 0.2;
 export const STATIC_CLASSES = ["piece", "ground", "other"];
 export const CONTROL_CHECKS = [
@@ -345,43 +350,27 @@ export function produce({ damPath, flumePath, controlLogPath, head, platform = p
 }
 
 export function parseArgs(argv) {
-  const args = {
-    damPath: null,
-    flumePath: null,
-    controlLogPath: null,
-    head: null,
-    out: null,
-    mapcheck: false,
-  };
-  const take = (i, flag) => {
-    const val = argv[i + 1];
-    if (val === undefined || val === "" || val.startsWith("--")) {
-      throw new Error(`${flag} requires a value`);
-    }
-    return val;
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "--dam") args.damPath = take(i++, a);
-    else if (a.startsWith("--dam=")) args.damPath = a.slice("--dam=".length);
-    else if (a === "--flume") args.flumePath = take(i++, a);
-    else if (a.startsWith("--flume=")) args.flumePath = a.slice("--flume=".length);
-    else if (a === "--control-log") args.controlLogPath = take(i++, a);
-    else if (a.startsWith("--control-log=")) args.controlLogPath = a.slice("--control-log=".length);
-    else if (a === "--head") args.head = take(i++, a);
-    else if (a.startsWith("--head=")) args.head = a.slice("--head=".length);
-    else if (a === "--out") args.out = take(i++, a);
-    else if (a.startsWith("--out=")) args.out = a.slice("--out=".length);
-    else if (a === "--mapcheck") args.mapcheck = true;
-    else throw new Error(`unknown argument: ${a}`);
-  }
+  const args = parseReceiptArgs(argv, {
+    valueFlags: {
+      "--dam": { key: "damPath" },
+      "--flume": { key: "flumePath" },
+      "--control-log": { key: "controlLogPath" },
+    },
+    boolFlags: { "--mapcheck": "mapcheck" },
+    defaults: {
+      damPath: null,
+      flumePath: null,
+      controlLogPath: null,
+      head: null,
+      out: null,
+      mapcheck: false,
+    },
+    head: "optional",
+  });
   if (!args.damPath || !args.flumePath || !args.controlLogPath || !args.head) {
     throw new Error(
       "usage: snag-sweep-receipt.mjs --dam <park_dam.json> --flume <park_flume.json> --control-log <snag_sweep_test.log> --head <sha> [--out <file>] [--mapcheck]",
     );
-  }
-  if (!COMMIT.test(args.head)) {
-    throw new Error(`--head requires 7 to 40 lowercase hex characters; got "${args.head}"`);
   }
   return args;
 }
@@ -396,19 +385,17 @@ function main(argv) {
     console.error(String(e?.message ?? e));
     return 2;
   }
-  const text = JSON.stringify(result.receipt, null, 2) + "\n";
   if (args.out) {
-    mkdirSync(path.dirname(path.resolve(args.out)), { recursive: true });
-    writeFileSync(args.out, text);
+    writeJsonReceipt(args.out, result.receipt);
     process.stdout.write(result.mapcheckLines.join("\n") + "\n");
   } else if (args.mapcheck) {
     process.stdout.write(result.mapcheckLines.join("\n") + "\n");
   } else {
-    process.stdout.write(text);
+    process.stdout.write(formatJsonReceipt(result.receipt));
   }
   return result.receipt.pass ? 0 : 1;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   process.exit(main(process.argv.slice(2)));
 }

@@ -3,12 +3,14 @@ extends Node3D
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
@@ -23,8 +25,8 @@ const CATCH_RADIUS := 6.0
 const CHUNK := 32.0
 const CLOUD_WRAP := 650.0
 const CLOUD_STEP := 0.1
-static var MOTE_COUNTS: Array = EventKinds.juice("thermal_ride")["motes"]
-static var STREAK_COUNTS: Array = EventKinds.juice("thermal_ride")["streaks"]
+static var MOTE_COUNTS: Array = EventJuice.juice("thermal_ride")["motes"]
+static var STREAK_COUNTS: Array = EventJuice.juice("thermal_ride")["streaks"]
 
 static var shader_dir := SHADER_DIR
 var thermals: Array[Dictionary] = []
@@ -36,12 +38,6 @@ var cloud_placements: Array[Transform3D] = []
 var cloud_velocities: Array[Vector3] = []
 var clock := 0.0
 var frozen := false
-static var preferred: bool:
-	get:
-		return Kit.reduced_motion
-	set(on):
-		Kit.reduced_motion = on
-var reduced_motion := preferred
 var low := false
 var _map
 var _last_ball := Vector3.INF
@@ -302,7 +298,7 @@ func catch_at(ball: Vector3) -> void:
 			active_catches.append(row)
 			material.set_shader_parameter("catch_point", Vector4(point.x, point.y, CATCH_DEPTH, CATCH_RADIUS))
 			_glow(row)
-	if not _net_dust.is_empty() and Kit.dressing_share("hd_net_dust", low, reduced_motion) > 0.0:
+	if not _net_dust.is_empty() and Kit.dressing_share("hd_net_dust", low, Comfort.reduced_motion) > 0.0:
 		var puff := _net_dust[_net_dust_next]
 		_net_dust_next = (_net_dust_next + 1) % _net_dust.size()
 		FxLibrary.fire(puff, "net_dust", "net_caught", int(FxLibrary.effects("net_caught")["net_dust"]), Vector3(ball.x, deck + 0.1, ball.z))
@@ -311,7 +307,7 @@ func catch_at(ball: Vector3) -> void:
 func on_landed(_impact: float, player: Node3D) -> void:
 	if frozen or not is_visible_in_tree() or not is_instance_valid(player):
 		return
-	var body: RigidBody3D = player.active_body()
+	var body: RigidBody3D = player.body()
 	var physics := PhysicsServer3D.body_get_direct_state(body.get_rid())
 	if physics != null:
 		catch_at(physics.transform.origin)
@@ -327,7 +323,7 @@ func _sink(age: float) -> float:
 func _glow(row: Dictionary) -> void:
 	var at: Vector2 = row.at
 	var material: ShaderMaterial = row.material
-	if Kit.dressing_share("hd_net_ring", low, reduced_motion) == 0.0:
+	if Kit.dressing_share("hd_net_ring", low, Comfort.reduced_motion) == 0.0:
 		var level := clampf(1.0 - row.age / PULSE_SECONDS, 0.0, 1.0)
 		material.set_shader_parameter("pulse", Vector4(at.x, at.y, CATCH_RADIUS, FlashGuard.spike(0.0, level)))
 		return
@@ -391,7 +387,7 @@ static func along(path: Array[Vector3], t: float) -> Vector3:
 
 
 func _step_valley(delta: float) -> void:
-	if not reduced_motion:
+	if not Comfort.reduced_motion:
 		for ring in rings:
 			var rest: Transform3D = ring["rest"]
 			var turned := Transform3D(rest.basis.rotated(Vector3.UP, clock * RING_SPIN * float(ring["spin"])),
@@ -403,9 +399,9 @@ func _step_valley(delta: float) -> void:
 		for i in path.size() - 1:
 			span += path[i].distance_to(path[i + 1])
 		for k in int(line["count"]):
-			var t := fposmod(float(line["phase"]) + (k + 0.5) / float(line["count"]) + (0.0 if reduced_motion else clock * BUCKET_SPEED / maxf(span, 1.0)), 1.0)
+			var t := fposmod(float(line["phase"]) + (k + 0.5) / float(line["count"]) + (0.0 if Comfort.reduced_motion else clock * BUCKET_SPEED / maxf(span, 1.0)), 1.0)
 			(line["view"] as MultiMeshInstance3D).multimesh.set_instance_transform(k, Transform3D(Basis.IDENTITY, along(path, t)))
-	if gypsum != null and not reduced_motion:
+	if gypsum != null and not Comfort.reduced_motion:
 		var rise := float(gypsum.get_meta("rise", 0.0))
 		for i in gypsum_rest.size():
 			var xf := gypsum_rest[i]
@@ -417,7 +413,7 @@ func _step_valley(delta: float) -> void:
 
 
 func _step_strikes(delta: float) -> void:
-	if rods.is_empty() or reduced_motion:
+	if rods.is_empty() or Comfort.reduced_motion:
 		return
 	var offset := float(beat_offset.call()) if beat_offset.is_valid() else INF
 	if is_inf(offset):

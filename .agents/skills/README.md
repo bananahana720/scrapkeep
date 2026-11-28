@@ -46,7 +46,7 @@ The `description` is one or two sentences. Name the artifacts the skill acts on 
 1. Write the body at `.agents/skills/<name>/SKILL.md` and keep it at 120 lines or fewer after the frontmatter.
 2. Put detail under `.agents/skills/<name>/references/`.
 3. Link it for Claude: `ln -s ../../.agents/skills/<name> .claude/skills/<name>`.
-4. Register it on the skills line of `AGENTS.md`.
+4. Register it in the table at the top of this file.
 5. Start `.agents/skills/<name>/references/lessons.md` with the lesson format below, even if it has one lesson.
 6. Run `npm run check:skills` and fix every finding before the coordinator commits.
 
@@ -54,7 +54,7 @@ The `description` is one or two sentences. Name the artifacts the skill acts on 
 
 A lesson is one bullet in `.agents/skills/<name>/references/lessons.md`. Its status is `established`, `provisional` or `retracted`. A new lesson starts as `provisional` unless a second independent run or review, or a recorded ruling, supports it. A retracted lesson keeps its text and fills `Overturned by`, and the rule line that cited it changes in the same commit. Every change adds a row to the file's `## Changelog`.
 
-A rule line in `.agents/skills/<name>/SKILL.md` ends with the lesson id it rests on, for example `(SKL-07)`. A rule with no lesson says "(design choice)".
+A rule line in `.agents/skills/<name>/SKILL.md` ends with the lesson id it rests on, for example `(RML-48)`. A rule with no lesson says "(design choice)".
 
 ## Template
 

@@ -72,6 +72,13 @@ static var _park_defs_source := ""
 static var _graphs := {}
 
 
+static func reset_for_tests() -> void:
+	restore_park_defs()
+	graph_notes = 0
+	_park_defs_source = ""
+	_graphs.clear()
+
+
 class Sampler:
 	extends RefCounted
 

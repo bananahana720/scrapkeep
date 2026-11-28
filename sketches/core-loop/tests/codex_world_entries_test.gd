@@ -3,7 +3,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const CodexWorld := preload("res://src/world/codex_world.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
 const WORLD_IDS := ["breach_plate", "net_deck", "thermal_lift", "moving_island"]
 const WORLD_FIELDS := ["id", "category", "name", "hint", "clue", "text"]
 const BOSS_FIELDS := ["id", "name", "hint", "clue", "text"]

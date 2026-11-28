@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { cleanHead, root } from "./clean-head.mjs";
 import { runWindowed } from "./display-run.mjs";
+import { cleanHead, parseReceiptArgs, root, runReceiptCli } from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const TOOL = "tools/model_render_check.gd";
 export const ENGINE_ARGS = ["--resolution", "800x600", "--audio-driver", "Dummy"];
@@ -113,21 +113,11 @@ export async function produce({ cwd = root, run = runShoots } = {}) {
   return buildReceipt(real, plant, head);
 }
 
-async function main(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
-  let receipt;
-  try {
-    receipt = await produce();
-  } catch (e) {
-    console.error(String(e.message ?? e));
-    return 2;
-  }
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) writeFileSync(args.out, text);
-  else process.stdout.write(text);
-  return receipt.pass ? 0 : 1;
+function main(argv) {
+  return runReceiptCli(async () => {
+    const args = parseReceiptArgs(argv);
+    return { receipt: await produce(), out: args.out };
+  });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  main(process.argv.slice(2)).then((code) => process.exit(code));
+if (isMain(import.meta.url)) main(process.argv.slice(2)).then((code) => process.exit(code));

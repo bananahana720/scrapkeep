@@ -311,19 +311,10 @@ func set_mutation(mut_id: String) -> void:
 	_sync_pilot()
 
 
-func clear_mutation_override() -> void:
-	_mutation_override.clear()
-	_sync_pilot()
-
-
 func swapped_slots() -> Array:
 	var keys := active_mutations.keys()
 	keys.sort()
 	return keys
-
-
-func mutation_for(slot: String) -> String:
-	return String(active_mutations.get(slot, ""))
 
 
 func _desired_mutations(state: Dictionary) -> Dictionary:

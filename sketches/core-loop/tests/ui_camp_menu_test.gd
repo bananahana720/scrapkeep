@@ -8,8 +8,8 @@ const Companion := preload("res://src/core/companion.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 
@@ -154,7 +154,7 @@ func _run() -> void:
 	_game._screen_key(KEY_K)
 	await _frames(1)
 	_t.check("K again closes the camp", not screens.camp_open() and screens._actions.visible, "")
-	_t.eq("the title body comes back", screens._body.text, FieldNotes.OBJECTIVE)
+	_t.eq("the title body comes back", screens.said_body(), FieldNotes.OBJECTIVE)
 	_t.check("nothing keeps focus after closing", root.gui_get_focus_owner() == null, str(root.gui_get_focus_owner()))
 
 	# Escape and pad Start close (pad B is the boost); pad A presses the focused button.

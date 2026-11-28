@@ -22,12 +22,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ensureNodeModules } from "./ensure-node-modules.mjs";
+import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import { isMain } from "./lib/cli.mjs";
 import {
   godotIdentity,
   hasValidUidCache,
   importSketch,
   writeImportStamp,
 } from "./import-stamp.mjs";
+import { git, gitOptional } from "./lib/git.mjs";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SANDBOX_ROOT_REL = path.join("artifacts", "local", "dev-ref");
@@ -139,15 +142,17 @@ export function resolveGitRef(ref, repoRoot = REPO_ROOT, { spawn = spawnSync } =
     throw new Error("--ref requires a non-empty git ref or commit SHA");
   }
   const cleanRef = ref.trim();
-  const ran = spawn("git", ["-C", repoRoot, "rev-parse", "--verify", `${cleanRef}^{commit}`], {
-    encoding: "utf8",
-  });
-  if (ran.error || ran.status !== 0 || !ran.stdout.trim()) {
+  let sha;
+  try {
+    sha = git(["rev-parse", "--verify", `${cleanRef}^{commit}`], { cwd: repoRoot, spawn }).split(
+      /\r?\n/,
+    )[0];
+  } catch (error) {
     throw new Error(
-      `Could not resolve git ref "${cleanRef}": ${(ran.stderr || ran.error?.message || "unknown ref").trim()}`,
+      `Could not resolve git ref "${cleanRef}": ${(error.stderr || error.message).trim()}`,
     );
   }
-  const sha = ran.stdout.trim().split(/\r?\n/)[0];
+  if (!sha) throw new Error(`Could not resolve git ref "${cleanRef}": unknown ref`);
   return { ref: cleanRef, sha, sha12: sha.slice(0, 12) };
 }
 
@@ -526,47 +531,34 @@ export function reconcileDetachedWorktree({
         unlinkSync(indexLock);
       } catch {}
     }
-    const headCheck = spawn("git", ["-C", worktreeDir, "rev-parse", "HEAD"], { encoding: "utf8" });
-    if (headCheck.status === 0 && headCheck.stdout.trim() === sha) {
+    if (gitOptional(["rev-parse", "HEAD"], { cwd: worktreeDir, spawn }) === sha) {
       return { created: false, reconciled: false, worktreeDir, sha };
     }
   }
 
   if (existsSync(worktreeDir)) {
-    spawn("git", ["-C", repoRoot, "worktree", "remove", "--force", worktreeDir], {
-      encoding: "utf8",
-    });
+    gitOptional(["worktree", "remove", "--force", worktreeDir], { cwd: repoRoot, spawn });
     if (existsSync(worktreeDir)) {
       rmSync(worktreeDir, { recursive: true, force: true });
     }
-    spawn("git", ["-C", repoRoot, "worktree", "prune"], { encoding: "utf8" });
-    const add = spawn(
-      "git",
-      ["-C", repoRoot, "worktree", "add", "--detach", "--force", worktreeDir, sha],
-      {
-        encoding: "utf8",
-      },
-    );
-    if (add.error || add.status !== 0) {
+    gitOptional(["worktree", "prune"], { cwd: repoRoot, spawn });
+    try {
+      git(["worktree", "add", "--detach", "--force", worktreeDir, sha], { cwd: repoRoot, spawn });
+    } catch (error) {
       throw new Error(
-        `Failed to recreate sandbox worktree at ${sha}: ${(add.stderr || add.error?.message || "git error").trim()}`,
+        `Failed to recreate sandbox worktree at ${sha}: ${(error.stderr || error.message).trim()}`,
       );
     }
     return { created: true, reconciled: true, worktreeDir, sha };
   }
 
   mkdirSync(path.dirname(worktreeDir), { recursive: true });
-  spawn("git", ["-C", repoRoot, "worktree", "prune"], { encoding: "utf8" });
-  const add = spawn(
-    "git",
-    ["-C", repoRoot, "worktree", "add", "--detach", "--force", worktreeDir, sha],
-    {
-      encoding: "utf8",
-    },
-  );
-  if (add.error || add.status !== 0) {
+  gitOptional(["worktree", "prune"], { cwd: repoRoot, spawn });
+  try {
+    git(["worktree", "add", "--detach", "--force", worktreeDir, sha], { cwd: repoRoot, spawn });
+  } catch (error) {
     throw new Error(
-      `Failed to add sandbox worktree at ${sha}: ${(add.stderr || add.error?.message || "git error").trim()}`,
+      `Failed to add sandbox worktree at ${sha}: ${(error.stderr || error.message).trim()}`,
     );
   }
   return { created: true, reconciled: false, worktreeDir, sha };
@@ -581,14 +573,10 @@ export function linkSandboxNodeModules(worktreeDir, repoRoot = REPO_ROOT) {
     return { ok: true, linked: false, reason: "already_exists" };
   } catch {}
   const candidates = [path.join(repoRoot, "node_modules")];
-  const common = spawnSync(
-    "git",
-    ["-C", repoRoot, "rev-parse", "--path-format=absolute", "--git-common-dir"],
-    { encoding: "utf8" },
-  );
-  if (common.status === 0 && common.stdout.trim()) {
-    candidates.push(path.join(path.dirname(common.stdout.trim()), "node_modules"));
-  }
+  const common = gitOptional(["rev-parse", "--path-format=absolute", "--git-common-dir"], {
+    cwd: repoRoot,
+  });
+  if (common) candidates.push(path.join(path.dirname(common), "node_modules"));
   for (const primaryModules of candidates) {
     if (existsSync(primaryModules)) {
       symlinkSync(primaryModules, target, process.platform === "win32" ? "junction" : "dir");
@@ -680,20 +668,13 @@ export function ensureSandboxImport({
   }
 
   const importHome = path.resolve(homeDir);
-  const dataDir = path.join(importHome, "data");
-  const configDir = path.join(importHome, "config");
-  const cacheDir = path.join(importHome, "cache");
-  mkdirSync(dataDir, { recursive: true });
-  mkdirSync(configDir, { recursive: true });
-  mkdirSync(cacheDir, { recursive: true });
-
   const env = {
-    ...process.env,
+    ...scratchGodotEnv(importHome, {
+      baseEnv: process.env,
+      forceHome: true,
+      create: true,
+    }),
     GODOT_BIN: godotBin,
-    HOME: importHome,
-    XDG_DATA_HOME: dataDir,
-    XDG_CONFIG_HOME: configDir,
-    XDG_CACHE_HOME: cacheDir,
   };
   if (process.platform === "linux") {
     env.SDL_AUDIODRIVER = "dummy";
@@ -909,24 +890,16 @@ function parseCliArgs(argv) {
   return { cmd, opts };
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const { cmd, opts } = parseCliArgs(process.argv.slice(2));
     if (cmd === "prepare") {
+      const godotBin = resolveGodotBinary({ requireExplicit: true });
       const box = materializeSandbox({
         ref: opts.ref,
         slot: opts.slot,
-        godotBin: process.env.GODOT_BIN || null,
-        skipImport: opts.skipImport || !process.env.GODOT_BIN,
+        godotBin,
+        skipImport: opts.skipImport || !godotBin,
         overlayMode: opts.overlayMode,
       });
       box.release();

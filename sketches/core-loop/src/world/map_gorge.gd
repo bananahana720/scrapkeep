@@ -183,8 +183,12 @@ func _tint(x: float, z: float, h: float, ride: float) -> Color:
 	return tint.lerp(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.45), ride * 0.9)
 
 
+func in_marble_chute(x: float, z: float) -> bool:
+	return _polyline_channel(x, z, marble_path, MARBLE_HALF, MARBLE_WALL)[1] > 0.5
+
+
 func material_at(x: float, z: float) -> String:
-	if _polyline_channel(x, z, marble_path, MARBLE_HALF, MARBLE_WALL)[1] > 0.5:
+	if in_marble_chute(x, z):
 		return "concrete"
 	if absf(x - SKYLIGHT_X) < SKYLIGHT_DEPTH and z > SKYLIGHT_Z.x and z < SKYLIGHT_Z.y:
 		return "concrete"

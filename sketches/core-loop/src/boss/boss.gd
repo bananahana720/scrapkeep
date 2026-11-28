@@ -17,11 +17,10 @@ const BossModel := preload("res://src/boss/boss_model.gd")
 const Field := preload("res://src/build/scrap_field.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
-const RewardGates := preload("res://src/build/reward_gates.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 enum { IDLE, FIGHT, EJECT, DEFEATED }
 const STATE_NAMES := ["idle", "fight", "eject", "defeated"]
@@ -600,22 +599,12 @@ func _tug(ball: Vector3, magnet_at: Vector3) -> void:
 	ctx.player.crowd_control("brindle_tug", (Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / step, false)
 
 
-# Keep Engine.time_scale transitions from skewing knockback (dividing by _delta during hit-stop scales by 1/HIT_STOP_SCALE).
 func _shove_ball(kind: String, dv: Vector3, interrupts := true) -> void:
-	if not dv.is_finite() or dv == Vector3.ZERO:
-		return
-	if not ctx.player.crowd_control(kind, Vector3.ZERO, interrupts):
-		return
-	var body = ctx.player.body() if ctx.player.has_method("body") else null
-	if body == null or (body is RigidBody3D and body.freeze):
-		return
-	var kit = ctx.player.get("kit")
-	if kit != null and (bool(kit.get("mounted")) or float(kit.get("plant_time")) > 0.0):
-		return
-	if body.has_method("set_velocity_now"):
-		body.set_velocity_now(ctx.player.state.velocity + dv)
-	elif body is RigidBody3D:
-		body.apply_central_impulse(dv * body.mass)
+	ctx.player.shove_planar(dv, interrupts, kind)
+
+
+func suppress_lobbers() -> void:
+	_next_lobber = INF
 
 
 func _drip(c: Dictionary) -> void:
@@ -720,7 +709,7 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 		fallback.size = Vector3.ONE * 0.7
 		_pickup_mesh = fallback
 	if not _pickup_materials.has("reward"):
-		var made: ShaderMaterial = Field._pickup_material(Palette.AMBER)
+		var made: ShaderMaterial = Field.pickup_material(Palette.AMBER)
 		made.resource_name = "field"
 		_pickup_materials["reward"] = made
 	var reward_material: ShaderMaterial = _pickup_materials["reward"]
@@ -1417,7 +1406,7 @@ func _step_scooter(delta: float) -> void:
 	var at: Vector3 = arena.point_at(_eject["angle"], Rules.SCOOTER_RING, 0.7)
 	var ahead: Vector3 = Arena.tangent(_eject["angle"]) * _eject["dir"]
 	var slowed: bool = clock < float(_eject.get("slow_until", -1.0))
-	var roll := sin(clock * 24.0) * 0.14 * EnemyMotion.motion_scale if slowed else 0.0
+	var roll := sin(clock * 24.0) * 0.14 * Comfort.motion_scale() if slowed else 0.0
 	scooter.global_transform = Transform3D(Basis.looking_at(ahead, Vector3.UP) * Basis(Vector3.FORWARD, roll), at)
 	_eject["puff_t"] = float(_eject.get("puff_t", 0.0)) + delta
 	if float(_eject["puff_t"]) >= 0.22 and is_instance_valid(arena):
@@ -1485,23 +1474,20 @@ func _offer_cobalt_pick() -> void:
 		return
 	if String(ctx.run.extra.get("brindle_cobalt_picked", "")) != "":
 		return
+	if ctx.build == null or not ctx.build.has_method("roll_cobalt_boss_picks"):
+		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([ctx.rng.seed if ctx.rng != null else 0, ctx.flow.run_key(), ctx.run.stage, "brindle_cobalt"])
 	var class_id: String = ctx.run.class_id() if ctx.run.has_method("class_id") else ""
-	var picks := RewardGates.roll_cobalt_boss_picks(rng, class_id, ctx.run.parts, 2)
+	var picks: Array = ctx.build.roll_cobalt_boss_picks(rng, class_id, ctx.run.parts, 2)
 	if picks.is_empty():
 		return
 	brindle_cobalt_offers = picks
 	ctx.run.extra["brindle_cobalt_pending"] = String(picks[0])
 	if is_instance_valid(arena):
-		_cobalt_gates = RewardGates.new()
-		_cobalt_gates.name = "BrindleCobaltGates"
-		arena.add_child(_cobalt_gates)
-		_cobalt_gates.setup(arena.ground_query())
-		_cobalt_gates.chosen.connect(_on_cobalt_pick_chosen)
 		var heading: Vector3 = ctx.player.planar_velocity()
 		heading = heading.normalized() if heading.length() > 0.5 else ctx.heading()
-		_cobalt_gates.open(picks, ctx.player.ball_position(), heading, ctx.run.parts)
+		_cobalt_gates = ctx.build.open_cobalt_boss_gates(arena, arena.ground_query(), picks, ctx.player.ball_position(), heading, ctx.run.parts, _on_cobalt_pick_chosen)
 
 
 func _on_cobalt_pick_chosen(part_id: String) -> void:

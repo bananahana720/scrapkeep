@@ -10,7 +10,8 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Palette := preload("res://src/core/palette.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Groups := preload("res://src/core/groups.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const FALLOUT_EYE_FRACTION := 0.4
 const SHAPES := {
@@ -32,7 +33,7 @@ var _hits_enemies := false
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "IndustrialEvents"
-	add_to_group("world_telegraphs")
+	add_to_group(Groups.WORLD_TELEGRAPHS)
 	_hits_enemies = HazardHits.applies_to(world.ctx.get("run"))
 	for site in world.terrain.map().park.park_rows:
 		_sites[site.id] = site
@@ -116,7 +117,7 @@ func _spawn_plume(row: Dictionary, state: Dictionary) -> void:
 	var at: Vector3 = state.at
 	var size: Array = row.effect.hazard_m
 	var spawned: Array = []
-	var count_scale := 0.5 if EnemyMotion.motion_scale <= 0.0 else 1.0
+	var count_scale := 0.5 if Comfort.reduced_motion else 1.0
 	if SHAPES.get(kind, {}).get("form", "") == "cone":
 		var axis := -deg_to_rad(float(site.yaw_deg))
 		var dir := Vector3(cos(axis), 0.0, sin(axis)).normalized()

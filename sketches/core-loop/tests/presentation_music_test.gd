@@ -3,6 +3,8 @@ extends SceneTree
 
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
+const MusicPhrases := preload("res://src/presentation/music_phrases.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
 # The band, driven directly: layer gains rise monotonically with pressure and calm
@@ -14,7 +16,7 @@ var _failures := 0
 
 
 func _initialize() -> void:
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	_gains()
 	_loudness()
 	_stinger_on_the_beat()
@@ -124,8 +126,8 @@ func _lane_and_cadence() -> void:
 
 
 func _lead() -> void:
-	var a := MusicEngine.make_lead(1)
-	var b := MusicEngine.make_lead(2)
+	var a := MusicPhrases.make_lead(1)
+	var b := MusicPhrases.make_lead(2)
 	var in_range := true
 	var in_key := true
 	for event in a + b:

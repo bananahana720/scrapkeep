@@ -9,7 +9,7 @@ const Triggers := preload("res://src/build/triggers.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const Codex := preload("res://src/core/codex.gd")
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
 
 # SG5, comps/gunfire/scrolls-and-synergies.md:86: measure real item strikes through
 # Build.item_hit against one fixed target. This is a headless model, not a feel verdict.

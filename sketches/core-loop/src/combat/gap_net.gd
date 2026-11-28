@@ -79,7 +79,7 @@ class ElectricAura extends Node3D:
 		player.set_meta("electric_aura_left", left)
 		if not is_inside_tree():
 			return
-		for enemy in get_tree().get_nodes_in_group("enemy"):
+		for enemy in get_tree().get_nodes_in_group(GROUP):
 			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 				continue
 			var id := enemy.get_instance_id()
@@ -382,7 +382,7 @@ func _pose() -> void:
 	var t := clampf(_warn_progress(), 0.0, 1.0)
 	var beat := fmod(_t * FlashGuard.rate(CRACKLE_RATE + CRACKLE_RATE_GAIN * t), 1.0)
 	var lit := beat < 0.2 + 0.5 * t
-	var shake := sin(_t * 70.0) * CRACKLE_SHAKE * t * EnemyMotion.motion_scale
+	var shake := sin(_t * 70.0) * CRACKLE_SHAKE * t * Comfort.motion_scale()
 	for net in nets:
 		if not net["live"] or not is_instance_valid(net["mesh"]):
 			continue

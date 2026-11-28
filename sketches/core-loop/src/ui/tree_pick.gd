@@ -2,6 +2,7 @@ extends Control
 
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const TreeCard := preload("res://src/ui/tree_card.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -9,6 +10,7 @@ const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const BuildReadout := preload("res://src/ui/build_readout.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 signal chosen(index: int)
@@ -60,21 +62,9 @@ func _init() -> void:
 	_column.add_theme_constant_override("separation", 24)
 	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_column)
-	_heading = Label.new()
-	_heading.text = HEADING
-	_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_heading.add_theme_font_override("font", UiFonts.bold())
-	_heading.add_theme_font_size_override("font_size", UiTokens.HEADING)
-	_heading.add_theme_color_override("font_color", Palette.SAND)
-	_heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_heading = UiDraw.label(UiTokens.HEADING, Palette.SAND, HEADING)
 	_column.add_child(_heading)
-	_held_line = Label.new()
-	_held_line.text = HELD
-	_held_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_held_line.add_theme_font_override("font", UiFonts.bold())
-	_held_line.add_theme_font_size_override("font_size", UiTokens.BODY)
-	_held_line.add_theme_color_override("font_color", Palette.AMBER)
-	_held_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_held_line = UiDraw.label(UiTokens.BODY, Palette.AMBER, HELD)
 	_column.add_child(_held_line)
 	_row = HBoxContainer.new()
 	_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -348,7 +338,7 @@ func _play_out(chosen_index: int) -> void:
 		var card: Control = list[i]
 		_nudge(card, 0.0)
 		if i == chosen_index:
-			var pop := 1.0 if UiTokens.reduced_motion else POP
+			var pop := 1.0 if Comfort.reduced_motion else POP
 			_tween.tween_property(card, "scale", Vector2.ONE * pop, FADE_OUT * 0.45).set_trans(UiTokens.hand(UiTokens.Hand.KEEPER).trans).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(card, "modulate:a", 0.0, FADE_OUT).set_delay(FADE_OUT * 0.45).set_ease(Tween.EASE_IN)
 		else:

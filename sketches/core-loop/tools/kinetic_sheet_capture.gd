@@ -5,7 +5,6 @@ const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const Recipes := preload("res://src/world/park/park_recipes.gd")
@@ -14,6 +13,7 @@ const Requisition := preload("res://src/boss/requisition.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const TILE_W := 640
 const TILE_H := 480
@@ -375,7 +375,7 @@ func _run() -> void:
 		quit(2)
 		return
 	FlashGuard.on = bool(_opts["reduce_flashes"])
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	var out_dir := String(_opts["out"])
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	var stage := build_stage(int(_opts["world"]))
@@ -604,11 +604,11 @@ func _place_glb(parent: Node3D, path: String, at: Vector3) -> Node3D:
 	var holder := Node3D.new()
 	holder.position = at
 	parent.add_child(holder)
-	var body := Recipes._body(holder)
-	var scenes := Recipes._load(path)
+	var body := Recipes.collider_body(holder)
+	var scenes := Recipes.load_glb(path)
 	if not scenes.is_empty():
 		var s: Node = scenes[0]
-		Recipes._views(s, holder, body, Transform3D.IDENTITY)
+		Recipes.attach_views(s, holder, body, Transform3D.IDENTITY)
 		s.free()
 	return holder
 
@@ -767,9 +767,9 @@ func _pose_subject(cat: String, asset_id: String, beat: String, ctx: Dictionary,
 						if vfx_on:
 							FxLibrary.burst(holder, "crack_debris", Vector3(0.0, 2.0, 4.5), 14)
 					"attack":
-						EnemyMotion.motion_scale = 0.0
+						Comfort.reduced_motion = true
 						cache.fire()
-						EnemyMotion.motion_scale = 1.0
+						Comfort.reduced_motion = false
 						if vfx_on:
 							FxLibrary.burst(holder, "brass_spark", Vector3(0.0, 1.8, -1.5), 16, Palette.BRASS)
 							FxLibrary.burst(holder, "steam_puff", Vector3(0.0, 1.5, -1.5), 8)

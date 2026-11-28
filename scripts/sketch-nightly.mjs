@@ -1,18 +1,13 @@
 #!/usr/bin/env node
-import { spawn, spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as smoke from "./sketch-smoke.mjs";
+import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import * as testRunner from "./lib/godot-test-runner.mjs";
+import { acquireSlot } from "./lib/machine-lock.mjs";
+import { pool, runProcess as runChild } from "./lib/proc.mjs";
+import { runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
 import {
   BANDS,
   TABLE,
@@ -21,6 +16,8 @@ import {
   median,
   summarizeRun,
 } from "./checkpoint.mjs";
+import { gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 export const MAX_WALL_MS = 60 * 60_000;
 export const MAX_FLAKE_RATE = 0.01;
@@ -64,7 +61,7 @@ export function flakePasses(failures, runs) {
 }
 
 export function testEntry(script) {
-  return typeof smoke.testEntry === "function" ? smoke.testEntry(script) : script;
+  return script;
 }
 
 export function soloScripts(scripts, baseline, directory = sketch) {
@@ -75,7 +72,7 @@ export function soloScripts(scripts, baseline, directory = sketch) {
     allowed.add("res://tests/tree_play_test.gd");
   }
   return new Set(
-    scripts.filter((script) => allowed.has(script) || smoke.isSoloScript(directory, script)),
+    scripts.filter((script) => allowed.has(script) || testRunner.isSoloScript(directory, script)),
   );
 }
 
@@ -83,7 +80,7 @@ export function buildPlan(
   options,
   {
     directory = sketch,
-    scripts = smoke.testScripts(directory),
+    scripts = testRunner.testScripts(directory),
     baseline = JSON.parse(
       readFileSync(path.join(root, "scripts/sketch-lint.baseline.json"), "utf8"),
     ),
@@ -92,12 +89,13 @@ export function buildPlan(
   } = {},
 ) {
   const solo = soloScripts(scripts, baseline, directory);
+  const command = resolveGodotBinary() ?? "godot";
   const plan = [];
   const add = (id, kind, args, extra = {}) => {
     plan.push({
       id,
       kind,
-      command: smoke.binary,
+      command,
       args,
       render: false,
       timeout_ms: TOOL_TIMEOUT_MS,
@@ -189,7 +187,7 @@ export function buildPlan(
         script,
         run,
         solo: solo.has(script),
-        timeout_ms: smoke.testTimeoutMs(
+        timeout_ms: testRunner.testTimeoutMs(
           readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"),
         ),
       });
@@ -278,52 +276,27 @@ export function artifacts(step, output = "") {
   return {};
 }
 
-export function runProcess(step, timeoutMs) {
-  return new Promise((resolve) => {
-    const launch = commandFor(step);
-    const state = path.join(step.state_dir, "state");
-    const env = { ...process.env };
-    if (step.kind === "export") {
-      const realData = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
-      const godotData = path.join(state, "data", "godot");
-      mkdirSync(godotData, { recursive: true });
-      const templates = path.join(godotData, "export_templates");
-      if (!existsSync(templates))
-        symlinkSync(path.join(realData, "godot/export_templates"), templates);
-    }
-    for (const kind of ["DATA", "CONFIG", "CACHE"])
-      env[`XDG_${kind}_HOME`] = path.join(state, kind.toLowerCase());
-    const child = spawn(launch.command, launch.args, {
-      cwd: root,
-      env,
-      detached: true,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let output = "";
-    let timedOut = false;
-    child.stdout.on("data", (d) => (output += d));
-    child.stderr.on("data", (d) => (output += d));
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try {
-        process.kill(-child.pid, "SIGKILL");
-      } catch {
-        child.kill("SIGKILL");
-      }
-    }, timeoutMs);
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({
-        code: -1,
-        output: `${output}\n${error.message}`,
-        timed_out: false,
-      });
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({ code, output, timed_out: timedOut });
-    });
-  });
+export async function runProcess(step, timeoutMs) {
+  const launch = commandFor(step);
+  const state = path.join(step.state_dir, "state");
+  if (step.kind === "export") {
+    const realData = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
+    const godotData = path.join(state, "data", "godot");
+    mkdirSync(godotData, { recursive: true });
+    const templates = path.join(godotData, "export_templates");
+    if (!existsSync(templates))
+      symlinkSync(path.join(realData, "godot/export_templates"), templates);
+  }
+  const env = scratchGodotEnv(state, { baseEnv: process.env });
+  const res = await runChild(launch.command, launch.args, { cwd: root, env, timeoutMs });
+  if (res.error) {
+    return {
+      code: -1,
+      output: `${res.output}\n${res.error.message}`,
+      timed_out: false,
+    };
+  }
+  return { code: res.exit, output: res.output, timed_out: res.timedOut };
 }
 
 export function buildReceipt({ options, plan, results, git, startedAt, wallMs, lockWaitMs = 0 }) {
@@ -469,7 +442,7 @@ export async function runNightly(
     let data = {};
     try {
       result = await runner({ ...step, state_dir: dir }, Math.min(step.timeout_ms, remaining));
-      const verdict = smoke.judge({
+      const verdict = testRunner.judge({
         test: step.kind === "test",
         status: result.code,
         output: result.output,
@@ -485,7 +458,7 @@ export async function runNightly(
       result ??= { code: -1, output: error.message };
     }
     const output = result.output ?? "";
-    const checks = smoke.countChecks(output);
+    const checks = testRunner.countChecks(output);
     const verdictLine =
       output
         .split(/\r?\n/)
@@ -519,11 +492,10 @@ export async function runNightly(
       )
         end++;
     }
-    let next = first;
-    await Promise.all(
-      Array.from({ length: Math.min(WIDTH, end - first) }, async () => {
-        while (next < end) await run(next++);
-      }),
+    const indices = Array.from({ length: end - first }, (_, i) => first + i);
+    await pool(
+      indices.map((idx) => () => run(idx)),
+      WIDTH,
     );
     first = end;
   }
@@ -540,13 +512,7 @@ export async function runNightly(
 }
 
 function gitState() {
-  const git = (args) => {
-    const r = spawnSync("git", ["-C", root, ...args], {
-      encoding: "utf8",
-      timeout: 10_000,
-    });
-    return r.status === 0 ? r.stdout.trim() : null;
-  };
+  const git = (args) => gitOptional(args, { cwd: root, timeout: 10_000 });
   const status = git(["status", "--porcelain"]);
   return {
     head: git(["rev-parse", "HEAD"]),
@@ -556,36 +522,23 @@ function gitState() {
   };
 }
 
-async function acquireMachine(deadline) {
-  const lock = path.join(process.env.SCRAPKEEP_LOCK_DIR || "/tmp", "scrapkeep-sketch-smoke.lock");
-  while (Date.now() < deadline) {
-    try {
-      mkdirSync(lock);
-      writeFileSync(path.join(lock, "pid"), String(process.pid));
-      return () => rmSync(lock, { recursive: true, force: true });
-    } catch (error) {
-      if (error.code !== "EEXIST") throw error;
-      let alive = true;
-      try {
-        process.kill(Number(readFileSync(path.join(lock, "pid"), "utf8")), 0);
-      } catch (error) {
-        alive = error.code !== "ESRCH";
-      }
-      if (!alive) rmSync(lock, { recursive: true, force: true });
-      await new Promise((resolve) =>
-        setTimeout(resolve, Math.max(0, Math.min(2000, deadline - Date.now()))),
-      );
-    }
-  }
-  throw new Error("nightly wall budget exhausted waiting for the smoke machine lock");
+export async function acquireNightlySlot(deadline, options = {}) {
+  const lease = await acquireSlot({
+    ...options,
+    sleep: (ms) => {
+      if (Date.now() >= deadline)
+        throw new Error("nightly wall budget exhausted waiting for the smoke machine lock");
+      return new Promise((resolve) => setTimeout(resolve, Math.min(ms, deadline - Date.now())));
+    },
+  });
+  return lease.release;
 }
 
 export function writeReceipt(receipt) {
-  const dir = path.join(root, "artifacts/local/receipts");
-  mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, smoke.receiptFileName("nightly", receipt.tree, receipt.started_at));
-  writeFileSync(file, JSON.stringify(receipt, null, 2) + "\n");
-  return file;
+  return writeJsonReceipt(
+    runnerReceiptPath(root, "nightly", receipt.tree, receipt.started_at),
+    receipt,
+  );
 }
 
 async function main() {
@@ -602,7 +555,7 @@ async function main() {
   let release;
   let outcome;
   try {
-    release = await acquireMachine(started + MAX_WALL_MS - FINISH_RESERVE_MS);
+    release = await acquireNightlySlot(started + MAX_WALL_MS - FINISH_RESERVE_MS);
     process.once("exit", release);
     outcome = await runNightly(options, {
       plan,
@@ -648,7 +601,7 @@ async function main() {
   process.exitCode = outcome.exit;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
+if (isMain(import.meta.url))
   main().catch((error) => {
     console.error(`sketch:nightly: ${error.message}`);
     process.exitCode = 2;

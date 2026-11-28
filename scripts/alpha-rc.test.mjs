@@ -35,6 +35,7 @@ import {
   runProcess,
   verdict,
 } from "./alpha-rc.mjs";
+import { git as runGit } from "./lib/git.mjs";
 
 const createdTempDirs = [];
 const tmp = () => {
@@ -260,12 +261,6 @@ test("sub-command exits are read in each tool's terms", () => {
     judgeCommand({ id: "smoke" }, { exit: null, output: "", error: "ENOENT" }).status,
     "fail",
   );
-  const quarantined =
-    "skipped 0\nquarantined (red) 2 (known red; see tests/QUARANTINE.tsv):\n  a\nsketch:smoke pass";
-  assert.match(
-    judgeCommand({ id: "smoke" }, { exit: 0, output: quarantined }).note,
-    /2 quarantined red/,
-  );
   assert.equal(
     judgeCommand({ id: "smoke" }, { exit: 0, output: "sketch:smoke pass" }).status,
     "pass",
@@ -315,10 +310,10 @@ test(
 
 test("gitState reads HEAD and dirtiness through git, including in a linked worktree", () => {
   const repo = tmp();
-  const g = (...a) => spawnSync("git", ["-C", repo, ...a], { encoding: "utf8" });
+  const g = (...a) => runGit(a, { cwd: repo });
   g("init", "-q");
   g("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "x");
-  const sha = g("rev-parse", "HEAD").stdout.trim();
+  const sha = g("rev-parse", "HEAD");
   assert.deepEqual(gitState(repo).head, sha);
   assert.equal(gitState(repo).clean, true);
   const wt = path.join(repo, "..", path.basename(repo) + "-wt");
@@ -442,7 +437,7 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
         fake(
           dir,
           "card.sh",
-          `echo "${TITLE_INTERACTIVE} ms=300"; echo "${BOOT_FAILED} the game scene's script did not load"; exec sleep 30`,
+          `echo "${TITLE_INTERACTIVE} ms=300"; echo "${BOOT_FAILED} the game scene's script did not load"; sleep 10; echo "${MENU_READY} ms=10300"; exec sleep 30`,
         ),
         { seconds: 5, menuWaitSeconds: 20 },
       ),
@@ -454,9 +449,12 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
         ),
         { seconds: 5 },
       ),
-      launchAppImage(fake(dir, "held.sh", "sleep 30 & echo last words; exit 3"), {
-        seconds: 20,
-      }),
+      launchAppImage(
+        fake(dir, "held.sh", "(sleep 10; echo pipes closed) & echo last words; exit 3"),
+        {
+          seconds: 20,
+        },
+      ),
       launchAppImage(
         fake(
           dir,
@@ -471,8 +469,8 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
       card.note,
       "the build said it did not load (SCRAPKEEP_BOOT_FAILED): the game scene's script did not load",
     );
-    assert.ok(card.ms < 5000, `failed in ${card.ms} ms, not at the 20 s menu wait`);
     assert.equal(card.menuMs, null);
+    assert.doesNotMatch(card.output, /SCRAPKEEP_MENU_READY/);
     assert.equal(headless.status, "fail");
     assert.match(
       headless.note,
@@ -480,14 +478,13 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
     );
     assert.match(held.note, /^exited \(3\) before the main menu$/);
     assert.match(held.output, /last words/);
-    assert.ok(held.ms < 10000, `judged in ${held.ms} ms`);
+    assert.doesNotMatch(held.output, /pipes closed/);
     assert.equal(quoted.status, "pass");
   });
 
   test("runProcess returns the exit, and a timeout kills the group and reads as killed", async () => {
     const dir = tmp();
     const pidFile = path.join(dir, "pid");
-    const started = Date.now();
     const [ok, hung] = await Promise.all([
       runProcess({ command: fake(dir, "ok.sh", "echo hi; exit 4"), args: [] }),
       runProcess(
@@ -497,7 +494,6 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
     ]);
     assert.equal(ok.exit, 4);
     assert.equal(hung.exit, null);
-    assert.ok(Date.now() - started < 5000);
     assert.equal(judgeCommand({ id: "smoke" }, hung).note, "timed out or killed");
     assert.equal(alive(Number(readFileSync(pidFile, "utf8"))), false);
   });

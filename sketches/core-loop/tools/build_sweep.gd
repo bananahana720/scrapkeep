@@ -2,6 +2,7 @@ extends SceneTree
 
 const PartDef := preload("res://src/build/part_def.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Items := preload("res://src/build/items.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
@@ -274,7 +275,7 @@ static func compose_arm(run_seed: int, builds: int) -> Dictionary:
 		var held: Array = []
 		var offered := {}
 		for pick in BUILD_SIZE:
-			var rarities: Array = Parts.gate_rarities(rng.randi_range(0, 2))
+			var rarities: Array = PartOffers.gate_rarities(rng.randi_range(0, 2))
 			var offer: Array = Parts.roll(rng, rarities, class_id, held, OFFER_SIZE, [], offered)
 			draws += offer.size()
 			repeats += offer_repeats(offer)

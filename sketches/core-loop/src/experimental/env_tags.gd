@@ -31,6 +31,40 @@ const REQUIRED_PAYLOAD_KEYS: Array[String] = [
 	"ttl_s",
 ]
 
+const BOUNDS_DEFAULT := {
+	"radius_min": 0.1,
+	"intensity_min": 0.0,
+	"intensity_max": 10.0,
+	"ttl_min": 0.0,
+	"require_positive_intensity": false,
+	"require_positive_ttl": false,
+	"strict_tag_type": false,
+	"strip_source_id": true,
+}
+
+const BOUNDS_ELITE := {
+	"radius_min": 0.1,
+	"intensity_min": 0.0,
+	"intensity_max": INF,
+	"ttl_min": 0.1,
+	"require_positive_intensity": false,
+	"require_positive_ttl": true,
+	"strict_tag_type": false,
+	"strip_source_id": false,
+}
+
+const BOUNDS_SETPIECE := {
+	"radius_min": 0.1,
+	"intensity_min": 0.05,
+	"intensity_max": 2.0,
+	"ttl_min": 0.05,
+	"require_positive_intensity": true,
+	"require_positive_ttl": true,
+	"strict_tag_type": true,
+	"strip_source_id": true,
+}
+
+const MIN_TELL_S := 0.6
 const MAX_CASCADE_DEPTH := 2
 const MAX_REACTIONS_PER_PASS := 12
 const MAX_ACTIVE_ZONES := 64
@@ -228,10 +262,6 @@ var _stats := {
 }
 
 
-static func reset() -> void:
-	pass
-
-
 static func is_canonical_tag(tag: StringName) -> bool:
 	return CANONICAL_TAGS.has(tag)
 
@@ -249,18 +279,23 @@ static func lookup_reaction(a: StringName, b: StringName) -> Dictionary:
 
 
 static func make_payload(tag: StringName, origin: Vector3, radius_m: float, source_id: String,
-		intensity: float = 1.0, ttl_s: float = 4.0) -> Dictionary:
+		intensity: float = 1.0, ttl_s: float = 4.0, bounds: Dictionary = BOUNDS_DEFAULT) -> Dictionary:
+	var radius_min: float = float(bounds.get("radius_min", 0.1))
+	var intensity_min: float = float(bounds.get("intensity_min", 0.0))
+	var intensity_max: float = float(bounds.get("intensity_max", 10.0))
+	var ttl_min: float = float(bounds.get("ttl_min", 0.0))
+	var clamped_intensity: float = clampf(intensity, intensity_min, intensity_max) if is_finite(intensity_max) else maxf(intensity, intensity_min)
 	return {
 		"tag": tag,
 		"origin": origin,
-		"radius_m": maxf(radius_m, 0.1),
+		"radius_m": maxf(radius_m, radius_min),
 		"source_id": source_id,
-		"intensity": clampf(intensity, 0.0, 10.0),
-		"ttl_s": maxf(ttl_s, 0.0),
+		"intensity": clamped_intensity,
+		"ttl_s": maxf(ttl_s, ttl_min),
 	}
 
 
-static func validate_payload(payload: Dictionary) -> Array[String]:
+static func validate_payload(payload: Dictionary, bounds: Dictionary = BOUNDS_DEFAULT) -> Array[String]:
 	var problems: Array[String] = []
 	for key in REQUIRED_PAYLOAD_KEYS:
 		if not payload.has(key):
@@ -268,19 +303,36 @@ static func validate_payload(payload: Dictionary) -> Array[String]:
 	if not problems.is_empty():
 		return problems
 	var tag: Variant = payload["tag"]
-	if not (tag is StringName or tag is String) or not is_canonical_tag(StringName(tag)):
+	var strict_tag: bool = bool(bounds.get("strict_tag_type", false))
+	var tag_type_ok: bool = (tag is StringName) if strict_tag else (tag is StringName or tag is String)
+	if not tag_type_ok or not is_canonical_tag(StringName(tag)):
 		problems.append("non-canonical tag: %s" % str(tag))
 	if not (payload["origin"] is Vector3):
 		problems.append("origin must be Vector3")
 	if float(payload["radius_m"]) <= 0.0:
 		problems.append("radius_m must be > 0")
-	if String(payload["source_id"]).strip_edges() == "":
+	var src: String = String(payload["source_id"])
+	if bool(bounds.get("strip_source_id", true)):
+		src = src.strip_edges()
+	if src == "":
 		problems.append("source_id must be non-empty")
-	if float(payload["intensity"]) < 0.0:
+	var intensity: float = float(payload["intensity"])
+	if bool(bounds.get("require_positive_intensity", false)):
+		if intensity <= 0.0:
+			problems.append("intensity must be > 0")
+	elif intensity < 0.0:
 		problems.append("intensity must be >= 0")
-	if float(payload["ttl_s"]) < 0.0:
+	var ttl_s: float = float(payload["ttl_s"])
+	if bool(bounds.get("require_positive_ttl", false)):
+		if ttl_s <= 0.0:
+			problems.append("ttl_s must be > 0")
+	elif ttl_s < 0.0:
 		problems.append("ttl_s must be >= 0")
 	return problems
+
+
+static func is_valid_payload(payload: Dictionary, bounds: Dictionary = BOUNDS_DEFAULT) -> bool:
+	return validate_payload(payload, bounds).is_empty()
 
 
 static func grammar_for(tag: StringName) -> Dictionary:

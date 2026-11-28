@@ -1,11 +1,11 @@
 extends Node
 
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const SHADER := preload("res://src/presentation/launch_take.gdshader")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 enum { IDLE, WIND, COVER, HOLD, REVEAL }
 
@@ -89,7 +89,7 @@ func busy() -> bool:
 
 
 func play(on_cover: Callable, wind := Callable(), ready_check := Callable()) -> bool:
-	return _begin(on_cover, wind, ready_check, Callable(), 0.0 if HighdraftFx.preferred else WIND_S, false)
+	return _begin(on_cover, wind, ready_check, Callable(), 0.0 if Comfort.reduced_motion else WIND_S, false)
 
 
 func play_over_flight(on_cover: Callable, cover_gate: Callable, ready_check := Callable(), flight_s := 0.0, taken_part := "") -> bool:
@@ -103,7 +103,7 @@ func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gat
 		on_cover.call()
 		finished.emit()
 		return false
-	reduced_motion = HighdraftFx.preferred
+	reduced_motion = Comfort.reduced_motion
 	_on_cover = on_cover
 	_ready_check = ready_check
 	_cover_gate = cover_gate

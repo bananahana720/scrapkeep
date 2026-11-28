@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { deflateSync, inflateSync } from "node:zlib";
+import { isMain } from "./lib/cli.mjs";
 
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
@@ -427,16 +427,7 @@ export function buildVisualQaPack(inputPngPath, { outDir = null, stem = null } =
   return { ...manifest, input: absIn, out: resolvedOut };
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const argv = process.argv.slice(2);
     let input = null;

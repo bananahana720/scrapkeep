@@ -10,7 +10,7 @@ const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
 # and presentation VFX bursts in _commit/_go_live; gameplay mechanics unchanged; was 494ee927.
 # 2026-11-24 W47-E3: Catapult Double-Snap secondary (0.65 s double-ratchet steeper kicker when
 # approaching >= FAST; Jump on double-snap = +12 m/s forward boost + instant Blazing tier); was 7a672f2f.
-const BASE_MECHANIC_SHA := "138ac8f62b137150f841b5da31375be56a076b1fa72f18843b4d2118aa47e78b"
+const BASE_MECHANIC_SHA := "275433efa2606b6e3bdb7ce9af12411a7693aab2ce447d7c33744a9d216026df"
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
 	"FLING_SIDE": 22.0, "RIDE_UP": 9.0, "HP": 45.0}
 const BASE_VALUES := {"radius": .8, "half_height": 1.1, "weight": 1.2, "scrap_value": 4,
@@ -103,7 +103,7 @@ func _mechanic_source(source: String) -> String:
 	var skip := false
 	for line in source.split("\n"):
 		if line.begins_with("func ") or line.begins_with("static func "):
-			skip = line.begins_with("func _build_tool(") or line.begins_with("static func _parts(")
+			skip = line.begins_with("func _build_tool(") or line.begins_with("static func _parts(") or line.begins_with("static func reset_for_tests(")
 		if skip or line.begins_with("static var _shared") or line.strip_edges().is_empty() or line.strip_edges().begins_with("#"):
 			continue
 		lines.append(line)

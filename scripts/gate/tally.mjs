@@ -1,10 +1,11 @@
-import { spawnSync } from "node:child_process";
-import { readFileSync, realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { checkLedger } from "../known-failing.mjs";
 import { WEEKLY_FILE, gateLists } from "./shard.mjs";
+import { gitOptional } from "../lib/git.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const BOT_BLOCK = 5;
@@ -194,8 +195,7 @@ async function main() {
   const text = readFileSync(argv[planAt + 1], "utf8");
   const rows = tallyRows(text);
   const gated = planHead(argv[planAt + 1]);
-  const head =
-    spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim() || null;
+  const head = gitOptional(["rev-parse", "HEAD"], { cwd: root }) || null;
   if (!gated)
     console.log(
       "NOTE the plan's file name is not w<N>-<head>-gate-plan.md, so the head it gates was not checked against this checkout",
@@ -232,7 +232,7 @@ async function main() {
   return problems.length === 0 ? 0 : 1;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = await main();
   } catch (error) {

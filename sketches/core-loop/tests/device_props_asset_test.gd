@@ -6,6 +6,7 @@ const Game := preload("res://src/game.gd")
 const Cache := preload("res://src/world/cracked_cache.gd")
 const Bet := preload("res://src/world/bet_crate.gd")
 const Altar := preload("res://src/world/ambush_altar.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ASSETS := [
 	[Cache, "cracked_cache", ["CacheShell", "CacheRoof", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"], 6],
@@ -136,6 +137,7 @@ func _run() -> void:
 			_check_altar(device)
 		_dispose(device)
 	_check_gameplay_sources()
+	_check_single_slot_material()
 	_finish()
 
 
@@ -158,13 +160,13 @@ func _check_cache(device) -> void:
 	for i in mini(before.size(), expected.size()):
 		_check(before[i][0] == expected[i][0] and before[i][1].is_equal_approx(Transform3D(Basis.IDENTITY, expected[i][1]))
 			and before[i][2] == 1 and before[i][3] == 1, "cache collider dimensions, transform and order %d" % i)
-	var saved: Array = Cache._shared
-	Cache._shared = []
+	var saved: Array = ModelKit._device_kits[Cache.MODEL]
+	ModelKit._device_kits[Cache.MODEL] = []
 	var fallback := _device(Cache, "fallback")
 	_check(_collisions(fallback) == before, "cache fallback and dressed collisions identical")
 	_check(fallback._lid is MeshInstance3D and fallback._lid.mesh is BoxMesh, "cache greybox fallback retained")
 	_dispose(fallback)
-	Cache._shared = saved
+	ModelKit._device_kits[Cache.MODEL] = saved
 	_check(device.state == Cache.SEALED and device._wall.visible, "cache sealed fracture panel visible")
 	device.crumble()
 	_check(device.state == Cache.OPEN and not device._wall.visible and device._wall.position.y < -390, "cache cracked wall vanishes and opens route")
@@ -185,12 +187,12 @@ func _check_cache(device) -> void:
 
 func _check_bet(device) -> void:
 	_check(_collisions(device).is_empty(), "bet has no collider")
-	var saved: Array = Bet._shared
-	Bet._shared = []
+	var saved: Array = ModelKit._device_kits[Bet.MODEL]
+	ModelKit._device_kits[Bet.MODEL] = []
 	var fallback := _device(Bet, "fallback")
 	_check(fallback._needle.get_child_count() > 0, "bet greybox fallback retained")
 	_dispose(fallback)
-	Bet._shared = saved
+	ModelKit._device_kits[Bet.MODEL] = saved
 	var twin := _device(Bet, "twin")
 	_check(twin._needle.mesh == device._needle.mesh and twin._needle != device._needle, "bet shares mesh with independent state pivot")
 	game.run.bonus_cores = 2
@@ -214,12 +216,12 @@ func _check_bet(device) -> void:
 
 func _check_altar(device) -> void:
 	_check(_collisions(device).is_empty(), "altar has no collider")
-	var saved: Array = Altar._shared
-	Altar._shared = []
+	var saved: Array = ModelKit._device_kits[Altar.MODEL]
+	ModelKit._device_kits[Altar.MODEL] = []
 	var fallback := _device(Altar, "fallback")
 	_check(fallback._cap is MeshInstance3D and fallback._cap.mesh is BoxMesh, "altar greybox fallback retained")
 	_dispose(fallback)
-	Altar._shared = saved
+	ModelKit._device_kits[Altar.MODEL] = saved
 	var idle: float = device._cap.rotation.y
 	device.tick(0.1)
 	_check(is_equal_approx(device._cap.rotation.y - idle, 0.06) and device._ring == null, "altar idle cap turns with no floor ring")
@@ -240,11 +242,35 @@ func _check_gameplay_sources() -> void:
 	for stem in SOURCE_PINS:
 		var source := FileAccess.get_file_as_string("res://src/world/%s.gd" % stem)
 		var tail := "func " + source.get_slice("func " + SOURCE_PINS[stem][0], 1)
-		tail = tail.get_slice("\n\nstatic func _slot_material", 0).get_slice("\n\nfunc _collision_box", 0)
+		tail = tail.get_slice("\n\nfunc _collision_box", 0)
 		tail = tail.strip_edges()
 		_check(tail.sha256_text() == SOURCE_PINS[stem][1], stem + " interaction, timing, reward and state logic unchanged")
 	for path in INHERITED_PINS:
 		_check(FileAccess.get_sha256("res://src/world/" + path + ".gd") == INHERITED_PINS[path], path + " unchanged source")
+
+
+func _check_single_slot_material() -> void:
+	var offenders: Array[String] = []
+	var kit_has := false
+	var queue: Array[String] = ["res://src/world"]
+	while not queue.is_empty():
+		var dir_path: String = queue.pop_back()
+		var dir := DirAccess.open(dir_path)
+		if dir == null:
+			continue
+		for sub in dir.get_directories():
+			queue.append(dir_path.path_join(sub))
+		for file in dir.get_files():
+			if not file.ends_with(".gd"):
+				continue
+			var full := dir_path.path_join(file)
+			var text := FileAccess.get_file_as_string(full)
+			if text.contains("func _slot_material("):
+				if full == "res://src/world/model_kit.gd":
+					kit_has = true
+				else:
+					offenders.append(full)
+	_check(kit_has and offenders.is_empty(), "only src/world/model_kit.gd defines func _slot_material(" + ("" if offenders.is_empty() else ": " + ", ".join(offenders)))
 
 
 const SOURCE_PINS := {
@@ -254,14 +280,14 @@ const SOURCE_PINS := {
 	# 2026-11-12: re-pinned for the pedestal gem becoming its rung's TierMark shape (W1-26).
 	# 2026-11-24: re-pinned for fire() lid hinge tween, staggered pedestal rise and brass glint burst (W46-ANIM-VFX-FLAIR).
 	# 2026-11-25: re-pinned for _relic_offer() passing include_alt = true so all 12 W50 swap relics can drop in-run.
-	"cracked_cache": ["stand_down()", "aaf96c816d49040ac55ca6b4560139f36458c09e0abda73162a86efddc6322b0"],
+	"cracked_cache": ["stand_down()", "4b213d39ca49bc8c5486cda33766e7e5395f44161f4726ef1b88a6a92c811144"],
 	"bet_crate": ["reach_point()", "dc1b7b8203b6c2018894e88689885c366ed5edd5d928cae60f6370082acb2e16"],
 	"ambush_altar": ["reach_point()", "7a1a73f6c7f2d8fc8645eb7565f763f0fb95d0d7701598998f46905bc9aa6db3"],
 }
 const INHERITED_PINS := {
 	# 2026-11-19: device and interactables re-pinned for the prompt drawing Interact's bound key or
 	# button in place of a fixed E (Wave 44 audit).
-	"device": "df8c6c95e0c30134840d77dd9070190071c9325f377d1ec29c5ab5458b96ba36",
+	"device": "9fb867d521205d036280e431b6c5fd2778709f0d375940b72e12438325c9eb03",
 	"interactables": "693003acc330eaffb583edf65056f45c13b09918795409fb3b2e7e7fa86b8713",
 	"interact": "4211c0ccb3631e6fd9dff62b929527f38a1bf1a99ae9dea7217e9f75470a0708",
 }

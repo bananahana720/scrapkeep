@@ -5,9 +5,9 @@ const Interactables := preload("res://src/world/interactables.gd")
 const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const Palette := preload("res://src/core/palette.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const MODEL := "res://assets/models/world_one/rescue_cage.glb"
 const SCARF := "res://assets/models/world_one/rescue_keeper_scarf.glb"
 const SCARF_AT := Vector3(1.4, 2.55, 1.4)
@@ -225,7 +225,7 @@ class Cage extends "res://src/world/device.gd":
 			return
 		var rest := Vector3(0.0, 1.6, 2.1)
 		if _pilot.position.is_equal_approx(rest) or not _freed_now or not is_inside_tree() \
-				or EnemyMotion.motion_scale <= 0.0:
+				or Comfort.reduced_motion:
 			_pilot.position = rest
 			_pilot.rotation.y = PI
 			return

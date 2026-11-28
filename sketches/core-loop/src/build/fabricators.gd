@@ -1,8 +1,8 @@
 extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Relics := preload("res://src/build/relics.gd")
-const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -262,10 +262,6 @@ func add_press_at(at: Vector3, facing: Vector3, part_id: String) -> Dictionary:
 	return rec
 
 
-func scrappers() -> Array[Dictionary]:
-	return _scrappers
-
-
 func presses() -> Array[Dictionary]:
 	return _presses
 
@@ -302,20 +298,11 @@ func _add(at: Vector3, facing: Vector3, held: Array, part_id := "") -> Dictionar
 func _roll(held: Array) -> String:
 	if _rng == null:
 		_rng = RandomNumberGenerator.new()
-	var rarities := Parts.source_rarities("fabricator", _stage)
-	var picks: Array = Parts.roll_for_stage(_rng, rarities, _class_id, held, 1, _stage, [], {}, _stage >= Parts.WORLD_ESCALATION_STAGE_W3) \
-		if _stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+	var rarities := PartOffers.source_rarities("fabricator", _stage)
+	var picks: Array = PartOffers.roll_for_stage(_rng, rarities, _class_id, held, 1, _stage, [], {}, _stage >= PartOffers.WORLD_ESCALATION_STAGE_W3, Parts.offer_ops()) \
+		if _stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 		else Parts.roll(_rng, rarities, _class_id, held, 1)
 	return picks[0] if not picks.is_empty() else "hot_rivets"
-
-
-func roll_press_target(held: Array, stage := -1) -> String:
-	if _rng == null:
-		_rng = RandomNumberGenerator.new()
-	var at_stage := _stage if stage < 0 else stage
-	var rarities: Array = ["rare"] if at_stage >= Parts.WORLD_ESCALATION_STAGE_W2 else ["common", "rare"]
-	var picks: Array = Parts.roll_high_impact(_rng, rarities, _class_id, held, 1, [], {}, at_stage, false)
-	return String(picks[0]) if not picks.is_empty() else "hot_rivets"
 
 
 func step(ball: Vector3, delta: float, cogs: int, held: Array) -> Array[Dictionary]:
@@ -380,16 +367,11 @@ func _build_hoop(fab: Dictionary) -> void:
 func _refresh_glyph(fab: Dictionary) -> void:
 	var d: Resource = Parts.def(fab["part_id"])
 	var rarity: String = d.rarity if d != null else "common"
-	var color: Color = _rarity_color(rarity)
+	var color: Color = RewardGates.rarity_color(rarity)
 	var glyph: MeshInstance3D = fab["glyph"]
 	glyph.material_override = Palette.solid(color, 2.4)
 	glyph.visible = fab["restock"] <= 0.0
 	fab["text"] = ""
-
-
-static func _rarity_color(rarity: String) -> Color:
-	var id := ItemGen.resolve_rarity(rarity)
-	return ItemGen.RARITY[id if id != "" else "common"]["color"]
 
 
 func _refresh_label(fab: Dictionary, cogs: int, held: Array) -> void:

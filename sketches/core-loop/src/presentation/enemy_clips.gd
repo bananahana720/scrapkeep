@@ -2,6 +2,7 @@ extends Node
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const DIR := "res://assets/models/world_one/clips/"
@@ -244,7 +245,7 @@ func _physics_process(delta: float) -> void:
 	var choice := _choose()
 	_set_clip(String(choice[0]))
 	clip_time = float(choice[1])
-	var weight := 1.0 if clip in HARD else EnemyMotion.motion_scale
+	var weight := 1.0 if clip in HARD else Comfort.motion_scale()
 	_sample(clip, clip_time, weight)
 	if _strike_age >= 0.0:
 		_strike_age += delta
@@ -253,13 +254,12 @@ func _physics_process(delta: float) -> void:
 
 
 func _choose() -> Array:
-	var atk: Dictionary = enemy.get("_atk")
+	var atk: Dictionary = enemy.attack_state() if enemy.has_method("attack_state") else {}
 	var anims: Dictionary = lib.anims
-	if not atk.is_empty() and String(atk.phase) == "windup" and anims.has("windup"):
+	if not atk.is_empty() and String(atk["phase"]) == "windup" and anims.has("windup"):
 		_strike_age = -1.0
 		_hit_age = -1.0
-		var tele = atk.get("tele")
-		var progress := float(tele.progress) if tele != null and is_instance_valid(tele) else float(atk.progress)
+		var progress := float(atk["progress"])
 		var run: float = enemy.windup_run() if enemy.has_method("windup_run") else -1.0
 		if run >= 0.0:
 			progress = run

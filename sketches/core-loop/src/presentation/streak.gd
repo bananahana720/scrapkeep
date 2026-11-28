@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 
 
 const FAST_RATIO := 0.45
@@ -18,7 +18,7 @@ var peak_rung := 0
 
 static func for_kind(kind: String) -> RefCounted:
 	var streak: RefCounted = load("res://src/presentation/streak.gd").new()
-	var row := EventKinds.juice(kind)
+	var row := EventJuice.juice(kind)
 	streak.window_ms = int(row.get("chain_ms", 700))
 	streak.cap = int(row.get("chain_cap", 9))
 	return streak

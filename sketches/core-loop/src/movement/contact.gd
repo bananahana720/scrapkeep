@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Tuning := preload("res://src/movement/tuning.gd")
+
 
 const REBOUND_WEIGHT := 1.15
 const SPRINT_REBOUND_WEIGHT := 1.0
@@ -66,13 +68,12 @@ static func ram_knock(base: float, speed: float, heft: float, mult := 1.0) -> fl
 	return minf(knock * mult, LANDING_CEILING) if mult > 1.0 else knock
 
 
-const BUMP_FLOOR_DOT := 0.45
 const BUMP_MIN_SPEED := 9.0
 const BUMP_GAP_S := 0.25
 
 
 static func bump_closing(velocity: Vector3, normal: Vector3) -> float:
-	if normal.y > BUMP_FLOOR_DOT:
+	if normal.y > Tuning.MAX_SLOPE_DOT:
 		return 0.0
 	return maxf(0.0, -velocity.dot(normal.normalized()))
 

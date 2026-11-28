@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "../lib/cli.mjs";
+import { git } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const JS_FILE = /^(?:src|server|scripts|tests|tools)\/.*\.(?:js|mjs|cjs)$|^vite\.config\.js$/;
@@ -15,20 +17,10 @@ export function filterFormatTargets(files, exists = (file) => existsSync(path.jo
 }
 
 export function changedFilesSince(baseRef, { cwd = root, spawn = spawnSync } = {}) {
-  const ran = spawn(
-    "git",
-    ["diff", "--no-renames", "--name-only", "--diff-filter=ACM", `${baseRef}...HEAD`],
-    {
-      cwd,
-      encoding: "utf8",
-    },
-  );
-  if (ran.error || ran.status !== 0) {
-    throw new Error(
-      `git diff against ${baseRef} failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
-    );
-  }
-  return ran.stdout
+  return git(["diff", "--no-renames", "--name-only", "--diff-filter=ACM", `${baseRef}...HEAD`], {
+    cwd,
+    spawn,
+  })
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
@@ -62,16 +54,7 @@ export function parseFormatArgs(argv) {
   return opts;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const opts = parseFormatArgs(process.argv.slice(2));
     const candidates = opts.files.length > 0 ? opts.files : changedFilesSince(opts.base);

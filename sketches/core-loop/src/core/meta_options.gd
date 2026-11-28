@@ -1,5 +1,6 @@
 extends RefCounted
 
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 const KINDS := ["option", "discovery", "pocket_key"]
 const FIELDS := ["name", "text", "kind", "effect", "grant"]
@@ -144,10 +145,6 @@ static func level(profile) -> int:
 	return ROWS.keys().filter(func(id): return profile.has_option(id)).size()
 
 
-static func _words(s: String) -> int:
-	return s.split(" ", false).size()
-
-
 static func _keys(value, out: Array) -> Array:
 	if value is Dictionary:
 		for key in value:
@@ -175,10 +172,10 @@ static func validate(rows: Dictionary, grants: Dictionary) -> Array:
 				if key.contains(word):
 					problems.append("%s: key %s names a %s" % [id, key, word])
 		var title := str(r.get("name", ""))
-		if title == "" or _words(title) > NAME_WORDS:
+		if title == "" or WordBudget.words_in(title) > NAME_WORDS:
 			problems.append("%s: name must be 1 to %d words" % [id, NAME_WORDS])
 		var text := str(r.get("text", ""))
-		if text == "" or _words(text) > TEXT_WORDS:
+		if text == "" or WordBudget.words_in(text) > TEXT_WORDS:
 			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
 		if not KINDS.has(r.get("kind", "")):
 			problems.append("%s: kind %s is not one of %s" % [id, r.get("kind", ""), KINDS])
@@ -336,10 +333,10 @@ static func validate_overrides(order_ids: Array, grant_ids: Array, rows_to_check
 				if key.contains(word):
 					problems.append("%s: key %s names banned word %s" % [id, key, word])
 		var title := str(r.get("name", ""))
-		if title == "" or _words(title) > NAME_WORDS:
+		if title == "" or WordBudget.words_in(title) > NAME_WORDS:
 			problems.append("%s: name must be 1 to %d words" % [id, NAME_WORDS])
 		var text := str(r.get("text", ""))
-		if text == "" or _words(text) > TEXT_WORDS:
+		if text == "" or WordBudget.words_in(text) > TEXT_WORDS:
 			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
 		var upside := str(r.get("upside", ""))
 		if upside == "":
@@ -348,7 +345,7 @@ static func validate_overrides(order_ids: Array, grant_ids: Array, rows_to_check
 		if downside == "":
 			problems.append("%s: downside must be non-empty" % id)
 		var downside_text := str(r.get("downside_text", ""))
-		if downside_text == "" or _words(downside_text) > TEXT_WORDS:
+		if downside_text == "" or WordBudget.words_in(downside_text) > TEXT_WORDS:
 			problems.append("%s: downside_text must be 1 to %d words" % [id, TEXT_WORDS])
 		_validate_unlock(String(id), r.get("unlock"), order_ids, grant_ids, problems)
 	return problems
@@ -439,10 +436,10 @@ static func validate_alt_loadouts(relic_rows: Dictionary, pilot_ids: Array, orde
 				if key.contains(word):
 					problems.append("%s: key %s names banned word %s" % [id, key, word])
 		var title := str(r.get("name", ""))
-		if title == "" or _words(title) > NAME_WORDS:
+		if title == "" or WordBudget.words_in(title) > NAME_WORDS:
 			problems.append("%s: name must be 1 to %d words" % [id, NAME_WORDS])
 		var text := str(r.get("text", ""))
-		if text == "" or _words(text) > TEXT_WORDS:
+		if text == "" or WordBudget.words_in(text) > TEXT_WORDS:
 			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
 		var pilot := str(r.get("pilot", ""))
 		if not pilot_ids.has(pilot):

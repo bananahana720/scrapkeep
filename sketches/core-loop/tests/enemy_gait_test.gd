@@ -10,6 +10,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const EnemyGait := preload("res://src/presentation/enemy_gait.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var _game
 var _t := T.new("enemy_gait_test")
@@ -123,7 +124,7 @@ func _unit() -> void:
 	_t.check("leans with its weight, never past the cap", lean > 0.05 and lean <= EnemyGait.LEAN_MAX + 0.001, "peak %.1f deg" % rad_to_deg(lean))
 	_t.check("steps instead of sliding", lift > EnemyGait.STEP_LIFT * 0.5 and lift <= EnemyGait.STEP_LIFT + 0.0001, "peak lift %.3f m" % lift)
 	_t.check("stands upright once stopped", gait.tilt.is_equal_approx(Transform3D.IDENTITY), str(gait.tilt))
-	EnemyMotion.motion_scale = 0.0
+	Comfort.reduced_motion = true
 	var still := true
 	for i in 45:
 		gait.step(dt, body, Vector3(0.0, 0.0, 3.8 if i % 10 < 5 else 0.0), 0.6)
@@ -138,12 +139,12 @@ func _unit() -> void:
 	for i in 30:
 		gait.step(dt, body, Vector3(10.0, 0.0, 0.0), 0.6, false)
 		lifted = maxf(lifted, gait.turn.origin.y)
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	for i in 30:
 		gait.step(dt, body, Vector3(10.0, 0.0, 0.0), 0.6, false)
 		lifted = maxf(lifted, gait.turn.origin.y)
 	_t.check("a knocked or falling body does not step", lifted == 0.0, "peak lift %.3f m" % lifted)
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	# W1-85: a glance takes the look from the aim for a beat; a hop is a small cheer.
 	var aimed := gait.yaw()
 	gait.glance(aimed + 1.5)
@@ -283,19 +284,19 @@ func _grounding() -> void:
 	var holder := Node3D.new()
 	root.add_child(holder)
 	var flat := func(_x: float, _z: float) -> float: return 0.0
-	var cases := [["hooker", true, 1.0, true], ["winch_drone", true, 1.0, false], ["hooker", true, 0.0, false], ["hooker", false, 1.0, false]]
+	var cases := [["hooker", true, false, true], ["winch_drone", true, false, false], ["hooker", true, true, false], ["hooker", false, false, false]]
 	var all_right := true
 	var said := []
 	for c in cases:
 		EnemyMotion.headless_idle = c[1]
-		EnemyMotion.motion_scale = c[2]
+		Comfort.reduced_motion = c[2]
 		var body := Node3D.new()
 		holder.add_child(body)
 		var made = EnemyMotion.scatter(body, c[0], Vector3.FORWARD, flat)
 		var grounded: bool = made != null and made.ground.is_valid() and made.rest > 0.0
 		all_right = all_right and made != null and grounded == c[3]
-		said.append("%s idle %s scale %.0f: %s" % [c[0], c[1], c[2], grounded])
+		said.append("%s idle %s reduced %s: %s" % [c[0], c[1], c[2], grounded])
 	EnemyMotion.headless_idle = false
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	holder.free()
 	_t.check("deaths land only for walking kinds with motion on", all_right, ", ".join(said))

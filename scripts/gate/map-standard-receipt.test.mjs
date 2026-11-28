@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -19,6 +18,7 @@ import {
   produce,
 } from "./map-standard-receipt.mjs";
 import { receiptRow } from "../world1-bands.mjs";
+import { git as runGit } from "../lib/git.mjs";
 
 const HEAD = "3adc2fd0e8563b13c87f921b2ae85763467fec03";
 const OTHER_HEAD = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -180,7 +180,7 @@ test("map standard: MAPCHECK parsing reads marker lines and skips report INFO", 
 test("map standard: the producer refuses a dirty checkout and passes on a clean checkout", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "map-standard-git-"));
   try {
-    const git = (...args) => spawnSync("git", args, { cwd: dir, encoding: "utf8" });
+    const git = (...args) => runGit(args, { cwd: dir });
     git("init", "-q");
     git("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "base");
     writeFileSync(path.join(dir, "tracked.txt"), "a");
@@ -202,7 +202,7 @@ test("map standard: the producer refuses a dirty checkout and passes on a clean 
     assert.equal(ran, false);
     git("checkout", "-q", "tracked.txt");
     const r = produce({ cwd: dir, run: () => logs() });
-    assert.equal(r.head, git("rev-parse", "HEAD").stdout.trim());
+    assert.equal(r.head, git("rev-parse", "HEAD"));
     assert.equal(r.pass, true, r.measured);
     assert.equal(r.plant_caught, true);
   } finally {

@@ -1,7 +1,7 @@
 extends SceneTree
 
 const ClassDef := preload("res://src/core/class_def.gd")
-const Meanings := preload("res://src/core/colour_meanings.gd")
+const Meanings := preload("res://tests/support/colour_meanings.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")

@@ -4,12 +4,13 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Roster := preload("res://src/combat/roster.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpecialCues := preload("res://src/combat/special_cues.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const PauseGuard := preload("res://src/presentation/pause_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const FAMILY := {Roster.FLEET: "fleet", Roster.REACTOR: "ancient", Roster.SWARM: "ancient", Roster.MIND: "ancient"}
@@ -95,10 +96,8 @@ var root: Node3D
 var spawned := {}
 var moments: Array = []
 const LOG_KEEP := 64
-var reduced_motion := false
 
-var _fx := {}
-var _fx_next := {}
+var _fx := FxLibrary.Pools.new()
 var _busy := {}
 var _follows: Array = []
 var _windups := {}
@@ -136,21 +135,11 @@ func setup(ctx_ref) -> void:
 	root = Node3D.new()
 	root.name = "MachineEffects"
 	ctx.root.add_child(root)
-	for id in FxLibrary.SPECS:
-		if FxLibrary.SPECS[id].get("owner", "vfx") != "machine":
-			continue
-		var pool: Array = []
-		for i in int(FxLibrary.SPECS[id]["pool"]):
-			var p := FxLibrary.build(id)
-			p.name = "%s_%d" % [p.name, i]
-			root.add_child(p)
-			pool.append(p)
-		_fx[id] = pool
-		_fx_next[id] = 0
+	_fx = FxLibrary.pools(root, "machine")
 	_word_root = Node3D.new()
 	_word_root.name = "Words"
 	root.add_child(_word_root)
-	var pause_guard := PlayerFx.PauseGuard.new()
+	var pause_guard := PauseGuard.new()
 	pause_guard.root = _word_root
 	add_child(pause_guard)
 	for i in WORD_POOL:
@@ -186,18 +175,8 @@ static func family_of_kind(kind: String) -> String:
 	return family_of(String(Roster.row(kind).get("faction", Roster.FLEET)))
 
 
-static func special_of(enemy: Node) -> String:
-	return SpecialCues.special_of(enemy)
-
-
-static func special_sound(special: String, moment: String) -> String:
-	return SpecialCues.sound(special, moment)
-
-
 func clear() -> void:
-	for id in _fx:
-		for p: GPUParticles3D in _fx[id]:
-			p.emitting = false
+	_fx.stop()
 	_busy.clear()
 	_follows.clear()
 	_windups.clear()
@@ -222,10 +201,7 @@ func fire(effects: Dictionary, at: Vector3, tint := Color.TRANSPARENT, cls := "P
 		var count := _thin(int(effects[id]), _class_of(id, cls))
 		if count <= 0 or not _fx.has(id) or FxLibrary.SPECS[id]["attach"] != "world":
 			continue
-		var pool: Array = _fx[id]
-		var p: GPUParticles3D = pool[_fx_next[id]]
-		_fx_next[id] = (_fx_next[id] + 1) % pool.size()
-		FxLibrary.fire(p, id, "enemy_struck", count, at, tint if FxLibrary.SPECS[id]["colour"] == "row" else Color.TRANSPARENT)
+		_fx.fire(id, "enemy_struck", count, at, tint if FxLibrary.SPECS[id]["colour"] == "row" else Color.TRANSPARENT)
 		spawned[id] = spawned.get(id, 0) + 1
 		fired += 1
 	return fired
@@ -250,13 +226,13 @@ func _thin(count: int, cls: String) -> int:
 func follow(id: String, node: Node3D, count: int, lift: float, seconds := INF, tint := Color.TRANSPARENT, spin := 0.0) -> GPUParticles3D:
 	if not _fx.has(id) or not is_instance_valid(node) or count <= 0:
 		return null
-	for p: GPUParticles3D in _fx[id]:
+	for p: GPUParticles3D in _fx.list(id):
 		if _busy.has(p):
 			continue
 		_busy[p] = true
 		p.amount_ratio = clampf(float(count) / float(p.amount), 0.0, 1.0)
 		p.global_transform = Transform3D(Basis.IDENTITY, node.global_position + Vector3.UP * lift)
-		p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else FxLibrary.colour(id, "enemy_struck"))
+		p.set_instance_shader_parameter(FxLibrary.TINT, tint if tint.a > 0.0 else FxLibrary.colour(id, "enemy_struck"))
 		FxLibrary.set_heat(p, FxLibrary.look(id))
 		p.emitting = true
 		_follows.append({"emitter": p, "node": node, "lift": lift, "until": _clock + seconds, "spin": spin})
@@ -383,7 +359,7 @@ func _draw_word(slot: Dictionary) -> void:
 	var size: float = slot["scale"]
 	var at: Vector3 = slot["at"]
 	size = _fit(slot, at, size)
-	if not reduced_motion and t < WORD_SLAM:
+	if not Comfort.reduced_motion and t < WORD_SLAM:
 		size *= lerpf(1.6, 1.0, t / WORD_SLAM)
 	at = _below_top(slot, at, size)
 	var leave := clampf((t - (life - 0.25)) / 0.25, 0.0, 1.0)
@@ -392,7 +368,7 @@ func _draw_word(slot: Dictionary) -> void:
 		var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 		if cam != null:
 			side = cam.global_basis.x
-		if not reduced_motion:
+		if not Comfort.reduced_motion:
 			at += (side + Vector3.UP) * leave * 1.2
 	label.global_position = at
 	label.scale = Vector3.ONE * size
@@ -430,7 +406,7 @@ func _on_spawned(enemy: Node3D, kind: String) -> void:
 		return
 	var family := family_of(String(enemy.get("faction"))) if enemy.get("faction") != null else family_of_kind(kind)
 	var at := enemy.global_position
-	var special := special_of(enemy)
+	var special := SpecialCues.special_of(enemy)
 	if special != "":
 		SpecialCues.attach(enemy)
 		special_moment(special, "spawn", enemy)
@@ -511,7 +487,7 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 
 
 func _on_died(at: Vector3, _scrap: int, enemy: Node3D, kind: String, family: String) -> void:
-	var special := special_of(enemy)
+	var special := SpecialCues.special_of(enemy)
 	if special != "":
 		special_moment(special, SpecialCues.break_moment(enemy), enemy, at)
 		return
@@ -627,7 +603,7 @@ static func _kind_name(kind) -> String:
 
 
 func _on_special_tell(moment: String, enemy: Node3D) -> void:
-	var special := special_of(enemy)
+	var special := SpecialCues.special_of(enemy)
 	if special != "":
 		special_moment(special, moment, enemy)
 
@@ -651,7 +627,7 @@ func special_moment(special: String, moment: String, enemy: Node3D, at := Vector
 	if text != "":
 		word(text, top + Vector3.UP * WORD_HEIGHT, tint if moment == "tell" else WORD_TINT[row["family"]], true)
 	_note(special + "_" + moment, special, at)
-	return special_sound(special, moment)
+	return SpecialCues.sound(special, moment)
 
 
 func _draw_cables(delta: float) -> void:
@@ -794,7 +770,6 @@ func _process(delta: float) -> void:
 	if root == null:
 		return
 	_clock += delta
-	reduced_motion = EnemyMotion.motion_scale <= 0.0
 	_sample -= delta
 	if _sample <= 0.0:
 		_sample = SAMPLE_SECONDS
@@ -808,7 +783,7 @@ func _process(delta: float) -> void:
 			p.emitting = false
 			_busy.erase(p)
 			continue
-		var spin := 0.0 if reduced_motion else float(f["spin"]) * _clock
+		var spin := 0.0 if Comfort.reduced_motion else float(f["spin"]) * _clock
 		p.global_transform = Transform3D(Basis(Vector3.UP, spin), node.global_position + Vector3.UP * float(f["lift"]))
 		kept.append(f)
 	_follows = kept

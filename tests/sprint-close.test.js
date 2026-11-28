@@ -2,18 +2,18 @@ import { after, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, writeFile, rm, mkdir, symlink } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { execFile, execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { git as runGit } from "../scripts/lib/git.mjs";
 
 const execFileAsync = promisify(execFile);
 const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
 const script = fileURLToPath(new URL("../scripts/sprint-close.mjs", import.meta.url));
 const hash = (data) => createHash("sha256").update(data).digest("hex");
-const git = (root, ...args) =>
-  execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
+const git = (root, ...args) => runGit(args, { cwd: root });
 const EVIDENCE_BYTES = "synthetic test evidence only\n";
 const EVIDENCE_SHA = hash(EVIDENCE_BYTES);
 

@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Bindings := preload("res://src/core/bindings.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const RestartMeter := preload("res://src/ui/restart_meter.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")

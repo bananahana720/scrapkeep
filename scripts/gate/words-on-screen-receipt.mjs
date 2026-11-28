@@ -1,23 +1,15 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
+import { withoutTeardownNoise } from "../lib/godot-test-runner.mjs";
 import { applyBaseline } from "../sketch-lint.mjs";
 import { SOURCES, lintFile, parseBoundKeys, parseNames } from "../sketch-lint-words.mjs";
-import { withoutTeardownNoise } from "../sketch-smoke.mjs";
-import { cleanHead, root } from "./clean-head.mjs";
+import { cleanHead, parseReceiptArgs, root, runReceiptCliSync } from "./receipt-cli.mjs";
 import { parseSmokeLog } from "./shard.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const BUDGET_TESTS = ["ui_word_budget_test", "ui_word_budget_first_find_test"];
 export const PLANT_PATH = "sketches/core-loop/src/ui/_planted_label.gd";
@@ -190,42 +182,16 @@ export function produce({
 }
 
 export function parseArgs(argv) {
-  const args = { out: null };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "--out") {
-      const val = argv[++i];
-      if (!val || val.startsWith("--")) throw new Error("--out requires a value");
-      args.out = val;
-    } else if (a.startsWith("--out=")) {
-      args.out = a.slice("--out=".length);
-    } else {
-      throw new Error(`unknown argument: ${a}`);
-    }
-  }
-  return args;
+  return parseReceiptArgs(argv, { defaults: { out: null } });
 }
 
 function main(argv) {
-  let args;
-  let receipt;
-  try {
-    args = parseArgs(argv);
-    receipt = produce();
-  } catch (e) {
-    console.error(String(e?.message ?? e));
-    return 2;
-  }
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) {
-    mkdirSync(path.dirname(path.resolve(args.out)), { recursive: true });
-    writeFileSync(args.out, text);
-  } else {
-    process.stdout.write(text);
-  }
-  return receipt.pass ? 0 : 1;
+  return runReceiptCliSync(() => {
+    const args = parseArgs(argv);
+    return { receipt: produce(), out: args.out };
+  });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   process.exit(main(process.argv.slice(2)));
 }

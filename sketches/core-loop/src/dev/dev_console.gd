@@ -9,9 +9,10 @@ const DevLook := preload("res://src/dev/dev_look.gd")
 const DevLens := preload("res://src/dev/dev_lens.gd")
 const DevFight := preload("res://src/dev/dev_fight.gd")
 const DevOverlay := preload("res://src/dev/dev_overlay.gd")
-const FrameRead := preload("res://src/presentation/frame_read.gd")
+const DevInspect := preload("res://src/dev/dev_inspect.gd")
+const DevAgent := preload("res://src/dev/dev_agent.gd")
+const DevCapture := preload("res://src/dev/dev_capture.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
-const SafeStore := preload("res://src/core/safe_store.gd")
 const TreePick := preload("res://src/ui/tree_pick.gd")
 
 const LAYER := 90
@@ -21,17 +22,6 @@ const MARGIN := 16.0
 const SLIDE_S := 0.18
 const LOG_LINES := 7
 const STATUS_EVERY := 0.25
-const SHOT_DIR := "user://dev_shots"
-const SHEET_SCALE := 0.34
-const SHEET_AXES := ["presets", "cams", "quality"]
-const SHEET_SETTLE := {"presets": 4, "cams": 6, "quality": 10}
-const SHEET_GUTTER := 4
-const SHEET_HEADER := 28
-const SHEET_CAPTION := 28
-const SHEET_DEAD_EDGE := 4
-const SAME_LUMA := 0.002
-const INSPECT_PATH := "res://src/dev/dev_inspect.gd"
-const AGENT_PATH := "res://src/dev/dev_agent.gd"
 const TAB_PAD := 6
 const DOT_PX := 6.0
 const RESET_PX := 20.0
@@ -39,14 +29,11 @@ const HAND := UiTokens.Hand.OLD_WORKS
 const TABS := ["Look", "Paint", "Print", "Lens", "Fight", "Debug", "Bake"]
 const OVERLAY_WORDS := ["off", "all", "bounds", "telegraphs", "vel", "perf", "+bounds", "+telegraphs", "+vel", "+perf",
 	"-bounds", "-telegraphs", "-vel", "-perf"]
-const MODULE_HEADS := ["stage", "warp", "give", "panel", "inspect", "events", "assert", "tune"]
 const LIGHT_KEYS := ["exposure", "saturation", "contrast", "brightness", "ambient", "sun", "sun_pitch", "sun_yaw", "shadow",
 	"sun_size", "fog", "fog_sky", "air", "glow", "bloom", "ssao", "white", "ink_width"]
 const TONEMAPS := ["Linear", "Reinhard", "Filmic", "ACES", "AgX"]
 const LENS_KNOBS := DevLens.LENS_KNOBS
 const SCRIPT_STEPS := ["wait", "tick", "until", "shot", "qa_pack", "sheet", "quit"]
-const LENS_RANGES := {"fov": [10.0, 120.0, 0.5], "distance": [2.0, 200.0, 0.5], "pitch": [-89.5, 60.0, 0.5],
-	"yaw": [-180.0, 180.0, 1.0], "size": [2.0, 300.0, 0.5], "lift": [-5.0, 30.0, 0.1], "spin": [-90.0, 90.0, 1.0], "tilt": [0.0, 1.0, 0.01], "cut": [0.0, 200.0, 0.5]}
 const WORLDS := ["all", "1", "2", "3"]
 
 var game
@@ -55,9 +42,9 @@ var look: DevLook
 var lens: DevLens
 var fight: DevFight
 var overlay: DevOverlay
-var inspect
-var agent
-var shot_dir := SHOT_DIR
+var inspect: DevInspect
+var agent: DevAgent
+var capture: DevCapture
 var open := false
 var _drawer: PanelContainer
 var _page: VBoxContainer
@@ -78,8 +65,6 @@ var _rows := {}
 var _spawn_world := "1"
 var _spawn_count := 1
 var _spawn_affix := ""
-var _shots := 0
-var _busy := false
 
 
 static func hook(game_ref) -> void:
@@ -110,24 +95,22 @@ func setup(game_ref) -> void:
 	_register()
 	if fight.has_method("register_extra"):
 		fight.register_extra(commands)
-	if ResourceLoader.exists(INSPECT_PATH):
-		inspect = load(INSPECT_PATH).new()
-		add_child(inspect)
-		inspect.setup(game, self)
-		inspect.register(commands)
+	inspect = DevInspect.new()
+	add_child(inspect)
+	inspect.setup(game, self)
+	inspect.register(commands)
 	overlay.register(commands)
-	if ResourceLoader.exists(AGENT_PATH):
-		agent = load(AGENT_PATH).new()
-		add_child(agent)
-		agent.setup(game, self)
+	capture = DevCapture.new()
+	agent = DevAgent.new()
+	add_child(agent)
+	agent.setup(game, self)
 	commands.said.connect(_say)
 	_build()
 	_drawer.visible = false
+	add_child(capture)
+	capture.setup(game, self, _drawer, _ink())
+	capture.said.connect(_say)
 	game.events.flow_changed.connect(_on_flow_changed)
-	if agent == null:
-		for arg in OS.get_cmdline_user_args():
-			if arg.begins_with("--dev-run="):
-				run_script.call_deferred(arg.trim_prefix("--dev-run="), true)
 
 
 func _exit_tree() -> void:
@@ -243,55 +226,23 @@ func held_input() -> Array:
 func run(line: String, keep := true) -> void:
 	_echo(line)
 	commands.run(line, keep)
-	_refresh_rows()
+	refresh_rows()
 	_sweep_input.call_deferred()
 
 
 func run_script(script: String, scripted := false) -> void:
-	if agent != null and agent.has_method("run_scenario"):
-		for part in script.split(";", false):
-			var text := part.strip_edges()
-			if not text.is_empty():
-				_echo(text)
-		var receipt: Dictionary = await agent.run_scenario([script], {"scripted": scripted, "reset_assertions": false})
-		_refresh_rows()
-		_sync_dots()
-		_sweep_input.call_deferred()
-		for row in receipt.get("steps", []):
-			if row is Dictionary and row.get("data") is Dictionary and bool(row.data.get("quitting", false)):
-				if is_inside_tree():
-					get_tree().quit(0 if bool(receipt.get("ok", false)) else 1)
-				return
-		return
 	for part in script.split(";", false):
 		var text := part.strip_edges()
-		var words := text.split(" ", false)
-		var head := words[0].to_lower() if not words.is_empty() else ""
-		if head == "wait":
+		if not text.is_empty():
 			_echo(text)
-			for i in DevCommands.whole(words, 1, 30):
-				await get_tree().process_frame
-				if not is_inside_tree():
-					return
-			continue
-		if head == "tick":
-			_echo(text)
-			if fight.has_method("step_physics"):
-				var res: Dictionary = await fight.step_physics(DevCommands.whole(words, 1, 1))
-				_say(String(res.get("text", "")), "ok" if bool(res.get("ok", false)) else "warn")
-			continue
-		if head == "sheet":
-			_echo(text)
-			await sheet_detailed(DevCommands.word(words, 1, "presets"), DevCommands.word(words, 2), scripted)
-		elif head == "shot":
-			_echo(text)
-			await shot(DevCommands.word(words, 1), scripted)
-		elif head == "quit":
-			get_tree().quit()
-			return
-		elif head != "":
-			run(text, false)
-		if not is_inside_tree():
+	var receipt: Dictionary = await agent.run_scenario([script], {"scripted": scripted, "reset_assertions": false})
+	refresh_rows()
+	_sync_dots()
+	_sweep_input.call_deferred()
+	for row in receipt.get("steps", []):
+		if row is Dictionary and row.get("data") is Dictionary and bool(row.data.get("quitting", false)):
+			if is_inside_tree():
+				get_tree().quit(0 if bool(receipt.get("ok", false)) else 1)
 			return
 
 
@@ -398,14 +349,10 @@ func _register() -> void:
 	commands.add("boss", "[phase]", "enter this world's boss, or jump the running boss to a phase", func(args: Array[String]):
 		return fight.boss(DevCommands.whole(args, 0, 0)))
 	commands.add("run", "[pilot number]", "start a run from the title with a pilot (1 is the first)", func(args: Array[String]):
-		var flow = game.flow
-		var index := DevCommands.whole(args, 0, 1) - 1
-		if flow.state_name() != "title":
-			return "!runs start from the title screen"
-		if index < 0 or index >= flow.classes.size():
-			return "!no pilot %d" % (index + 1)
-		flow.launch_from_title(flow.classes[index])
-		return "run started")
+		var res = fight.launch_pilot(["1"] if args.is_empty() else args)
+		if res is Dictionary and bool(res.get("ok", false)):
+			return "run started"
+		return res)
 	commands.add("bake", "<name>", "save the current look to a file", func(args: Array[String]):
 		return look.bake(DevCommands.word(args, 0, "look-%d" % Engine.get_frames_drawn())))
 	commands.add("load", "<name>", "load a baked look", func(args: Array[String]):
@@ -414,16 +361,16 @@ func _register() -> void:
 		var found := look.baked()
 		return ", ".join(found) if not found.is_empty() else "no baked looks yet: 'bake <name>' saves one")
 	commands.add("shot", "[name]", "save a still without the console", func(args: Array[String]):
-		shot(DevCommands.word(args, 0))
+		capture.shot(DevCommands.word(args, 0))
 		return "")
 	commands.add("qa_pack", "[name]", "capture the 4-oracle visual QA pack (1080p RGB, 720p, Rec.709 greyscale, Machado deuteranopia)", func(args: Array[String]):
-		qa_pack_detailed(DevCommands.word(args, 0))
+		capture.qa_pack_detailed(DevCommands.word(args, 0))
 		return "")
 	commands.add("sheet", "[presets|cams|quality] [name]", "capture this frame once per look, camera or quality level into one labelled sheet", func(args: Array[String]):
 		var axis := DevCommands.word(args, 0, "presets").to_lower()
-		if not axis in SHEET_AXES:
-			return "!sheet takes %s" % ", ".join(SHEET_AXES)
-		sheet_detailed(axis, DevCommands.word(args, 1))
+		if not axis in DevCapture.SHEET_AXES:
+			return "!sheet takes %s" % ", ".join(DevCapture.SHEET_AXES)
+		capture.sheet_detailed(axis, DevCommands.word(args, 1))
 		return "")
 	commands.add("pick", "<card>", "take the open kit or start card (1 is the left one)", func(args: Array[String]):
 		unpause()
@@ -455,311 +402,6 @@ func unpause() -> bool:
 		return false
 	menu.close()
 	return true
-
-
-func shot(id := "", close_menu := false) -> String:
-	var result: Dictionary = await shot_detailed(id, close_menu)
-	return String(result.text)
-
-
-func shot_detailed(id := "", close_menu := false) -> Dictionary:
-	if _busy:
-		return _answer(false, "!a still or sheet is already running")
-	_busy = true
-	if close_menu:
-		unpause()
-	DirAccess.make_dir_recursive_absolute(shot_dir)
-	_shots += 1
-	var stem := id if id.is_valid_filename() and id != "" else "shot-%03d-%d" % [_shots, Engine.get_frames_drawn()]
-	var path := shot_dir.path_join(stem + ".png")
-	var was := _drawer.visible
-	_drawer.visible = false
-	overlay.set_capture_hide(false, overlay.active_layers().perf != "on")
-	await RenderingServer.frame_post_draw
-	await RenderingServer.frame_post_draw
-	if not is_inside_tree():
-		return {"ok": false, "text": "!the console closed before the still", "data": {}}
-	var image := _grab()
-	_drawer.visible = was and open
-	overlay.set_capture_hide(false, false)
-	_busy = false
-	if image == null:
-		return _answer(false, "!no viewport image in headless mode")
-	var read := FrameRead.metrics(image)
-	var err := image.save_png(path)
-	if err != OK:
-		return _answer(false, "!could not save %s (%d)" % [path, err])
-	var data := {"path": ProjectSettings.globalize_path(path), "width": image.get_width(), "height": image.get_height(),
-		"metrics": read, "dead_frame": FrameRead.is_dead(read), "cam": lens.mode, "look": look.preset_name,
-		"quality": GraphicsPreset.current, "stage": _stage_name()}
-	SafeStore.write_atomic(shot_dir.path_join(stem + ".json"), JSON.stringify(data, "\t"))
-	var dead := FrameRead.note(read)
-	return _answer(true, "still -> %s%s" % [data.path, ("  dead frame: " + dead) if dead != "" else ""], data)
-
-
-func qa_pack_detailed(id := "", close_menu := false) -> Dictionary:
-	if _busy:
-		return _answer(false, "!a still or sheet is already running")
-	_busy = true
-	if close_menu:
-		unpause()
-	DirAccess.make_dir_recursive_absolute(shot_dir)
-	_shots += 1
-	var stem := id if id.is_valid_filename() and id != "" else "qa-pack-%03d-%d" % [_shots, Engine.get_frames_drawn()]
-	var was := _drawer.visible
-	_drawer.visible = false
-	overlay.set_capture_hide(false, overlay.active_layers().perf != "on")
-	await RenderingServer.frame_post_draw
-	await RenderingServer.frame_post_draw
-	if not is_inside_tree():
-		return {"ok": false, "text": "!the console closed before qa_pack", "data": {}}
-	var image := _grab()
-	_drawer.visible = was and open
-	overlay.set_capture_hide(false, false)
-	_busy = false
-	if image == null:
-		return _answer(false, "!no viewport image in headless mode")
-	var read := FrameRead.metrics(image)
-	var pack := DevLook.build_qa_pack_images(image)
-	var suffixes := {
-		"rgb_1080p": "_1080p_rgb.png",
-		"downscale_720p": "_720p.png",
-		"greyscale_rec709": "_greyscale.png",
-		"cvd_deuteranopia_machado": "_deuteranopia.png",
-	}
-	var oracles := {}
-	for key in suffixes:
-		var out_img: Image = pack[key]
-		var out_path := shot_dir.path_join(stem + String(suffixes[key]))
-		var err := out_img.save_png(out_path)
-		if err != OK:
-			return _answer(false, "!could not save %s (%d)" % [out_path, err])
-		oracles[key] = {
-			"path": ProjectSettings.globalize_path(out_path),
-			"width": out_img.get_width(),
-			"height": out_img.get_height(),
-			"metrics": FrameRead.metrics(out_img),
-		}
-	var data := {
-		"path": oracles.rgb_1080p.path,
-		"stem": stem,
-		"source_width": image.get_width(),
-		"source_height": image.get_height(),
-		"metrics": read,
-		"dead_frame": FrameRead.is_dead(read),
-		"oracles": oracles,
-		"cam": lens.mode,
-		"look": look.preset_name,
-		"quality": GraphicsPreset.current,
-		"stage": _stage_name(),
-	}
-	SafeStore.write_atomic(shot_dir.path_join(stem + "_qa_pack.json"), JSON.stringify(data, "\t"))
-	var dead := FrameRead.note(read)
-	return _answer(true, "qa_pack -> %s%s" % [data.path, ("  dead frame: " + dead) if dead != "" else ""], data)
-
-
-func contact_sheet(close_menu := false) -> String:
-	var result: Dictionary = await sheet_detailed("presets", "", close_menu)
-	return String(result.text)
-
-
-func sheet_detailed(axis := "presets", id := "", close_menu := false) -> Dictionary:
-	if _busy:
-		return _answer(false, "!a still or sheet is already running")
-	axis = axis.to_lower()
-	if not axis in SHEET_AXES:
-		return _answer(false, "!sheet takes %s" % ", ".join(SHEET_AXES))
-	_busy = true
-	var held_look := look.snapshot()
-	var held_lens := lens.snapshot()
-	var held_quality := GraphicsPreset.current
-	if close_menu:
-		unpause()
-	var was_frozen := fight.frozen()
-	var scale := fight.time_scale()
-	fight.set_time(0.0)
-	var was := _drawer.visible
-	_drawer.visible = false
-	overlay.set_capture_hide(true, true)
-	var header := "%s | cam %s | frame %d | %s" % [axis, lens.mode, Engine.get_frames_drawn(), _stage_name()]
-	var ids := sheet_ids(axis)
-	var tiles: Array[Image] = []
-	var reads: Array = []
-	var failed := ""
-	for step in ids:
-		_sheet_step(axis, step)
-		for i in int(SHEET_SETTLE[axis]):
-			await RenderingServer.frame_post_draw
-		if not is_inside_tree():
-			return {"ok": false, "text": "!the console closed before the sheet", "data": {}}
-		var image := _grab()
-		if image == null:
-			failed = "!no viewport image in headless mode"
-			break
-		reads.append(FrameRead.metrics(image))
-		image.resize(maxi(1, int(image.get_width() * SHEET_SCALE)), maxi(1, int(image.get_height() * SHEET_SCALE)), Image.INTERPOLATE_LANCZOS)
-		tiles.append(image)
-	look.clear()
-	look.load_snapshot(held_look)
-	lens.restore(held_lens)
-	if GraphicsPreset.current != held_quality:
-		GraphicsPreset.apply(held_quality)
-	fight.set_time(0.0 if was_frozen else scale)
-	if failed != "":
-		overlay.set_capture_hide(false, false)
-		_drawer.visible = was and open
-		_busy = false
-		return _answer(false, failed)
-	var rows: Array = []
-	for i in ids.size():
-		var tag := ""
-		if axis == "quality" and ids[i] == "target":
-			var high := ids.find("high")
-			if high >= 0 and absf(float(reads[i].mean_luma) - float(reads[high].mean_luma)) / 255.0 <= SAME_LUMA:
-				tag = "= high"
-		var label := ("%02d %s %s" % [i + 1, ids[i], tag]).strip_edges()
-		rows.append({"index": i + 1, "id": ids[i], "label": label, "tag": tag, "metrics": reads[i], "dead": FrameRead.is_dead(reads[i]),
-			"note": FrameRead.note(reads[i])})
-	var sheet := await _compose(tiles, rows, header)
-	if not is_inside_tree():
-		return {"ok": false, "text": "!the console closed before the sheet", "data": {}}
-	overlay.set_capture_hide(false, false)
-	_drawer.visible = was and open
-	_busy = false
-	DirAccess.make_dir_recursive_absolute(shot_dir)
-	_shots += 1
-	var stem := id if id.is_valid_filename() and id != "" else "sheet-%s-%03d-%d" % [axis, _shots, Engine.get_frames_drawn()]
-	var path := shot_dir.path_join(stem + ".png")
-	var err := sheet.save_png(path)
-	if err != OK:
-		return _answer(false, "!could not save the sheet (%d)" % err)
-	var grid := sheet_grid(ids.size())
-	var dead := rows.filter(func(r): return r.dead).size()
-	var data := {"path": ProjectSettings.globalize_path(path), "axis": axis, "header": header, "width": sheet.get_width(),
-		"height": sheet.get_height(), "columns": grid.x, "rows": grid.y, "tiles": rows, "dead_count": dead,
-		"dead_frame": dead > 0, "cam": lens.mode, "look": look.preset_name,
-		"quality": GraphicsPreset.current, "stage": _stage_name()}
-	SafeStore.write_atomic(shot_dir.path_join(stem + ".json"), JSON.stringify(data, "\t"))
-	return _answer(true, "sheet of %d %s (%s)%s -> %s" % [ids.size(), axis, ", ".join(ids),
-		("  %d dead" % dead) if dead > 0 else "", data.path], data)
-
-
-static func sheet_ids(axis: String) -> Array:
-	match axis:
-		"cams":
-			var cams: Array = ["game"]
-			for mode in DevLens.MODES:
-				if mode != "game":
-					cams.append(mode)
-			return cams
-		"quality":
-			return GraphicsPreset.PRESETS.keys()
-	return DevLook.PRESETS.keys()
-
-
-static func sheet_grid(n: int) -> Vector2i:
-	if n <= 0:
-		return Vector2i(1, 1)
-	if n <= 3:
-		return Vector2i(n, 1)
-	var best := Vector2i(3, ceili(n / 3.0))
-	for cols in [4, 5]:
-		var rows := ceili(float(n) / cols)
-		if cols * rows - n <= best.x * best.y - n:
-			best = Vector2i(cols, rows)
-	return best
-
-
-func _sheet_step(axis: String, step: String) -> void:
-	match axis:
-		"presets":
-			look.apply_preset(step)
-		"cams":
-			lens.use(step)
-			lens.spin = 0.0
-		"quality":
-			GraphicsPreset.apply(step)
-
-
-func _grab() -> Image:
-	var texture := get_viewport().get_texture()
-	var image := texture.get_image() if texture != null else null
-	if image == null or image.is_empty():
-		return null
-	if image.get_format() != Image.FORMAT_RGBA8:
-		image.convert(Image.FORMAT_RGBA8)
-	return image
-
-
-func _compose(tiles: Array[Image], rows: Array, header: String) -> Image:
-	var grid := sheet_grid(tiles.size())
-	var w := tiles[0].get_width()
-	var h := tiles[0].get_height()
-	var g := SHEET_GUTTER
-	var size := Vector2i(grid.x * w + (grid.x + 1) * g, SHEET_HEADER + grid.y * (h + SHEET_CAPTION) + (grid.y + 1) * g)
-	var print_vp := SubViewport.new()
-	print_vp.name = "SheetLabels"
-	print_vp.size = size
-	print_vp.disable_3d = true
-	print_vp.transparent_bg = false
-	print_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-	var board := ColorRect.new()
-	board.color = Palette.CHARCOAL
-	board.size = Vector2(size)
-	print_vp.add_child(board)
-	board.add_child(_sheet_label(header, Vector2(g * 2, 0), Vector2(size.x - g * 4, SHEET_HEADER), _ink()))
-	for i in tiles.size():
-		var at := _tile_at(i, grid, w, h)
-		var colour := Palette.HAZARD if rows[i].dead else _ink()
-		var text: String = rows[i].label + (("  " + rows[i].note) if rows[i].dead else "")
-		board.add_child(_sheet_label(text, Vector2(at.x + UiTokens.GAP_XS, at.y + h), Vector2(w - UiTokens.GAP_XS, SHEET_CAPTION), colour))
-	add_child(print_vp)
-	await RenderingServer.frame_post_draw
-	await RenderingServer.frame_post_draw
-	var sheet: Image = null
-	if is_inside_tree():
-		sheet = print_vp.get_texture().get_image()
-	print_vp.queue_free()
-	if sheet == null or sheet.is_empty() or sheet.get_size() != size:
-		sheet = Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
-		sheet.fill(Palette.CHARCOAL)
-	if sheet.get_format() != Image.FORMAT_RGBA8:
-		sheet.convert(Image.FORMAT_RGBA8)
-	for i in tiles.size():
-		var at := _tile_at(i, grid, w, h)
-		sheet.blit_rect(tiles[i], Rect2i(0, 0, w, h), at)
-		if rows[i].dead:
-			var e := SHEET_DEAD_EDGE
-			for edge in [Rect2i(at.x, at.y, w, e), Rect2i(at.x, at.y + h - e, w, e), Rect2i(at.x, at.y, e, h), Rect2i(at.x + w - e, at.y, e, h)]:
-				sheet.fill_rect(edge, Palette.HAZARD)
-	return sheet
-
-
-func _tile_at(i: int, grid: Vector2i, w: int, h: int) -> Vector2i:
-	var g := SHEET_GUTTER
-	return Vector2i(g + (i % grid.x) * (w + g), SHEET_HEADER + g + (i / grid.x) * (h + SHEET_CAPTION + g))
-
-
-func _sheet_label(text: String, at: Vector2, span: Vector2, colour: Color) -> Label:
-	var label := _text(text, UiTokens.CAPTION, colour, UiFonts.mono())
-	label.position = at
-	label.size = span
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.clip_text = true
-	return label
-
-
-func _stage_name() -> String:
-	var run = game.get("run") if game != null else null
-	var state: String = game.flow.state_name() if game != null and game.flow != null else ""
-	if run != null and state != "title":
-		return "w%d s%d %s" % [int(run.world), int(run.stage), state]
-	return state
-
-
-func _answer(ok: bool, text: String, data := {}) -> Dictionary:
-	_say(text, "ok" if ok else "warn")
-	return {"ok": ok, "text": text, "data": data}
 
 
 func _build() -> void:
@@ -997,7 +639,7 @@ func _page_lens() -> void:
 		_show_tab("Lens"))
 	_page.add_child(ortho)
 	for key in LENS_KNOBS:
-		_slider_row(key, LENS_RANGES[key], lens.knob(key), func(v: float): lens.set_knob(key, v), "cam %s %s" % [key, "%s"], false)
+		_slider_row(key, DevLens.LENS_RANGES[key], lens.knob(key), func(v: float): lens.set_knob(key, v), "cam %s %s" % [key, "%s"], false)
 	_sync_lens_rows()
 
 
@@ -1082,7 +724,7 @@ func _page_bake() -> void:
 	shots.add_child(_button("Still", func(): run("shot")))
 	shots.add_child(_button("Contact sheet", func(): run("sheet")))
 	shots.add_child(_button("Toggle HUD", func(): run("hud")))
-	_note(ProjectSettings.globalize_path(shot_dir))
+	_note(ProjectSettings.globalize_path(capture.shot_dir))
 
 
 func _page_debug() -> void:
@@ -1118,7 +760,7 @@ func _page_debug() -> void:
 	_page.add_child(_labelled("quality", quality))
 	var sheets := HBoxContainer.new()
 	sheets.add_theme_constant_override("separation", UiTokens.GAP_XS)
-	for axis in SHEET_AXES:
+	for axis in DevCapture.SHEET_AXES:
 		var button := _button(axis, func(): run_script("sheet %s" % axis))
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_font_size_override("font_size", UiTokens.CAPTION)
@@ -1156,15 +798,6 @@ func _set_quality(id: String) -> void:
 		return
 	_echo("quality %s" % id)
 	_say("quality %s" % id if GraphicsPreset.apply(id) else "!no quality '%s'" % id, "ok")
-
-
-func _module_pool(head: String) -> Array:
-	for module in [fight, inspect, agent]:
-		if module != null and is_instance_valid(module) and module.has_method("complete_args"):
-			var found: Array = module.complete_args(head)
-			if not found.is_empty():
-				return found
-	return []
 
 
 func _sync_lens_rows() -> void:
@@ -1268,7 +901,7 @@ func _slider_row(key: String, span: Array, current: float, apply: Callable, echo
 	_page.add_child(row)
 
 
-func _refresh_rows() -> void:
+func refresh_rows() -> void:
 	for key in _rows:
 		var row: Dictionary = _rows[key]
 		if not is_instance_valid(row.slider):
@@ -1386,14 +1019,11 @@ func _line_keys(event: InputEvent) -> void:
 					"overlay", "debug":
 						pool = OVERLAY_WORDS
 					"sheet":
-						pool = SHEET_AXES
+						pool = DevCapture.SHEET_AXES
 					"quality":
 						pool = GraphicsPreset.PRESETS.keys()
 					"help":
 						pool = commands.names() + ["json"]
-					_:
-						if head in MODULE_HEADS:
-							pool = _module_pool(head)
 				var hits := pool.filter(func(p: String): return p.begins_with(tail))
 				if hits.size() == 1:
 					_line.text = "%s %s " % [head, hits[0]]

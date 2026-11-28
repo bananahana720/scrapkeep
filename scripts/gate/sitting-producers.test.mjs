@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { root } from "./clean-head.mjs";
+import { REPO_ROOT as root, git as runGit } from "../lib/git.mjs";
 import {
   buildReceipt as installedBuildReceipt,
   defaultAppImage,
@@ -69,10 +69,7 @@ function withTempDir(prefix, fn) {
 
 function initTempGitRepo(dir, files = { "sketches/core-loop/src/a.gd": "extends Node\n" }) {
   const git = (...args) =>
-    spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
-      cwd: dir,
-      encoding: "utf8",
-    });
+    runGit(["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: dir });
   git("init", "-q");
   for (const [rel, content] of Object.entries(files)) {
     mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
@@ -80,7 +77,7 @@ function initTempGitRepo(dir, files = { "sketches/core-loop/src/a.gd": "extends 
   }
   git("add", ".");
   git("commit", "-q", "-m", "init");
-  return { git, head: git("rev-parse", "HEAD").stdout.trim() };
+  return { git, head: git("rev-parse", "HEAD") };
 }
 
 function runCli(scriptRel, argv) {
@@ -468,9 +465,7 @@ function makeFullReleasePlan({
 }
 
 test("release-gate: runs real scripts/gate/tally.mjs (no --wave), passes CLEAN plan, and catches planted RED shard", () => {
-  const actualHead = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], {
-    encoding: "utf8",
-  }).stdout.trim();
+  const actualHead = runGit(["rev-parse", "HEAD"], { cwd: root });
   const shortHead = actualHead.slice(0, 8);
 
   withTempDir("release-gate-real-", (dir) => {

@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import path from "node:path";
+import { isMain } from "./lib/cli.mjs";
+import { git } from "./lib/git.mjs";
+
+const BUFFER = 256 * 1024 * 1024;
+
+function grep(top, args) {
+  try {
+    return git(args, { cwd: top, trim: false, maxBuffer: BUFFER });
+  } catch (error) {
+    if (error.status === 1) return error.stdout;
+    throw error;
+  }
+}
+
+function needles(top, rel) {
+  const out = [{ text: path.posix.basename(rel), word: false }];
+  const abs = path.join(top, rel);
+  if (rel.endsWith(".py")) out.push({ text: path.posix.basename(rel, ".py"), word: true });
+  if (rel.endsWith(".gd")) {
+    const m = readFileSync(abs, "utf8").match(/^class_name\s+(\w+)/m);
+    if (m) out.push({ text: m[1], word: true });
+    const uid = existsSync(`${abs}.uid`) && readFileSync(`${abs}.uid`, "utf8").match(/uid:\/\/\w+/);
+    if (uid) out.push({ text: uid[0], word: false });
+  }
+  return out;
+}
+
+function outside(rel) {
+  return rel === ".." || rel.startsWith("../") || path.isAbsolute(rel);
+}
+
+function why(top, rel, tracked) {
+  const abs = path.join(top, rel);
+  if (outside(rel)) return "lies outside the repository";
+  if (!existsSync(abs)) return "does not exist";
+  if (statSync(abs).isDirectory()) return "is a directory";
+  return tracked.has(rel) ? null : "is not tracked by git";
+}
+
+export function badPaths(files, cwd = process.cwd()) {
+  const { top, rels } = resolve(files, cwd);
+  const inside = rels.filter((r) => !outside(r));
+  const tracked = new Set(
+    inside.length
+      ? git(["--literal-pathspecs", "ls-files", "-z", "--", ...inside], {
+          cwd: top,
+          trim: false,
+          maxBuffer: BUFFER,
+        }).split("\0")
+      : [],
+  );
+  return files.flatMap((f, i) => {
+    const reason = why(top, rels[i], tracked);
+    return reason
+      ? [`${f}: ${reason}; pass a path to a tracked file, relative to where you run the command`]
+      : [];
+  });
+}
+
+function resolve(files, cwd) {
+  const top = realpathSync(git(["rev-parse", "--show-toplevel"], { cwd }));
+  const base = realpathSync(cwd);
+  const rels = files.map((f) =>
+    path.relative(top, path.resolve(base, f)).split(path.sep).join("/"),
+  );
+  return { top, rels };
+}
+
+export function findMentions(files, cwd = process.cwd()) {
+  const bad = badPaths(files, cwd);
+  if (bad.length) throw new Error(bad.join("\n"));
+  const { top, rels } = resolve(files, cwd);
+  const skip = new Set(rels.flatMap((r) => [r, `${r}.uid`]));
+  const result = new Map();
+  for (const rel of rels) {
+    const hits = new Set();
+    for (const n of needles(top, rel)) {
+      const args = ["grep", "-n", "-I", "-F", ...(n.word ? ["-w"] : []), "-e", n.text];
+      for (const line of grep(top, args).split("\n")) {
+        const m = line.match(/^([^:]+):(\d+):(.*)$/);
+        if (m && !skip.has(m[1])) hits.add(`${m[1]}:${m[2]}: ${m[3].trim().slice(0, 160)}`);
+      }
+    }
+    result.set(rel, [...hits].sort());
+  }
+  return result;
+}
+
+const unknown = (err) =>
+  `the search could not run, so nothing is known about callers: ${err?.message ?? err}`;
+
+export function main(
+  files,
+  { cwd = process.cwd(), log = console.log, error = console.error } = {},
+) {
+  if (files.length === 0) {
+    error("usage: node scripts/no-caller.mjs <file>...");
+    return 2;
+  }
+  try {
+    const bad = badPaths(files, cwd);
+    if (bad.length) {
+      for (const line of bad) error(line);
+      return 2;
+    }
+    let mentioned = false;
+    for (const [rel, hits] of findMentions(files, cwd)) {
+      log(`${rel}: ${hits.length} mention${hits.length === 1 ? "" : "s"}`);
+      for (const h of hits) log(`  ${h}`);
+      if (hits.length) mentioned = true;
+    }
+    return mentioned ? 1 : 0;
+  } catch (err) {
+    error(unknown(err));
+    return 2;
+  }
+}
+
+if (isMain(import.meta.url)) {
+  process.on("uncaughtException", (err) => {
+    console.error(unknown(err));
+    process.exit(2);
+  });
+  process.exitCode = main(process.argv.slice(2));
+}

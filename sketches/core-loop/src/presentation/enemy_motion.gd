@@ -6,16 +6,10 @@ const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
-const IDLE_STYLES := ["bob", "sway", "breathe", "hover", "tick"]
-const DEATH_STYLES := ["scatter", "collapse", "spin_down", "pop"]
-const AMPLITUDE_MIN := 0.02
-const AMPLITUDE_MAX := 0.08
 const PARTS_MIN := 3
-const PARTS_MAX := 8
-const SECONDS_MIN := 0.4
-const SECONDS_MAX := 0.7
 const REST_CLOCK := 1.0
 const LOW_PART_CAP := 4
 const GRAVITY := 18.0
@@ -23,7 +17,6 @@ const SHRINK := 0.5
 const SPECK := 0.01
 const TICK_STEPS := [0.0, 0.5, 1.0, 0.5]
 
-static var motion_scale := 1.0
 static var headless_idle := false
 
 var seconds := 0.5
@@ -249,7 +242,7 @@ static func pop_shift_tag(enemy: Node3D, kind: String, direction: Vector3, land 
 	tag.velocity = toss * TAG_OUT + Vector3.UP * TAG_UP
 	var axis := Vector3(-toss.z, 0.35, toss.x).normalized()
 	tag.spin = axis * TAG_SPIN
-	tag.spin_scale = motion_scale
+	tag.spin_scale = Comfort.motion_scale()
 	tag.mount_visual(_build_tag_mesh(), _build_tag_material(), Basis(Vector3.UP, angle) * Basis(Vector3.RIGHT, 0.45))
 	if land.is_valid():
 		tag.ground = land
@@ -258,22 +251,6 @@ static func pop_shift_tag(enemy: Node3D, kind: String, direction: Vector3, land 
 
 static func active() -> bool:
 	return headless_idle or not AppShell.headless()
-
-
-static func valid_idle(idle: Dictionary) -> bool:
-	return String(idle.get("style", "")) in IDLE_STYLES and _number(idle, "amplitude") \
-		and float(idle.amplitude) >= AMPLITUDE_MIN and float(idle.amplitude) <= AMPLITUDE_MAX \
-		and _number(idle, "beats") and float(idle.beats) > 0.0
-
-
-static func valid_death(death: Dictionary) -> bool:
-	return String(death.get("style", "")) in DEATH_STYLES and death.get("parts") is int \
-		and int(death.parts) >= PARTS_MIN and int(death.parts) <= PARTS_MAX \
-		and _number(death, "seconds") and float(death.seconds) >= SECONDS_MIN and float(death.seconds) <= SECONDS_MAX
-
-
-static func _number(row: Dictionary, field: String) -> bool:
-	return row.get(field) is float or row.get(field) is int
 
 
 static func attack_clock(kind: String, enemy: Object) -> float:
@@ -285,7 +262,7 @@ static func attack_clock(kind: String, enemy: Object) -> float:
 
 
 static func idle_offset(idle: Dictionary, clock: float, period: float) -> Vector3:
-	var amp := float(idle.get("amplitude", 0.0)) * motion_scale
+	var amp := float(idle.get("amplitude", 0.0)) * Comfort.motion_scale()
 	if amp <= 0.0 or period <= 0.0:
 		return Vector3.ZERO
 	var turn := fposmod(clock / period, 1.0)
@@ -332,7 +309,7 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3, land := Cal
 	parent.add_child(node)
 	var at := enemy.global_position
 	node.global_transform = Transform3D(Basis.IDENTITY, at)
-	if land.is_valid() and motion_scale > 0.0 and active() and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne":
+	if land.is_valid() and not Comfort.reduced_motion and active() and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne":
 		node.ground = land
 		node.rest = LAND_REST
 	var material: Material = null

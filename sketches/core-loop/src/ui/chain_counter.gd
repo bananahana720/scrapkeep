@@ -4,6 +4,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const FONT := UiTokens.HEADING
@@ -96,7 +97,7 @@ func reset() -> void:
 
 
 func draw_scale() -> float:
-	if UiTokens.reduced_motion or _fall >= 0.0:
+	if Comfort.reduced_motion or _fall >= 0.0:
 		return 1.0
 	var scale := 1.0
 	if _pulse >= 0.0:
@@ -160,7 +161,7 @@ func _draw() -> void:
 	var scale := draw_scale()
 	var drop := 0.0
 	var tilt := 0.0
-	if _pulse >= 0.0 and not UiTokens.reduced_motion and _tier >= 1:
+	if _pulse >= 0.0 and not Comfort.reduced_motion and _tier >= 1:
 		var kick := 1.0 - _pulse / PULSE
 		tilt = -KICK_TILT_RAD * kick * (1.0 if shown % 2 == 0 else -1.0)
 	if _fall >= 0.0:

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+
+import { parseReceiptArgs, runReceiptCliSync } from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const LOOPS = ["heat", "overtime", "called_shot", "marked_hull", "moss_scale", "carry_core"];
 export const MIN_CHECKS = 20;
@@ -56,20 +58,16 @@ export function buildReceipt(text, head) {
 }
 
 function main(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
-  if (!args.log || !args.head) {
-    console.error(
-      "usage: sitting-played-receipt.mjs --log <test output> --head <commit> [--out <file>]",
-    );
-    return 2;
-  }
-  const receipt = buildReceipt(readFileSync(args.log, "utf8"), args.head);
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) writeFileSync(args.out, text);
-  else process.stdout.write(text);
-  return receipt.pass ? 0 : 1;
+  const usage =
+    "usage: sitting-played-receipt.mjs --log <test output> --head <commit> [--out <file>]";
+  return runReceiptCliSync(() => {
+    const args = parseReceiptArgs(argv, {
+      valueFlags: { "--log": { key: "log" }, "--head": { key: "head" } },
+      usageError: usage,
+    });
+    if (!args.log || !args.head) throw new Error(usage);
+    return { receipt: buildReceipt(readFileSync(args.log, "utf8"), args.head), out: args.out };
+  });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

@@ -3,8 +3,8 @@ extends RefCounted
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
-const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Stamps := preload("res://src/world/park/park_stamps.gd")
 const LandmarkProxy := preload("res://src/presentation/landmark_proxy.gd")
 const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
@@ -25,8 +25,6 @@ const MOVING_GROUP := "park_row_moving"
 const SCATTER_DRESSED := "scatter"
 const SENSOR_ONLY := [LANDMARK_DRESSED, SCATTER_DRESSED]
 const COL_SUFFIX := "-col"
-const WORLD_LAYER := 1
-const BALL_LAYER := 2
 const COVER_META := "cover_kind"
 const COVER_HARD := "hard"
 const COVER_SOFT := "soft"
@@ -223,11 +221,11 @@ static func authored_ends(scene: Node, lip: bool) -> Dictionary:
 	var exit = null
 	for n: Node3D in scene.find_children("*", "Node3D", true, false):
 		if n.name == SOCKET_ENTRY:
-			entry = _relative(n, scene).origin
+			entry = relative_transform(n, scene).origin
 		elif n.name == SOCKET_EXIT:
-			exit = _relative(n, scene).origin
+			exit = relative_transform(n, scene).origin
 		elif n is MeshInstance3D and String(n.name).ends_with(COL_SUFFIX) and (n as MeshInstance3D).mesh != null:
-			var box: AABB = _relative(n, scene) * (n as MeshInstance3D).mesh.get_aabb()
+			var box: AABB = relative_transform(n, scene) * (n as MeshInstance3D).mesh.get_aabb()
 			col = box if col == null else (col as AABB).merge(box)
 	if col == null:
 		return {}
@@ -240,7 +238,7 @@ static func authored_ends(scene: Node, lip: bool) -> Dictionary:
 
 static func recipe_ends(recipe: String) -> Dictionary:
 	if not _ends.has(recipe):
-		var scenes := _load(GLB_DIR + recipe + ".glb")
+		var scenes := load_glb(GLB_DIR + recipe + ".glb")
 		_ends[recipe] = authored_ends(scenes[0], origin(recipe) == ORIGIN_ENTRY_LIP) if not scenes.is_empty() else {}
 		for scene: Node in scenes:
 			scene.free()
@@ -331,14 +329,14 @@ static func _rects_meet(a: Array, b: Array) -> bool:
 	return true
 
 
-static func _lift_drawn(node: Node, lift: float) -> void:
+static func lift_drawn(node: Node, lift: float) -> void:
 	for child: Node in node.get_children():
 		if child is CollisionObject3D:
 			continue
 		if child is GeometryInstance3D:
 			(child as Node3D).position.y += lift
 		else:
-			_lift_drawn(child, lift)
+			lift_drawn(child, lift)
 
 
 static func fits_drape(row: Dictionary) -> bool:
@@ -382,7 +380,7 @@ static func col_faces(scene: Node) -> PackedVector3Array:
 	var out := PackedVector3Array()
 	for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		if source.mesh != null and String(source.name).ends_with(COL_SUFFIX):
-			out.append_array(_relative(source, scene) * _trimesh(source).get_faces())
+			out.append_array(relative_transform(source, scene) * _trimesh(source).get_faces())
 	return out
 
 
@@ -432,7 +430,7 @@ static func tile_ends(scene: Node, lip: bool) -> Dictionary:
 
 static func recipe_tile(recipe: String) -> Dictionary:
 	if not _tiles.has(recipe):
-		var scenes := _load(GLB_DIR + recipe + ".glb")
+		var scenes := load_glb(GLB_DIR + recipe + ".glb")
 		_tiles[recipe] = tile_ends(scenes[0], origin(recipe) == ORIGIN_ENTRY_LIP) if not scenes.is_empty() else {}
 		for scene: Node in scenes:
 			scene.free()
@@ -525,12 +523,12 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 			if stand != null:
 				stand.set_meta("tile_refused", refusal)
 			return stand
-	var parts :={"base": _load(p["base"]), "shells": [], "mid": [], "far": []}
+	var parts :={"base": load_glb(p["base"]), "shells": [], "mid": [], "far": []}
 	for path: String in p["shells"]:
-		parts["shells"].append_array(_load(path))
+		parts["shells"].append_array(load_glb(path))
 	for key in ["mid", "far"]:
 		if p.has(key):
-			parts[key] = _load(p[key])
+			parts[key] = load_glb(p[key])
 	var node := place_parts(row, parts, parent, ground, publish, ridden)
 	for key in parts:
 		for scene: Node in parts[key]:
@@ -605,13 +603,13 @@ static func moves(node: Node) -> bool:
 
 static func _tip_shape(row: Dictionary) -> CollisionShape3D:
 	var out: CollisionShape3D = null
-	for scene: Node in _load(GLB_DIR + String(row["recipe"]) + TIP_SUFFIX + ".glb"):
+	for scene: Node in load_glb(GLB_DIR + String(row["recipe"]) + TIP_SUFFIX + ".glb"):
 		for source: MeshInstance3D in scene.find_children("*" + COL_SUFFIX, "MeshInstance3D", true, false):
 			if out == null and source.mesh != null:
 				out = CollisionShape3D.new()
 				out.name = "TipShape"
 				out.shape = _trimesh(source)
-				out.transform = Transform3D(Basis.IDENTITY, ride_frame(row)["origin"]) * _relative(source, scene)
+				out.transform = Transform3D(Basis.IDENTITY, ride_frame(row)["origin"]) * relative_transform(source, scene)
 		scene.free()
 	return out
 
@@ -621,12 +619,12 @@ static var _beam_roots := {}
 static func _beam_root(path: String):
 	if _beam_roots.has(path):
 		return _beam_roots[path]
-	var scenes := _load(path)
+	var scenes := load_glb(path)
 	var out = null
 	for scene: Node in scenes:
 		var found := scene.find_child(BEAM_ROOT, true, false)
 		if out == null and found is Node3D:
-			out = _relative(found, scene).origin
+			out = relative_transform(found, scene).origin
 		scene.free()
 	_beam_roots[path] = out
 	return out
@@ -634,7 +632,7 @@ static func _beam_root(path: String):
 
 static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), ridden := Callable()) -> Node3D:
 	var node := _node(row, parent, ground)
-	var body := _body(node)
+	var body := collider_body(node)
 	var at_origin := Transform3D(Basis.IDENTITY, ride_frame(row)["origin"])
 	var baked := false
 	if fits_seat(row) and not (parts.get("base", []) as Array).is_empty():
@@ -671,42 +669,42 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 	var footing := Footings.fit(row, node.transform, at_origin, tiles, ground, ridden)
 	if not footing.is_empty():
 		var footing_view := footing["view"] as MeshInstance3D
-		_range(footing_view, 0.0, base_end, float(r.get("base_margin", 0.0)))
+		set_visibility_range(footing_view, 0.0, base_end, float(r.get("base_margin", 0.0)))
 		footing_view.set_meta(RecipeProps.META_FADE, true)
 		node.add_child(footing_view)
 		body.add_child(footing["shape"])
 	var mid_end := float(r.get("mid_end", 0.0))
 	for scene: Node in parts.get("base", []):
 		for f: Array in fits:
-			for view in _views(scene, node, body, f[0], baked, f[1]):
+			for view in attach_views(scene, node, body, f[0], baked, f[1]):
 				view.position.y += float(f[2])
-				_range(view, 0.0, base_end, float(r.get("base_margin", 0.0)))
+				set_visibility_range(view, 0.0, base_end, float(r.get("base_margin", 0.0)))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var shell_ranges: Array = r.get("shells", [])
 	var shells: Array = parts.get("shells", [])
 	for k in shells.size():
 		var sr: Array = shell_ranges[k] if k < shell_ranges.size() else [0.0, 0.0]
 		for f: Array in fits:
-			for view in _views(shells[k], node, body, f[0], baked, f[1]):
+			for view in attach_views(shells[k], node, body, f[0], baked, f[1]):
 				view.position.y += float(f[2])
-				_range(view, 0.0, float(sr[0]), float(sr[1]))
+				set_visibility_range(view, 0.0, float(sr[0]), float(sr[1]))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for scene: Node in parts.get("mid", []):
 		for f: Array in fits:
-			for view in _views(scene, node, body, f[0], baked, f[1]):
+			for view in attach_views(scene, node, body, f[0], baked, f[1]):
 				view.position.y += float(f[2])
-				_range(view, base_end, mid_end, float(r.get("mid_margin", 0.0)))
+				set_visibility_range(view, base_end, mid_end, float(r.get("mid_margin", 0.0)))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for scene: Node in parts.get("far", []):
 		for f: Array in fits:
-			for view in _views(scene, node, body, f[0], baked, f[1]):
+			for view in attach_views(scene, node, body, f[0], baked, f[1]):
 				view.position.y += float(f[2])
-				_range(view, mid_end, 0.0, 0.0)
+				set_visibility_range(view, mid_end, 0.0, 0.0)
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	if baked and fits_seat(row) and DRAPED.has(String(row.get("recipe", ""))) and ground.is_valid():
 		drape(node, row, at_origin, ground)
 	if body.get_shape_owners().is_empty():
-		body.collision_layer = 0
+		body.collision_layer = PhysicsLayers.NONE
 	_sensor(node, row, publish)
 	tag_cover(node, row)
 	return node
@@ -761,7 +759,7 @@ static func place_greybox(row: Dictionary, element: String, parent: Node3D, grou
 	var size: Array = row["size"]
 	var extent := Vector3(float(size[2]), float(size[1]), float(size[0]))
 	var node := _node(row, parent, ground)
-	var body := _body(node)
+	var body := collider_body(node)
 	var view := MeshInstance3D.new()
 	view.name = "Greybox"
 	var shape := CollisionShape3D.new()
@@ -800,7 +798,7 @@ static func place_over_greybox(row: Dictionary, p: Dictionary, budget: String, p
 	var grey := node.get_node("Greybox")
 	node.remove_child(grey)
 	grey.free()
-	var body := _body(node)
+	var body := collider_body(node)
 	body.name = "PieceCollider"
 	var r := ranges(budget)
 	var shell_ranges: Array = r.get("shells", [])
@@ -809,9 +807,9 @@ static func place_over_greybox(row: Dictionary, p: Dictionary, budget: String, p
 		var sr: Array = shell_ranges[k] if k < shell_ranges.size() else [0.0, 0.0]
 		parts.append([p["shells"][k], [0.0, float(sr[0]), float(sr[1])], false])
 	for part: Array in parts:
-		for scene: Node in _load(part[0]):
-			for view in _views(scene, node, body, Transform3D.IDENTITY):
-				_range(view, part[1][0], part[1][1], part[1][2])
+		for scene: Node in load_glb(part[0]):
+			for view in attach_views(scene, node, body, Transform3D.IDENTITY):
+				set_visibility_range(view, part[1][0], part[1][1], part[1][2])
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if part[2] else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			scene.free()
 	if body.get_child_count() == 0:
@@ -831,22 +829,22 @@ static func _node(row: Dictionary, parent: Node3D, ground: Callable) -> Node3D:
 	return node
 
 
-static func _body(node: Node3D) -> StaticBody3D:
+static func collider_body(node: Node3D) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.name = "Collider"
-	body.collision_layer = 0
-	body.collision_mask = 0
-	body.set_collision_layer_value(WORLD_LAYER, true)
+	body.collision_layer = PhysicsLayers.NONE
+	body.collision_mask = PhysicsLayers.NONE
+	body.set_collision_layer_value(PhysicsLayers.WORLD_LAYER, true)
 	node.add_child(body)
 	return body
 
 
-static func _views(scene: Node, node: Node3D, body: StaticBody3D, at_origin: Transform3D, baked := false, suffix := "") -> Array[MeshInstance3D]:
+static func attach_views(scene: Node, node: Node3D, body: StaticBody3D, at_origin: Transform3D, baked := false, suffix := "") -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
 	for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		if source.mesh == null:
 			continue
-		var xf := at_origin * _relative(source, scene)
+		var xf := at_origin * relative_transform(source, scene)
 		if String(source.name).ends_with(COL_SUFFIX):
 			var shape := CollisionShape3D.new()
 			var trimesh := _trimesh(source)
@@ -883,7 +881,7 @@ static func _trimesh(source: MeshInstance3D) -> ConcavePolygonShape3D:
 	return source.mesh.create_trimesh_shape()
 
 
-static func _range(view: GeometryInstance3D, begin: float, end: float, margin: float) -> void:
+static func set_visibility_range(view: GeometryInstance3D, begin: float, end: float, margin: float) -> void:
 	view.visibility_range_begin = begin
 	view.visibility_range_end = end
 	view.visibility_range_end_margin = margin
@@ -901,9 +899,9 @@ static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
 	var size: Array = row["size"]
 	var area := Area3D.new()
 	area.name = "Ride"
-	area.collision_layer = 0
-	area.collision_mask = 0
-	area.set_collision_mask_value(BALL_LAYER, true)
+	area.collision_layer = PhysicsLayers.NONE
+	area.collision_mask = PhysicsLayers.NONE
+	area.set_collision_mask_value(PhysicsLayers.BALL_LAYER, true)
 	area.monitorable = false
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -980,14 +978,14 @@ static func _wedge_mesh(p: PackedVector3Array) -> ArrayMesh:
 	return st.commit()
 
 
-static func _load(path: String) -> Array:
+static func load_glb(path: String) -> Array:
 	if not ResourceLoader.exists(path):
 		return []
 	var packed := load(path) as PackedScene
 	return [packed.instantiate()] if packed != null else []
 
 
-static func _relative(node: Node3D, top: Node) -> Transform3D:
+static func relative_transform(node: Node3D, top: Node) -> Transform3D:
 	var xf := Transform3D.IDENTITY
 	var walk: Node = node
 	while walk != null and walk != top:
@@ -1285,7 +1283,7 @@ static func shape_aabb(shape: Shape3D) -> AABB:
 	return shape.get_debug_mesh().get_aabb()
 
 
-static func cover_height(node: Node3D, layer_mask := 1 << (WORLD_LAYER - 1), stop_at := 0.0) -> float:
+static func cover_height(node: Node3D, layer_mask := PhysicsLayers.WORLD_MASK, stop_at := 0.0) -> float:
 	var lo := INF
 	var hi := -INF
 	var local_boxes := {}
@@ -1316,7 +1314,7 @@ static func cover_kind_of(node: Node3D, row: Dictionary = {}) -> String:
 		var explicit := String(row["cover"])
 		if COVER_KINDS.has(explicit):
 			return explicit
-	var h := cover_height(node, 1 << (WORLD_LAYER - 1), COVER_HARD_M)
+	var h := cover_height(node, PhysicsLayers.WORLD_MASK, COVER_HARD_M)
 	if h >= COVER_HARD_M:
 		return COVER_HARD
 	if h > 0.0:
@@ -1342,7 +1340,7 @@ static func anchor_kit_ready(recipe: String) -> bool:
 
 static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callable(), zones: Array = [], pitch := ANCHOR_PITCH_M, posts = null) -> Node3D:
 	var node := _node(row, parent, ground)
-	var body := _body(node)
+	var body := collider_body(node)
 	var tall := float(row["size"][1]) + ANCHOR_SINK_M
 	var extent := Vector3(ANCHOR_POST_M, tall, ANCHOR_POST_M)
 	if posts == null:
@@ -1410,7 +1408,7 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 			lod_view.visibility_range_end_margin = 0.0
 			node.add_child(lod_view)
 	if body.get_shape_owners().is_empty():
-		body.collision_layer = 0
+		body.collision_layer = PhysicsLayers.NONE
 	node.set_meta("anchor_posts", posts.size())
 	node.set_meta("anchor_kit", kit)
 	tag_cover(node, row)
@@ -1596,13 +1594,13 @@ static func anchor_hulls(row: Dictionary, fit: Array) -> Array:
 		var highs := PackedFloat64Array()
 		_tri_spans(tris, lows, highs)
 		for b: Dictionary in fit:
-			out.append(_band_hull(tris, float(b["h"][0]), float(b["h"][1]), lows, highs))
+			out.append(band_hull(tris, float(b["h"][0]), float(b["h"][1]), lows, highs))
 	_anchor_hulls[key] = out
 	_anchor_hull_lock.unlock()
 	return out
 
 
-static func _band_hull(tris: PackedVector3Array, lo: float, hi: float, lows := PackedFloat64Array(), highs := PackedFloat64Array()) -> ConvexPolygonShape3D:
+static func band_hull(tris: PackedVector3Array, lo: float, hi: float, lows := PackedFloat64Array(), highs := PackedFloat64Array()) -> ConvexPolygonShape3D:
 	if lows.is_empty():
 		_tri_spans(tris, lows, highs)
 	var pts := PackedVector3Array()
@@ -1727,7 +1725,7 @@ static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), pub
 		return place_anchor_field(row, parent, ground, zones, ANCHOR_PITCH_M, posts)
 	var node := place(row, parent, seat(row, ground), publish, ridden)
 	if node != null and lift > 0.0:
-		_lift_drawn(node, lift)
+		lift_drawn(node, lift)
 	if node != null and row.has("rider"):
 		place_rider(row, parent, ground)
 	if node != null and stamp_replaces(row):

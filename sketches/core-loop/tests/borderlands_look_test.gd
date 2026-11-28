@@ -4,10 +4,11 @@ const T := preload("res://tests/support/t.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const Juice := preload("res://src/presentation/juice.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const ComicPage := preload("res://src/ui/comic_page.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Palette := preload("res://src/core/palette.gd")
-const DefenceBars := preload("res://src/core/defence_bars.gd")
+const DefenceBars := preload("res://tests/support/defence_bars.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const MIN_COLOR_LAW_DE := 35.0
@@ -228,6 +229,6 @@ func _juice_impact_zoom() -> void:
 		cam.punches.size() == 3 and float(cam.punches[1][0]) < 0.0 and float(cam.punches[2][0]) < 0.0
 		and is_equal_approx(float(cam.punches[1][1]), Juice.IMPACT_ZOOM_S)
 		and is_equal_approx(float(cam.punches[2][1]), Juice.IMPACT_ZOOM_S)
-		and juice.hit_stop_log.all(func(row: Array) -> bool: return float(row[1]) * 1000.0 <= Juice.SPINE_CAP_MS + 0.001))
+		and juice.hit_stop_log.all(func(row: Array) -> bool: return float(row[1]) * 1000.0 <= EventJuice.SPINE_CAP_MS + 0.001))
 	juice.free()
 	cam.free()

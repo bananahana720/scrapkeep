@@ -267,7 +267,7 @@ func _terrain_shadow_fixture() -> void:
 		await physics_frame
 		_tech("foundry_cutter", 4)
 		_combat.ultimate._peak(_player.ball_position())
-		var hull: float = _combat._hull(covered)
+		var hull: float = _combat.hull_radius(covered)
 		_t.check("wall %s occludes the whole target hull" % label, width * 0.5 >= hull * 6.25 / (8.0 - hull), "hull=%s" % hull)
 		_t.check("wall %s covers the beam aperture" % label, width >= Weapons.FULL_CUT_WIDTH)
 		_t.eq("wall %s front target hit exactly once" % label, _damage(front), [Weapons.FULL_CUT_DAMAGE])
@@ -284,7 +284,7 @@ func _terrain_shadow_fixture() -> void:
 		if exposed_shadow != null:
 			var slope := width * 0.5 / 6.25
 			var edge_distance := (slope * 8.0 - 1.3) / sqrt(1.0 + slope * slope)
-			_t.check("partial hull independently crosses the terrain shadow edge", edge_distance > 0.0 and edge_distance < _combat._hull(exposed_shadow))
+			_t.check("partial hull independently crosses the terrain shadow edge", edge_distance > 0.0 and edge_distance < _combat.hull_radius(exposed_shadow))
 			_t.check("partial hull centre ray is blocked", not _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(_player.ball_position(), exposed_shadow.global_position, 1)).is_empty())
 			_t.eq("exposed part of a terrain-shadow boundary hull hits once", _damage(exposed_shadow), [Weapons.FULL_CUT_DAMAGE])
 		wall.queue_free()
@@ -294,7 +294,7 @@ func _terrain_shadow_fixture() -> void:
 	var exposed := _enemy("chaser", 8.0, 10.5)
 	exposed.set_physics_process(false)
 	var distance := (10.5 - 8.0) / sqrt(2.0) - Weapons.FULL_CUT_WIDTH * 0.5
-	_t.check("exposed hull centre is outside the sweep, hull intersects it", distance > 0.0 and distance < _combat._hull(exposed))
+	_t.check("exposed hull centre is outside the sweep, hull intersects it", distance > 0.0 and distance < _combat.hull_radius(exposed))
 	_t.check("exposed hull independent centre ray is clear", _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(_player.ball_position(), exposed.global_position, 1)).is_empty())
 	_tech("foundry_cutter", 4)
 	_combat.ultimate._peak(_player.ball_position())
@@ -316,7 +316,7 @@ func _terrain_shadow_fixture() -> void:
 			wall.add_child(collision)
 			_game.add_child(wall)
 			wall.global_position = _player.ball_position() + Vector3.RIGHT * 30.5
-			_t.check("outer hull independently intersects reach", sqrt(30.5 * 30.5 + 4.0 * 4.0) - Weapons.FULL_CUT_REACH < _combat._hull(outer_hull))
+			_t.check("outer hull independently intersects reach", sqrt(30.5 * 30.5 + 4.0 * 4.0) - Weapons.FULL_CUT_REACH < _combat.hull_radius(outer_hull))
 		await physics_frame
 		await physics_frame
 		_t.check("outer hull ray clear, wall=%s" % wall_present, _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(_player.ball_position(), outer_hull.global_position, 1)).is_empty())
@@ -815,10 +815,10 @@ func _cylinder_terrain_fixture() -> void:
 	var slope := radius / sqrt(distance * distance - radius * radius)
 	var whole_clearance := slope * 9.0 / sqrt(1.0 + slope * slope)
 	var edge_clearance := (slope * 8.0 - 1.6) / sqrt(1.0 + slope * slope)
-	_t.check("cylinder independently covers the whole rear hull", whole_clearance > _combat._hull(covered) and 9.0 - _combat._hull(covered) > distance + radius)
+	_t.check("cylinder independently covers the whole rear hull", whole_clearance > _combat.hull_radius(covered) and 9.0 - _combat.hull_radius(covered) > distance + radius)
 	_t.check("cylinder front target has an independent clear ray", _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, front.global_position, 1)).is_empty())
 	_t.check("cylinder rear target has an independent blocked ray", not _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, covered.global_position, 1)).is_empty())
-	_t.check("cylinder boundary hull independently exposes an edge", edge_clearance > 0.0 and edge_clearance < _combat._hull(exposed))
+	_t.check("cylinder boundary hull independently exposes an edge", edge_clearance > 0.0 and edge_clearance < _combat.hull_radius(exposed))
 	_t.check("cylinder boundary centre ray is independently blocked", not _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, exposed.global_position, 1)).is_empty())
 	var front_health: float = front.hp
 	var exposed_health: float = exposed.hp
@@ -942,7 +942,7 @@ func _run() -> void:
 	var charges: int = _player.abilities.slot("movement").charges
 	var landed := []
 	var chain_mult: float = _player.chain.multiplier()
-	var heft_mult: float = Ultimate.HEFT_MULT[ult._heft_index()]
+	var heft_mult: float = Ultimate.HEFT_MULT[ult.heft_index()]
 	var expected_damage: float = Ultimate.LANDING_DAMAGE * chain_mult * heft_mult
 	var slam_rate: float = _combat.punch_of("slam", 1.0)
 	var on_landed := func(_id: String, _at: Vector3, count: int, dealt: float): landed.append([count, dealt])
@@ -1167,7 +1167,7 @@ func _run() -> void:
 	_t.check("Line Drive waits for loaded_line; Foundry Cutter opens after set_piece",
 		not _combat.discovered.has("rivet_line_drive") and _combat.discovered.has("rivet_shrugged")
 		and log.has("set_piece") and log.find("set_piece") < log.find("rivet_foundry_cutter"), str(log))
-	_combat._discover("loaded_line", _player.ball_position())
+	_combat.discover("loaded_line", _player.ball_position())
 	await _step_cards(8)
 	_kit.last_punch = {"id": puncher.get_instance_id(), "clock": _kit._clock, "punch": 1.0, "dir": Vector3.RIGHT}
 	_game.events.enemy_pinned.emit(pinned, 1.0)

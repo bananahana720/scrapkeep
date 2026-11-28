@@ -290,8 +290,8 @@ func _grants(enemy: Node3D) -> void:
 	for id in ["ach_sable_cable_runs", "ach_sable_parting_shot", "ach_sable_switchback"]:
 		listener.rows[id] = Achievements.row(id)
 	listener.setup(_game.events, null, profile, func(): return 1.0)
-	_combat._discover("loaded_line", Vector3.ZERO)
-	_combat._discover("set_piece", Vector3.ZERO)
+	_combat.discover("loaded_line", Vector3.ZERO)
+	_combat.discover("set_piece", Vector3.ZERO)
 	_fresh()
 	var stakes = _combat.ultimate.stakes
 	var stake = stakes.plant(_player.ball_position() + Vector3.RIGHT * 10.0)

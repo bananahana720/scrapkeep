@@ -5,6 +5,7 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 
 const PIP := 18.0
@@ -35,7 +36,7 @@ var _drawn := false
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(maxf(PLATE_WIDTH, word_left() + UiDraw.width(THREAT_WORD, WORD_FONT) + WORD_PAD), PIP + ROW_GAP + 9.0)
+	custom_minimum_size = Vector2(maxf(PLATE_WIDTH, word_left() + UiFonts.width(THREAT_WORD, WORD_FONT) + WORD_PAD), PIP + ROW_GAP + 9.0)
 	size = custom_minimum_size
 
 

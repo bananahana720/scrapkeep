@@ -6,6 +6,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 const PARK_MODELS := "res://assets/models/park/"
 
 const VERSION := 1
@@ -95,7 +96,7 @@ func _initialize() -> void:
 			return
 		quit(pair(base_dir, head_dir, out))
 		return
-	if out.is_empty() or subject_path.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or subject_path.is_empty() or AppShell.headless():
 		printerr("capture needs --out, --subject and a native display")
 		quit(2)
 		return

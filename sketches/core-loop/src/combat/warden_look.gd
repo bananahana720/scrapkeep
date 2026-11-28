@@ -86,14 +86,6 @@ func jaw_open() -> float:
 	return _open
 
 
-func lit_levels() -> int:
-	var count := 0
-	for level in _seams.size():
-		if not _seams[level].is_empty() and (_seams[level][0] as MeshInstance3D).visible:
-			count += 1
-	return count
-
-
 func core_material() -> StandardMaterial3D:
 	return _core_material
 

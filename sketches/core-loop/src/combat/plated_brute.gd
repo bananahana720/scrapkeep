@@ -61,7 +61,6 @@ var bounty_return_speed := 9.0
 var bounty_woken := false
 var bounty_met := false
 var _crate: MeshInstance3D
-var _absorb := false
 var _plate: MeshInstance3D
 var windup_pose_enabled := true
 var _windup_rig: Skeleton3D
@@ -419,7 +418,7 @@ func _try_break_destructible() -> bool:
 func _try_crash_brute() -> bool:
 	if not is_inside_tree():
 		return false
-	for other in get_tree().get_nodes_in_group("enemy"):
+	for other in get_tree().get_nodes_in_group(GROUP):
 		if other == self or not is_instance_valid(other) or other.is_dead() or other.kind != "plated_brute":
 			continue
 		var to_other: Vector3 = other.global_position - global_position
@@ -483,7 +482,7 @@ func _on_charge_crash(cause: String) -> void:
 
 class FlungPlate extends Node3D:
 	const LIFE := 0.72
-	const GRAVITY := 24.0
+	const HURL_GRAVITY := 24.0
 	var vel := Vector3.ZERO
 	var spin := Vector3.ZERO
 	var floor_y := -INF
@@ -491,14 +490,14 @@ class FlungPlate extends Node3D:
 
 	func _physics_process(delta: float) -> void:
 		_t += delta
-		vel.y -= GRAVITY * delta
+		vel.y -= HURL_GRAVITY * delta
 		global_position += vel * delta
 		if global_position.y < floor_y:
 			global_position.y = floor_y
 			vel.y = absf(vel.y) * 0.35
 			vel.x *= 0.65
 			vel.z *= 0.65
-		rotation += spin * delta * EnemyMotion.motion_scale
+		rotation += spin * delta * Comfort.motion_scale()
 		var fade := clampf((_t - LIFE * 0.55) / (LIFE * 0.45), 0.0, 1.0)
 		var s := maxf(0.01, 1.0 - fade)
 		scale = Vector3.ONE * s
@@ -549,14 +548,6 @@ func on_struck(_kind: String, _part: String, result: Dictionary) -> void:
 
 func absorbs_hit(result: Dictionary) -> bool:
 	return bool(result.get("full", false)) and plates > 0
-
-
-func take_damage(amount: float) -> float:
-	if _absorb:
-		_absorb = false
-		flash()
-		return 0.0
-	return super.take_damage(amount)
 
 
 func _pose() -> void:

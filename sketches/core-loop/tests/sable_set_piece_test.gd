@@ -183,12 +183,12 @@ func _run() -> void:
 	_ult._posture_spent = {}
 	before = warden.posture()
 	for i in 9:
-		_combat._ult_hit(warden, "arc", 12.0, warden.global_position, false)
-	_combat._ult_hit(warden, "arc", 60.0, warden.global_position, true)
+		_combat.ult_hit(warden, "arc", 12.0, warden.global_position, false)
+	_combat.ult_hit(warden, "arc", 60.0, warden.global_position, true)
 	_t.check("closed Warden gains at most the cap once", warden.posture() - before > 0.0 and warden.posture() - before <= Ultimate.warden_cap(warden.monster_build()) + 0.001 and warden.chunks_left() == 4)
 	warden._apply_posture({"gain": 100.0, "contact": false})
 	await physics_frame
-	_combat._ult_hit(warden, "arc", 60.0, warden.global_position, true)
+	_combat.ult_hit(warden, "arc", 60.0, warden.global_position, true)
 	_t.eq("open core shatters a chunk", warden.chunks_left(), 3)
 	for signal_name in ["stage_entered", "player_died", "stage_content_cleared"]:
 		_stakes.plant(_home)

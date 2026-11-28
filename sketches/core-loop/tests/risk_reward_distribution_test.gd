@@ -7,8 +7,10 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const Items := preload("res://src/build/items.gd")
+const MakerDefs := preload("res://src/build/maker_defs.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Relics := preload("res://src/build/relics.gd")
 const RelicSwaps := preload("res://src/combat/relic_swaps.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
@@ -64,32 +66,32 @@ func _check_risk_vs_kindness_tables() -> void:
 
 func _check_world_escalation_and_verb_parts() -> void:
 	var prev_table = Synergies.table
-	Synergies.table = AlphaDefs
-	_t.eq("W1 fabricator stays common", Parts.source_rarities("fabricator", 1), ["common"])
-	_t.eq("W2 fabricator mixes common and rare", Parts.source_rarities("fabricator", 3), ["common", "rare"])
-	_t.eq("W3 fabricator mixes common and rare", Parts.source_rarities("fabricator", 5), ["common", "rare"])
-	_t.eq("W1 vault stays rare", Parts.source_rarities("vault", 1), ["rare"])
-	_t.eq("W2 vault escalates to rare+relic", Parts.source_rarities("vault", 3), ["rare", "relic"])
-	_t.eq("W3 vault escalates to rare+relic", Parts.source_rarities("vault", 5), ["rare", "relic"])
+	Synergies.set_table(AlphaDefs)
+	_t.eq("W1 fabricator stays common", PartOffers.source_rarities("fabricator", 1), ["common"])
+	_t.eq("W2 fabricator mixes common and rare", PartOffers.source_rarities("fabricator", 3), ["common", "rare"])
+	_t.eq("W3 fabricator mixes common and rare", PartOffers.source_rarities("fabricator", 5), ["common", "rare"])
+	_t.eq("W1 vault stays rare", PartOffers.source_rarities("vault", 1), ["rare"])
+	_t.eq("W2 vault escalates to rare+relic", PartOffers.source_rarities("vault", 3), ["rare", "relic"])
+	_t.eq("W3 vault escalates to rare+relic", PartOffers.source_rarities("vault", 5), ["rare", "relic"])
 	_t.check("rare multiplier climbs W1 < W2 < W3",
-		Parts.stage_rare_mult(1) < Parts.stage_rare_mult(3) and Parts.stage_rare_mult(3) < Parts.stage_rare_mult(5),
-		"%.2f / %.2f / %.2f" % [Parts.stage_rare_mult(1), Parts.stage_rare_mult(3), Parts.stage_rare_mult(5)])
-	_t.eq("gate_rarities W1 0 cores stays common", Parts.gate_rarities(0, 1), ["common"])
-	_t.eq("gate_rarities W2 0 cores mixes common+rare", Parts.gate_rarities(0, 3), ["common", "rare"])
-	_t.eq("gate_rarities W2 1 core lifts to rare", Parts.gate_rarities(1, 3), ["rare"])
-	_t.eq("gate_rarities W3 1 core lifts to rare+relic", Parts.gate_rarities(1, 5), ["rare", "relic"])
+		PartOffers.stage_rare_mult(1) < PartOffers.stage_rare_mult(3) and PartOffers.stage_rare_mult(3) < PartOffers.stage_rare_mult(5),
+		"%.2f / %.2f / %.2f" % [PartOffers.stage_rare_mult(1), PartOffers.stage_rare_mult(3), PartOffers.stage_rare_mult(5)])
+	_t.eq("gate_rarities W1 0 cores stays common", PartOffers.gate_rarities(0, 1), ["common"])
+	_t.eq("gate_rarities W2 0 cores mixes common+rare", PartOffers.gate_rarities(0, 3), ["common", "rare"])
+	_t.eq("gate_rarities W2 1 core lifts to rare", PartOffers.gate_rarities(1, 3), ["rare"])
+	_t.eq("gate_rarities W3 1 core lifts to rare+relic", PartOffers.gate_rarities(1, 5), ["rare", "relic"])
 
 	var verb_parts := ["slag_pike", "halo_rig", "backwash", "barbed_reel", "faultline_cap", "second_bell",
 		"long_leash", "fan_spread", "helix_drill", "basalt_ram", "storm_capacitor", "boomerang_spool",
 		"orbital_flywheel", "prism_splitter", "slag_furnace"]
 	for pid in verb_parts:
 		_t.check("%s counts as changes_behaviour and high_impact" % pid,
-			Parts.changes_behaviour(pid) and Parts.is_high_impact(pid), pid)
+			PartOffers.changes_behaviour(pid, Parts.def) and PartOffers.is_high_impact(pid, Parts.def), pid)
 	_t.check("planted: stat cobalts gatling_heart and ram_plow stay changes_behaviour=false",
-		not Parts.changes_behaviour("gatling_heart") and not Parts.changes_behaviour("ram_plow"), "")
+		not PartOffers.changes_behaviour("gatling_heart", Parts.def) and not PartOffers.changes_behaviour("ram_plow", Parts.def), "")
 
 	var prev_seams := Parts.seams.duplicate()
-	Parts.seams = {"spawner.fan_spread": true, "spawner.helix_drill": true}
+	Parts.set_seams({"spawner.fan_spread": true, "spawner.helix_drill": true})
 	var fab := Fabricators.new()
 	fab._class_id = "runner_gunner"
 	var rare_counts := {1: 0, 3: 0, 5: 0}
@@ -103,7 +105,7 @@ func _check_world_escalation_and_verb_parts() -> void:
 			var pid := fab._roll([])
 			if Parts.rarity_of(pid) == "rare":
 				rare_counts[stage] += 1
-			if pid in verb_parts or Parts.changes_behaviour(pid):
+			if pid in verb_parts or PartOffers.changes_behaviour(pid, Parts.def):
 				verb_hits[stage] += 1
 			if stage >= 3 and pid in verb_parts:
 				surfaced_w23[pid] = int(surfaced_w23.get(pid, 0)) + 1
@@ -124,14 +126,14 @@ func _check_world_escalation_and_verb_parts() -> void:
 		var got := Parts.roll_high_impact(hi_rng, ["rare", "relic"], "pylon_engineer", [], 1, [], {}, 5, true)
 		if not got.is_empty():
 			var pid := String(got[0])
-			if Parts.is_high_impact(pid):
+			if PartOffers.is_high_impact(pid, Parts.def):
 				hi_impact += 1
 			if Relics.is_relic(pid) and Relics.swap_of(Relics.relic_of(pid)) != "":
 				hi_relics += 1
 	_t.eq("roll_high_impact delivers 100% high-impact picks", hi_impact, 80)
 	_t.check("roll_high_impact surfaces W2/W3 kit-swap relics when rare+relic allowed", hi_relics >= 15, "relics=%d/80" % hi_relics)
-	Parts.seams = prev_seams
-	Synergies.table = prev_table
+	Parts.set_seams(prev_seams)
+	Synergies.set_table(prev_table)
 
 
 func _check_world_relics_all_pilots() -> void:
@@ -139,7 +141,7 @@ func _check_world_relics_all_pilots() -> void:
 	_t.eq("Relics.validate_alt() clean", Relics.validate_alt(), [])
 	_t.eq("MakerSets.validate() clean", MakerSets.validate(), [])
 	_t.eq("WORLD_SWAPS defines 6 missing W2/W3 swaps", Relics.WORLD_SWAPS.size(), 6)
-	for pilot in Relics.PILOTS:
+	for pilot in Relics.pilots():
 		for world in [1, 2, 3]:
 			var swaps := Relics.eligible_swaps(pilot, {}, null, world)
 			_t.check("%s has >= 1 kit-swap relic in World %d" % [pilot, world],
@@ -154,33 +156,33 @@ func _check_world_relics_all_pilots() -> void:
 		var icon := String(AbilityState.ABILITIES.get(swap, {}).get("icon", ""))
 		_t.check("WORLD_SWAP %s respects word caps, overdrive, suffix, maker" % id,
 			name_words <= Relics.MAX_NAME_WORDS and text_words <= Relics.MAX_TEXT_WORDS
-			and Relics.overdrive_of(id) > 1.0 and String(r["maker"]) in Relics.VALID_MAKERS
+			and Relics.overdrive_of(id) > 1.0 and String(r["maker"]) in Relics.valid_makers()
 			and icon.ends_with(String(Relics.SUFFIX[slot])), str(r))
 
 
 func _check_archetype_synergies_and_grapple_maps() -> void:
-	_t.eq("planted: empty build has no dominant archetype", Parts.dominant_archetype([]), "")
-	_t.eq("planted: single part does not lock archetype", Parts.dominant_archetype(["ram_plow"]), "")
-	_t.eq("heavy_melee archetype detected", Parts.dominant_archetype(["ram_plow", "basalt_ram", "drop_weight"]), "heavy_melee")
-	_t.eq("run_n_gun archetype detected", Parts.dominant_archetype(["gatling_heart", "fan_spread", "helix_drill"]), "run_n_gun")
-	_t.eq("spell_cast archetype detected", Parts.dominant_archetype(["spare_cell", "storm_capacitor", "second_bell"]), "spell_cast")
+	_t.eq("planted: empty build has no dominant archetype", PartOffers.dominant_archetype([], Parts.maker_of), "")
+	_t.eq("planted: single part does not lock archetype", PartOffers.dominant_archetype(["ram_plow"], Parts.maker_of), "")
+	_t.eq("heavy_melee archetype detected", PartOffers.dominant_archetype(["ram_plow", "basalt_ram", "drop_weight"], Parts.maker_of), "heavy_melee")
+	_t.eq("run_n_gun archetype detected", PartOffers.dominant_archetype(["gatling_heart", "fan_spread", "helix_drill"], Parts.maker_of), "run_n_gun")
+	_t.eq("spell_cast archetype detected", PartOffers.dominant_archetype(["spare_cell", "storm_capacitor", "second_bell"], Parts.maker_of), "spell_cast")
 
-	var melee_nudge := Parts.archetype_nudge(["ram_plow", "basalt_ram"], ["drop_weight", "faultline_cap", "gatling_heart"])
+	var melee_nudge := PartOffers.archetype_nudge(["ram_plow", "basalt_ram"], ["drop_weight", "faultline_cap", "gatling_heart"], Parts.offer_ops())
 	_t.check("heavy_melee nudge boosts melee anchors and leaves gun parts untouched",
 		melee_nudge.has("drop_weight") and melee_nudge.has("faultline_cap") and not melee_nudge.has("gatling_heart"), str(melee_nudge))
-	var gun_nudge := Parts.archetype_nudge(["gatling_heart", "fan_spread"], ["helix_drill", "slag_pike", "drop_weight"])
+	var gun_nudge := PartOffers.archetype_nudge(["gatling_heart", "fan_spread"], ["helix_drill", "slag_pike", "drop_weight"], Parts.offer_ops())
 	_t.check("run_n_gun nudge boosts shooting anchors and leaves melee parts untouched",
 		gun_nudge.has("helix_drill") and gun_nudge.has("slag_pike") and not gun_nudge.has("drop_weight"), str(gun_nudge))
-	var spell_nudge := Parts.archetype_nudge(["spare_cell", "storm_capacitor"], ["second_bell", "overcharge_coil", "ram_plow"])
+	var spell_nudge := PartOffers.archetype_nudge(["spare_cell", "storm_capacitor"], ["second_bell", "overcharge_coil", "ram_plow"], Parts.offer_ops())
 	_t.check("spell_cast nudge boosts casting anchors and leaves melee parts untouched",
 		spell_nudge.has("second_bell") and spell_nudge.has("overcharge_coil") and not spell_nudge.has("ram_plow"), str(spell_nudge))
 
 	_t.eq("evolution completion bait finds basalt_ram for orbital_flywheel",
-		Parts.completing_archetype_part(["orbital_flywheel"], ["hot_rivets", "basalt_ram"]), "basalt_ram")
+		PartOffers.completing_archetype_part(["orbital_flywheel"], ["hot_rivets", "basalt_ram"], Parts.offer_ops()), "basalt_ram")
 	_t.eq("3-piece Spillway completion bait finds 3rd Spillway piece",
-		Parts.completing_archetype_part(["quick_spool", "cap_relay"], ["hot_rivets", "backwash"]), "backwash")
+		PartOffers.completing_archetype_part(["quick_spool", "cap_relay"], ["hot_rivets", "backwash"], Parts.offer_ops()), "backwash")
 	_t.eq("3-piece Roosts completion bait finds 3rd Roosts piece",
-		Parts.completing_archetype_part(["loose_trigger", "long_barrel"], ["hot_rivets", "storm_capacitor"]), "storm_capacitor")
+		PartOffers.completing_archetype_part(["loose_trigger", "long_barrel"], ["hot_rivets", "storm_capacitor"], Parts.offer_ops()), "storm_capacitor")
 
 	_t.eq("basalt_ram maps to tether_slam grapple mutation", Items.grapple_mutation_of("basalt_ram"), "tether_slam")
 	_t.eq("storm_capacitor maps to sonic_snap_sling grapple mutation", Items.grapple_mutation_of("storm_capacitor"), "sonic_snap_sling")
@@ -188,10 +190,10 @@ func _check_archetype_synergies_and_grapple_maps() -> void:
 	_t.eq("prism_splitter maps to live_bus grapple mutation", Items.grapple_mutation_of("prism_splitter"), "live_bus")
 	_t.eq("orbital_flywheel maps to wrecking_flail grapple mutation", Items.grapple_mutation_of("orbital_flywheel"), "wrecking_flail")
 
-	Parts.archetype_nudge_on = false
-	_t.eq("archetype_nudge respects toggle", Parts.archetype_nudge(["ram_plow", "basalt_ram"], ["drop_weight"]), {})
+	PartOffers.archetype_nudge_on = false
+	_t.eq("archetype_nudge respects toggle", PartOffers.archetype_nudge(["ram_plow", "basalt_ram"], ["drop_weight"], Parts.offer_ops()), {})
 	Parts.reset_for_tests()
-	_t.check("reset_for_tests restores archetype_nudge_on", Parts.archetype_nudge_on, "")
+	_t.check("reset_for_tests restores archetype_nudge_on", PartOffers.archetype_nudge_on, "")
 
 
 func _run_live() -> void:
@@ -221,7 +223,7 @@ func _run_live() -> void:
 	var hi_auc := TradePockets.bid_salvage_auction(run, 100)
 	_t.check("salvage auction high bid grants high-impact rare",
 		bool(hi_auc["ok"]) and bool(hi_auc["high_impact"]) and hi_auc["rarities"] == ["rare"]
-		and Parts.rarity_of(String(hi_auc["part_id"])) == "rare" and Parts.is_high_impact(String(hi_auc["part_id"])), str(hi_auc))
+		and Parts.rarity_of(String(hi_auc["part_id"])) == "rare" and PartOffers.is_high_impact(String(hi_auc["part_id"]), Parts.def), str(hi_auc))
 	run.stage = 5
 	run.parts.clear()
 	run.cogs = 500
@@ -229,7 +231,7 @@ func _run_live() -> void:
 	_t.check("salvage auction relic bid grants high-impact rare or relic",
 		bool(relic_auc["ok"]) and bool(relic_auc["high_impact"]) and relic_auc["rarities"] == ["rare", "relic"]
 		and Parts.rarity_of(String(relic_auc["part_id"])) in ["rare", "relic"]
-		and Parts.is_high_impact(String(relic_auc["part_id"])), str(relic_auc))
+		and PartOffers.is_high_impact(String(relic_auc["part_id"]), Parts.def), str(relic_auc))
 
 	run.stage = 3
 	run.parts.clear()
@@ -238,19 +240,19 @@ func _run_live() -> void:
 	var contract_win := TradePockets.settle_overtime_contract(run, 25.0, _game.player.ball_position())
 	_t.check("overtime contract win pays 140 cogs and high-impact W2 part",
 		bool(contract_win["ok"]) and bool(contract_win["won"]) and run.cogs == cogs_before + 140
-		and String(contract_win.get("part_id", "")) != "" and Parts.is_high_impact(String(contract_win["part_id"])), str(contract_win))
+		and String(contract_win.get("part_id", "")) != "" and PartOffers.is_high_impact(String(contract_win["part_id"]), Parts.def), str(contract_win))
 
 	run.stage = 4
 	run.parts.clear()
 	var cores_before: int = run.bonus_cores
 	build.overtime_paid(_game.player.ball_position(), 2)
 	_t.check("overtime 2 rings pays 1 high-impact rare part",
-		run.parts.size() == 1 and Parts.rarity_of(String(run.parts[0])) == "rare" and Parts.is_high_impact(String(run.parts[0])), str(run.parts))
+		run.parts.size() == 1 and Parts.rarity_of(String(run.parts[0])) == "rare" and PartOffers.is_high_impact(String(run.parts[0]), Parts.def), str(run.parts))
 	run.parts.clear()
 	build.overtime_paid(_game.player.ball_position(), 3)
 	_t.check("overtime 3 rings pays 2 high-impact rare/relic parts and bonus core",
 		run.parts.size() == 2 and run.bonus_cores == cores_before + 1
-		and run.parts.all(func(pid): return Parts.rarity_of(String(pid)) in ["rare", "relic"] and Parts.is_high_impact(String(pid))), str(run.parts))
+		and run.parts.all(func(pid): return Parts.rarity_of(String(pid)) in ["rare", "relic"] and PartOffers.is_high_impact(String(pid), Parts.def)), str(run.parts))
 
 	run.stage = 3
 	run.parts.clear()
@@ -262,7 +264,7 @@ func _run_live() -> void:
 	var stake_offers: Array = build.gates.offers.filter(func(o): return not ActiveOffers.is_offer(String(o["part_id"])))
 	var stake_tail: Array = stake_offers.slice(2)
 	_t.check("challenge stakes add 2 high-impact rare/relic gate choices",
-		stake_tail.size() == 2 and stake_tail.all(func(o): return String(o["rarity"]) in ["rare", "relic"] and Parts.is_high_impact(String(o["part_id"]))),
+		stake_tail.size() == 2 and stake_tail.all(func(o): return String(o["rarity"]) in ["rare", "relic"] and PartOffers.is_high_impact(String(o["part_id"]), Parts.def)),
 		str(stake_tail.map(func(o): return [o["part_id"], o["rarity"]])))
 	build.gates.close()
 	StakeDevices.reset_challenge_stakes(run)
@@ -272,7 +274,7 @@ func _run_live() -> void:
 	run.add_part("quick_spool", "test")
 	run.add_part("cap_relay", "test")
 	shop.enter()
-	var set_shown: bool = shop.shelf.any(func(e): return MakerSets.maker_of(String(e["part_id"])) == MakerSets.SPILLWAY)
+	var set_shown: bool = shop.shelf.any(func(e): return MakerSets.maker_of(String(e["part_id"])) == MakerDefs.SPILLWAY)
 	_t.check("W2 shop surfaces completing 3rd Spillway piece when 2 held", set_shown, str(shop.shelf))
 	shop.leave()
 
@@ -312,7 +314,7 @@ func _run_live() -> void:
 	boss_rng.seed = 777
 	var boss_picks := RewardGates.roll_cobalt_boss_picks(boss_rng, "pylon_engineer", [], 2, 5)
 	_t.check("boss cobalt picks return 2 behaviour-changing rares",
-		boss_picks.size() == 2 and boss_picks.all(func(pid): return Parts.rarity_of(String(pid)) == "rare" and Parts.changes_behaviour(String(pid))),
+		boss_picks.size() == 2 and boss_picks.all(func(pid): return Parts.rarity_of(String(pid)) == "rare" and PartOffers.changes_behaviour(String(pid), Parts.def)),
 		str(boss_picks))
 
 	_game.free()

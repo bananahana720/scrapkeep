@@ -11,6 +11,7 @@ const Director := preload("res://src/world/director.gd")
 const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Sheet := preload("res://src/build/build_sheet.gd")
@@ -24,13 +25,14 @@ const StartCard := preload("res://src/ui/start_pick_card.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const Cards := preload("res://src/world/director_cards.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 # Re-pinned 2026-10-14 (coordinator): the KD2 flume merge c81cec4a changed stage 2's park data, so every
 # whole run moved. SG10 proved tier 0 equal to the pre-SG10 game on the old pins (b8b6605b passes them);
 # these are tier-0 replays at c81cec4a, without SG11, seeds 0..19, with the same script:
-# /home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
-# --headless --path sketches/core-loop --script /home/andrew/scratch/w13/sol/sg10-tier-r5/base_replay.gd
-# -- --record-base --section=runtime --seed=N  (log: /home/andrew/scratch/w13/runtier-repin.log)
+# $HOME/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
+# --headless --path sketches/core-loop --script $HOME/scratch/w13/sol/sg10-tier-r5/base_replay.gd
+# -- --record-base --section=runtime --seed=N  (log: $HOME/scratch/w13/runtier-repin.log)
 # 2026-10-16 wave-15 re-pin (ruling RT1): the schedule hash now leaves out each park row's presentation
 # fields (recipe, fit); KD1-DRESS's three recipe renames had moved all 20. Whole runs unchanged.
 # 2026-10-16 PARK-WIN re-pin: crown_apron at 730.5 -> 731.5 (PW2) and the islands Warden anchor y
@@ -346,9 +348,9 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 			# Ruling al: no tier raises enemy health.
 			t.near("health untouched seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], d.hp_scale(), row.threat)
 			t.eq("interval mode retained", d.mode, "interval")
-		var pay := {"kill_scrap": row.kill_scrap, "source_rarities": Parts.SOURCE_RARITIES,
-			"gate_rarities": [Parts.gate_rarities(0), Parts.gate_rarities(1), Parts.gate_rarities(2)],
-			"milestones": Parts.MILESTONE_FOR_EVENT}
+		var pay := {"kill_scrap": row.kill_scrap, "source_rarities": PartOffers.SOURCE_RARITIES,
+			"gate_rarities": [PartOffers.gate_rarities(0), PartOffers.gate_rarities(1), PartOffers.gate_rarities(2)],
+			"milestones": PartOffers.MILESTONE_FOR_EVENT}
 		if d._park_map != null:
 			pay["park_rows"] = _director_rows(d._park_map.park.park_rows)
 		stages.append({"stage": row.stage, "mode": d.mode, "schedule": measured.schedule,
@@ -703,7 +705,7 @@ func _continue_replay() -> void:
 	elif continue_mode == "bot":
 		game.bot_driven = true
 	else:
-		t.check(label + " headless default is bot driven", game.bot_driven and DisplayServer.get_name() == "headless")
+		t.check(label + " headless default is bot driven", game.bot_driven and AppShell.headless())
 	t.check(label + " resumes without retry", game.flow.resume_run())
 	await process_frame
 	var card = game.flow.start_card

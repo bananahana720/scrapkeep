@@ -3,8 +3,8 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # The launch take (launch_take.gd, world 1 unit 17) on the real game:
 #   - not live (tests, bots, headless), a play runs its cover call at once and shows nothing;
@@ -173,7 +173,7 @@ func _run() -> void:
 	_game.screens.prologue_enabled = false
 
 	# Reduced motion: no wind, still lines.
-	HighdraftFx.preferred = true
+	Comfort.reduced_motion = true
 	flow.press_start()
 	await _frames(2)
 	_game._screen_key(KEY_1)
@@ -184,7 +184,7 @@ func _run() -> void:
 	await _step_while(LaunchTake.HOLD)
 	await _step_while(LaunchTake.REVEAL)
 	_t.check("the reduced take still starts the run", flow.in_stage() and not _take.busy(), flow.state_name())
-	HighdraftFx.preferred = false
+	Comfort.reduced_motion = false
 	await _seam_tests()
 	quit(_t.verdict())
 
@@ -280,7 +280,7 @@ func _seam_checks(label: String, run: Dictionary, reduced: bool) -> void:
 # A fresh run on stage 1 with the take not live (the pick starts the run at once).
 func _fresh_run() -> void:
 	var flow = _game.flow
-	HighdraftFx.preferred = false
+	Comfort.reduced_motion = false
 	_take.force_live = false
 	flow.show_title()
 	await _frames(2)
@@ -338,7 +338,7 @@ func _seam_tests() -> void:
 
 	# Reduced motion, same seam.
 	await _fresh_run()
-	HighdraftFx.preferred = true
+	Comfort.reduced_motion = true
 	var reduced: Dictionary = await _seam_run()
 	_seam_checks("reduced motion", reduced, true)
 
@@ -349,4 +349,4 @@ func _seam_tests() -> void:
 	var bowl: Dictionary = await _seam_run()
 	_t.check("the second launch reaches the Slag Bowl", flow.state_name() == "boss", flow.state_name())
 	_seam_checks("flume to the Slag Bowl", bowl, false)
-	HighdraftFx.preferred = false
+	Comfort.reduced_motion = false

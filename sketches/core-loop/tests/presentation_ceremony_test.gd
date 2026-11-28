@@ -7,11 +7,11 @@ const Hud := preload("res://src/ui/hud.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Ceremony := preload("res://src/presentation/reward_ceremony.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
 const PartName := preload("res://src/ui/part_name.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 
@@ -67,13 +67,13 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 
 func _check_slice_hints() -> void:
-	Synergies.table = SliceDefs
+	Synergies.set_table(SliceDefs)
 	var leaks: Array = []
 	for part_id in Parts.ids():
 		var fed: Array = Ceremony._fed(part_id, [])
 		if not fed.is_empty() and not Synergies.in_play(fed[0]):
 			leaks.append("%s -> %s" % [part_id, fed[0]])
-	Synergies.table = null
+	Synergies.set_table(null)
 	_report("slice never hints a cut synergy", leaks.is_empty() and Synergies.in_play("storm_lattice"),
 		"on the slice table no part feeds a cut synergy; leaks %s" % [leaks])
 

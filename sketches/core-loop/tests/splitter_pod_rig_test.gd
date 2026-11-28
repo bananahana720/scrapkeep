@@ -12,6 +12,7 @@ const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 const Pod := preload("res://src/combat/splitter_pod.gd")
 const Splitter := preload("res://src/combat/splitter.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var game
 var ball := Vector3.ZERO
@@ -128,7 +129,7 @@ func _run() -> void:
 		var tele = pod.telegraph()
 		if pod.phase != Pod.Phase.WARN or tele == null:
 			continue
-		var want: Basis = WindupPoses.windup(Pod.WIND_POSE, tele.progress, tele.age, EnemyMotion.motion_scale)
+		var want: Basis = WindupPoses.windup(Pod.WIND_POSE, tele.progress, tele.age, Comfort.motion_scale())
 		var body: Node3D = pod.get_node("ReactionPivot/PodBody")
 		worst = maxf(worst, maxf((body.basis.x - want.x).length(), maxf((body.basis.y - want.y).length(), (body.basis.z - want.z).length())))
 		scale_ok = scale_ok and is_equal_approx(rig_speed(pod), 1.0 - tele.progress)
@@ -164,7 +165,7 @@ func _run() -> void:
 	_clear()
 
 	# Reduced motion: no wind-up pose (as windup_poses.gd), the scurry loop stilled.
-	EnemyMotion.motion_scale = 0.0
+	Comfort.reduced_motion = true
 	t.check("reduced motion has no wind-up pose", WindupPoses.windup(Pod.WIND_POSE, 0.9, 0.3, 0.0) == Basis.IDENTITY)
 	var calm = _pod(30.0)
 	calm.set_physics_process(false)
@@ -173,7 +174,7 @@ func _run() -> void:
 	calm_player.advance(calm_player.get_animation("pop_in").length + 0.02)
 	t.check("reduced motion starts no scurry after it", not calm_player.is_playing())
 	calm.free()
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	EnemyMotion.headless_idle = false
 
 	# (c) Gameplay numbers are the committed ones.

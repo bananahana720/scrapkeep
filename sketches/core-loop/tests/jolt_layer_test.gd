@@ -4,7 +4,8 @@ const Game := preload("res://src/game.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const AreaField := preload("res://src/combat/area_field.gd")
-const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const WavIo := preload("res://src/presentation/wav_io.gd")
 const T := preload("res://tests/support/t.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
@@ -154,7 +155,7 @@ func _voice() -> void:
 	data.resize(4 + 8)
 	data.encode_u32(0, 8)
 	riff.append_array(data)
-	var wav: AudioStreamWAV = JoltAudio._from_riff(riff)
+	var wav: AudioStreamWAV = WavIo.from_riff(riff)
 	_t.eq("a raw RIFF reads as 16-bit mono at its rate", [wav != null, wav.stereo if wav else true,
 		wav.mix_rate if wav else 0, wav.data.size() if wav else 0], [true, false, 44100, 8])
 
@@ -252,9 +253,9 @@ func _finish(field) -> bool:
 	windups.append(ult.windup_seconds())
 	player.abilities.ultimate_id = base_id
 	_t.eq("a base Q winds up 0.35 s and a variant casts 0.5 s", windups, [0.35, AbilityState.VARIANT_CAST])
-	var has_file := ResourceLoader.exists(JoltAudio.path("presence")) or FileAccess.file_exists(JoltAudio.path("presence"))
+	var has_file := ResourceLoader.exists(SfxBank.file_path("jolt_layer_presence")) or FileAccess.file_exists(SfxBank.file_path("jolt_layer_presence"))
 	_t.eq("the body carries a presence loop exactly when its file is present",
-		_unit.get_node_or_null("Jolt_presence") != null, has_file)
+		_unit.get_node_or_null("Foley_jolt_layer_presence") != null, has_file)
 	_t.eq("the check count", _t.checks + 1, EXPECTED_CHECKS)
 	_game.free()
 	quit(_t.verdict())

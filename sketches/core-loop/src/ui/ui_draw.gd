@@ -11,16 +11,12 @@ const ICON_EDGE := 1.5
 const CHAMFER := 6.0
 
 
-static func width(text: String, font_size: int, numbers := false) -> float:
-	return UiFonts.width(text, font_size, numbers)
-
-
 static func text(canvas: CanvasItem, x: float, y: float, value: String, font_size: int, color: Color, numbers := false) -> float:
 	var font := UiFonts.mono() if numbers else UiFonts.bold()
 	var at := Vector2(x, y + (font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5)
 	canvas.draw_string_outline(font, at, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 6, OUTLINE)
 	canvas.draw_string(font, at, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
-	return width(value, font_size, numbers)
+	return UiFonts.width(value, font_size, numbers)
 
 
 static func label(font_size: int, color: Color, words := "") -> Label:

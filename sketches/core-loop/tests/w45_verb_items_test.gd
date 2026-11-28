@@ -26,7 +26,7 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const Triggers := preload("res://src/build/triggers.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 
 const FIVE := ["backwash", "barbed_reel", "faultline_cap", "second_bell", "long_leash"]
@@ -210,7 +210,7 @@ func _hold(parts: Array) -> void:
 
 func _equip(slot: String, id: String) -> void:
 	_player.abilities.swap(slot, id)
-	_player._refit()
+	_player.refit()
 
 
 func _clear_machines() -> void:

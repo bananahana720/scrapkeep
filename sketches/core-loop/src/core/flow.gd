@@ -89,11 +89,13 @@ var lap_stats := {}
 var _entrance := {}
 var _save_spend_owed := false
 var _owed_entrance := {}
+var _draw_panel := Callable()
 
 
-func setup(ctx_ref, beacon_ref) -> void:
+func setup(ctx_ref, beacon_ref, draw_panel_fn := Callable()) -> void:
 	ctx = ctx_ref
 	beacon = beacon_ref
+	_draw_panel = draw_panel_fn
 	classes = ClassDef.all()
 	var layer := CanvasLayer.new()
 	layer.layer = 5
@@ -129,6 +131,12 @@ func trace_snapshot() -> Dictionary:
 
 func engaged() -> bool:
 	return _engaged
+
+
+func warden_fight_live() -> bool:
+	if not sealed or not is_instance_valid(warden) or not engaged():
+		return false
+	return not (warden.has_method("is_dead") and warden.is_dead())
 
 
 func in_play() -> bool:
@@ -1201,7 +1209,8 @@ func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:
 	if not _is_this_warden(at):
 		return
 	if ctx.build == null or not ctx.build.scrapless():
-		var bonus_panel := ShiftVariants.claim_overtime_panel(ctx.run)
+		var drawer: Callable = _draw_panel if _draw_panel.is_valid() else (ctx.build.Panels.draw if ctx.build != null else Callable())
+		var bonus_panel := ShiftVariants.claim_overtime_panel(ctx.run, drawer)
 		if bonus_panel != "":
 			ctx.run.add_panel(bonus_panel, _warden_at)
 	_unseal()
@@ -1226,6 +1235,13 @@ func _unseal() -> void:
 	ctx.events.beacon_unsealed.emit(ctx.run.stage)
 	_set_state(GATES)
 	ctx.events.beacon_charge_changed.emit(1.0)
+
+
+func force_unseal() -> bool:
+	if not in_stage():
+		return false
+	_unseal()
+	return true
 
 
 func _on_enemy_struck(enemy: Node3D, _kind: String, _force: float) -> void:

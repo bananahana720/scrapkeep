@@ -5,7 +5,7 @@ const Harness := preload("res://tests/doubles/module_harness.gd")
 const Waking := preload("res://src/boss/waking.gd")
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
 const WakingFloors := preload("res://src/boss/waking_floors.gd")
-const MindAttacks := preload("res://src/boss/mind_attacks.gd")
+const BossAttacks := preload("res://src/boss/boss_attacks.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
@@ -156,7 +156,7 @@ func _make_rim_hazard(mod, family: String, at: Vector3) -> Dictionary:
 	var d := {"family": family, "family_index": 1, "id": "waking_rim_%s" % family, "shape": "annulus",
 		"type": Threat.Type.INSTANT, "warn": 1.0, "live": 0.6, "height": WakingAttacks.HEIGHT,
 		"at": at, "band": Vector2(0.0, 4.0), "delay": 0.0}
-	var h = MindAttacks.build(d)
+	var h = Hazard.from_def(d)
 	h.ground = Callable(mod, "ground_height_at")
 	mod.ctx.root.add_child(h)
 	var attack := {"hazards": [h], "family": family, "landed": false, "descs": [d]}
@@ -252,10 +252,10 @@ func _check_rim_and_stall() -> void:
 		for fam in WakingAttacks.exposed(p):
 			var safe := WakingAttacks.commit_safe(fam, 101 + p, rim_ball, player.body().linear_velocity, center, p, cruise, Waking.PAD_RADIUS)
 			var descs: Array = safe["descriptors"]
-			if WakingAttacks.escape_point(descs, rim_ball, cruise, center, Waking.PAD_RADIUS) == null:
+			if BossAttacks.escape_point(descs, rim_ball, cruise, center, Waking.PAD_RADIUS) == null:
 				escape_ok = false
 			for d in descs:
-				var hz = MindAttacks.build(d)
+				var hz = Hazard.from_def(d)
 				min_warn = minf(min_warn, hz.warn_seconds)
 				hz.free()
 	_t.check("commit_safe escape corridors stay valid and warn_seconds >= Hazard.MIN_WARN", escape_ok and min_warn >= Hazard.MIN_WARN - 1e-6, "escape=%s warn=%.2f" % [str(escape_ok), min_warn])

@@ -61,7 +61,7 @@ func _until(cond: Callable) -> bool:
 
 
 func _slam(rig, force: float) -> void:
-	game.combat._hit(rig, "slam", force, Vector3.RIGHT, 0.0, "", "", "slam")
+	game.combat.deal_hit(rig, "slam", force, Vector3.RIGHT, 0.0, "", "", "slam")
 
 
 func _run() -> void:

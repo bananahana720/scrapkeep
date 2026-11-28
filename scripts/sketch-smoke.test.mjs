@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { userDataEnv } from "./godot-home.mjs";
+import { scratchGodotEnv, userDataEnv } from "./godot-home.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import {
@@ -16,6 +16,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import "./lib/proc.test.mjs";
 import * as smoke from "./sketch-smoke.mjs";
 
 process.env.SCRAPKEEP_QUIET_DIR = mkdtempSync(path.join(os.tmpdir(), "smoke-no-quiet-"));
@@ -24,6 +25,7 @@ import {
   HEARTBEAT_MS,
   STALE_CLAIM_MS,
   MISSING_VERDICT,
+  acquireMachine,
   acquireSlot,
   binary,
   buildReceipt,
@@ -35,28 +37,16 @@ import {
   judge,
   matchesGlob,
   machineSlotCount,
-  namedRunMustWait,
   noMatchMessage,
   parseArgs,
-  expiredLine,
   failingLines,
   logFileName,
   timeScale,
-  expiredQuarantine,
-  parseQuarantine,
-  quarantineLines,
-  quarantineRecords,
-  quarantineNote,
-  readQuarantine,
-  readQuarantineEntries,
-  quarantinedNames,
-  quarantineVerdict,
   runPasses,
   receiptFileName,
   selectTests,
   splitFlags,
   validateRun,
-  waitForMachine,
   isSolo,
   isSoloScript,
   testTimeoutMs,
@@ -100,19 +90,31 @@ test("parseArgs selects the bot tier with its own receipt label", () => {
   );
 });
 
+function copySmokeRuntime(dir) {
+  mkdirSync(path.join(dir, "scripts/lib"), { recursive: true });
+  for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs", "toolchain.json"])
+    writeFileSync(
+      path.join(dir, "scripts", module),
+      readFileSync(new URL(`./${module}`, import.meta.url)),
+    );
+  for (const module of [
+    "cli.mjs",
+    "git.mjs",
+    "godot-test-runner.mjs",
+    "machine-lock.mjs",
+    "proc.mjs",
+    "receipt.mjs",
+  ])
+    writeFileSync(
+      path.join(dir, "scripts/lib", module),
+      readFileSync(new URL(`./lib/${module}`, import.meta.url)),
+    );
+}
+
 function botTierFixture(args, check) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-bot-tier-"));
   try {
-    mkdirSync(path.join(dir, "scripts"));
-    writeFileSync(
-      path.join(dir, "scripts/sketch-smoke.mjs"),
-      readFileSync(new URL("./sketch-smoke.mjs", import.meta.url)),
-    );
-    for (const module of ["import-stamp.mjs", "godot-home.mjs"])
-      writeFileSync(
-        path.join(dir, "scripts", module),
-        readFileSync(new URL(`./${module}`, import.meta.url)),
-      );
+    copySmokeRuntime(dir);
     const tests = path.join(dir, "sketches/core-loop/tests");
     mkdirSync(tests, { recursive: true });
     writeFileSync(path.join(dir, "sketches/core-loop/project.godot"), "config_version=5\n");
@@ -275,6 +277,63 @@ test("a test's data home also moves HOME on macOS, where Godot ignores XDG_DATA_
   assert.deepEqual(userDataEnv("/t/a", "darwin"), { XDG_DATA_HOME: "/t/a", HOME: "/t/a" });
   assert.deepEqual(userDataEnv("/t/a", "linux"), { XDG_DATA_HOME: "/t/a" });
   assert.deepEqual(userDataEnv("/t/a", "win32"), { XDG_DATA_HOME: "/t/a" });
+  assert.deepEqual(scratchGodotEnv("/t/b", { platform: "linux" }), {
+    XDG_DATA_HOME: "/t/b/data",
+    XDG_CONFIG_HOME: "/t/b/config",
+    XDG_CACHE_HOME: "/t/b/cache",
+  });
+  assert.deepEqual(scratchGodotEnv("/t/b", { platform: "darwin" }), {
+    HOME: "/t/b/data",
+    XDG_DATA_HOME: "/t/b/data",
+    XDG_CONFIG_HOME: "/t/b/config",
+    XDG_CACHE_HOME: "/t/b/cache",
+  });
+});
+
+test("no non-test script outside scripts/godot-home.mjs sets scratch XDG dirs by hand", () => {
+  const scriptsDir = path.dirname(new URL(import.meta.url).pathname);
+  const repoRoot = path.resolve(scriptsDir, "..");
+  const walk = (dir) => {
+    const out = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) out.push(...walk(full));
+      else if (entry.isFile() && entry.name.endsWith(".mjs") && !entry.name.endsWith(".test.mjs"))
+        out.push(full);
+    }
+    return out;
+  };
+  const directXdgWrite =
+    /\bXDG_(?:DATA|CONFIG|CACHE)_HOME\s*:|(?:\.XDG_(?:DATA|CONFIG|CACHE)_HOME|\[\s*["'`]XDG_(?:DATA|CONFIG|CACHE)_HOME["'`]\s*\]|\[\s*`XDG_\$\{[^}]+\}_HOME`\s*\])\s*=(?!=)/g;
+  const allowlist = {
+    "scripts/sketch-appimage.mjs": 1,
+    "scripts/sketch-export.mjs": 1,
+  };
+  const bad = [];
+  const seen = new Set();
+  for (const file of walk(scriptsDir)) {
+    const rel = path.relative(repoRoot, file).split(path.sep).join("/");
+    if (rel === "scripts/godot-home.mjs") continue;
+    const matches = [...readFileSync(file, "utf8").matchAll(directXdgWrite)].map((m) => m[0]);
+    if (matches.length === 0) continue;
+    if (rel in allowlist && matches.length <= allowlist[rel]) {
+      seen.add(rel);
+      if (rel === "scripts/sketch-export.mjs")
+        assert.deepEqual(matches, ["XDG_DATA_HOME:"], "only templateDataHome override allowed");
+    } else {
+      bad.push(`${rel} (${matches.join(", ")})`);
+    }
+  }
+  assert.deepEqual(
+    bad,
+    [],
+    `manual XDG_*_HOME writes outside scripts/godot-home.mjs: ${bad.join("; ")}`,
+  );
+  assert.deepEqual(
+    Object.keys(allowlist).filter((rel) => !seen.has(rel)),
+    [],
+    "stale XDG write allowlist entries must be removed",
+  );
 });
 
 test("the engine's shutdown report is skipped on macOS only; on Linux it still fails the run", () => {
@@ -411,6 +470,24 @@ test("the machine pool defaults to two slots and validates SMOKE_SLOTS", () => {
   }
 });
 
+async function wouldWait(options) {
+  const waited = new Error("a run would wait");
+  try {
+    const lease = await acquireSlot({
+      ...options,
+      log: () => {},
+      sleep: async () => {
+        throw waited;
+      },
+    });
+    lease.release();
+    return false;
+  } catch (error) {
+    if (error !== waited) throw error;
+    return true;
+  }
+}
+
 test("two runs acquire two slots and a third waits", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-slots-"));
   const leases = [];
@@ -422,10 +499,10 @@ test("two runs acquire two slots and a third waits", async () => {
   };
   try {
     leases.push(await acquireSlot(options));
-    assert.equal(namedRunMustWait(options), false);
+    assert.equal(await wouldWait(options), false);
     leases.push(await acquireSlot(options));
     assert.notEqual(leases[0].slot, leases[1].slot);
-    assert.equal(namedRunMustWait(options), true);
+    assert.equal(await wouldWait(options), true);
     let sleeps = 0;
     leases.push(
       await acquireSlot({
@@ -434,7 +511,7 @@ test("two runs acquire two slots and a third waits", async () => {
         sleep: async (ms) => {
           assert.equal(ms, 7);
           assert.equal(++sleeps, 1);
-          assert.equal(namedRunMustWait(options), true);
+          assert.equal(await wouldWait(options), true);
           leases[0].release();
         },
       }),
@@ -443,7 +520,7 @@ test("two runs acquire two slots and a third waits", async () => {
     assert.equal(leases[2].slot, leases[0].slot);
     assert.equal(typeof leases[2].waitMs, "number");
     leases[0].release();
-    assert.equal(namedRunMustWait(options), true, "an old release cannot delete the new claim");
+    assert.equal(await wouldWait(options), true, "an old release cannot delete the new claim");
   } finally {
     for (const lease of leases) lease.release();
     rmSync(directory, { recursive: true, force: true });
@@ -467,9 +544,9 @@ test("a dead pid slot is reclaimed without waiting", async () => {
     });
     assert.equal(lease.slot, slot);
     assert.equal(existsSync(path.join(slot, "claim-dead")), false);
-    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
+    assert.equal(await wouldWait({ directory, slots: 1 }), true);
     lease.release();
-    assert.equal(namedRunMustWait({ directory, slots: 1 }), false);
+    assert.equal(await wouldWait({ directory, slots: 1 }), false);
     assert.deepEqual(readdirSync(directory), []);
   } finally {
     lease?.release();
@@ -490,7 +567,7 @@ test("a fresh unkillable-pid claim holds its slot", async (t) => {
     const slot = path.join(directory, "slot-0");
     mkdirSync(slot);
     writeFileSync(path.join(slot, "claim-foreign"), "1");
-    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
+    assert.equal(await wouldWait({ directory, slots: 1 }), true);
     await assert.rejects(
       acquireSlot({
         directory,
@@ -523,7 +600,6 @@ test("a stale unkillable-pid claim is reclaimed at once", async (t) => {
     writeFileSync(path.join(slot, "claim-foreign"), "1");
     const old = (Date.now() - STALE_CLAIM_MS - 60_000) / 1000;
     utimesSync(path.join(slot, "claim-foreign"), old, old);
-    assert.equal(namedRunMustWait({ directory, slots: 1 }), false);
     lease = await acquireSlot({
       directory,
       slots: 1,
@@ -548,7 +624,7 @@ test("a lease heartbeat refreshes its claim mtime", async () => {
     utimesSync(claimFile, old, old);
     await new Promise((r) => setTimeout(r, 200));
     assert.ok(Date.now() - statSync(claimFile).mtimeMs < STALE_CLAIM_MS);
-    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
+    assert.equal(await wouldWait({ directory, slots: 1 }), true);
   } finally {
     lease?.release();
     rmSync(directory, { recursive: true, force: true });
@@ -571,7 +647,7 @@ test("a slot published after a long wait is never born stale", async () => {
       heartbeatMs: 3_600_000,
       beforePublish: backdate,
     });
-    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
+    assert.equal(await wouldWait({ directory, slots: 1 }), true);
     let slept = false;
     const second = acquireSlot({
       directory,
@@ -619,18 +695,30 @@ test("a stale waiter directory is swept and a fresh one is kept", async () => {
   }
 });
 
-test("waitForMachine claims a slot and records wait duration", async () => {
+test("acquireMachine claims a slot and records wait duration", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-named-slot-"));
   const exitsBefore = new Set(process.listeners("exit"));
+  const env = { lock: process.env.SCRAPKEEP_LOCK_DIR, slots: process.env.SMOKE_SLOTS };
   try {
-    const waited = await waitForMachine({
-      directory,
-      slots: 1,
-      sleep: async () => assert.fail("unexpected wait"),
-    });
+    process.env.SCRAPKEEP_LOCK_DIR = directory;
+    process.env.SMOKE_SLOTS = "1";
+    const waited = await acquireMachine();
     assert.equal(typeof waited, "number");
-    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
+    assert.equal(
+      await wouldWait({
+        directory: path.join(directory, "scrapkeep-sketch-smoke.slots"),
+        slots: 1,
+      }),
+      true,
+    );
   } finally {
+    for (const [key, value] of [
+      ["SCRAPKEEP_LOCK_DIR", env.lock],
+      ["SMOKE_SLOTS", env.slots],
+    ]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     for (const listener of process.listeners("exit")) {
       if (!exitsBefore.has(listener)) {
         listener();
@@ -769,8 +857,6 @@ test("the receipt carries every field and its totals", () => {
     failed: 1,
     skipped: 1,
     missing_verdict: 1,
-    quarantined_red: [],
-    quarantine_stale: [],
   });
   assert.equal(receipt.ok, false);
   for (const key of [
@@ -852,174 +938,16 @@ const result = (label, ok, extra = {}) => ({
 });
 const testLabel = (name) => `sketches/core-loop res://tests/${name}.gd`;
 
-test("the quarantine file parses into entries and names", () => {
-  const text =
-    "test\towner\treason\tadded\tdeadline\na_test\tO1\twhy\t2026-10-01\twave 3\r\n\nb_test\tB0\tbecause\t2026-10-01\twave 3\n";
-  assert.deepEqual(parseQuarantine(text)[0], {
-    test: "a_test",
-    owner: "O1",
-    reason: "why",
-    added: "2026-10-01",
-    deadline: "wave 3",
-  });
-  assert.deepEqual([...quarantinedNames(text)], ["a_test", "b_test"]);
-  assert.deepEqual(parseQuarantine(""), []);
-});
-
-test("a quarantined failure names its owner and reason, and the readers agree", () => {
-  const entry = parseQuarantine(
-    "test\towner\treason\tadded\tdeadline\na_test\tO1\twhy; #1\t2026-10-01\twave 3\n",
-  )[0];
-  assert.equal(quarantineNote(entry), "quarantined: a_test (O1: why; #1)");
-  const dir = mkdtempSync(path.join(os.tmpdir(), "quarantine-"));
-  try {
-    mkdirSync(path.join(dir, "tests"));
-    writeFileSync(
-      path.join(dir, "tests", "QUARANTINE.tsv"),
-      "test\towner\treason\tadded\tdeadline\nfixture_test\tSystems\texit abort after 12 passing checks; #241 1\t2026-10-22\t2026-10-29\n",
-    );
-    const rows = readQuarantineEntries(dir);
-    const fixture = rows.find((row) => row.test === "fixture_test");
-    assert.equal(fixture.owner, "Systems");
-    assert.match(
-      quarantineNote(fixture),
-      /^quarantined: fixture_test \(Systems: exit abort .*#241 1\)$/,
-    );
-    assert.deepEqual(
-      [...readQuarantine(dir)],
-      rows.map((row) => row.test),
-    );
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-test("an expired quarantine row is reported and an unexpired or free-text one is not", () => {
-  const rows = parseQuarantine(
-    "test\towner\treason\tadded\tdeadline\na_test\tO1\twhy\t2026-10-01\t2026-10-29\nb_test\tO2\twhy\t2026-10-01\twave 3\n",
-  );
-  assert.deepEqual(expiredQuarantine(rows, "2026-10-29"), []);
-  const late = expiredQuarantine(rows, "2026-10-30");
-  assert.deepEqual(
-    late.map((row) => row.test),
-    ["a_test"],
-  );
+test("a run passes only when every result passed", () => {
   assert.equal(
-    expiredLine(late[0]).startsWith("quarantine expired: a_test (O1) deadline 2026-10-29"),
+    runPasses([result("sketches/core-loop import", true), result(testLabel("c_test"), true)]),
     true,
   );
-});
-
-test("quarantine rows reach the human output and the receipt with that run's result", () => {
-  const entry = {
-    test: "a_test",
-    owner: "Systems",
-    reason: "why; #1",
-    added: "2026-10-22",
-    deadline: "2026-10-29",
-  };
-  const stale = { ...entry, test: "b_test" };
-  const results = [
-    result(testLabel("a_test"), false, {
-      quarantined: true,
-      quarantine: entry,
-      exit: null,
-      signal: "SIGABRT",
-      fails: 0,
-    }),
-    result(testLabel("b_test"), true, { quarantined: true, quarantine: stale, exit: 0, fails: 0 }),
-    result(testLabel("c_test"), true),
-  ];
-  const records = quarantineRecords(results);
-  assert.deepEqual(
-    records.map((row) => [row.test, row.result, row.signal, row.failing_checks]),
-    [
-      ["a_test", "red", "SIGABRT", 0],
-      ["b_test", "green", null, 0],
-    ],
+  assert.equal(runPasses([]), true);
+  assert.equal(
+    runPasses([result(testLabel("c_test"), true), result(testLabel("d_test"), false)]),
+    false,
   );
-  const lines = quarantineLines(records);
-  assert.ok(
-    lines.some((line) =>
-      line.includes(
-        "a_test: 0 failing checks, signal SIGABRT (Systems: why; #1; deadline 2026-10-29)",
-      ),
-    ),
-  );
-  assert.ok(
-    lines.some((line) => line.startsWith("quarantined but green")) &&
-      lines.some((line) => line.includes("b_test")),
-  );
-  const receipt = buildReceipt({
-    label: "t",
-    argv: [],
-    root: "/r",
-    git: null,
-    godot: "g",
-    sketches: [],
-    flags: [],
-    width: 1,
-    lockWaitMs: 0,
-    startedAt: "x",
-    wallMs: 1,
-    stems: {},
-    results,
-    expired: [],
-  });
-  assert.equal(receipt.quarantined.length, 2);
-  assert.deepEqual(Object.keys(receipt.quarantined[0]).sort(), [
-    "deadline",
-    "exit",
-    "failing_checks",
-    "owner",
-    "reason",
-    "result",
-    "signal",
-    "test",
-  ]);
-});
-
-test("a red quarantined test does not fail the run, a green one is stale, any other failure fails", () => {
-  const red = [
-    result("sketches/core-loop import", true),
-    result(testLabel("a_test"), false, { quarantined: true }),
-    result(testLabel("c_test"), true),
-  ];
-  assert.equal(runPasses(red), true);
-  assert.deepEqual(quarantineVerdict(red).quarantined_red, ["a_test"]);
-  assert.deepEqual(quarantineVerdict(red).quarantine_stale, []);
-  const green = [result(testLabel("a_test"), true, { quarantined: true })];
-  assert.equal(runPasses(green), true);
-  assert.deepEqual(quarantineVerdict(green).quarantine_stale, ["a_test"]);
-  assert.equal(runPasses([...red, result(testLabel("d_test"), false)]), false);
-});
-
-test("the receipt lists quarantine outcomes and never counts them as failed", () => {
-  const receipt = buildReceipt({
-    label: "named",
-    argv: [],
-    root: "/r",
-    git: null,
-    godot: { binary: "/g", version: null },
-    sketches: [],
-    flags: [],
-    width: 1,
-    lockWaitMs: 0,
-    startedAt: "t",
-    wallMs: 0,
-    stems: {},
-    results: [
-      result(testLabel("a_test"), false, { quarantined: true }),
-      result(testLabel("b_test"), true, { quarantined: true }),
-      result(testLabel("c_test"), true),
-    ],
-  });
-  assert.equal(receipt.totals.failed, 0);
-  assert.deepEqual(receipt.totals.quarantined_red, ["a_test"]);
-  assert.deepEqual(receipt.totals.quarantine_stale, ["b_test"]);
-  assert.equal(receipt.results[0].quarantined, true);
-  assert.equal("quarantined" in receipt.results[2], false);
-  assert.equal(receipt.ok, true);
 });
 
 test("a gate run refuses launch flags from --flags or the environment", () => {
@@ -1059,7 +987,7 @@ test("a receipt that cannot be written is exit 3 and one clear line", () => {
   assert.deepEqual(ok, ["receipt /p/x.json"]);
 });
 
-test("every export the runner had before the quarantine unit still exists", async () => {
+test("the runner's public exports still exist", async () => {
   const module = await import("./sketch-smoke.mjs");
   for (const name of [
     "binary",
@@ -1079,8 +1007,6 @@ test("every export the runner had before the quarantine unit still exists", asyn
     "validateRun",
     "noMatchMessage",
     "acquireMachine",
-    "namedRunMustWait",
-    "waitForMachine",
     "receiptFileName",
     "buildReceipt",
   ]) {
@@ -1735,12 +1661,7 @@ test("splitBatch captures outside lines and batchHasOutsideError catches exit le
 test("warm batching in sketch-smoke emits per-test logs and reruns failures or exit leaks solo", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-warm-batch-"));
   try {
-    mkdirSync(path.join(dir, "scripts"));
-    for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
-      writeFileSync(
-        path.join(dir, "scripts", module),
-        readFileSync(new URL(`./${module}`, import.meta.url)),
-      );
+    copySmokeRuntime(dir);
     writeFileSync(
       path.join(dir, "scripts/sketch-fast.timings.json"),
       JSON.stringify({
@@ -1863,12 +1784,7 @@ console.log(stem + ": PASS (1 checks)");
 test("sketch-smoke forwards --fixed-fps and honors SMOKE_BATCH_SIZE in warm batches", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-fps-batch-"));
   try {
-    mkdirSync(path.join(dir, "scripts"));
-    for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
-      writeFileSync(
-        path.join(dir, "scripts", module),
-        readFileSync(new URL(`./${module}`, import.meta.url)),
-      );
+    copySmokeRuntime(dir);
     writeFileSync(
       path.join(dir, "scripts/sketch-fast.timings.json"),
       JSON.stringify({

@@ -3,7 +3,6 @@ extends Node
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
-const Parts := preload("res://src/build/parts.gd")
 
 
 const CATEGORIES := ["build", "world", "enemy", "npc", "coop"]
@@ -38,14 +37,16 @@ var _zone := ""
 var _guard_open := false
 var _visibility_fn := Callable()
 var _margin_fn := Callable()
+var _is_relic_fn := Callable()
 
 
-func setup(events_ref, run_ref, flow_ref, dir: String) -> void:
+func setup(events_ref, run_ref, flow_ref, dir: String, is_relic_fn := Callable()) -> void:
 	name = "Codex"
 	events = events_ref
 	run = run_ref
 	flow = flow_ref
 	storage_dir = dir
+	_is_relic_fn = is_relic_fn
 	_load()
 	events.run_started.connect(_on_run_started)
 	events.stage_entered.connect(_on_stage_entered)
@@ -163,7 +164,7 @@ func open_entry(id: String, profile = null) -> bool:
 	var reader = profile if profile != null else _profile()
 	if reader == null or not reader.mark_seen(id):
 		return false
-	if reader.can_save and not reader.save():
+	if not reader.save_if_allowed():
 		last_error = "logbook marker not saved: %s" % reader.last_error
 	return true
 
@@ -290,8 +291,7 @@ func _connect_lore() -> void:
 			_lore_moment())
 	events.rescue_completed.connect(func(_quest: String): _lore_moment())
 	events.part_gained.connect(func(part_id: String, _source: String):
-		var def: Resource = Parts.def(part_id)
-		if def != null and def.rarity == "relic":
+		if _is_relic_fn.is_valid() and bool(_is_relic_fn.call(part_id)):
 			_lore_moment())
 	events.posture_changed.connect(_on_lore_posture)
 	events.beacon_unsealed.connect(func(_stage: int): _lore_moment())
@@ -367,33 +367,10 @@ func _log(fields: Dictionary) -> void:
 
 
 func append_line(path: String, text: String) -> bool:
-	if path.get_file() == "runs.ndjson" and run != null:
-		var line = JSON.parse_string(text)
-		if line is Dictionary:
-			var totals: Dictionary = run.tallies()
-			line["tallies"] = totals
-			text = JSON.stringify(line)
-			var profile = _profile()
-			if profile != null:
-				var changed: bool = profile.record_run_tallies(run.run_id, totals)
-				var settled := false
-				var outcome := String(line.get("outcome", ""))
-				if outcome in ["won", "died", "lost"] and (outcome != "died" or run.over):
-					settled = profile.settle_run_tallies(run.run_id)
-				if profile.can_save and (changed or settled or not profile.last_error.is_empty()) and not profile.save():
-					last_error = "run tallies not saved: %s" % profile.last_error
-	var file: FileAccess
-	if FileAccess.file_exists(path):
-		file = FileAccess.open(path, FileAccess.READ_WRITE)
-		if file != null:
-			file.seek_end()
-	else:
-		file = FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		log_error = "cannot write %s: %s" % [path, error_string(FileAccess.get_open_error())]
+	var err := SafeStore.append_line(path, text)
+	if err != OK:
+		log_error = "cannot write %s: %s" % [path, error_string(err)]
 		return false
-	file.store_line(text)
-	file.close()
 	return true
 
 

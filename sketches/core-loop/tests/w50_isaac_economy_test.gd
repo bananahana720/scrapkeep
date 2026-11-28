@@ -64,7 +64,7 @@ func _run() -> void:
 	await _check_isaac_consumables_and_trade_contracts()
 	await _check_salvage_magnet_companion()
 
-	Consumables._reset()
+	Consumables.reset_for_tests()
 	_game.free()
 	quit(_t.verdict())
 
@@ -513,13 +513,13 @@ func _check_salvage_magnet_companion() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 99
 	var prints := 0
-	var first_yard := Companion.on_yard_cleared(run, _combat, _player.ball_position(), rng)
-	var second_yard := Companion.on_yard_cleared(run, _combat, _player.ball_position(), rng)
+	var first_yard := Companion.on_yard_cleared(run, _combat, _player.ball_position(), rng, Consumables.roll_id)
+	var second_yard := Companion.on_yard_cleared(run, _combat, _player.ball_position(), rng, Consumables.roll_id)
 	_t.check("cartridge_caddy prints on 2nd cleared yard (not 1st)",
 		not bool(first_yard["printed"]) and bool(second_yard["printed"]) and Consumables.is_valid(String(second_yard["consumable_id"])))
 	prints += 1
 	for _y in 10:
-		var yr := Companion.on_yard_cleared(run, _combat, _player.ball_position(), rng)
+		var yr := Companion.on_yard_cleared(run, _combat, _player.ball_position(), rng, Consumables.roll_id)
 		if bool(yr["printed"]):
 			prints += 1
 	_t.eq("planted: cartridge_caddy respects per-stage bounded cap", prints, Companion.CADDY_STAGE_CAP)

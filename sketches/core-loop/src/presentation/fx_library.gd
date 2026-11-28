@@ -1,9 +1,12 @@
 extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
+const TINT := &"tint"
+const INK := &"ink_colour"
 const SEED := 731
 const CEILING := 800
 const MACHINE_CEILING := 876
@@ -222,7 +225,7 @@ static func spec(id: String) -> Dictionary:
 
 
 static func effects(kind: String, variant := "") -> Dictionary:
-	var row := EventKinds.juice(kind)
+	var row := EventJuice.juice(kind)
 	if variant != "" and row.has(variant) and row[variant].has("fx"):
 		return row[variant]["fx"]
 	if variant != "" and row.has(variant) and not row[variant].is_empty():
@@ -284,7 +287,7 @@ static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
 		shader.code = (_HEAD % modes) + vertex + body
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
-		mat.set_shader_parameter("ink_colour", Palette.CHARCOAL)
+		mat.set_shader_parameter(INK, Palette.CHARCOAL)
 		if kind == "puff":
 			mat.set_shader_parameter("lens_fade", LENS_FADE)
 		_shaders[key] = mat
@@ -451,10 +454,64 @@ static func fire(p: GPUParticles3D, id: String, kind: String, count: int, at: Ve
 		p.global_transform = Transform3D(Basis.looking_at(toward.normalized(), Vector3.UP), at)
 	else:
 		p.global_transform = Transform3D(Basis.IDENTITY, at)
-	p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else colour(id, kind))
+	p.set_instance_shader_parameter(TINT, tint if tint.a > 0.0 else colour(id, kind))
 	set_heat(p, look(id))
 	p.restart()
 	p.emitting = true
+
+
+static func pools(parent: Node, owner: String) -> Pools:
+	var nodes := {}
+	var next := {}
+	for id in SPECS:
+		if SPECS[id].get("owner", "vfx") != owner:
+			continue
+		var pool: Array = []
+		for i in int(SPECS[id]["pool"]):
+			var p := build(id)
+			p.name = "%s_%d" % [p.name, i]
+			parent.add_child(p)
+			pool.append(p)
+		nodes[id] = pool
+		next[id] = 0
+	return Pools.new(nodes, next, fire)
+
+
+class Pools:
+	extends RefCounted
+
+	var _nodes := {}
+	var _next := {}
+	var _fire: Callable
+
+	func _init(nodes := {}, next := {}, fire_fn := Callable()) -> void:
+		_nodes = nodes
+		_next = next
+		_fire = fire_fn
+
+	func has(id: String) -> bool:
+		return _nodes.has(id)
+
+	func list(id: String) -> Array:
+		return _nodes.get(id, [])
+
+	func values() -> Array:
+		return _nodes.values()
+
+	func fire(id: String, kind: String, count: int, at: Vector3, tint := Color.TRANSPARENT, toward := Vector3.ZERO) -> GPUParticles3D:
+		if not _nodes.has(id):
+			return null
+		var pool: Array = _nodes[id]
+		var idx: int = _next[id]
+		var p: GPUParticles3D = pool[idx]
+		_next[id] = (idx + 1) % pool.size()
+		_fire.call(p, id, kind, count, at, tint, toward)
+		return p
+
+	func stop(ids: Array = []) -> void:
+		for id in (_nodes.keys() if ids.is_empty() else ids):
+			for p: GPUParticles3D in _nodes.get(id, []):
+				p.emitting = false
 
 
 static func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> GPUParticles3D:

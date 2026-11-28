@@ -1,32 +1,21 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { root } from "./clean-head.mjs";
+import {
+  COMMIT_SHA_RE,
+  commitsMatch,
+  parseReceiptArgs,
+  root,
+  runReceiptCliSync,
+} from "./receipt-cli.mjs";
 import { isPass, planHead, tallyRows } from "./tally.mjs";
+import { isMain } from "../lib/cli.mjs";
 
-export const COMMIT = /^[0-9a-f]{7,40}$/;
-
-export function commitsMatch(a, b) {
-  return (
-    typeof a === "string" &&
-    typeof b === "string" &&
-    COMMIT.test(a) &&
-    COMMIT.test(b) &&
-    (a.startsWith(b) || b.startsWith(a))
-  );
-}
+export const COMMIT = COMMIT_SHA_RE;
+export { commitsMatch };
 
 export function plantRedShard(planText) {
   const rows = tallyRows(planText, "shard");
@@ -129,55 +118,26 @@ export function produce({ planPath, head, cwd = root, run = runTally } = {}) {
 }
 
 export function parseArgs(argv) {
-  const args = { planPath: null, head: null, out: null };
-  const take = (i, flag) => {
-    const val = argv[i + 1];
-    if (val === undefined || val === "" || val.startsWith("--")) {
-      throw new Error(`${flag} requires a value`);
-    }
-    return val;
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "--plan") args.planPath = take(i++, a);
-    else if (a.startsWith("--plan=")) args.planPath = a.slice("--plan=".length);
-    else if (a === "--head") args.head = take(i++, a);
-    else if (a.startsWith("--head=")) args.head = a.slice("--head=".length);
-    else if (a === "--out") args.out = take(i++, a);
-    else if (a.startsWith("--out=")) args.out = a.slice("--out=".length);
-    else throw new Error(`unknown argument: ${a}`);
-  }
+  const args = parseReceiptArgs(argv, {
+    valueFlags: { "--plan": { key: "planPath" } },
+    defaults: { planPath: null, head: null, out: null },
+    head: "optional",
+  });
   if (!args.planPath || !args.head) {
     throw new Error(
       "usage: release-gate-receipt.mjs --plan <gate-plan.md> --head <sha> [--out <file>]",
     );
   }
-  if (!COMMIT.test(args.head)) {
-    throw new Error(`--head requires 7 to 40 lowercase hex characters; got "${args.head}"`);
-  }
   return args;
 }
 
 function main(argv) {
-  let args;
-  let receipt;
-  try {
-    args = parseArgs(argv);
-    receipt = produce(args);
-  } catch (e) {
-    console.error(String(e?.message ?? e));
-    return 2;
-  }
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) {
-    mkdirSync(path.dirname(path.resolve(args.out)), { recursive: true });
-    writeFileSync(args.out, text);
-  } else {
-    process.stdout.write(text);
-  }
-  return receipt.pass ? 0 : 1;
+  return runReceiptCliSync(() => {
+    const args = parseArgs(argv);
+    return { receipt: produce(args), out: args.out };
+  });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   process.exit(main(process.argv.slice(2)));
 }

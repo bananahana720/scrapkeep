@@ -4,9 +4,9 @@
 
 The game in one line (Andrew, 9 November 2026, ruling cj): A crew of loose cannons, bulls in the Foreman's china shop, take their world back from a machine that believes life can be run perfectly. The [Story map](design-v3/STORY-MAP.md) says what everything means under it.
 
-This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep: First Run"), built under Andrew's design principles from playtest entry 6 (`docs/playtests/PLAYTEST-LOG.md`, archived in git history). Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code. Models, textures, fonts and the recorded music stems load from `assets/`; the rest of the world is built in script.
+This is the live Godot 4.7.2 alpha game ("Scrapkeep"), built across three worlds, six zones, and three bosses flat on `main` (ruling `ep`) under Andrew's design principles from playtest entry 6 (`docs/playtests/PLAYTEST-LOG.md`, archived in git history). Movement uses the rigid-body mobility kit core. Models, textures, fonts and the recorded music stems load from `assets/`; the rest of the world is built in script. See [ARCHITECTURE.md](ARCHITECTURE.md) for the live directory map, state owners, `Context` fields, `GameEvents` groups, and script dependency-cycle status (`L16`).
 
-Play it with `scrapkeep core-loop`, from any directory: the name is this sketch's directory, so it opens the main checkout's copy, or the current worktree's copy when typed inside one; a worktree's own name (`scrapkeep <worktree>`) opens its `core-loop` too, and `scrapkeep <worktree>/<sketch>` opens exactly one. A launch with no table plays the six parks; add `--table=slice` after the name for the slice table, or `--table=default` for the old six maps. Headless tests and bot runs keep the old maps unless they name a table. After a sitting, `node scripts/run-summary.mjs --last 5` prints one line per run (table, outcome, stage, posture fight, packs and synergies) from the game's `runs.ndjson`. In play the HUD shows a key only while its action is available, beside the ball or the target; hold **Tab** for the controls and codex pages. The tester notes below are no longer drawn there. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves. Hero models under `assets/models/` come from the Blender recipes in `tools/blender/`, including `tools/blender/forge/` (recipes promoted from the historical asset forge `tools/asset-forge/README.md`, archived in git history).
+Play it with `scrapkeep core-loop`, from any directory: the name is this sketch's directory, so it opens the main checkout's copy, or the current worktree's copy when typed inside one; a worktree's own name (`scrapkeep <worktree>`) opens its `core-loop` too, and `scrapkeep <worktree>/<sketch>` opens exactly one. A launch with no table plays the six parks; add `--table=slice` after the name for the slice table, or `--table=default` for the old six maps. Headless tests and bot runs keep the old maps unless they name a table. After a sitting, `node scripts/run-summary.mjs --last 5` prints one line per run (table, outcome, stage, posture fight, packs and synergies) from the game's `runs.ndjson`. In play the HUD shows a key only while its action is available, beside the ball or the target; hold **Tab** for the controls and codex pages. The tester notes below are no longer drawn there. [ARCHITECTURE.md](ARCHITECTURE.md) owns the live code architecture, [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores), [CONTRACTS.md](CONTRACTS.md) holds the behavioral module seams, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves. Hero models under `assets/models/` come from the Blender recipes in `tools/blender/`, including `tools/blender/forge/` (recipes promoted from the historical asset forge `tools/asset-forge/README.md`, archived in git history).
 
 To play it from the app menu instead, `npm run sketch:export` then `npm run sketch:appimage` packs the export as `Scrapkeep-<sha>-x86_64.AppImage` and installs it with its icon and menu entry under `~/.local/share`; `npm run sketch:appimage -- --uninstall` takes them out again. The AppImage carries the same install script, so a copy on its own installs with `./Scrapkeep-<sha>-x86_64.AppImage --install` and removes itself with `--uninstall`. Saves and settings under `~/.local/share/godot/app_userdata/core-loop` survive an uninstall. The game opens on the main menu: Play (pilot select), Camp, Settings, Help, Achievements and Quit, and prints `SCRAPKEEP_MENU_READY ms=<ticks> profile=<default|sitting> pilots=<open>/<all> stages=<in the run>` once when the menu first shows. A fresh profile opens Sable only, and the rest unlock in play (P-R21). The menu entry's second action, "Scrapkeep sitting" (right-click it in the launcher), launches with `-- --profile=sitting`: all six pilots open and the real save is never written.
 
@@ -156,17 +156,22 @@ A built package is a `scrapkeep-core-loop-<sha7>.tar.gz`, where `<sha7>` is the 
 
 ## Layout
 
-| Path                | Owner    | Holds                                                                                                                                                        |
-| ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/game.gd`       | spine    | the root: builds the spine, sets up the modules in order, input, pause, hit-stop                                                                             |
-| `src/boss/`         | spine    | the boss fights: Admiral Brindle, the Waking and the Mind                                                                                                    |
-| `src/core/`         | spine    | the bus, `event_kinds`, run state and heft, classes, stage dials, the flow and the Warden gate, the beacon, the context, the codex, the run log, the palette |
-| `src/movement/`     | spine    | the v2 rigid ball, augments, tuning and the chase camera                                                                                                     |
-| `src/ui/`           | spine    | HUD, screens, field notes, tuning panel, reticle                                                                                                             |
-| `src/combat/`       | writer A | weapons, enemies, damage, the spawner                                                                                                                        |
-| `src/build/`        | writer B | scrap, parts, reward gates                                                                                                                                   |
-| `src/presentation/` | writer C | juice, SFX, the music engine and the ACE stem sequencer                                                                                                      |
-| `src/world/`        | writer D | terrain, the flood, the director, the launch, Moss's bay                                                                                                     |
+Full architecture map, runtime state owners, `Context` fields, and `GameEvents` groups live in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+| Path | Holds |
+| --- | --- |
+| `src/game.gd` | root `Node3D`: builds the spine, mounts modules in order, input, pause, hit-stop, and lazy menu modules |
+| `src/boot/` | lightweight 2D boot card that threaded-loads `main.tscn` (synchronous fallback in headless/test runs) |
+| `src/core/` | the bus, `event_kinds`, run state and heft, classes, stage/park tables, flow and Warden gate, beacon, `Context`, `BuffLedger`, `Profile`, `Progress`, `Codex`, `RunLog`, `RunStore`, palette |
+| `src/movement/` | the rigid ball, augments, harpoon/grip, tuning and the chase camera |
+| `src/world/` | terrain, the six Arizona parks, flood, director, stage events, activities, destructibles, launch rails, Moss's bay, camp hub |
+| `src/combat/` | weapons, enemies, posture/plating damage, actives, ultimates, special cues, the spawner |
+| `src/build/` | scrap and cogs, parts, items, relics, panels, consumables, fabricators, reward gates, synergies |
+| `src/boss/` | the boss fights: Admiral Brindle, The Waking and The Mind |
+| `src/presentation/` | juice, VFX, world scenery, craft rigs, SFX, the music engine and the ACE stem sequencer |
+| `src/ui/` | HUD, screens, menus, pause/workshop/camp UI, field notes, tuning panel, reticle, `SettingsStore` |
+| `src/dev/` | `--dev` developer console drawer, command runner, overlays, and headless `DevSession` helpers |
+| `src/experimental/` | opt-in `--experimental-depth` / `SCRAPKEEP_EXPERIMENTAL` live run bridge and prototype encounters |
 
 ## Checks
 

@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { cleanHead } from "./sound-recipes-receipt.mjs";
+import {
+  COMMIT_SHA_RE,
+  cleanHead,
+  emitJsonReceipt,
+  parseReceiptArgs,
+  root,
+  runReceiptCliSync,
+} from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const COMMIT = /^[0-9a-f]{7,40}$/;
+const COMMIT = COMMIT_SHA_RE;
 export const MAPS = ["park_dam", "park_flume"];
 export const TESTS = {
   park_landmark_sight_test: 1,
@@ -297,30 +296,14 @@ export function produce({ cwd = root, run = runTests, snagReceipt = undefined } 
 }
 
 export function parseArgs(argv) {
-  const args = { out: null, logs: null, snagReceipt: null };
-  const take = (i, flag) => {
-    const val = argv[i + 1];
-    if (val === undefined || val === "" || val.startsWith("--")) {
-      throw new Error(`${flag} requires a value`);
-    }
-    return val;
-  };
-  const takeEq = (a, flag) => {
-    const val = a.slice(flag.length + 1);
-    if (val === "") throw new Error(`${flag} requires a value`);
-    return val;
-  };
-  for (let i = 0; i < argv.length; i += 1) {
-    const a = argv[i];
-    if (a === "--out") args.out = take(i++, a);
-    else if (a.startsWith("--out=")) args.out = takeEq(a, "--out");
-    else if (a === "--logs") args.logs = take(i++, a);
-    else if (a.startsWith("--logs=")) args.logs = takeEq(a, "--logs");
-    else if (a === "--snag-receipt") args.snagReceipt = take(i++, a);
-    else if (a.startsWith("--snag-receipt=")) args.snagReceipt = takeEq(a, "--snag-receipt");
-    else throw new Error(`unknown argument: ${a}`);
-  }
-  return args;
+  return parseReceiptArgs(argv, {
+    valueFlags: {
+      "--logs": { key: "logs" },
+      "--snag-receipt": { key: "snagReceipt" },
+    },
+    defaults: { out: null, logs: null, snagReceipt: null },
+    rejectEmptyEquals: true,
+  });
 }
 
 function readSnagReceipt(file) {
@@ -349,27 +332,10 @@ function main(argv) {
       logs[test] = existsSync(file) ? readFileSync(file, "utf8") : "";
     }
     const r = buildReceipt(logs, "0000000", { snagReceipt });
-    process.stdout.write(
-      JSON.stringify(
-        { ...r, pass: false, measured: `logs only, not a receipt: ${r.measured}` },
-        null,
-        2,
-      ) + "\n",
-    );
+    emitJsonReceipt({ ...r, pass: false, measured: `logs only, not a receipt: ${r.measured}` });
     return 1;
   }
-  let receipt;
-  try {
-    receipt = produce({ snagReceipt });
-  } catch (e) {
-    console.error(String(e?.message ?? e));
-    return 2;
-  }
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) writeFileSync(args.out, text);
-  else process.stdout.write(text);
-  return receipt.pass ? 0 : 1;
+  return runReceiptCliSync(() => ({ receipt: produce({ snagReceipt }), out: args.out }));
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

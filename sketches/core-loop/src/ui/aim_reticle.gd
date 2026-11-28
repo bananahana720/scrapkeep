@@ -5,8 +5,9 @@ const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const RING := 13.0
 const DIAMOND := 15.0
@@ -14,7 +15,6 @@ const GAUGE_RING := 24.0
 const GAUGE_WIDTH := 3.0
 const HARPOON_RING := 19.0
 const HARPOON_WIDTH := 2.5
-static var reduced_motion := false
 const DRY_SHAKE := 3.0
 const DRY_SHAKE_TIME := 0.25
 const SHAKE_HZ := 40.0
@@ -316,7 +316,7 @@ func rect() -> Rect2:
 
 
 func shake_offset() -> Vector2:
-	if reduced_motion or _shake_left <= 0.0:
+	if Comfort.reduced_motion or _shake_left <= 0.0:
 		return Vector2.ZERO
 	return Vector2(sin(_shake_clock * TAU * SHAKE_HZ) * DRY_SHAKE, 0.0)
 
@@ -399,7 +399,7 @@ func _draw_ack(centre: Vector2) -> void:
 	if _ack_left <= 0.0:
 		return
 	var frac := ack_fraction()
-	var expand := 0.0 if reduced_motion else (1.0 - frac) * 3.0 * _ack_strength
+	var expand := 0.0 if Comfort.reduced_motion else (1.0 - frac) * 3.0 * _ack_strength
 	var inner := RING + ACK_INNER + expand
 	var outer := RING + ACK_OUTER + expand
 	var c := _thin(Color(_ack_color, 0.85 * frac))

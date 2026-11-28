@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const SIZE := Vector2i(640, 480)
@@ -24,7 +25,7 @@ func _initialize() -> void:
 			out = arg.trim_prefix("--out=")
 		elif arg.begins_with("--kinds="):
 			kinds = Array(arg.trim_prefix("--kinds=").split(","))
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		quit(2)
 		return
 	DirAccess.make_dir_recursive_absolute(out)

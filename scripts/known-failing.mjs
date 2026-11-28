@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { realpathSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { weeklyNames } from "./gate/weekly.mjs";
+import { globToRegExp } from "./lib/godot-test-runner.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 export const LEDGER_FILE = "project-guide/handoff/KNOWN-FAILING.tsv";
 export const LEDGER_HEADER = ["test", "kind", "cause", "owner", "added", "review"];
@@ -113,15 +113,7 @@ export function parseLedger(text) {
 }
 
 const RESERVED = [TIME_OUT, ERROR_LINE];
-const checkPattern = (named) =>
-  new RegExp(
-    "^" +
-      named
-        .split("*")
-        .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-        .join(".*") +
-      "$",
-  );
+const checkPattern = (named) => globToRegExp(named);
 
 export function uncoveredChecks(row, { labels = [], timedOut = false, errorLine = false } = {}) {
   if (!row?.checks) return [];
@@ -305,7 +297,7 @@ async function main() {
   return failures ? 1 : 0;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = await main();
   } catch (error) {

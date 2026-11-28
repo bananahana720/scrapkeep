@@ -2,6 +2,7 @@ extends SceneTree
 
 
 const T := preload("res://tests/support/t.gd")
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 const AdversityDirector := preload("res://src/experimental/adversity_director.gd")
 const EncounterEngine := preload("res://src/experimental/encounter_engine.gd")
@@ -47,8 +48,8 @@ func _test_resources_and_clarity() -> void:
 		var ok: bool = String(spec["silhouette_cue"]) != "" \
 			and String(spec["movement_cadence"]) != "" \
 			and String(spec["counterplay_cue"]) != "" \
-			and float(spec["tell_s"]) >= RefurbishedElites.MIN_TELL_S \
-			and RefurbishedElites.ENV_TAGS.has(StringName(spec["ability_tag"]))
+			and float(spec["tell_s"]) >= EnvTags.MIN_TELL_S \
+			and EnvTags.CANONICAL_TAGS.has(StringName(spec["ability_tag"]))
 		all_elites_clear = all_elites_clear and ok
 	t.check("every Refurbished Elite .tres carries silhouette, cadence, counterplay, >=0.6s tell, and canonical env tag", all_elites_clear)
 
@@ -168,7 +169,7 @@ func _test_refurbished_elites_plates_and_bounty() -> void:
 		int(shatter_hit["plates_broken"]) >= 2 and int(shatter_hit["scrap_spilled"]) >= 28,
 		"broken=%d scrap=%d" % [int(shatter_hit["plates_broken"]), int(shatter_hit["scrap_spilled"])])
 	var tag_ok := not (shatter_hit["env_tags"] as Array).is_empty() \
-		and RefurbishedElites.is_valid_env_tag_payload((shatter_hit["env_tags"] as Array)[0])
+		and EnvTags.is_valid_payload((shatter_hit["env_tags"] as Array)[0], EnvTags.BOUNDS_ELITE)
 	t.check("plate shatter emits canonical env_tag payload", tag_ok)
 
 	var kill_hit := jug.apply_hit(500.0, 16.0, 14.0, [&"coolant_brittle"])
@@ -198,9 +199,9 @@ func _test_refurbished_elites_plates_and_bounty() -> void:
 		var tick := winch.step(0.15, Vector3(0.0, 0.0, 0.0), fast_vel, 14.0)
 		for f in tick["facts"]:
 			if f["kind"] == "elite_telegraph":
-				saw_tell = float(f["tell_s"]) >= RefurbishedElites.MIN_TELL_S
+				saw_tell = float(f["tell_s"]) >= EnvTags.MIN_TELL_S
 		for tp in tick["env_tags"]:
-			if RefurbishedElites.is_valid_env_tag_payload(tp) and tp["tag"] == &"magnetic":
+			if EnvTags.is_valid_payload(tp, EnvTags.BOUNDS_ELITE) and tp["tag"] == &"magnetic":
 				saw_exec_tag = true
 		if (tick["ball_accel"] as Vector3).length() > 0.1:
 			slingshot_accel = tick["ball_accel"]
@@ -239,7 +240,7 @@ func _test_slag_tide_recession_and_bounded_hold() -> void:
 			if f["kind"] == "hazard_ended" and f["id"] == &"rising_slag_tide":
 				saw_ended = true
 		for tp in res["env_tags"]:
-			t.check("slag tide env_tag payload valid", RefurbishedElites.is_valid_env_tag_payload(tp))
+			t.check("slag tide env_tag payload valid", EnvTags.is_valid_payload(tp, EnvTags.BOUNDS_ELITE))
 			if tp["tag"] == &"slag_coated":
 				saw_slag_tag = true
 			if tp["tag"] == &"burning":

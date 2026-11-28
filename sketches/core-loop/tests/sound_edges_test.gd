@@ -1,7 +1,8 @@
 extends SceneTree
 
 const Bank := preload("res://src/presentation/sfx_bank.gd")
-const Foley := preload("res://src/presentation/foley_audio.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
+const Cues := preload("res://src/presentation/positional_cue_rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -101,15 +102,15 @@ func _ids() -> Array:
 	for cue in Bank.EVENT_CUES:
 		if cue not in ids:
 			ids.append(cue)
-	for speaker in Bank.CALLERS:
-		ids.append(Bank.say_id(speaker, LINE))
+	ids.append("babble")
+	for speaker in VoiceSynth.CALLERS:
+		ids.append(VoiceSynth.say_id(speaker, LINE))
 	return ids
 
 
 func _loops() -> Array:
 	var loops: Array = Bank.LOOPED.duplicate()
-	loops.append_array(Foley.LOOPS)
-	loops.append("jolt_layer_presence")
+	loops.append_array(Cues.ROWS.keys().filter(func(id): return Cues.ROWS[id].get("loop", false)))
 	return loops
 
 
@@ -120,10 +121,12 @@ func _bank() -> void:
 	var stale: Array = ALLOWED.keys()
 	var missing := []
 	for id in ids:
-		if not Bank.has_recipe(id):
+		var is_voice: bool = id == "babble" or String(id).begins_with(VoiceSynth.SAY)
+		var has_own: bool = VoiceSynth.has_recipe(id) if is_voice else Bank.has_recipe(id)
+		if not has_own:
 			missing.append(id)
 			continue
-		var found := faults(Bank.samples(id), id in loops)
+		var found := faults(VoiceSynth.samples(id) if is_voice else Bank.samples(id), id in loops)
 		if found.is_empty():
 			continue
 		if ALLOWED.has(id):

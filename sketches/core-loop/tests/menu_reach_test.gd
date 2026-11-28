@@ -56,7 +56,6 @@ func _visit_extended() -> int:
 	count += 1
 
 	var customize = screens._camp.customize
-	customize.reduced_motion = true
 	customize._open_from_camp()
 	await process_frame
 	await process_frame

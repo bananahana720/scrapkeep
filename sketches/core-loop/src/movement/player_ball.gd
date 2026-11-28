@@ -7,9 +7,9 @@ const BallState := preload("res://src/movement/ball_state.gd")
 const RigidBall := preload("res://src/movement/rigid_ball.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
+const MathUtil := preload("res://src/core/math_util.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
-const Harpoon := preload("res://src/movement/harpoon.gd")
 const Grip := preload("res://src/movement/grip.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Contact := preload("res://src/movement/contact.gd")
@@ -21,9 +21,9 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const ChainState := preload("res://src/combat/chain.gd")
 const Dunk := preload("res://src/combat/dunk.gd")
 const Redline := preload("res://src/combat/redline.gd")
-const CombatRules := preload("res://src/combat/combat.gd")
-const Weapons := preload("res://src/combat/weapons.gd")
 const ExceptionHold := preload("res://src/movement/exception_hold.gd")
+const SpeedBank := preload("res://src/movement/speed_bank.gd")
+const KestAir := preload("res://src/movement/kest_air.gd")
 
 
 const STOMP := "stomp"
@@ -70,6 +70,8 @@ var spawn_point := Vector3.ZERO
 var builtin_squash := true
 var crush_check := Callable()
 var heft_of := Callable()
+var enemy_heft_of := Callable()
+var strike_damage := {}
 var mass_of := Callable()
 var pressure_grant := Callable()
 var hulk_launch := Callable()
@@ -120,26 +122,33 @@ var _line_anchor := Vector3.ZERO
 var _line_hold := 0.0
 var _line_standing := false
 var _bow: Area3D
-var speed_bank := {}
-var _speed_bank_airborne := false
-var _speed_bank_jumped := false
-enum BankMove { NONE, JUMP, SLIDE, SLIDE_FLIGHT }
-var _speed_bank_chosen := BankMove.NONE
-var _speed_bank_move_held := false
-var _speed_bank_brake_held := false
-var _speed_bank_rest_ticks := 0
-var _speed_bank_rest_braked := false
+var _speed_bank := SpeedBank.new()
+var _kest_air := KestAir.new()
+var speed_bank: Dictionary:
+	get:
+		return _speed_bank.state
+	set(v):
+		_speed_bank.state = v
 var _bow_check_queued := false
 var _crushing := {}
 var exceptions
 var _destructibles: Node = null
 var _destructibles_class := Callable()
-var air_draw_active := false
-var air_draw_left := Weapons.KEST_AIR_DRAW_MAX_S
-var _kest_wall_kick_faces := {}
-var _kest_wall_aim := {}
-var last_kest_wall_kick := {}
-var last_spire_vault := {}
+var air_draw_active: bool:
+	get:
+		return _kest_air.air_draw_active
+	set(v):
+		_kest_air.air_draw_active = v
+var air_draw_left: float:
+	get:
+		return _kest_air.air_draw_left
+	set(v):
+		_kest_air.air_draw_left = v
+var last_kest_wall_kick: Dictionary:
+	get:
+		return _kest_air.last_wall_kick.duplicate()
+	set(v):
+		_kest_air.last_wall_kick = v
 
 
 func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
@@ -198,10 +207,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid.landed.connect(func(impact: float): events.landed.emit(impact))
 	_rigid.bumped.connect(func(at: Vector3, normal: Vector3, speed: float): events.bumped.emit(at, normal, speed))
 	_rigid.jumped.connect(func(air: bool):
-		if not air:
-			_speed_bank_jumped = true
-		_speed_bank_chosen = BankMove.JUMP
-		_speed_bank_airborne = false)
+		_speed_bank.note_jump(air))
 
 	# Everything under the player is placed per frame in _process, which interpolation
 	# must leave alone; only the body is ticked by physics and interpolated.
@@ -243,10 +249,6 @@ func body() -> RigidBody3D:
 	return _rigid
 
 
-func active_body() -> RigidBody3D:
-	return _rigid
-
-
 func ball_position() -> Vector3:
 	return _rigid.global_position
 
@@ -285,6 +287,17 @@ func planar_velocity() -> Vector3:
 	return Vector3(state.velocity.x, 0.0, state.velocity.z)
 
 
+func body_planar_speed() -> float:
+	if _rigid == null:
+		return 0.0
+	var v: Vector3 = _rigid.linear_velocity
+	return Vector2(v.x, v.z).length()
+
+
+func speed_bank_move() -> int:
+	return _speed_bank.chosen
+
+
 func add_external_accel(accel: Vector3) -> void:
 	if _frozen:
 		return
@@ -306,11 +319,8 @@ func frozen() -> bool:
 func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_bank_pending = {}
 	_drags.clear()
-	_clear_speed_bank()
-	_speed_bank_move_held = false
-	_speed_bank_brake_held = false
-	_speed_bank_rest_ticks = 0
-	_speed_bank_rest_braked = false
+	_speed_bank.clear()
+	_speed_bank.reset_inputs()
 	state.reset()
 	kit.clear_runtime()
 	chain.clear_active()
@@ -323,12 +333,7 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_line_target = null
 	_line_hold = 0.0
 	_line_standing = false
-	air_draw_active = false
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
-	_kest_wall_kick_faces.clear()
-	_kest_wall_aim = {}
-	last_kest_wall_kick = {}
-	last_spire_vault = {}
+	_kest_air.reset()
 	_rigid.external_accel = Vector3.ZERO
 	_rigid.teleport(point, velocity)
 
@@ -443,37 +448,28 @@ func in_set_piece() -> bool:
 
 func fit_class(def: Resource) -> void:
 	class_def = def
-	air_draw_active = false
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
-	_kest_wall_kick_faces.clear()
-	_kest_wall_aim = {}
+	_kest_air.on_fit_class()
 	tree.reset(def.id if def != null else "")
 	abilities.fit(class_def)
-	_refit()
+	refit()
 
 
 func refresh_air_draw() -> void:
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	_kest_air.refresh_air_draw()
 
 
 func apply_spire_vault(anchor: Vector3) -> bool:
 	if class_def == null or class_def.id != "demolitions_caster" or _frozen:
 		return false
-	var v: Vector3 = state.velocity
-	v.y = maxf(v.y, Weapons.KEST_SPIRE_VAULT_UP)
-	_rigid.set_velocity_now(v)
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
-	state.air_actions = maxi(state.air_actions, 1)
-	last_spire_vault = {"anchor": anchor, "vy": v.y}
-	return true
+	return _kest_air.apply_spire_vault(self, anchor)
 
 
 func _on_tree_picked(n: Dictionary) -> void:
 	UpgradeTree.apply_pick(abilities, n)
-	_refit()
+	refit()
 
 
-func _refit() -> void:
+func refit() -> void:
 	if class_def == null:
 		kit.fit(Augments.DEFAULT_MOVEMENT, "")
 	else:
@@ -500,6 +496,10 @@ func yours(shape: Dictionary) -> Dictionary:
 
 func heft() -> float:
 	return float(heft_of.call()) if heft_of.is_valid() else 1.0
+
+
+func enemy_heft(target) -> float:
+	return float(enemy_heft_of.call(target)) if enemy_heft_of.is_valid() else INF
 
 
 func bind_destructibles(pieces: Node, class_of := Callable()) -> void:
@@ -558,6 +558,20 @@ func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> b
 	return true
 
 
+# Keep Engine.time_scale transitions from skewing knockback (dividing by _delta during hit-stop scales by 1/HIT_STOP_SCALE).
+func shove_planar(dv: Vector3, interrupts := true, kind := "shove") -> bool:
+	if not dv.is_finite() or dv == Vector3.ZERO:
+		return false
+	if not crowd_control(kind, Vector3.ZERO, interrupts):
+		return false
+	if _rigid == null or _rigid.freeze:
+		return false
+	if kit != null and (kit.mounted or kit.plant_time > 0.0):
+		return false
+	_rigid.set_velocity_now(state.velocity + dv)
+	return true
+
+
 func grant_immunity(seconds: float) -> void:
 	immune_left = maxf(immune_left, seconds)
 
@@ -573,7 +587,7 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 		return
 	_clear_speed_bank()
 	Augments.attach(kit, ball_position(), point, normal, body)
-	kit.grip = Grip.of(body, heft(), tuning.pole_flail())
+	kit.grip = Grip.of(body, heft(), enemy_heft(body), tuning.pole_flail())
 	events.grapple_fired.emit(point)
 	if body != null:
 		if body.has_method("flash"):
@@ -666,104 +680,11 @@ func _physics_process(delta: float) -> void:
 
 
 func _clear_speed_bank() -> void:
-	speed_bank = {}
-	_speed_bank_airborne = false
-	_speed_bank_jumped = false
-	_speed_bank_chosen = BankMove.NONE
+	_speed_bank.clear()
 
 
 func _tick_speed_bank(delta: float) -> void:
-	var landed := false
-	var jumped := _speed_bank_jumped
-	_speed_bank_jumped = false
-	var moving := intent.move.length_squared() >= 0.02
-	var roll_start := moving and not _speed_bank_move_held
-	var slide_start := intent.brake_held and not _speed_bank_brake_held
-	_speed_bank_move_held = moving
-	_speed_bank_brake_held = intent.brake_held
-	var cruise: float = tuning.f("cruise")
-	if _frozen or kit.hooked or Augments.holding(kit) or in_set_piece():
-		_clear_speed_bank()
-		_speed_bank_rest_ticks = 0
-		_speed_bank_rest_braked = false
-		return
-	var floored: bool = state.grounded and state.contact_normal.y > Tuning.MAX_SLOPE_DOT
-	var planar := planar_velocity()
-	var speed := planar.length()
-	var free_rest := _speed_bank_rest_ticks > 0 and not _speed_bank_rest_braked
-	if floored and speed <= Tuning.BANK_REST * cruise:
-		_speed_bank_rest_ticks += 1
-		_speed_bank_rest_braked = _speed_bank_rest_braked or intent.brake_held
-	else:
-		_speed_bank_rest_ticks = 0
-		_speed_bank_rest_braked = false
-	var probe_grounded := false
-	for i in _rigid._probe.get_collision_count():
-		if _rigid._probe.get_collision_normal(i).y > Tuning.MAX_SLOPE_DOT:
-			probe_grounded = true
-	if _speed_bank_chosen != BankMove.NONE:
-		if not probe_grounded:
-			_speed_bank_airborne = true
-		elif _speed_bank_airborne:
-			landed = true
-			_speed_bank_chosen = BankMove.NONE
-			_speed_bank_airborne = false
-	if _speed_bank_chosen == BankMove.SLIDE:
-		if not floored:
-			_speed_bank_chosen = BankMove.SLIDE_FLIGHT
-		elif not intent.brake_held or speed <= Tuning.BANK_REST * cruise:
-			_speed_bank_chosen = BankMove.NONE
-	if slide_start and floored and speed >= Tuning.BANK_ARM * cruise:
-		_speed_bank_chosen = BankMove.SLIDE
-		_speed_bank_airborne = false
-	roll_start = roll_start and free_rest and floored and not intent.brake_held and speed <= Tuning.BANK_REST * cruise
-	if not speed_bank.is_empty() and jumped:
-		var row: Dictionary = speed_bank["row"]
-		var u: float = speed_bank["t"] / float(row["decay_s"])
-		if u >= 1.0 - Tuning.BANK_WINDOW:
-			_bank_push(planar, maxf(0.0, float(row["ratio"]) * cruise - speed))
-		else:
-			_bank_push(planar, -minf(float(speed_bank["bonus"]), maxf(0.0, speed - cruise)))
-		speed_bank = {}
-		return
-	if speed_bank.is_empty():
-		if not floored or not (roll_start or (landed and speed >= Tuning.BANK_ARM * cruise)):
-			return
-		var row := Tuning.bank_row(class_def.id if class_def != null else "")
-		var bonus := float(row["ratio"]) * cruise - speed
-		if bonus <= 0.0:
-			return
-		if roll_start:
-			var heading := Rules.wish_direction(intent, drive_basis, state)
-			var target := Vector3(heading.x, 0.0, heading.z).normalized() * float(row["ratio"]) * cruise
-			var push := target - planar
-			_bank_push(push, push.length())
-		else:
-			_bank_push(planar, bonus)
-		var banked := minf(bonus, (float(row["ratio"]) - 1.0) * cruise)
-		speed_bank = {"row": row, "t": 0.0, "bonus0": banked, "bonus": banked}
-		return
-	if not floored:
-		return
-	var row: Dictionary = speed_bank["row"]
-	speed_bank["t"] += delta
-	var left: float = float(speed_bank["bonus0"]) * Tuning.bank_share(row, speed_bank["t"] / float(row["decay_s"]))
-	var give_back: float = float(speed_bank["bonus"]) - left
-	speed_bank["bonus"] = left
-	_bank_push(planar, -minf(give_back, maxf(0.0, speed - (cruise + left))))
-	if speed_bank["t"] >= float(row["decay_s"]):
-		_clear_speed_bank()
-
-
-func _bank_push(planar: Vector3, dv: float) -> void:
-	if absf(dv) < 0.0001 or planar.length_squared() < 0.0001:
-		return
-	var push := planar.normalized() * dv
-	_rigid.apply_central_impulse(push * _rigid.mass)
-	var axis := Rules.roll_axis(push, state.contact_normal if state.grounded else Vector3.UP)
-	if axis != Vector3.ZERO:
-		_rigid.angular_velocity += axis / Tuning.RADIUS
-	state.velocity += push
+	_speed_bank.tick(self, delta)
 
 
 func _mark_slots() -> void:
@@ -901,21 +822,16 @@ func _burst_key() -> String:
 	return Bindings.label("boost")
 
 
-func _burst_pilot() -> bool:
-	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK) or kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE) \
-		or kit.on(Augments.RECOIL)
-
-
 func _read_shift(delta := 0.0) -> void:
 	if delta > 0.0 and kit.movement_buffer > 0.0:
 		kit.movement_buffer = maxf(0.0, kit.movement_buffer - delta)
 	if intent.cancel_pressed or (kit.on(Augments.SPRINT) and intent.shift_released):
 		kit.movement_buffer = 0.0
-	if _burst_pilot():
+	if Augments.has_burst(kit):
 		intent.movement_held = intent.movement_held or intent.shift_held
 		intent.movement_released = intent.movement_released or intent.shift_released
 		if intent.shift_pressed:
-			var wait: float = Harpoon.burst_wait(kit)
+			var wait: float = Augments.burst_wait(kit)
 			if wait <= 0.0:
 				kit.movement_buffer = 0.0
 				intent.movement_pressed = true
@@ -957,8 +873,8 @@ func verb_ready(verb: String) -> bool:
 			return not _frozen and not Augments.holding(kit) and kit.hooked \
 					and (not kit.on_body or (kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit)))
 		"boost":
-			if _burst_pilot():
-				return Harpoon.burst_ready(kit)
+			if Augments.has_burst(kit):
+				return Augments.burst_ready(kit)
 			return state.boost_cooldown <= 0.0 and not kit.mounted
 	return false
 
@@ -1230,16 +1146,9 @@ func _squash_basis() -> Basis:
 	var amount := clampf(state.impact / 26.0, 0.0, 0.42)
 	if amount <= 0.001:
 		return Basis.IDENTITY
-	var align := _align_up(state.contact_normal)
+	var align := MathUtil.basis_up(state.contact_normal)
 	var scale := Basis.from_scale(Vector3(1.0 + amount * 0.55, 1.0 - amount, 1.0 + amount * 0.55))
 	return align * scale * align.inverse()
-
-
-static func _align_up(normal: Vector3) -> Basis:
-	var up := normal.normalized()
-	var right := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
-	right = (right - up * right.dot(up)).normalized()
-	return Basis(right, up, right.cross(up))
 
 
 func _build_bow() -> void:
@@ -1357,7 +1266,7 @@ func pylon_node() -> Node3D:
 func _update_augment_visuals(at: Vector3) -> void:
 	_pylon.visible = kit.mounted
 	if kit.mounted:
-		_pylon.global_transform = Transform3D(_align_up(kit.mount_normal), kit.mount_face)
+		_pylon.global_transform = Transform3D(MathUtil.basis_up(kit.mount_normal), kit.mount_face)
 
 	_wings.visible = kit.gliding or air_draw_active
 	if _wings.visible:
@@ -1384,8 +1293,10 @@ func _on_rigid_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	var strength := slam_strength(speed, flatness)
 	if strength < 0.05:
 		return
-	dunk.store(Dunk.slam_damage(Augments.SLAM_KNOCK * strength, CombatRules.STRIKE_DAMAGE["slam"], heft()) * tuning.mod("dunk_store"),
-		kit.smash_flavour, String(class_def.id) if class_def != null else "", class_color())
+	var row: Array = strike_damage.get("slam", [])
+	if row.size() >= 2:
+		dunk.store(Dunk.slam_damage(Augments.SLAM_KNOCK * strength, row, heft()) * tuning.mod("dunk_store"),
+			kit.smash_flavour, String(class_def.id) if class_def != null else "", class_color())
 
 
 func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
@@ -1438,7 +1349,7 @@ func _drag_in(at: Vector3) -> void:
 		if enemy.has_method("is_dead") and enemy.is_dead():
 			continue
 		var offset: Vector3 = at - enemy.global_position
-		if offset.length() > slam_radius() or Grip.heft_of(enemy) > heft():
+		if offset.length() > slam_radius() or enemy_heft(enemy) > heft():
 			continue
 		_drags[enemy.get_instance_id()] = {"enemy": weakref(enemy), "to": at, "t": 0.0}
 		enemy.flash()
@@ -1526,7 +1437,7 @@ func _update_aim_cones(at: Vector3) -> void:
 		indicator.set_shape("bank", bank_geometry())
 	else:
 		indicator.clear("bank")
-	var vault_aim: Dictionary = kit.vault_aim if not kit.vault_aim.is_empty() else _kest_wall_aim
+	var vault_aim: Dictionary = kit.vault_aim if not kit.vault_aim.is_empty() else _kest_air.wall_aim
 	if not vault_aim.is_empty():
 		indicator.set_shape("vault", _aim_cone(at, vault_aim["dir"], AIM_CONE_LENGTH))
 	else:
@@ -1655,9 +1566,9 @@ func _begin_landing(enemy: Node3D) -> bool:
 
 
 func _landing_force(kind: String, force: float) -> float:
-	if _landing_mult == 1.0 or not CombatRules.STRIKE_DAMAGE.has(kind):
+	if _landing_mult == 1.0 or not strike_damage.has(kind):
 		return force
-	var row: Array = CombatRules.STRIKE_DAMAGE[kind]
+	var row: Array = strike_damage[kind]
 	return (_landing_mult * (row[0] + force * row[1]) - row[0]) / row[1]
 
 
@@ -1699,78 +1610,17 @@ func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, aw
 
 func _step_kest_air_draw(delta: float) -> void:
 	if class_def == null or class_def.id != "demolitions_caster" or _frozen:
-		air_draw_active = false
+		_kest_air.air_draw_active = false
 		return
-	if state.grounded:
-		air_draw_active = false
-		air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
-		return
-	if kit.slamming or Augments.holding(kit) or in_set_piece():
-		air_draw_active = false
-		return
-	var wg = abilities.gauge(AbilityState.WEAPON)
-	var drawing: bool = (wg != null and wg.charging) or (abilities.selected == AbilityState.WEAPON and intent.fire_held)
-	if drawing and air_draw_left > 0.0:
-		air_draw_active = true
-		air_draw_left = maxf(0.0, air_draw_left - delta)
-		add_external_accel(Vector3.UP * tuning.f("gravity") * (1.0 - Weapons.KEST_AIR_DRAW_GRAVITY))
-	else:
-		air_draw_active = false
+	_kest_air.step_air_draw(self, delta)
 
 
 func _step_kest_wall_kick(delta: float) -> void:
-	for k in _kest_wall_kick_faces.keys():
-		_kest_wall_kick_faces[k] = float(_kest_wall_kick_faces[k]) - delta
-		if float(_kest_wall_kick_faces[k]) <= 0.0:
-			_kest_wall_kick_faces.erase(k)
-	_kest_wall_aim = {}
+	_kest_air.decay_wall_kick(delta)
 	if class_def == null or class_def.id != "demolitions_caster" or _frozen or state.grounded \
 			or kit.hooked or Augments.holding(kit) or in_set_piece() or not is_inside_tree():
 		return
-	var face := _kest_steep_face()
-	if face.is_empty():
-		return
-	var key := Augments.face_key(face["point"], face["normal"])
-	if float(_kest_wall_kick_faces.get(key, 0.0)) > 0.0:
-		return
-	var n: Vector3 = (face["normal"] as Vector3).normalized()
-	var look: Vector3 = -drive_basis.z
-	var along := look - n * look.dot(n)
-	var dir := (Vector3.UP * 0.78 + n * 0.48 + (along.normalized() * 0.35 if along.length_squared() > 0.01 else Vector3.ZERO)).normalized()
-	var jump_spd: float = tuning.f("jump_speed")
-	var incoming: float = state.velocity.length()
-	var speed := minf(Weapons.KEST_WALL_KICK_CAP, maxf(jump_spd * Weapons.KEST_WALL_KICK_MULT, incoming * 1.15))
-	var launch := dir * speed
-	launch.y = maxf(launch.y, jump_spd * Weapons.KEST_WALL_KICK_UP_MULT)
-	_kest_wall_aim = {"point": face["point"], "normal": n, "dir": launch.normalized(), "speed": launch.length()}
-	if state.jump_buffer <= 0.0 and not intent.jump_pressed:
-		return
-	state.jump_buffer = 0.0
-	state.coyote = 0.0
-	intent.jump_pressed = false
-	_kest_wall_kick_faces[key] = Weapons.KEST_WALL_KICK_LOCK_S
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
-	_rigid.set_velocity_now(launch)
-	last_kest_wall_kick = {"point": face["point"], "normal": n, "velocity": launch}
-	_on_kit_fact("vault_kicked", [face["point"], launch.length()])
-	events.jumped.emit(true)
-
-
-func _kest_steep_face() -> Dictionary:
-	var space: PhysicsDirectSpaceState3D = _rigid.get_world_3d().direct_space_state
-	var origin := ball_position()
-	var reach := Tuning.RADIUS + Augments.FACE_REACH
-	var best := {}
-	var best_tilt := Augments.FACE_MAX_TILT
-	for i in Augments.FACE_RAYS:
-		var ang := TAU * float(i) / float(Augments.FACE_RAYS)
-		var dir := Vector3(cos(ang), 0.0, sin(ang))
-		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + dir * reach, Augments.WORLD_MASK))
-		if hit.is_empty():
-			continue
-		var n: Vector3 = (hit["normal"] as Vector3).normalized()
-		var tilt := absf(n.y)
-		if tilt < best_tilt:
-			best_tilt = tilt
-			best = {"point": hit["position"], "normal": n}
-	return best
+	var kicked := _kest_air.step_wall_kick(self)
+	if not kicked.is_empty():
+		_on_kit_fact("vault_kicked", [kicked["point"], (kicked["velocity"] as Vector3).length()])
+		events.jumped.emit(true)

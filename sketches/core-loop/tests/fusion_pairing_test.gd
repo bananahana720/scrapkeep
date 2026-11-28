@@ -21,7 +21,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Elements := preload("res://src/build/elements.gd")
-const DefenceBars := preload("res://src/core/defence_bars.gd")
+const DefenceBars := preload("res://tests/support/defence_bars.gd")
 const Triggers := preload("res://src/build/triggers.gd")
 const Director := preload("res://src/world/director.gd")
 const ElementField := preload("res://src/build/element_field.gd")
@@ -186,7 +186,7 @@ func _layer_checks() -> void:
 	_t.eq("the 150% element differs per layer", weak.values().size() == 3 and weak.values()[0] != weak.values()[1]
 		and weak.values()[1] != weak.values()[2] and weak.values()[0] != weak.values()[2], true)
 	var code := []
-	for line in FileAccess.get_file_as_string("res://src/core/defence_bars.gd").split("\n"):
+	for line in FileAccess.get_file_as_string("res://tests/support/defence_bars.gd").split("\n"):
 		if not line.strip_edges().begins_with("#"):
 			code.append(line)
 	var private := RegEx.create_from_string("\\b(1\\.5|0\\.75|150)\\b")

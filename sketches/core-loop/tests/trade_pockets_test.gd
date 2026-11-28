@@ -237,8 +237,8 @@ func _runtime(model) -> void:
 			var at: Vector3 = s.to_global(Vector3(entry.entry_spot[0], 0, entry.entry_spot[1]))
 			at.y = game.ctx.terrain.height(at.x, at.z) + 1.1
 			game.player.reset_to(at)
-			game.player.active_body().global_position = at
-			game.player.active_body().linear_velocity = Vector3.ZERO
+			game.player.body().global_position = at
+			game.player.body().linear_velocity = Vector3.ZERO
 			game.player.set_frozen(true)
 			var before: float = game.run.hp
 			acts.set_physics_process(true)
@@ -290,7 +290,7 @@ func _appearance_recency(game, model, site) -> void:
 	var acts = game.world.activities
 	var outside: Vector3 = site.global_position + Vector3(200.0, 0.0, 200.0)
 	game.player.reset_to(outside)
-	game.player.active_body().global_position = outside
+	game.player.body().global_position = outside
 	t.check("skipped trade player outside approach radius", Vector2(outside.x, outside.z).distance_to(Vector2(site.global_position.x, site.global_position.z)) > site.footprint.z * 0.5 + 16.0)
 	acts._watch_trade(site, game.player.ball_position())
 	t.eq("skipped trade stays unvisited", run.summary().trade_pockets, [])

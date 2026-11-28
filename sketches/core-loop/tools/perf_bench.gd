@@ -8,6 +8,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Director := preload("res://src/world/director.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 
 
 const Flow := preload("res://src/core/flow.gd")
@@ -43,6 +44,7 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band", "no-machine-fx", "no-stills"]
 const PACK_ORDER := ["grounded", "strung", "netted", "rebound", "reeled", "wobble", "flung", "cupped"]
 const EXTRA_COPIES := ["spiral_wave", "chain_arc", "cross_split", "gatling_heart", "double_feed", "arc_coil"]
@@ -170,7 +172,7 @@ func _initialize() -> void:
 	if _table == "":
 		_table = String(SCENES[_scene_id].get("table", ""))
 	DirAccess.make_dir_recursive_absolute(_out.get_base_dir())
-	_native = DisplayServer.get_name() != "headless"
+	_native = not AppShell.headless()
 	for asset in ["shell_sable", "shell_rivet", "shell_kest"]:
 		if load("res://assets/models/" + asset + ".glb") == null:
 			printerr("perf_bench: import this project with --headless --editor --import first")
@@ -339,13 +341,10 @@ func _prebake_band() -> void:
 		return
 	var audio = _game.presentation.audio
 	if audio.live_output:
-		audio._finish_opening()
-		if audio._rest_task >= 0:
-			WorkerThreadPool.wait_for_task_completion(audio._rest_task)
-			audio._rest_task = -1
+		audio.finish_band_bakes()
 	else:
-		MusicEngine.prepare_opening()
-		MusicEngine.prepare_rest()
+		MusicPrebake.prepare_opening()
+		MusicPrebake.prepare_rest()
 
 
 func _grant() -> void:
@@ -900,8 +899,7 @@ func _apply_ablations() -> void:
 		for child in audio.get_children():
 			if child is AudioStreamPlayer:
 				child.stop()
-		if node_added.is_connected(audio._on_node_added):
-			node_added.disconnect(audio._on_node_added)
+		audio.set_threat_watch(false)
 		_ablation_notes["no-audio"] = {"listeners_cut": _cut_listeners(audio)}
 	if _off.has("no-vfx"):
 		var effects = _game.combat.effects

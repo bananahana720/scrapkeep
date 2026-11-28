@@ -1,33 +1,63 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
+import { isMain } from "../lib/cli.mjs";
+import { git } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-function expandToken(token, baseDir = root) {
-  if (!token.includes("*")) return [token];
-  const dir = path.dirname(token);
-  const pattern = path.basename(token);
-  const regex = new RegExp(
-    "^" + pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$",
+export const TEST_SCOPES = Object.freeze([
+  Object.freeze({ dir: "tests", suffix: ".test.js", recursive: false }),
+  Object.freeze({ dir: "scripts", suffix: ".test.mjs", recursive: true }),
+  Object.freeze({
+    dir: "project-guide/handoff/sitting-kit",
+    suffix: ".test.mjs",
+    recursive: false,
+  }),
+]);
+
+export const EXCLUDED_TESTS = Object.freeze({
+  "scripts/budget-audit.test.mjs":
+    "audits every model in sketches/core-loop/assets/registry.json, which the node-tests partial checkout leaves out of sketches/core-loop/assets/models/; scripts/sketch-fast.mjs runs it on a full checkout through NODE_PATH_RULES",
+  "scripts/far-faults.test.mjs":
+    "scans the park prop models under sketches/core-loop/assets/models/park/props/, which the node-tests partial checkout leaves out; scripts/sketch-fast.mjs runs it on a full checkout through NODE_PATH_RULES",
+});
+
+function scopeFiles(scope, files) {
+  const prefix = `${scope.dir}/`;
+  return files.filter(
+    (file) =>
+      file.startsWith(prefix) &&
+      file.endsWith(scope.suffix) &&
+      (scope.recursive || !file.slice(prefix.length).includes("/")),
   );
-  return readdirSync(path.join(baseDir, dir))
-    .filter((name) => regex.test(name))
-    .sort()
-    .map((name) => path.posix.join(dir, name));
 }
 
-export function resolveTestFiles(testScript, baseDir = root) {
-  const prefix = "node --test ";
-  if (!testScript.startsWith(prefix)) {
-    throw new Error(`expected package.json "test" script to start with "${prefix}"`);
-  }
-  const tokens = testScript.slice(prefix.length).trim().split(/\s+/).filter(Boolean);
-  return [...new Set(tokens.flatMap((token) => expandToken(token, baseDir)))];
+export function discoverTestFiles(
+  baseDir = root,
+  { scopes = TEST_SCOPES, excluded = EXCLUDED_TESTS, log = console.error } = {},
+) {
+  const list = (...args) =>
+    git(["ls-files", "-z", ...args, "--", ...scopes.map((scope) => scope.dir)], {
+      cwd: baseDir,
+      trim: false,
+    })
+      .split("\0")
+      .filter(Boolean);
+  const tracked = list();
+  if (tracked.length === 0) throw new Error(`git ls-files lists no tracked files in ${baseDir}`);
+  const untracked = new Set(list("--others", "--exclude-standard"));
+  const excludedSet = new Set(Object.keys(excluded));
+  const found = [
+    ...new Set(scopes.flatMap((scope) => scopeFiles(scope, [...tracked, ...untracked]))),
+  ]
+    .filter((file) => !excludedSet.has(file))
+    .sort();
+  for (const file of found) if (untracked.has(file)) log(`node-tests: running untracked ${file}`);
+  return found;
 }
 
 export function shuffleFiles(files, seed) {
@@ -157,6 +187,10 @@ function parseArgs(argv) {
       opts.seed = Math.trunc(Number(raw)) >>> 0;
     } else if (arg === "--dry-run") {
       opts.dryRun = true;
+    } else if (arg.startsWith("--test-name-pattern")) {
+      throw new Error(
+        `${arg} is not passed on; run the files it names with node --test --test-name-pattern=<pattern> <file>...`,
+      );
     } else {
       throw new Error(`unknown argument: ${arg}`);
     }
@@ -164,24 +198,17 @@ function parseArgs(argv) {
   return opts;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const opts = parseArgs(process.argv.slice(2));
     if (opts.shard && opts.shuffle && opts.seed === null) {
       throw new Error("--shard with --shuffle requires an explicit --seed");
     }
     const seed = opts.shuffle ? (opts.seed ?? (Date.now() & 0xffffffff) >>> 0) : null;
-    const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
-    const files = resolveTestFiles(pkg.scripts?.test ?? "", root);
+    const files = discoverTestFiles(root);
+    if (files.length === 0) {
+      throw new Error("no Node test files discovered");
+    }
     const args = buildNodeTestArgs(files, { shard: opts.shard, shuffle: opts.shuffle, seed });
     const selectedCount = args.length - 1;
     if (opts.shuffle) {

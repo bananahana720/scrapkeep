@@ -1,12 +1,12 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const LoopTally := preload("res://src/core/loop_tally.gd")
 const Relics := preload("res://src/build/relics.gd")
 const Items := preload("res://src/build/items.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
-const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
@@ -277,7 +277,7 @@ func shelf_offers() -> Array:
 	for i in shelf.size():
 		var offer := _offer(shelf[i]["part_id"], shelf[i]["sold"], i)
 		offer["odds"] = shelf[i].get("odds", [])
-		offer["odds_text"] = OddsReadout.text(offer["odds"])
+		offer["odds_text"] = ItemGen.odds_text(offer["odds"])
 		if shelf[i].has("set"):
 			var maker := String(shelf[i]["set"])
 			offer["set"] = maker
@@ -533,7 +533,7 @@ func top_shelf() -> Dictionary:
 		return {}
 	var locked: bool = ctx.run.heft_class() < top["lock_class"]
 	return {"part_id": top["part_id"], "name": Parts.display_name(top["part_id"]), "price": price(top["part_id"]),
-		"odds": OddsReadout.odds_for(top.get("table", TOP_RARITIES), ctx.run.class_id()), "locked": locked, "needs_class": top["lock_class"], "heft_class": ctx.run.heft_class(),
+		"odds": Parts.odds_for(top.get("table", TOP_RARITIES), ctx.run.class_id()), "locked": locked, "needs_class": top["lock_class"], "heft_class": ctx.run.heft_class(),
 		"lock_icon": "res_heft", "sold": top["sold"], "relented": talks["relented"]}
 
 
@@ -638,7 +638,7 @@ func _stock() -> Array:
 			var focused_pool := _set_pool(maker, [])
 			if not focused_pool.is_empty():
 				var focused_out: Array = []
-				var focused_odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
+				var focused_odds: Array = Parts.odds_for(SHELF_RARITIES, ctx.run.class_id())
 				var pool_copy := focused_pool.duplicate()
 				for _k in mini(SHELF_SIZE, pool_copy.size()):
 					var idx := _rng.randi_range(0, pool_copy.size() - 1)
@@ -650,22 +650,22 @@ func _stock() -> Array:
 						focused_out.append({"part_id": fill_id, "sold": false, "odds": focused_odds})
 				return focused_out
 	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
-	var deep_world := stage >= Parts.WORLD_ESCALATION_STAGE_W2
+	var deep_world := stage >= PartOffers.WORLD_ESCALATION_STAGE_W2
 	var near_set := deep_world and _set_near_complete()
 	var set_pick: String = _set_pick() if (last_call() or near_set) else ""
 	var floor_pick: Array = [set_pick] if set_pick != "" else (
 		Parts.roll_high_impact(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1, [], {}, stage, false)
 		if deep_world else Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1))
-	var picks: Array = Parts.roll_for_stage(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
-		SHELF_SIZE - floor_pick.size(), stage, floor_pick) if deep_world \
+	var picks: Array = PartOffers.roll_for_stage(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
+		SHELF_SIZE - floor_pick.size(), stage, floor_pick, {}, false, Parts.offer_ops()) if deep_world \
 		else Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE - floor_pick.size(), floor_pick)
 	var out: Array = []
 	for part_id in floor_pick:
-		var entry := {"part_id": part_id, "sold": false, "odds": [] if set_pick != "" else OddsReadout.odds_for(FLOOR_RARITIES, ctx.run.class_id())}
+		var entry := {"part_id": part_id, "sold": false, "odds": [] if set_pick != "" else Parts.odds_for(FLOOR_RARITIES, ctx.run.class_id())}
 		if set_pick != "":
 			entry["set"] = MakerSets.maker_of(part_id)
 		out.append(entry)
-	var odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
+	var odds: Array = Parts.odds_for(SHELF_RARITIES, ctx.run.class_id())
 	for part_id in picks:
 		out.append({"part_id": part_id, "sold": false, "odds": odds})
 	var rack = _rack()
@@ -783,7 +783,7 @@ func _roll_one(rarities: Array, exclude: Array = []) -> String:
 	var picks: Array = Parts.roll(_rng, rarities, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 	if not picks.is_empty():
 		return picks[0]
-	if Parts.listed_only():
+	if PartOffers.listed_only():
 		var any: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 		return any[0] if not any.is_empty() else ""
 	return ItemGen.roll_id(_rng, rarities[0])
@@ -791,10 +791,10 @@ func _roll_one(rarities: Array, exclude: Array = []) -> String:
 
 func _roll_hook(exclude: Array = []) -> Dictionary:
 	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
-	if Parts.listed_only() and not Parts.offer_pool(ctx.run.class_id(), TOP_RARITIES).is_empty():
+	if PartOffers.listed_only() and not Parts.offer_pool(ctx.run.class_id(), TOP_RARITIES).is_empty():
 		for table in [TOP_RARITIES, TOP_FALLBACK]:
 			var picks: Array = Parts.roll_high_impact(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude, {}, stage, false) \
-				if table == TOP_FALLBACK and stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+				if table == TOP_FALLBACK and stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 				else Parts.roll(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 			if not picks.is_empty():
 				return {"part_id": picks[0], "table": table}
@@ -867,8 +867,8 @@ func press_duplicate(target_part_id: String) -> Dictionary:
 
 func _stock_tri_terminal() -> Array:
 	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
-	var picks: Array = Parts.roll_for_stage(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE, stage) \
-		if stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+	var picks: Array = PartOffers.roll_for_stage(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE, stage, [], {}, false, Parts.offer_ops()) \
+		if stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 		else Parts.roll(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE)
 	var out: Array = []
 	for i in picks.size():

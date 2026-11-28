@@ -1,7 +1,6 @@
 extends RefCounted
 
 const Augments := preload("res://src/movement/augments.gd")
-const AbilityState := preload("res://src/core/ability_state.gd")
 
 
 const STICKY := 1.5
@@ -44,35 +43,3 @@ static func _lock(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array,
 				"normal": away.normalized() if away.length() > 0.01 else Vector3.UP, "body": enemy}
 	kit.lock_body = null
 	return {}
-
-
-static func burst_wait(kit) -> float:
-	if kit.mounted:
-		return INF
-	if kit.on(Augments.SPRINT):
-		if kit.sprinting:
-			return INF
-		return _slot_wait(kit.abilities, AbilityState.MOVEMENT)
-	if kit.on(Augments.BLINK):
-		if kit.cloaked and kit.knob("cloak_free_blink"):
-			return 0.0
-		return _slot_wait(kit.abilities, AbilityState.MOVEMENT)
-	if kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE) or kit.on(Augments.RECOIL):
-		return _slot_wait(kit.abilities, AbilityState.MOVEMENT)
-	return INF
-
-
-static func _slot_wait(abilities, name: String) -> float:
-	if abilities.ready(name):
-		return 0.0
-	var s = abilities.slot(name)
-	if not s.available or abilities.silenced(name):
-		return INF
-	var cd: float = abilities.cooldown_of(name)
-	if cd <= 0.0:
-		return INF
-	return maxf(0.0, cd - s.recharge)
-
-
-static func burst_ready(kit) -> bool:
-	return burst_wait(kit) <= 0.0

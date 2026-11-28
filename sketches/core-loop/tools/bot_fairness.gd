@@ -1,5 +1,6 @@
 extends RefCounted
 
+const Groups := preload("res://src/core/groups.gd")
 const TelegraphScript := preload("res://src/combat/telegraph.gd")
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 
@@ -7,6 +8,10 @@ const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const CONFIG_FILE := "scripts/challenge/fairness.json"
 
 static var _config := {}
+
+
+static func reset_for_tests() -> void:
+	_config = {}
 
 var game
 var boss_hazards := Callable()
@@ -127,7 +132,7 @@ func _open_segment(key: String) -> void:
 func _enemy_near() -> bool:
 	var ball: Vector3 = game.player.ball_position()
 	var reach: float = float(config()["contactM"])
-	for node in game.get_tree().get_nodes_in_group("enemy"):
+	for node in game.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not node is Node3D or not is_instance_valid(node):
 			continue
 		if node.has_method("is_dead") and node.is_dead():
@@ -141,7 +146,7 @@ func _scan(mark: bool) -> Array:
 	var out: Array = []
 	var ids := {}
 	var ball: Vector3 = game.player.ball_position()
-	for node in game.get_tree().get_nodes_in_group("enemy"):
+	for node in game.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if is_instance_valid(node) and node.has_method("telegraph"):
 			var t = node.telegraph()
 			if t != null:
@@ -155,7 +160,7 @@ func _scan(mark: bool) -> Array:
 			var ring = child.get("ring")
 			if ring != null and is_instance_valid(ring):
 				_add(out, ids, ring, "lobber", ball, mark)
-	for node in game.get_tree().get_nodes_in_group("world_telegraphs"):
+	for node in game.get_tree().get_nodes_in_group(Groups.WORLD_TELEGRAPHS):
 		if is_instance_valid(node) and node.has_method("telegraphs"):
 			for t in node.telegraphs(ball):
 				_add_row(out, ids, int(t["id"]), "world", String(t["cause"]), bool(t["covers"]), mark)

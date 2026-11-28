@@ -7,6 +7,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Rows := preload("res://src/presentation/flourish_rows.gd")
 const Cues := preload("res://src/presentation/flourish_cues.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # Ruling bv: Brindle's entrance is on screen. The bowl entry aims the camera down the track and
 # the Requisition lands across the bowl, off to one side, so his card and HONK played with the
@@ -126,12 +127,12 @@ func _rig_checks() -> void:
 	_t.check("G5 a stick push ends it", not cam.glancing(), "")
 
 	cam.snap(Vector3.FORWARD)
-	cam.reduced_motion = true
+	Comfort.reduced_motion = true
 	yaw_then = cam.yaw
 	cam.glance_at(subject, 0.9)
 	_step(cam, 60)
 	_t.check("G6 reduced motion refuses it", not cam.glancing() and is_equal_approx(cam.yaw, yaw_then), "")
-	cam.reduced_motion = false
+	Comfort.reduced_motion = false
 
 	cam.glance_at(subject, 0.9)
 	cam.snap(Vector3.FORWARD)

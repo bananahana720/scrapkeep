@@ -10,13 +10,13 @@ const ShopTile := preload("res://src/ui/shop_tile.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
 const Workshop := preload("res://src/ui/workshop.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
-const MossBubble := preload("res://src/ui/moss_bubble.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const TreePick := preload("res://src/ui/tree_pick.gd")
 const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # The Keeper screens in the Keeper's hand (LEGIBILITY.md section 14.3, ruling ek, unit E2-12):
 #   - every frame the pilot cards, the tree pick's cards, Moss's counter and its tiles, and the talk bubble
@@ -85,9 +85,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	UiTokens.reduced_motion = false
-	MossBubble.reduced_motion = false
-	CallerTile.reduced_motion = false
+	Comfort.reduced_motion = false
 	_planted()
 	_pilot_cards()
 	_tree_cards()
@@ -100,9 +98,7 @@ func _run() -> void:
 	_words()
 	_game.queue_free()
 	await _frames(2)
-	UiTokens.reduced_motion = false
-	MossBubble.reduced_motion = false
-	CallerTile.reduced_motion = false
+	Comfort.reduced_motion = false
 	quit(_t.verdict())
 
 
@@ -350,17 +346,17 @@ func _motion() -> void:
 		level.tilt = 0.0
 		if _points(box) != _points(level):
 			leaning += 1
-		UiTokens.reduced_motion = true
+		Comfort.reduced_motion = true
 		_t.eq("serial %d: with less motion a Keeper plate stands straight" % serial, _points(box), _points(level))
-		UiTokens.reduced_motion = false
+		Comfort.reduced_motion = false
 	_t.check("with motion on, Keeper plates lean", leaning > 0, "%d of 8" % leaning)
 	_t.eq("with less motion the Keeper's frames move without overshoot", (func():
-		UiTokens.reduced_motion = true
+		Comfort.reduced_motion = true
 		var trans: int = UiTokens.hand(KEEPER).trans
-		UiTokens.reduced_motion = false
+		Comfort.reduced_motion = false
 		return trans).call(), Tween.TRANS_LINEAR)
 	for still in [false, true]:
-		MossBubble.reduced_motion = still
+		Comfort.reduced_motion = still
 		for record in [{"text": "probe", "relent": true}, {"text": "probe", "restart": true}]:
 			var bubble = _game.workshop().bubble
 			bubble.beat(record)
@@ -368,12 +364,12 @@ func _motion() -> void:
 			_t.check("Moss's %s %s" % ["relent" if record.has("relent") else "restart",
 				"comes up whole with less motion" if still else "pops with motion on"], whole == still, "pop %.2f spin %.2f" % [bubble._pop, bubble._spin])
 			bubble.hush()
-	MossBubble.reduced_motion = false
+	Comfort.reduced_motion = false
 	for still in [false, true]:
 		var peak: float = await _taken_pop(still)
 		_t.check("the tree pick's taken card %s" % ("holds its size with less motion" if still else "pops with motion on"),
 			(peak <= 1.0001) == still, "peak scale %.3f" % peak)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 
 
 # The largest the taken card grows as the tree pick closes on it.
@@ -384,11 +380,11 @@ func _taken_pop(still: bool) -> float:
 	host.add_child(pick)
 	var nodes := [{"id": "e2_12_a", "name": "Probe A", "effect": "a", "key": "weapon", "knob": {}},
 		{"id": "e2_12_b", "name": "Probe B", "effect": "b", "key": "weapon", "knob": {}}]
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	pick.open("pylon_engineer", 1, nodes, [], Palette.COPPER)
 	await _frames(2)
 	var taken: Control = pick.cards()[0]
-	UiTokens.reduced_motion = still
+	Comfort.reduced_motion = still
 	pick.close(0)
 	# Half a second of the engine's own frame time: the pop and the fade both end inside it.
 	var peak := 0.0

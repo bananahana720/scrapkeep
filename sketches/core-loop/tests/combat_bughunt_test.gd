@@ -66,7 +66,7 @@ func _daisy_chain() -> void:
 		var c: Dictionary = _combat.sticky.drop(base + Vector3(float(i), 0.0, 0.0), 1.0, 1.0, 99.0, 0.0)
 		if i == 0:
 			first = c
-	_combat._detonate(_combat.sticky.take(first))
+	_combat.detonate(_combat.sticky.take(first))
 	_game.player.tree._knobs.erase("sticky_chain")
 	_game.events.sticky_detonated.disconnect(count)
 	_report("F001 chain", seen.size() == 3 and _combat.sticky.charges.is_empty(),
@@ -149,7 +149,7 @@ func _would_crush() -> void:
 # F009: a trick found in run 1 and again in run 2 is in run 2's log once.
 func _discovery_log() -> void:
 	var at: Vector3 = _game.player.ball_position()
-	_combat._discover("chain", at)
+	_combat.discover("chain", at)
 	_game.events.run_started.emit("rivet")
-	_combat._discover("chain", at)
+	_combat.discover("chain", at)
 	_report("F009 log", _combat.discovery_log == ["chain"], "run 2's discovery_log: %s" % [_combat.discovery_log])

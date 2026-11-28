@@ -2,7 +2,7 @@ extends RefCounted
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Bindings := preload("res://src/core/bindings.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const Icons := preload("res://src/ui/icons.gd")
 
 

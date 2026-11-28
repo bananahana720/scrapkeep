@@ -8,7 +8,6 @@ const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculpto
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const VistaMegas := preload("res://src/presentation/craft/vista_megastructures.gd")
 const AtmoRig := preload("res://src/presentation/craft/vista_atmosphere_rig.gd")
-const AudioCues := preload("res://src/presentation/craft/craft_audio_cues.gd")
 
 var _t := T.new("craft_pipeline_integration_test")
 
@@ -112,10 +111,6 @@ func _run() -> void:
 		vistas != null and vistas.get_vista_records().size() == 22
 		and rig != null and rig.get_particle_systems().size() >= 3 and rig.get_bounce_lights().size() == 6)
 
-	var audio_report := AudioCues.audit_manifest()
-	_t.check("all 4 experimental audio stems resolve in integrated pipeline",
-		int(audio_report["resolved"]) == 4 and (audio_report["missing"] as Array).is_empty())
-
 	var q_low := Assembly.apply_quality_tier(arena, "low")
 	var sun_node := arena.get_node_or_null("SunKey") as DirectionalLight3D
 	_t.check("quality tier 'low' disables SSAO/SSIL/volumetric fog/particles and scales shadow bias against low-res acne while keeping AgX",
@@ -144,12 +139,12 @@ func _run() -> void:
 		and we.environment.glow_hdr_threshold >= Assembly.SELECTIVE_GLOW_THRESHOLD_MIN)
 
 	FlashGuard.on = true
-	Assembly.sync_accessibility(arena, true)
+	Assembly.assemble_into(arena)
 	var plasma_mat := Lookdev.preset_material("plasma_conduit_core")
 	_t.check("FlashGuard propagates reduce_flashes=true into CraftLookdev master weathering shaders",
 		plasma_mat != null and bool(plasma_mat.get_shader_parameter("reduce_flashes")) == true)
 	FlashGuard.on = false
-	Assembly.sync_accessibility(arena, false)
+	Assembly.assemble_into(arena)
 	_t.check("FlashGuard restores reduce_flashes=false cleanly",
 		plasma_mat != null and bool(plasma_mat.get_shader_parameter("reduce_flashes")) == false)
 

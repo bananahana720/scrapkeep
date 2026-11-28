@@ -624,7 +624,7 @@ func _post_start() -> void:
 func _check_post() -> void:
 	var aim := _aim_flat()
 	var side := aim.cross(Vector3.UP).normalized()
-	var anchor: Vector3 = _combat._floor_at(_player.ball_position() + aim * 12.0 + Vector3.UP * 4.0)
+	var anchor: Vector3 = _combat.floor_at(_player.ball_position() + aim * 12.0 + Vector3.UP * 4.0)
 	_player.grapple_to(anchor, Vector3.UP, null)
 	var body: RigidBody3D = _player.body()
 	body.linear_velocity = Vector3.ZERO
@@ -810,7 +810,7 @@ func _check_balance() -> void:
 	# reaching full 22.0 weight at 14 m/s cruise (gain 14.0 from standstill 8.0, capped at 22.0).
 	var a: float = _record["a"]
 	var b := _balance_force(_record["from"])
-	var want: float = (Weapons.STAMP_MAX - Weapons.STAMP_BASE) * _combat._damage_mod(Weapons.LEDGER_READER)
+	var want: float = (Weapons.STAMP_MAX - Weapons.STAMP_BASE) * _combat.damage_mod(Weapons.LEDGER_READER)
 	_t.check("balance due grows with speed", a > 0.0 and b > a and absf((b - a) - want) <= want * 0.1,
 		"at rest %.2f, at %.1f m/s %.2f, gain %.2f, want %.2f" % [a, _record["speed"], b, b - a, want])
 
@@ -976,7 +976,7 @@ func _balance_aim_ready() -> bool:
 	var space: PhysicsDirectSpaceState3D = _game.get_world_3d().direct_space_state
 	var sight := Hitscan.aim(space, _game.ctx.aim_origin(), _game.ctx.aim_forward(),
 		_player.ball_position(), Weapons.CARD_REACH + _combat.AIM_SLACK)
-	var aim: Dictionary = _combat._card_aim()
+	var aim: Dictionary = _combat.card_aim()
 	if bool(sight["on_enemy"]) and bool(aim["valid"]) and _player.abilities.selected == AbilityState.WEAPON \
 			and _player.abilities.ready(AbilityState.WEAPON) and _combat._cooldown <= 0.0:
 		return true
@@ -990,7 +990,7 @@ func _balance_shot_arrived() -> bool:
 func _balance_state() -> String:
 	return str({"wait_start": _wait_start_frame, "physics_frame": Engine.get_physics_frames(),
 		"deadline": _wait_start_frame + 2 * Engine.physics_ticks_per_second,
-		"aim": _combat._card_aim(), "selected": _player.abilities.selected,
+		"aim": _combat.card_aim(), "selected": _player.abilities.selected,
 		"ready": _player.abilities.ready(AbilityState.WEAPON), "charges": _charges(),
 		"cooldown": _combat._cooldown, "forward": _game.ctx.aim_forward(),
 		"shots": _shots.slice(_record.get("shots_from", _shots.size())),

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -24,8 +24,7 @@ const readAll = () =>
     file,
     text: readFileSync(file, "utf8"),
   }));
-const byKind = (findings, kind) =>
-  findings.filter((f) => f.signature.kind === kind);
+const byKind = (findings, kind) => findings.filter((f) => f.signature.kind === kind);
 
 test("normalize drops the numbers that change between runs", () => {
   assert.equal(
@@ -36,10 +35,9 @@ test("normalize drops the numbers that change between runs", () => {
 
 test("parseLog reads a Godot 4.7 script error with its first game frame", () => {
   const [event] = parseLog(
-    readFileSync(
-      path.join(fixtures, "jobs/speedrunner-tally-35010/log.txt"),
-      "utf8",
-    ).split("bot_run")[0],
+    readFileSync(path.join(fixtures, "jobs/speedrunner-tally-35010/log.txt"), "utf8").split(
+      "bot_run",
+    )[0],
   );
   assert.equal(event.kind, "script");
   assert.equal(signature(event).where, "res://src/enemies/brindle.gd:418");
@@ -54,9 +52,7 @@ test("warnings are not findings, and only log files are read", () => {
 
 test("one script error across runs and colour codes is one major with every run", () => {
   const findings = harvest(readAll(), { base: fixtures });
-  const brindle = findings.filter(
-    (f) => f.signature.where === "res://src/enemies/brindle.gd:418",
-  );
+  const brindle = findings.filter((f) => f.signature.where === "res://src/enemies/brindle.gd:418");
   assert.equal(brindle.length, 1);
   assert.equal(brindle[0].severity, "major");
   assert.equal(brindle[0].count, 3);
@@ -69,18 +65,11 @@ test("one script error across runs and colour codes is one major with every run"
 test("a crash is a blocker, keyed by its script frame or else its native frames", () => {
   const crashes = byKind(harvest(readAll(), { base: fixtures }), "crash");
   assert.equal(crashes.length, 2);
-  assert.ok(
-    crashes.every((f) => f.severity === "blocker" && f.area === "stability"),
-  );
-  const scripted = crashes.find(
-    (f) => f.signature.where === "res://src/player/harpoon_pool.gd:41",
-  );
+  assert.ok(crashes.every((f) => f.severity === "blocker" && f.area === "stability"));
+  const scripted = crashes.find((f) => f.signature.where === "res://src/player/harpoon_pool.gd:41");
   assert.match(scripted.signature.message, /^Program crashed with signal 11$/);
   const native = crashes.find((f) => f.runs[0].id === "native-crash");
-  assert.equal(
-    native.signature.where,
-    "main+1a2b3c < main+2b3c4d < main+3c4d5e",
-  );
+  assert.equal(native.signature.where, "main+1a2b3c < main+2b3c4d < main+3c4d5e");
 });
 
 test("parse errors and scripts that fail to load are majors; engine errors are minors", () => {
@@ -96,55 +85,42 @@ test("parse errors and scripts that fail to load are majors; engine errors are m
 
 test("findings rank blocker first and carry seeded runs in the red team's shape", () => {
   const findings = harvest(readAll(), { base: fixtures });
-  assert.deepEqual(
-    [...new Set(findings.map((f) => f.severity))],
-    ["blocker", "major", "minor"],
-  );
+  assert.deepEqual([...new Set(findings.map((f) => f.severity))], ["blocker", "major", "minor"]);
   for (const f of findings)
     for (const key of ["severity", "area", "key", "title", "feel", "runs"])
       assert.ok(key in f, key);
   const carry = carryList(findings);
   assert.ok(
-    carry.some(
-      (c) =>
-        c.pilot === "tally" && c.seed === 35010 && c.persona === "speedrunner",
-    ),
+    carry.some((c) => c.pilot === "tally" && c.seed === 35010 && c.persona === "speedrunner"),
   );
 });
 
 test("runOf names red team jobs and plain logs", () => {
-  assert.deepEqual(
-    runOf("/x/jobs/line-rider-pylon_engineer-2604/log.txt", "/x"),
-    {
-      id: "line-rider-pylon_engineer-2604",
-      persona: "line-rider",
-      pilot: "pylon_engineer",
-      seed: 2604,
-      log: "jobs/line-rider-pylon_engineer-2604/log.txt",
-    },
-  );
+  assert.deepEqual(runOf("/x/jobs/line-rider-pylon_engineer-2604/log.txt", "/x"), {
+    id: "line-rider-pylon_engineer-2604",
+    persona: "line-rider",
+    pilot: "pylon_engineer",
+    seed: 2604,
+    log: "jobs/line-rider-pylon_engineer-2604/log.txt",
+  });
   assert.equal(runOf("/x/export.txt", "/x").id, "export");
   assert.equal(runOf("/x/export.txt", "/x").seed, null);
 });
 
 test("--ignore drops matching signatures and --fail-on sets the exit", () => {
   const out = mkdtempSync(path.join(os.tmpdir(), "crash-harvest-"));
-  const quiet = () => {};
-  assert.equal(main([`--out=${out}`, fixtures], quiet), 0);
-  const written = JSON.parse(
-    readFileSync(path.join(out, "findings.json"), "utf8"),
-  );
-  assert.equal(
-    written.findings.filter((f) => f.severity === "blocker").length,
-    2,
-  );
-  assert.deepEqual(written.runs, []);
-  assert.equal(main(["--fail-on=blocker", fixtures], quiet), 1);
-  assert.equal(
-    main(["--fail-on=blocker", "--ignore=^crash:", fixtures], quiet),
-    0,
-  );
-  assert.equal(main([path.join(out, "missing")], quiet), 2);
+  try {
+    const quiet = () => {};
+    assert.equal(main([`--out=${out}`, fixtures], quiet), 0);
+    const written = JSON.parse(readFileSync(path.join(out, "findings.json"), "utf8"));
+    assert.equal(written.findings.filter((f) => f.severity === "blocker").length, 2);
+    assert.deepEqual(written.runs, []);
+    assert.equal(main(["--fail-on=blocker", fixtures], quiet), 1);
+    assert.equal(main(["--fail-on=blocker", "--ignore=^crash:", fixtures], quiet), 0);
+    assert.equal(main([path.join(out, "missing")], quiet), 2);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
 });
 
 test("a stdout line between a header and its at: line does not split the signature", () => {
@@ -171,9 +147,7 @@ test("a crash keys on its frame, not on the error printed near it", () => {
     [
       {
         file: "/x/a.txt",
-        text: dump(
-          "ERROR: pool exhausted at slot 3\n   at: push_error (core/v.cpp:1)\n",
-        ),
+        text: dump("ERROR: pool exhausted at slot 3\n   at: push_error (core/v.cpp:1)\n"),
       },
       {
         file: "/x/b.txt",
@@ -197,31 +171,74 @@ test("digits in res:// paths stay, so different assets stay different findings",
 
 test("findings.json carries what scripts/redteam/merge.mjs reads, and runs keep the red team's fields", () => {
   const out = mkdtempSync(path.join(os.tmpdir(), "crash-harvest-"));
-  assert.equal(
-    main(
-      [`--out=${out}`, "--wave=16", "--commit=cf63e622b0", fixtures],
-      () => {},
-    ),
-    0,
-  );
-  const written = JSON.parse(
-    readFileSync(path.join(out, "findings.json"), "utf8"),
-  );
-  assert.equal(written.wave, 16);
-  assert.equal(typeof written.commit, "string");
-  assert.equal(typeof written.started, "string");
-  assert.equal(written.minutes, 0);
-  assert.deepEqual(written.extras, {});
-  for (const f of written.findings)
-    for (const r of f.runs)
-      for (const key of [
-        "id",
-        "persona",
-        "pilot",
-        "seed",
-        "note",
-        "replay",
-        "carry",
-      ])
-        assert.ok(key in r, key);
+  try {
+    assert.equal(
+      main([`--out=${out}`, "--wave=16", "--commit=cf63e622b0", fixtures], () => {}),
+      0,
+    );
+    const written = JSON.parse(readFileSync(path.join(out, "findings.json"), "utf8"));
+    assert.equal(written.wave, 16);
+    assert.equal(typeof written.commit, "string");
+    assert.equal(typeof written.started, "string");
+    assert.equal(written.minutes, 0);
+    assert.deepEqual(written.extras, {});
+    for (const f of written.findings)
+      for (const r of f.runs)
+        for (const key of ["id", "persona", "pilot", "seed", "note", "replay", "carry"])
+          assert.ok(key in r, key);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("collect sorts by code unit (B < _ < a) and follows symlinked directories without EISDIR", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "crash-harvest-walk-"));
+  const target = mkdtempSync(path.join(os.tmpdir(), "crash-harvest-link-"));
+  try {
+    writeFileSync(path.join(dir, "a.log"), "ok\n");
+    writeFileSync(path.join(dir, "B.log"), "ok\n");
+    writeFileSync(path.join(dir, "_.log"), "ok\n");
+    writeFileSync(path.join(target, "inner.log"), "ok\n");
+    symlinkSync(target, path.join(dir, "log"));
+
+    const { files, skipped } = collect([dir]);
+    assert.deepEqual(
+      files.map((f) => path.relative(dir, f).split(path.sep).join("/")),
+      ["B.log", "_.log", "a.log", "log/inner.log"],
+    );
+    assert.deepEqual(skipped, []);
+    assert.equal(
+      main([dir], () => {}),
+      0,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(target, { recursive: true, force: true });
+  }
+});
+
+test("collect names a broken link and what it pointed to, and does not harvest it", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "crash-harvest-broken-"));
+  try {
+    writeFileSync(path.join(dir, "a.log"), "ok\n");
+    const gone = path.join(dir, "rotated.log.1");
+    symlinkSync(gone, path.join(dir, "latest.log"));
+    const lone = path.join(dir, "lone.log");
+    symlinkSync(gone, lone);
+    const { files, skipped } = collect([dir, path.join(dir, "nothing.log")]);
+    assert.deepEqual(files, [path.join(dir, "a.log")]);
+    assert.deepEqual(skipped, [
+      `${path.join(dir, "latest.log")} (broken link to ${gone})`,
+      `${lone} (broken link to ${gone})`,
+      `${path.join(dir, "nothing.log")} (missing)`,
+    ]);
+    const lines = [];
+    assert.equal(
+      main([lone], (line) => lines.push(line)),
+      2,
+    );
+    assert.match(lines.join("\n"), /broken link to /);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

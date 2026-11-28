@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
   existsSync,
@@ -26,10 +25,12 @@ import {
   renderGates,
   summarizeRun,
 } from "./gates-lib.mjs";
+import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
 import { pool, runProcess, stateEnv } from "./proc.mjs";
+import { gitOptional } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const godot = process.env.GODOT_BIN;
+const godot = resolveGodotBinary({ requireExplicit: true });
 const outRoot = path.join(root, "artifacts/local/challenge");
 const KIND_TIMEOUT_MS = 40 * 60_000;
 const DRIVER = path.join(root, "sketches/core-loop/tools/bot_driver.gd");
@@ -131,7 +132,7 @@ async function runGates() {
     `${jobs.length} jobs (${arms.map((a) => `${a} ${jobs.filter((j) => j.arm === a).length}`).join(", ")}) at --fixed-fps 90, ${opts.jobs} parallel`,
   );
   if (opts.dryRun) return;
-  if (!godot || !existsSync(godot)) die("set GODOT_BIN to the Godot 4.7.2 editor");
+  if (!godot || !existsSync(godot)) die(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor`);
   if (!existsSync(path.join(root, "sketches/core-loop/.godot/global_script_class_cache.cfg")))
     die(
       "this worktree was never imported; run $GODOT_BIN --headless --path sketches/core-loop --import first",
@@ -139,9 +140,7 @@ async function runGates() {
   const label = opts.label ?? "gates-" + stamp;
   const outDir = path.join(outRoot, label);
   const runsFile = path.join(outDir, "runs.ndjson");
-  const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], {
-    encoding: "utf8",
-  }).stdout.trim();
+  const commit = gitOptional(["rev-parse", "HEAD"], { cwd: root }) ?? "";
   const plan = hashString(
     JSON.stringify([arms, opts.stages, opts.seeds, opts.runs, opts.tune, opts.stageLimit]),
   );

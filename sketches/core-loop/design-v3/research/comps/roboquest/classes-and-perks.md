@@ -59,7 +59,7 @@ Source check: the default-class baseline row and the perk header-row split were 
 
 ## What Scrapkeep borrows
 
-Principles: **class identities** and **three characters with their own movement** (Andrew's, `docs/playtests/PLAYTEST-LOG.md` line 83). Bible anchors, each checked with `grep -n` on BIBLE.md: "5.1 Shared baseline and class roles" (`BIBLE.md:398`), "Four slots and milestone progression" (`BIBLE.md:527`), "Abilities, ultimates and combat rhythm" (`BIBLE.md:499`) and "Movement, camera and active aim" (`BIBLE.md:479`). TADR-008 is the ability contract a kit would be bound to, and TADR-011 the crew amendment that adds a drone-partner-like role to the crew rather than to a class. Everything below is proposal.
+Principles: **class identities** and **three characters with their own movement** (Andrew's, `docs/playtests/PLAYTEST-LOG.md` line 83). Bible anchors, each checked with `grep -n` on BIBLE.md: "5.1 Shared baseline and class roles" (`BIBLE.md:398`), "Four slots and milestone progression" (`BIBLE.md:527`), "Abilities, ultimates and combat rhythm" (`BIBLE.md:499`) and "Movement, camera and active aim" (`BIBLE.md:479`). TADR-008 is the ability contract a kit would be bound to, and TADR-013 the crew amendment that adds a drone-partner-like role to the crew rather than to a class. Everything below is proposal.
 
 - **Describe a character as baseline plus kit plus pool.** Scrapkeep already has the kit as four slots, each a binary tree of eight endpoints; the pool is where the Roboquest relationship lands. Scrapkeep's three characters differ in baseline (health and per-level growth ratios such as the 2:1 and 1.5:1 seen here), the mobility slot, and which tree nodes lean toward which ability.
 - **Level-up offers of two or three drawn from a class-weighted pool, with a shared pool beside it.** For Scrapkeep this is a candidate for the choice between the tree's fork nodes and found items, not a replacement for the tree (a binary tree is already settled in the Bible at line 527). Propose offer counts of 2 or 3 and a declared class-weighted share of 60% to 80% so characters meet different shelves.
@@ -74,7 +74,7 @@ Principles: **class identities** and **three characters with their own movement*
 - Perk names, text, the counts 54 / 58 / 76 / 37 / 46 / 45 / 59 and their category structure as a list.
 - Baseline numbers (200 and 100 health, 30 and 20 per level, slot counts) as Scrapkeep values.
 - Hidden or unfilled fields: Scrapkeep states what the player needs to compare offers.
-- A drone-partner class as a class: crew roles come from TADR-011, which is not a class feature.
+- A drone-partner class as a class: crew roles come from TADR-013, which is not a class feature.
 - Camp currency names and upgrade lists.
 
 ## Lab measure

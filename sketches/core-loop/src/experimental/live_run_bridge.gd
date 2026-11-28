@@ -13,6 +13,7 @@ const ExperimentalAudioBank := preload("res://src/presentation/experimental_audi
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const LiveWorldActors := preload("res://src/experimental/live_world_actors.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const FLAG_ARG_ON := "--experimental-depth=on"
 const FLAG_ARG_OFF := "--experimental-depth=off"
@@ -89,6 +90,7 @@ var stage_index := 1
 var biome_id: StringName = &""
 var sim_time_s := 0.0
 var configured := false
+var audio_cooldowns: Dictionary = {}
 
 var env_tags: RefCounted = null
 var synergies: RefCounted = null
@@ -111,10 +113,6 @@ var _live_stale := false
 var _live_links: Array[Dictionary] = []
 var _live_site: Dictionary = {}
 var live_actors: Node3D = null
-
-
-static func _reset() -> void:
-	ExperimentalAudioBank._reset()
 
 
 static func is_enabled(args: Variant = null, env: Variant = null) -> bool:
@@ -216,7 +214,7 @@ func configure_stage(
 		add_child(setpieces)
 		var sp_opts := {
 			"seed": seed_value,
-			"cruise_speed": float(opts.get("cruise_speed", 14.0)),
+			"cruise_speed": float(opts.get("cruise_speed", Tuning.CRUISE_MPS)),
 		}
 		setpiece_info = setpieces.setup_from_chunk(chunk_root, sp_opts)
 
@@ -271,7 +269,7 @@ func step(dt: float, run_ctx: Dictionary = {}) -> Dictionary:
 	var ball_pos: Vector3 = run_ctx.get("ball_pos", Vector3.ZERO)
 	var ball_vel: Vector3 = run_ctx.get("ball_vel", Vector3.ZERO)
 	var speed := Vector2(ball_vel.x, ball_vel.z).length()
-	var cruise_mps := float(run_ctx.get("cruise_mps", 14.0))
+	var cruise_mps := float(run_ctx.get("cruise_mps", Tuning.CRUISE_MPS))
 	var alive_count := int(run_ctx.get("alive_count", 0))
 	var grounded := bool(run_ctx.get("grounded", true))
 	var heft_tier := int(run_ctx.get("heft_tier", 1))
@@ -326,10 +324,10 @@ func trigger_audio_cue(event_id: String, force: bool = false) -> Dictionary:
 	var is_loop := bool(spec.get("loop", false))
 	if is_loop and bool(_active_loops.get(event_id, false)) and not force:
 		return {"triggered": false, "reason": "loop_already_active", "event_id": event_id}
-	if not force and not ExperimentalAudioBank.can_trigger(event_id, sim_time_s):
+	if not force and not ExperimentalAudioBank.can_trigger(event_id, sim_time_s, audio_cooldowns):
 		return {"triggered": false, "reason": "cooldown", "event_id": event_id}
 
-	ExperimentalAudioBank.mark_triggered(event_id, sim_time_s)
+	ExperimentalAudioBank.mark_triggered(event_id, sim_time_s, audio_cooldowns)
 	var player := _ensure_audio_player(event_id)
 	var player_ok := false
 	if player != null:
@@ -546,9 +544,9 @@ func _build_chunk_foundation_and_ramp(holder: Node3D, site: Dictionary) -> void:
 	holder.add_child(body)
 	var st_skirt := SurfaceTool.new()
 	st_skirt.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var c_flat := CampCraftMeshes.vc(0.18, 0.34)
-	var c_edge := CampCraftMeshes.vc(0.62, 0.16)
-	var c_bot := CampCraftMeshes.vc(0.08, 0.78)
+	var c_flat := CraftLookdev.encode_mask(0.18, 0.34)
+	var c_edge := CraftLookdev.encode_mask(0.62, 0.16)
+	var c_bot := CraftLookdev.encode_mask(0.08, 0.78)
 	var skirt_center := Vector3(0.0, -0.35 - skirt_h * 0.5, 0.0)
 	CampCraftMeshes.add_bevel_box(st_skirt, skirt_center, skirt_size, 0.45, 0.12, Transform3D.IDENTITY, c_flat, c_edge, c_bot)
 	st_skirt.generate_tangents()
@@ -768,7 +766,7 @@ func _dispatch_live(trigger: StringName, origin: Vector3, dir: Vector3 = Vector3
 func teardown() -> void:
 	_disconnect_signals()
 	_free_live_actors()
-	ExperimentalAudioBank.reset_cooldowns()
+	audio_cooldowns.clear()
 	for event_id in _active_loops.keys():
 		if _audio_players.has(event_id):
 			var p := _audio_players[event_id] as AudioStreamPlayer
@@ -888,7 +886,7 @@ func _wire_signals() -> void:
 			inst.synergies.dispatch(PartResource.TRIG_ON_PROP_RUPTURE, {
 				"origin": receipt.get("origin", Vector3.ZERO),
 				"prop_id": String(receipt.get("prop_id", "")),
-				"ball_speed_mps": 14.0,
+				"ball_speed_mps": Tuning.CRUISE_MPS,
 			})
 	)
 

@@ -4,6 +4,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const HEAT_HAZE_SHADER := preload("res://assets/shaders/craft_heat_haze.gdshader")
 
 const COMBAT_CLEAR_FOG_BEGIN_M := 68.0
@@ -169,7 +170,6 @@ const QUALITY_TIERS := {
 
 @export var preset_name := "smelter_dawn"
 @export var quality_tier := "high"
-@export var reduced_motion := false
 
 var _built := false
 var _environment: Environment
@@ -302,7 +302,7 @@ func build_atmosphere() -> void:
 		var pool := parent_node.get_node_or_null("BounceLightPool") as Node3D
 		if pool != null:
 			bind_bounce_pool(pool)
-	apply_accessibility(reduced_motion)
+	apply_accessibility()
 
 
 func apply_preset(name_id: String) -> Environment:
@@ -352,7 +352,7 @@ func apply_quality_tier(tier: String) -> Dictionary:
 			sun.shadow_bias = float(q["shadow_bias"])
 			sun.shadow_normal_bias = float(q["shadow_normal_bias"])
 	if show_particles:
-		apply_accessibility(reduced_motion)
+		apply_accessibility()
 	return {
 		"tier": quality_tier,
 		"ssao": _environment.ssao_enabled if _environment != null else false,
@@ -393,22 +393,16 @@ func bind_bounce_pool(pool_root: Node3D) -> int:
 			"pulse_hz": float(spec.get("pulse_hz", 0.42)),
 			"amp": float(spec.get("amp", 0.12)),
 		})
-	apply_accessibility(reduced_motion)
+	apply_accessibility()
 	return _bounce_lights.size()
 
 
-func set_reduced_motion(enabled: bool) -> void:
-	reduced_motion = enabled
-	apply_accessibility(enabled)
-
-
-func apply_accessibility(reduced_motion_on: bool) -> void:
-	reduced_motion = reduced_motion_on
+func apply_accessibility() -> void:
 	for p in _particles:
 		if not is_instance_valid(p):
 			continue
 		var cosmetic_spark := String(p.name).begins_with("Ember")
-		if reduced_motion:
+		if Comfort.reduced_motion:
 			p.speed_scale = 0.0
 			if cosmetic_spark:
 				p.emitting = false
@@ -417,7 +411,7 @@ func apply_accessibility(reduced_motion_on: bool) -> void:
 			p.emitting = true
 	for mat in _haze_materials:
 		if is_instance_valid(mat):
-			mat.set_shader_parameter("reduced_motion", 1.0 if reduced_motion else 0.0)
+			mat.set_shader_parameter("reduced_motion", 1.0 if Comfort.reduced_motion else 0.0)
 			mat.set_shader_parameter("reduce_flashes", 1.0 if FlashGuard.on else 0.0)
 	for entry in _bounce_lights:
 		var omni: OmniLight3D = entry["light"]
@@ -429,7 +423,7 @@ func apply_accessibility(reduced_motion_on: bool) -> void:
 func step_atmosphere(delta: float) -> void:
 	if not _built or delta <= 0.0:
 		return
-	if not reduced_motion:
+	if not Comfort.reduced_motion:
 		_anim_time += delta
 	for i in _cables.size():
 		var entry: Dictionary = _cables[i]
@@ -437,7 +431,7 @@ func step_atmosphere(delta: float) -> void:
 		if not is_instance_valid(cable):
 			continue
 		var base_pos: Vector3 = entry["base_pos"]
-		if reduced_motion:
+		if Comfort.reduced_motion:
 			cable.position = base_pos
 		else:
 			var sway_amt: float = entry["sway"]
@@ -446,7 +440,7 @@ func step_atmosphere(delta: float) -> void:
 			cable.position = base_pos + sway_dir * (sin(phase) * sway_amt)
 	for mat in _haze_materials:
 		if is_instance_valid(mat):
-			mat.set_shader_parameter("reduced_motion", 1.0 if reduced_motion else 0.0)
+			mat.set_shader_parameter("reduced_motion", 1.0 if Comfort.reduced_motion else 0.0)
 			mat.set_shader_parameter("reduce_flashes", 1.0 if FlashGuard.on else 0.0)
 	for i in _bounce_lights.size():
 		var entry: Dictionary = _bounce_lights[i]
@@ -454,7 +448,7 @@ func step_atmosphere(delta: float) -> void:
 		if not is_instance_valid(omni):
 			continue
 		var base_e: float = entry["base_energy"]
-		if reduced_motion:
+		if Comfort.reduced_motion:
 			omni.light_energy = FlashGuard.spike(base_e * 0.85, base_e)
 		else:
 			var hz := FlashGuard.rate(float(entry["pulse_hz"]))

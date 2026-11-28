@@ -89,10 +89,6 @@ func _unbind_whip_bus() -> void:
 			_reaction_bus.grapple_fired.disconnect(_on_player_grapple_whip)
 
 
-func is_whipping() -> bool:
-	return _whipping or _whip_armed
-
-
 func in_whip_crest() -> bool:
 	if _whip_armed:
 		return _whip_clock >= WHIP_WARN * WHIP_CREST_START

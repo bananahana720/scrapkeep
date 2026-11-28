@@ -2,6 +2,7 @@ extends Node
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
@@ -101,7 +102,7 @@ func _alive(enemy) -> bool:
 
 
 func _protected(enemy: Node3D) -> bool:
-	return enemy.has_method("_apply_posture") or combat._target_class(enemy) == "boss"
+	return enemy.has_method("_apply_posture") or combat.target_class_of(enemy) == "boss"
 
 
 func _movable(enemy) -> bool:
@@ -127,12 +128,12 @@ func _release(enemy: Node3D) -> void:
 
 
 func _enemies() -> Array:
-	return get_tree().get_nodes_in_group("enemy").filter(func(enemy): return _alive(enemy))
+	return get_tree().get_nodes_in_group(Groups.ENEMY).filter(func(enemy): return _alive(enemy))
 
 
 func _mark(enemy: Node3D, seconds: float) -> void:
 	if _alive(enemy) and not _protected(enemy):
-		combat._clamped[enemy.get_instance_id()] = combat._clock + seconds
+		combat.clamp_for(enemy, seconds)
 
 
 func _pull(enemy: Node3D, toward: Vector3, speed: float) -> void:
@@ -158,7 +159,7 @@ func _corridor(from: Vector3, to: Vector3, half_width: float) -> Dictionary:
 func geometry(_fraction: float) -> Dictionary:
 	var kit = ctx.player.kit
 	var ball: Vector3 = ctx.player.ball_position()
-	var at: Vector3 = kit.anchor if kit.hooked else ball + combat._flat_aim() * ctx.player.grapple_range()
+	var at: Vector3 = kit.anchor if kit.hooked else ball + combat.aim_heading() * ctx.player.grapple_range()
 	return _corridor(at, _arrival(at), BODY_HALF_WIDTH if kit.on_body else SLAB_HALF_WIDTH)
 
 
@@ -170,9 +171,9 @@ func on_body(target: Node3D, _fraction: float, mult: float) -> void:
 		if _protected(target):
 			combat.strike(target, "claw", DRAG_DAMAGE * mult, "", "special")
 		else:
-			combat._hit(target, "claw", DRAG_DAMAGE * mult, Vector3.ZERO, 0.0, "", "special")
+			combat.deal_hit(target, "claw", DRAG_DAMAGE * mult, Vector3.ZERO, 0.0, "", "special")
 			_mark(target, DRAG_MARK)
-		combat._reel_burst(target.global_position, 1.0, mult)
+		combat.reel_burst(target.global_position, 1.0, mult)
 		_start_pendulum_guard(target, target.global_position, false)
 		return
 	drag = {"target": target, "from": target.global_position, "mult": mult, "bite": BITE_SECONDS, "time": 0.0, "world": false}
@@ -214,10 +215,10 @@ func step(delta: float) -> void:
 	_step_piece(delta)
 	for id in _cards.keys():
 		var entry: Dictionary = _cards[id]
-		var codex = combat._codex()
+		var codex = combat.run_codex()
 		var frame := Engine.get_physics_frames()
 		if frame > _card_frame and frame > int(entry["queued"]) and codex != null and codex.known(entry["after"]):
-			combat._discover(id, entry["at"])
+			combat.discover(id, entry["at"])
 			_cards.erase(id)
 			_card_frame = frame
 			break
@@ -253,7 +254,7 @@ func _step_drag(delta: float) -> void:
 				if _protected(enemy):
 					combat.strike(enemy, "claw", SLAB_DAMAGE * mult, "", "special")
 				else:
-					combat._hit(enemy, "claw", SLAB_DAMAGE * mult, ctx.player.ball_position() - enemy.global_position, 14.0, "", "special")
+					combat.deal_hit(enemy, "claw", SLAB_DAMAGE * mult, ctx.player.ball_position() - enemy.global_position, 14.0, "", "special")
 		drag["at"] = next
 		ctx.player.indicator.set_shape("tarn_drag", _corridor(next, shape["to"], SLAB_HALF_WIDTH))
 		if next.distance_to(shape["to"]) < 0.05:
@@ -267,7 +268,7 @@ func _step_drag(delta: float) -> void:
 	if flat.length() <= DRAG_SPEED * delta + 0.1:
 		var push: Vector3 = target._knock
 		target._knock = Vector3(0.0, push.y, 0.0)
-		combat._hit(target, "claw", DRAG_DAMAGE * mult, flat, 0.0, "", "special")
+		combat.deal_hit(target, "claw", DRAG_DAMAGE * mult, flat, 0.0, "", "special")
 		_mark(target, DRAG_MARK)
 		_discover("tarn_claw_drag", "loaded_line", target.global_position)
 		_dragged[target.get_instance_id()] = true
@@ -302,7 +303,7 @@ static func in_strip(shape: Dictionary, point: Vector3) -> bool:
 func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
 	var hits := 0
 	if id == "rake_run":
-		rake_shapes = strips(_previous, ball, 3.0 + 1.5 * float(combat.ultimate._knob("ult_volley", 0)))
+		rake_shapes = strips(_previous, ball, 3.0 + 1.5 * float(combat.ultimate.knob("ult_volley", 0)))
 		for shape in rake_shapes:
 			_draw_rake(shape)
 		for enemy in _enemies():
@@ -324,7 +325,7 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 			var biased := to.length() > 0.01 and aim.length() > 0.01 and aim.angle_to(to) <= deg_to_rad(25.0)
 			picks.append([(0.0 if biased else 100.0) + to.length(), enemy])
 		picks.sort_custom(func(a, b): return a[0] < b[0])
-		for pick in picks.slice(0, 2 + int(combat.ultimate._knob("ult_volley", 0))):
+		for pick in picks.slice(0, 2 + int(combat.ultimate.knob("ult_volley", 0))):
 			var enemy: Node3D = pick[1]
 			_hit_piece(enemy, SNATCH_DAMAGE * heft, ball, false)
 			hits += 1
@@ -335,11 +336,11 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 					if enemy.has_method("open_ring_out"):
 						enemy.open_ring_out()
 				elif id == "vice_leap":
-					var ult = combat.ultimate
-					var left := maxf(0.05, float(ult._plan["legs"][ult._leg]["seconds"]) - float(ult._leg_time))
+					var state: Dictionary = combat.ultimate.leg_state()
+					var left := maxf(0.05, float(state["remaining"]))
 					if enemy.has_method("open_ring_out"):
 						enemy.open_ring_out()
-					hurls.append({"enemy": enemy, "from": enemy.global_position, "to": ult._plan["legs"][ult._leg]["to"], "time": 0.0, "seconds": left})
+					hurls.append({"enemy": enemy, "from": enemy.global_position, "to": state["to"], "time": 0.0, "seconds": left})
 					_hold(enemy)
 		for enemy in tow.duplicate():
 			if _alive(enemy):
@@ -368,7 +369,7 @@ func _draw_rake(shape: Dictionary) -> void:
 func peak(id: String, at: Vector3) -> void:
 	var heft: float = Ultimate.HEFT_MULT[_class() - 1]
 	if id == "rake_run":
-		var dir: Vector3 = combat._flat_aim()
+		var dir: Vector3 = combat.aim_heading()
 		rake_shapes = []
 		for angle in [-20.0, 20.0]:
 			var shape := _corridor(at, at + dir.rotated(Vector3.UP, deg_to_rad(angle)) * 10.0, 0.75)
@@ -378,7 +379,7 @@ func peak(id: String, at: Vector3) -> void:
 			if rake_shapes.any(func(shape): return in_strip(shape, enemy.global_position)):
 				_hit_piece(enemy, 24.0 * heft, at, false)
 	elif id == "vice_leap":
-		_vice = {"at": combat.ultimate._plan["legs"][combat.ultimate._leg]["to"], "radius": combat.ultimate.landing_radius() + 2.0, "clock": 0.0}
+		_vice = {"at": combat.ultimate.leg_state()["to"], "radius": combat.ultimate.landing_radius() + 2.0, "clock": 0.0}
 		ctx.player.indicator.set_shape("tarn_vice", ctx.player.yours({"kind": "ring", "centre": _vice["at"], "radius": _vice["radius"], "full_radius": _vice["radius"], "fill": 1.0}))
 	else:
 		combat.effects.ring(at, 5.0, ctx.player.class_color())
@@ -391,11 +392,11 @@ func peak(id: String, at: Vector3) -> void:
 
 func _hit_piece(enemy: Node3D, damage: float, at: Vector3, landing_hit: bool) -> float:
 	if enemy.has_method("_apply_posture"):
-		return combat._ult_hit(enemy, "claw", damage, at, landing_hit)
-	if combat._target_class(enemy) == "boss":
+		return combat.ult_hit(enemy, "claw", damage, at, landing_hit)
+	if combat.target_class_of(enemy) == "boss":
 		combat.strike(enemy, "claw", damage * Ultimate.BOSS_MULT, "", "special")
 		return damage * Ultimate.BOSS_MULT
-	combat._hit(enemy, "claw", damage, at - enemy.global_position, LANDING_PULL if landing_hit else 0.0, "", "special", "slam" if landing_hit else "")
+	combat.deal_hit(enemy, "claw", damage, at - enemy.global_position, LANDING_PULL if landing_hit else 0.0, "", "special", "slam" if landing_hit else "")
 	return damage
 
 
@@ -417,7 +418,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	if id == "redjaw_rend" and had_tow:
 		_discover("tarn_redjaw_rend", "set_piece", at)
 	if id == "rake_run":
-		combat._boost(3.0)
+		combat.add_overdrive(3.0)
 	_clear_piece()
 	return [hits, damage]
 
@@ -431,7 +432,7 @@ func _step_piece(delta: float) -> void:
 	if _piece == "" or combat.ultimate == null or combat.ultimate.phase() != "flight":
 		return
 	var ball: Vector3 = ctx.player.ball_position()
-	var heading: Vector3 = combat.ultimate._ride.heading if combat.ultimate._ride != null else combat._flat_aim()
+	var heading: Vector3 = combat.ultimate.ride_heading(combat.aim_heading())
 	var side := Vector3(-heading.z, 0.0, heading.x)
 	for i in range(tow.size() - 1, -1, -1):
 		var enemy = tow[i]
@@ -542,7 +543,7 @@ func _launch_seized() -> Dictionary:
 	seized = {}
 	if not _alive(enemy):
 		return {}
-	var aim: Vector3 = combat._flat_aim()
+	var aim: Vector3 = combat.aim_heading()
 	if aim.length_squared() < 0.0001:
 		aim = Vector3.FORWARD
 	var weight: float = maxf(1.0, float(enemy.get("weight")) if enemy.get("weight") != null else 1.0)
@@ -588,14 +589,14 @@ func _step_clamp_hurl(delta: float) -> void:
 			if float(seized["left"]) <= 0.0:
 				_launch_seized()
 			elif float(seized["elapsed"]) >= 0.06:
-				var aim: Vector3 = combat._flat_aim()
+				var aim: Vector3 = combat.aim_heading()
 				var hold_pos: Vector3 = ctx.player.ball_position() + aim * Weapons.CLAMP_HURL_HOLD_OFFSET
 				hold_pos.y = held.global_position.y
 				held.global_position = held.global_position.move_toward(hold_pos, 22.0 * delta)
 	if clamp_hurls.is_empty():
 		return
 	var live_enemies := _enemies()
-	var dmg: float = Weapons.CLAMP_HURL_BOWL_DAMAGE * combat._damage_mod(Weapons.CLAW_SWEEP)
+	var dmg: float = Weapons.CLAMP_HURL_BOWL_DAMAGE * combat.damage_mod(Weapons.CLAW_SWEEP)
 	for h in clamp_hurls.duplicate():
 		var enemy = h["enemy"]
 		if not _alive(enemy):
@@ -632,7 +633,7 @@ func _step_clamp_hurl(delta: float) -> void:
 				if _protected(other):
 					combat.strike(other, "claw", dmg, "", "special")
 				else:
-					combat._hit(other, "claw", dmg, dir + Vector3.UP * 0.25, Weapons.CLAMP_HURL_BOWL_KNOCK, "", "special", "clamp")
+					combat.deal_hit(other, "claw", dmg, dir + Vector3.UP * 0.25, Weapons.CLAMP_HURL_BOWL_KNOCK, "", "special", "clamp")
 				combat.flung.emit(other)
 		if float(h["left"]) <= 0.0:
 			clamp_hurls.erase(h)
@@ -640,7 +641,7 @@ func _step_clamp_hurl(delta: float) -> void:
 
 func trigger_beat3_lunge(aim_dir: Vector3) -> Dictionary:
 	var flat := Vector3(aim_dir.x, 0.0, aim_dir.z)
-	var dir: Vector3 = flat.normalized() if flat.length_squared() > 0.0001 else combat._flat_aim()
+	var dir: Vector3 = flat.normalized() if flat.length_squared() > 0.0001 else combat.aim_heading()
 	var lunge_speed := Weapons.TARN_BEAT3_LUNGE_M / maxf(Weapons.TARN_BEAT3_LUNGE_S, 0.01)
 	var current: Vector3 = ctx.player.state.velocity
 	var keep_speed := maxf(Vector2(current.x, current.z).length(), lunge_speed)
@@ -691,7 +692,7 @@ func _start_pendulum_guard(anchor_body: Node3D, anchor_pos: Vector3, is_world: b
 	var ball: Vector3 = ctx.player.ball_position()
 	var to_anchor := anchor_pos - ball
 	to_anchor.y = 0.0
-	var facing: Vector3 = to_anchor.normalized() if to_anchor.length_squared() > 0.0001 else combat._flat_aim()
+	var facing: Vector3 = to_anchor.normalized() if to_anchor.length_squared() > 0.0001 else combat.aim_heading()
 	pendulum_guard = {
 		"active": true,
 		"anchor_body": anchor_body,
@@ -730,7 +731,7 @@ func _step_pendulum_guard(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var to_anchor := anchor_pos - ball
 	to_anchor.y = 0.0
-	var facing: Vector3 = to_anchor.normalized() if to_anchor.length_squared() > 0.0001 else combat._flat_aim()
+	var facing: Vector3 = to_anchor.normalized() if to_anchor.length_squared() > 0.0001 else combat.aim_heading()
 	pendulum_guard["facing"] = facing
 	var strafe_input: float = float(ctx.player.intent.move.x) if ctx.player.intent != null else 0.0
 	if absf(strafe_input) > 0.05:

@@ -9,7 +9,7 @@ const NAMED := ["BurrowBody", "BurrowHull", "ShovelNose", "SidePaddles", "CrewVi
 const GAMEPLAY := {
 	"setup": "384e4992a7096daa0b6843767cd1a0c25483c29222eb2929931aad54de7428e9",
 	"_configure": "6fb461ab724a89e299b4929526b6afdac9bf4c46056bd1a996438f8c5ebb1c81",
-	"_set_hidden": "53c14e3ea8cf7301302172fa4101c6927662909322c42c6b9d123db8f71d2600",
+	"_set_hidden": "a5a22da79f4476070c80f4569adb45857143395873c0e986bce459726d11c79d",
 	"_commit": "c4841a82fa65be2e19afe87974017a84a0b767ff68ed0361eea6345b764320b3",
 	"_go_live": "a4b05a08a2aa474874a729e4aef5dd04c7f6942e02b1f89bdf87fa47ec2cb834",
 	"_live_motion": "878a18a155fc065e65f4e88b8994818c120c689bc24979ccab0c46bf6875c0e6",

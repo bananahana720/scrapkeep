@@ -1,8 +1,9 @@
 import { createServer } from "node:http";
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "../../../scripts/lib/cli.mjs";
+import { git } from "../../../scripts/lib/git.mjs";
 
 // npm run sitting-kit: serves the Sitting Kit page on localhost and keeps Andrew's verdicts on disk.
 // GET  /                 the page (index.html and the files beside it)
@@ -29,13 +30,13 @@ const TYPES = {
 const SERVED = new Set(["index.html", "areas.js", "README.md"]);
 
 export function readBuild(cwd = repo) {
-  const git = (...args) => execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  const read = (...args) => git(args, { cwd, stdio: ["ignore", "pipe", "ignore"] });
   try {
     return {
-      sha: git("rev-parse", "HEAD"),
-      short: git("rev-parse", "--short=8", "HEAD"),
-      subject: git("log", "-1", "--format=%s"),
-      dirty: git("status", "--porcelain").length > 0,
+      sha: read("rev-parse", "HEAD"),
+      short: read("rev-parse", "--short=8", "HEAD"),
+      subject: read("log", "-1", "--format=%s"),
+      dirty: read("status", "--porcelain").length > 0,
     };
   } catch {
     return { sha: "", short: "unknown", subject: "", dirty: false };
@@ -62,7 +63,11 @@ export function writeVerdicts(value, file = VERDICT_FILE) {
 }
 
 function send(res, status, body, type = "application/json; charset=utf-8") {
-  res.writeHead(status, { "content-type": type, "cache-control": "no-store", "x-content-type-options": "nosniff" });
+  res.writeHead(status, {
+    "content-type": type,
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+  });
   res.end(typeof body === "string" || Buffer.isBuffer(body) ? body : JSON.stringify(body));
 }
 
@@ -105,7 +110,11 @@ export function localHost(req) {
   return host === "localhost" || host === HOST;
 }
 
-export function createKitServer({ port = 8765, verdictFile = VERDICT_FILE, buildOf = readBuild } = {}) {
+export function createKitServer({
+  port = 8765,
+  verdictFile = VERDICT_FILE,
+  buildOf = readBuild,
+} = {}) {
   return createServer(async (req, res) => {
     try {
       await handle(req, res);
@@ -153,7 +162,12 @@ export function createKitServer({ port = 8765, verdictFile = VERDICT_FILE, build
       if (!SERVED.has(name) || !existsSync(path.join(here, name))) {
         send(res, 404, "not found", "text/plain; charset=utf-8");
       } else {
-        send(res, 200, readFileSync(path.join(here, name)), TYPES[path.extname(name)] ?? "application/octet-stream");
+        send(
+          res,
+          200,
+          readFileSync(path.join(here, name)),
+          TYPES[path.extname(name)] ?? "application/octet-stream",
+        );
       }
     } else {
       send(res, 405, { error: "method not allowed" });
@@ -161,7 +175,7 @@ export function createKitServer({ port = 8765, verdictFile = VERDICT_FILE, build
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const at = process.argv.indexOf("--port");
   const port = at >= 0 ? Number(process.argv[at + 1]) : 8765;
   const at2 = process.argv.indexOf("--verdicts");

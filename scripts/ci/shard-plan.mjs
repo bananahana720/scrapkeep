@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import { readFileSync, realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { isBot, testScripts } from "../sketch-smoke.mjs";
+import { isBot, testScripts } from "../lib/godot-test-runner.mjs";
 import { shuffleFiles } from "./node-tests.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_SKETCH = "sketches/core-loop";
@@ -99,16 +100,7 @@ function parseArgs(argv) {
   return opts;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const opts = parseArgs(process.argv.slice(2));
     const items = loadNonBotTests();

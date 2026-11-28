@@ -2,10 +2,10 @@ extends RefCounted
 
 
 const Achievements := preload("res://src/core/achievements.gd")
-const Items := preload("res://src/build/items.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const WorkOrders := preload("res://src/core/work_orders.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 const FIELDS := ["name", "text", "when", "stamp", "pays", "pilot"]
 const WORLD_FIELDS := ["name", "text", "when", "stamp", "pays", "pilot", "act", "gate_rung", "hidden_until_stamped"]
@@ -358,39 +358,67 @@ static func item_name(id: String) -> String:
 	return String(row.get("name", id))
 
 
-static func _words(s: String) -> int:
-	return s.split(" ", false).size()
+static func validate(rows: Dictionary, grants: Dictionary, tunes: Array, items_table: Dictionary) -> Array:
+	return _validate_rung_set(rows, grants, tunes, items_table, false)
 
 
-static func validate(rows: Dictionary, grants: Dictionary, tunes: Array) -> Array:
+static func validate_world_rungs(all_grants: Dictionary, tunes: Array, items_table: Dictionary, rows_to_check: Dictionary = WORLD_RUNGS) -> Array:
+	return _validate_rung_set(rows_to_check, all_grants, tunes, items_table, true)
+
+
+static func _validate_rung_set(rows: Dictionary, grants: Dictionary, tunes: Array, items_table: Dictionary, world_mode: bool) -> Array:
 	var problems: Array = []
+	var fields := WORLD_FIELDS if world_mode else FIELDS
+	var pay_kinds := WORLD_PAY_KINDS if world_mode else PAY_KINDS
+	var cards := WORLD_CARDS if world_mode else CARDS
+	var seeds := WORLD_SEEDS if world_mode else SEEDS
+	var card_prefix := "world card" if world_mode else "card"
+	var seed_prefix := "world seed" if world_mode else "seed"
 	var items_seen := {}
+	if world_mode:
+		for item in all_items():
+			items_seen[item] = "w1_board"
+	var merged: Dictionary = RUNGS.duplicate(false) if world_mode else rows
+	if world_mode:
+		for id in rows:
+			if RUNGS.has(id):
+				problems.append("%s: collides with W1 RUNGS" % id)
+			merged[id] = rows[id]
 	for id in rows:
 		var r: Dictionary = rows[id]
 		for key in r:
-			if not FIELDS.has(key):
+			if not fields.has(key):
 				problems.append("%s: unknown field %s" % [id, key])
-		if _words(String(r.get("name", ""))) < 1 or _words(String(r.get("name", ""))) > NAME_WORDS:
+		var name_words := WordBudget.words_in(String(r.get("name", "")))
+		if name_words < 1 or name_words > NAME_WORDS:
 			problems.append("%s: name must be 1 to %d words" % [id, NAME_WORDS])
-		if _words(String(r.get("text", ""))) < 1 or _words(String(r.get("text", ""))) > TEXT_WORDS:
+		var text_words := WordBudget.words_in(String(r.get("text", "")))
+		if text_words < 1 or text_words > TEXT_WORDS:
 			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
 		if not STAMPS.has(String(r.get("stamp", ""))):
 			problems.append("%s: stamp %s is not one of %s" % [id, r.get("stamp", ""), STAMPS])
+		if world_mode:
+			var act := int(r.get("act", 0))
+			if act < 2 or act > 3:
+				problems.append("%s: act must be 2 or 3" % id)
+			var gate := String(r.get("gate_rung", ""))
+			if gate != "" and not merged.has(gate):
+				problems.append("%s: gate_rung %s is not a rung" % [id, gate])
 		var when = r.get("when", {})
 		if not (when is Dictionary) or when.size() != 1:
 			problems.append("%s: when must carry exactly one of earned or tune" % id)
 			continue
 		var pays = r.get("pays", {})
-		if not (pays is Dictionary) or pays.size() != 1 or not PAY_KINDS.has(pays.keys()[0]):
-			problems.append("%s: pays must carry exactly one of %s" % [id, PAY_KINDS])
+		if not (pays is Dictionary) or pays.size() != 1 or not pay_kinds.has(pays.keys()[0]):
+			problems.append("%s: pays must carry exactly one of %s" % [id, pay_kinds])
 			continue
-		var kind: String = pays.keys()[0]
+		var kind := String(pays.keys()[0])
 		var target := String(pays[kind])
 		if when.has("earned"):
 			var grant := String(when["earned"])
 			if not grants.has(grant):
 				problems.append("%s: earned row %s is not an achievement" % [id, grant])
-			elif kind != "tune":
+			elif kind != "tune" and (not world_mode or kind != "mark"):
 				var reward: Dictionary = grants[grant].get("reward", {})
 				if String(reward.get(kind, "")) != target:
 					problems.append("%s: pays %s %s but %s rewards %s" % [id, kind, target, grant, reward])
@@ -400,123 +428,44 @@ static func validate(rows: Dictionary, grants: Dictionary, tunes: Array) -> Arra
 		else:
 			problems.append("%s: when key %s is unknown" % [id, when.keys()[0]])
 		if kind == "item":
-			if not Items.TABLE.has(target):
+			if not items_table.has(target):
 				problems.append("%s: item %s is not an items.gd row" % [id, target])
 			elif items_seen.has(target):
-				problems.append("%s: item %s is already opened by %s" % [id, target, items_seen[target]])
+				problems.append("%s: item %s already opened by %s" % [id, target, items_seen[target]] if world_mode else "%s: item %s is already opened by %s" % [id, target, items_seen[target]])
 			else:
 				items_seen[target] = id
-	for card in CARDS:
+	for card in cards:
 		var item := String(card.get("pays", {}).get("item", ""))
-		if not Items.TABLE.has(item):
-			problems.append("card %s: item %s is not an items.gd row" % [card.get("name", ""), item])
+		if not items_table.has(item):
+			problems.append("%s %s: item %s is not an items.gd row" % [card_prefix, card.get("name", ""), item])
 		elif items_seen.has(item):
-			problems.append("card %s: item %s is already opened by %s" % [card.get("name", ""), item, items_seen[item]])
+			problems.append("%s %s: item %s already opened by %s" % [card_prefix, card.get("name", ""), item, items_seen[item]] if world_mode else "%s %s: item %s is already opened by %s" % [card_prefix, card.get("name", ""), item, items_seen[item]])
 		else:
 			items_seen[item] = String(card.get("name", ""))
-	for grant in grants:
-		var reward = grants[grant].get("reward", {})
-		if not (reward is Dictionary) or not reward.has("item"):
-			continue
-		var item := String(reward["item"])
-		if not Items.TABLE.has(item):
-			problems.append("%s: reward item %s is not an items.gd row" % [grant, item])
-		elif not rows.keys().any(func(r): return rows[r].get("when", {}).get("earned", "") == grant):
-			problems.append("%s: pays item %s but no rung reads it, so the item could never show" % [grant, item])
+	if not world_mode:
+		for grant in grants:
+			var reward = grants[grant].get("reward", {})
+			if not (reward is Dictionary) or not reward.has("item"):
+				continue
+			var item := String(reward["item"])
+			if not items_table.has(item):
+				problems.append("%s: reward item %s is not an items.gd row" % [grant, item])
+			elif not rows.keys().any(func(r): return rows[r].get("when", {}).get("earned", "") == grant):
+				problems.append("%s: pays item %s but no rung reads it, so the item could never show" % [grant, item])
 	for item in items_seen:
-		var row: Dictionary = Items.TABLE[item]
+		if world_mode and items_seen[item] == "w1_board":
+			continue
+		var row: Dictionary = items_table[item]
 		if row.has("class") or row.has("needs"):
 			problems.append("%s: an opened item must suit every pilot and need no seam" % item)
-	for id in SEEDS:
-		var s: Dictionary = SEEDS[id]
-		if not SEED_KINDS.has(String(s.get("kind", ""))):
-			problems.append("seed %s: kind must be one of %s" % [id, SEED_KINDS])
-		if not rows.has(String(s.get("gate", ""))):
-			problems.append("seed %s: gate %s is not a rung" % [id, s.get("gate", "")])
-		if _words(String(s.get("text", ""))) > TEXT_WORDS:
-			problems.append("seed %s: text must be %d words or fewer" % [id, TEXT_WORDS])
-	return problems
-
-
-static func validate_world_rungs(all_grants: Dictionary, tunes: Array, rows_to_check: Dictionary = WORLD_RUNGS) -> Array:
-	var problems: Array = []
-	var items_seen := {}
-	for item in all_items():
-		items_seen[item] = "w1_board"
-	var merged := RUNGS.duplicate(false)
-	for id in rows_to_check:
-		if RUNGS.has(id):
-			problems.append("%s: collides with W1 RUNGS" % id)
-		merged[id] = rows_to_check[id]
-	for id in rows_to_check:
-		var r: Dictionary = rows_to_check[id]
-		for key in r:
-			if not WORLD_FIELDS.has(key):
-				problems.append("%s: unknown field %s" % [id, key])
-		if _words(String(r.get("name", ""))) < 1 or _words(String(r.get("name", ""))) > NAME_WORDS:
-			problems.append("%s: name must be 1 to %d words" % [id, NAME_WORDS])
-		if _words(String(r.get("text", ""))) < 1 or _words(String(r.get("text", ""))) > TEXT_WORDS:
-			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
-		if not STAMPS.has(String(r.get("stamp", ""))):
-			problems.append("%s: stamp %s is not one of %s" % [id, r.get("stamp", ""), STAMPS])
-		var act := int(r.get("act", 0))
-		if act < 2 or act > 3:
-			problems.append("%s: act must be 2 or 3" % id)
-		var gate := String(r.get("gate_rung", ""))
-		if gate != "" and not merged.has(gate):
-			problems.append("%s: gate_rung %s is not a rung" % [id, gate])
-		var when = r.get("when", {})
-		if not (when is Dictionary) or when.size() != 1:
-			problems.append("%s: when must carry exactly one of earned or tune" % id)
-			continue
-		var pays = r.get("pays", {})
-		if not (pays is Dictionary) or pays.size() != 1 or not WORLD_PAY_KINDS.has(pays.keys()[0]):
-			problems.append("%s: pays must carry exactly one of %s" % [id, WORLD_PAY_KINDS])
-			continue
-		var kind := String(pays.keys()[0])
-		var target := String(pays[kind])
-		if when.has("earned"):
-			var grant := String(when["earned"])
-			if not all_grants.has(grant):
-				problems.append("%s: earned row %s is not an achievement" % [id, grant])
-			elif kind != "tune" and kind != "mark":
-				var reward: Dictionary = all_grants[grant].get("reward", {})
-				if String(reward.get(kind, "")) != target:
-					problems.append("%s: pays %s %s but %s rewards %s" % [id, kind, target, grant, reward])
-		elif when.has("tune"):
-			if not tunes.has(String(when["tune"])):
-				problems.append("%s: tune %s is not a jukebox row" % [id, when["tune"]])
-		else:
-			problems.append("%s: when key %s is unknown" % [id, when.keys()[0]])
-		if kind == "item":
-			if not Items.TABLE.has(target):
-				problems.append("%s: item %s is not an items.gd row" % [id, target])
-			elif items_seen.has(target):
-				problems.append("%s: item %s already opened by %s" % [id, target, items_seen[target]])
-			else:
-				items_seen[target] = id
-	for card in WORLD_CARDS:
-		var item := String(card.get("pays", {}).get("item", ""))
-		if not Items.TABLE.has(item):
-			problems.append("world card %s: item %s is not an items.gd row" % [card.get("name", ""), item])
-		elif items_seen.has(item):
-			problems.append("world card %s: item %s already opened by %s" % [card.get("name", ""), item, items_seen[item]])
-		else:
-			items_seen[item] = String(card.get("name", ""))
-	for item in items_seen:
-		if items_seen[item] == "w1_board":
-			continue
-		var row: Dictionary = Items.TABLE[item]
-		if row.has("class") or row.has("needs"):
-			problems.append("%s: an opened item must suit every pilot and need no seam" % item)
-		if ParkDefs.part_in_play(item):
+		if world_mode and ParkDefs.part_in_play(item):
 			problems.append("%s: an opened item must not already be in ParkDefs.part_in_play" % item)
-	for id in WORLD_SEEDS:
-		var s: Dictionary = WORLD_SEEDS[id]
+	for id in seeds:
+		var s: Dictionary = seeds[id]
 		if not SEED_KINDS.has(String(s.get("kind", ""))):
-			problems.append("world seed %s: kind must be one of %s" % [id, SEED_KINDS])
+			problems.append("%s %s: kind must be one of %s" % [seed_prefix, id, SEED_KINDS])
 		if not merged.has(String(s.get("gate", ""))):
-			problems.append("world seed %s: gate %s is not a rung" % [id, s.get("gate", "")])
-		if _words(String(s.get("text", ""))) > TEXT_WORDS:
-			problems.append("world seed %s: text must be %d words or fewer" % [id, TEXT_WORDS])
+			problems.append("%s %s: gate %s is not a rung" % [seed_prefix, id, s.get("gate", "")])
+		if WordBudget.words_in(String(s.get("text", ""))) > TEXT_WORDS:
+			problems.append("%s %s: text must be %d words or fewer" % [seed_prefix, id, TEXT_WORDS])
 	return problems

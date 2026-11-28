@@ -185,14 +185,14 @@ func _as_cannon() -> void:
 func _equip_walk() -> void:
 	_as_cannon()
 	_player.abilities.swap(AbilityState.WEAPON, "cannon_lane_walk")
-	_player._refit()
+	_player.refit()
 	_combat._free_cannon()
 
 
 func _equip_wake() -> void:
 	_as_cannon()
 	_player.abilities.swap(AbilityState.SMASH, "cannon_rush_wake")
-	_player._refit()
+	_player.refit()
 	_combat._free_cannon()
 
 
@@ -313,7 +313,7 @@ func _check_walk_march_overdrive() -> void:
 
 	run.parts.clear()
 	_player.abilities.swap(AbilityState.WEAPON, "cannon_lane_walk")
-	_player._refit()
+	_player.refit()
 	_combat._free_cannon()
 	var p_first := _fire_walk()
 	_combat._clock += 0.5
@@ -409,7 +409,7 @@ func _check_wake_lane() -> void:
 	_player.kit.slamming = true
 	_combat._track_wake()
 	_t.check("the slam's start is recorded", not _combat._wake.is_empty() and _combat._wake["from"] == start, str(_combat._wake))
-	var landing: Vector3 = _combat._floor_at(start + Vector3(9.0, 0.0, 0.0) + Vector3.UP)
+	var landing: Vector3 = _combat.floor_at(start + Vector3(9.0, 0.0, 0.0) + Vector3.UP)
 	_player.body().global_position = landing + Vector3.UP
 	_combat._clock += 0.5
 	_player.kit.slamming = false
@@ -446,7 +446,7 @@ func _check_wake_lane() -> void:
 
 func _check_wake_edges() -> void:
 	_equip_wake()
-	var landing: Vector3 = _combat._floor_at(_player.ball_position() + Vector3.UP)
+	var landing: Vector3 = _combat.floor_at(_player.ball_position() + Vector3.UP)
 	# No recorded start: nothing laid.
 	_combat._on_cannon_slammed(landing, 1.0, 1.0)
 	_t.eq("a landing with no recorded slam lays only the rush", _combat._cannon.map(func(e): return e["family"]), ["rush"])
@@ -463,9 +463,9 @@ func _check_wake_edges() -> void:
 	_player.kit.slamming = false
 	_combat._track_wake()
 	_t.check("a slam that ended is held for the grace", float(_combat._wake["until"]) == _combat._clock + Combat.WAKE_GRACE, str(_combat._wake))
-	_combat._on_cannon_slammed(_combat._floor_at(_player.ball_position() + Vector3.UP), 1.0, 1.0)
+	_combat._on_cannon_slammed(_combat.floor_at(_player.ball_position() + Vector3.UP), 1.0, 1.0)
 	var lanes := _lanes("item_proc")
-	_t.check("a straight drop lays its wake back along the aim", lanes.size() == 1 and _lane(lanes[0]).heading.dot(-_combat._flat_aim()) > 0.9999,
+	_t.check("a straight drop lays its wake back along the aim", lanes.size() == 1 and _lane(lanes[0]).heading.dot(-_combat.aim_heading()) > 0.9999,
 		"%d lanes" % lanes.size())
 	# A later slam overwrites a slam that never landed.
 	_combat._free_cannon()
@@ -497,7 +497,7 @@ func _check_wake_plain() -> void:
 	_player.kit.slamming = true
 	_combat._track_wake()
 	_t.check("the plain rush records no start", _combat._wake.is_empty(), str(_combat._wake))
-	var landing: Vector3 = _combat._floor_at(start + Vector3(9.0, 0.0, 0.0) + Vector3.UP)
+	var landing: Vector3 = _combat.floor_at(start + Vector3(9.0, 0.0, 0.0) + Vector3.UP)
 	_player.kit.slamming = false
 	_combat._on_cannon_slammed(landing, 1.0, 1.0)
 	_t.eq("the plain rush lays only its ring", _combat._cannon.map(func(e): return e["family"]), ["rush"])

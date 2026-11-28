@@ -1,14 +1,23 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  KNOWN_FAILING_LEDGER,
+  isGodotPath,
+  isDocsPath,
+  isPackagePath,
+  isSkillPath,
+} from "../ci/affected.mjs";
 import { filterFormatTargets } from "../ci/format-changed.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
+import { isMain } from "../lib/cli.mjs";
+import { REPO_ROOT, git } from "../lib/git.mjs";
+import { BASELINE_PATH, baselineGrowth, formatFinding, readBaselineAt } from "../sketch-lint.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const root = REPO_ROOT;
 const ZERO_SHA = "0000000000000000000000000000000000000000";
 export const HOOK_BUDGET_S = 9;
 export const HIGH_LOAD_RATIO = 0.5;
@@ -22,10 +31,6 @@ export function isHighLoad({ loadStart, loadEnd, cpus }) {
   return peak >= cpus * HIGH_LOAD_RATIO;
 }
 
-const KNOWN_FAILING_LEDGER = "project-guide/handoff/KNOWN-FAILING.tsv";
-const DOCS_OR_PKG =
-  /(?:\.md$|^package(?:-lock)?\.json$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.agents\/skills\/|^\.claude\/skills\/)/;
-const SKILLS_TRIGGER = /^(?:\.agents\/skills\/|\.claude\/skills\/|scripts\/check-skills\.mjs$)/;
 const BRIEFS_TRIGGER = /(?:^|\/)sound\/briefs\/|^scripts\/brief-check\.mjs$/;
 
 export function parsePushStdin(text) {
@@ -57,15 +62,9 @@ export function changedFilesForRange(
         "--not",
         "--remotes",
       ];
-  const ran = spawn("git", args, { cwd, encoding: "utf8" });
-  if (ran.error || ran.status !== 0) {
-    throw new Error(
-      `git ${args[0]} failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
-    );
-  }
   return [
     ...new Set(
-      ran.stdout
+      git(args, { cwd, spawn })
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean),
@@ -73,14 +72,29 @@ export function changedFilesForRange(
   ];
 }
 
+export function rangeBase({ localSha, remoteSha }, { cwd = root, spawn = spawnSync } = {}) {
+  if (remoteSha) return remoteSha;
+  const oldest = git(["rev-list", "--first-parent", localSha, "--not", "--remotes"], {
+    cwd,
+    spawn,
+  })
+    .split("\n")
+    .filter(Boolean)
+    .pop();
+  return oldest ? `${oldest}^` : localSha;
+}
+
 export function planHookChecks(changedFiles, exists = (f) => existsSync(path.join(root, f))) {
   const jsFiles = filterFormatTargets(changedFiles, exists);
-  const hasSketch = changedFiles.some((f) => f.startsWith("sketches/core-loop/"));
-  const hasDocsOrPkg = changedFiles.some((f) => DOCS_OR_PKG.test(f));
-  const hasSkills = changedFiles.some((f) => SKILLS_TRIGGER.test(f));
+  const hasSketch = changedFiles.some(isGodotPath);
+  const hasDocsOrPkg = changedFiles.some(
+    (f) => isDocsPath(f, exists) || isPackagePath(f) || isSkillPath(f),
+  );
+  const hasSkills = changedFiles.some((f) => isSkillPath(f) || f === "scripts/check-skills.mjs");
   const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
   const hasKnownFailing = changedFiles.includes(KNOWN_FAILING_LEDGER);
-  return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing };
+  const hasBaseline = changedFiles.includes(BASELINE_PATH);
+  return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing, hasBaseline };
 }
 
 function runStep(label, cmd, args, { cwd = root, spawn = spawnSync } = {}) {
@@ -111,6 +125,8 @@ export function executeHookPlan(
     spawn = spawnSync,
     ensureModules = ensureNodeModules,
     errLog = console.error,
+    ranges = [],
+    readBaseline = (ref) => readBaselineAt(ref, { cwd }),
   } = {},
 ) {
   let ok = true;
@@ -194,6 +210,14 @@ export function executeHookPlan(
     );
     if (!r.ok) ok = false;
   }
+  if (plan.hasBaseline) {
+    ranLabels.push("baseline");
+    for (const { base, head } of ranges) {
+      const grew = baselineGrowth(readBaseline(base), readBaseline(head));
+      for (const item of grew) errLog(formatFinding(item));
+      if (grew.length > 0) ok = false;
+    }
+  }
   if (plan.hasKnownFailing) {
     ranLabels.push("known-failing");
     const r = runStep(
@@ -269,42 +293,29 @@ export function parseHookArgs(argv) {
   return opts;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   const started = performance.now();
   const loadStart = os.loadavg()[0];
   const cpus = os.cpus().length;
   try {
     const opts = parseHookArgs(process.argv.slice(2));
     let files = [];
+    let ranges = [];
     if (opts.base) {
-      const ran = spawnSync("git", ["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`], {
-        cwd: root,
-        encoding: "utf8",
-      });
-      if (ran.error || ran.status !== 0) {
-        throw new Error(`git diff failed: ${ran.error?.message || (ran.stderr || "").trim()}`);
-      }
-      files = ran.stdout
+      ranges = [{ base: git(["merge-base", opts.base, "HEAD"]), head: "HEAD" }];
+      files = git(["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`])
         .split("\n")
         .map((l) => l.trim())
         .filter(Boolean);
     } else {
       const stdin = process.stdin.isTTY ? "" : readFileSync(0, "utf8");
-      const ranges = parsePushStdin(stdin);
-      files = [...new Set(ranges.flatMap((range) => changedFilesForRange(range)))];
+      const pushed = parsePushStdin(stdin);
+      files = [...new Set(pushed.flatMap((range) => changedFilesForRange(range)))];
+      ranges = pushed.map((range) => ({ base: rangeBase(range), head: range.localSha }));
     }
 
     const plan = planHookChecks(files);
-    const { ok, ranLabels } = executeHookPlan(plan);
+    const { ok, ranLabels } = executeHookPlan(plan, { ranges });
     const loadEnd = os.loadavg()[0];
     const elapsedS = (performance.now() - started) / 1000;
     const outcome = evaluateHookOutcome({

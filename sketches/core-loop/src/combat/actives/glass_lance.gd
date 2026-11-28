@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://src/combat/actives/active_base.gd"
 
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -7,6 +7,7 @@ const BASE_DAMAGE := 34.0
 const REACH := 40.0
 const HALF_WIDTH := 0.9
 const HEIGHT := 1.5
+const DEFAULT_GIRTH := 0.6
 const SAMPLE := 2.5
 const CLIMB := 12.0
 const DIVE := 6.0
@@ -24,16 +25,9 @@ const SHARD_COLOR := Color(0.94, 1.0, 0.9)
 const KIND := "lance"
 const SOURCE := "special"
 
-var ctx
-var combat
 var lances: Array = []
 var pierced := 0
 var _generation := 0
-
-
-func setup(context, owner_combat) -> void:
-	ctx = context
-	combat = owner_combat
 
 
 func clear() -> void:
@@ -42,21 +36,16 @@ func clear() -> void:
 
 
 func count_for(bonus: int) -> int:
-	return 1 + bonus + _pattern("cross_split")
+	return 1 + bonus + pattern_level("cross_split")
 
 
 func damage() -> float:
-	var punch := 0.0
-	if ctx.build != null and ctx.build.has_method("punch_bonus"):
-		punch = float(ctx.build.punch_bonus())
-	return (BASE_DAMAGE + punch) * ctx.tuning.mod("weapon_damage")
+	return scaled_damage(BASE_DAMAGE)
 
 
 func fire(_rack, _row: Dictionary, bonus: int) -> int:
 	var count := count_for(bonus)
-	var forward: Vector3 = ctx.aim_forward()
-	forward.y = 0.0
-	forward = forward.normalized() if forward.length() > 0.01 else Vector3.FORWARD
+	var forward := flat_aim()
 	var from: Vector3 = ctx.player.ball_position()
 	var dmg := damage()
 	for i in count:
@@ -124,10 +113,10 @@ func _fly(lance: Dictionary, delta: float) -> bool:
 	var dir: Vector3 = lance["dir"]
 	combat.effects.beam(_point(lance, before), _point(lance, after), ActiveFx.peak(SHARD_COLOR), 0.08)
 	var generation := _generation
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or lance["hit"].has(enemy.get_instance_id()):
 			continue
-		var girth := _girth(enemy)
+		var girth := enemy_girth(enemy, DEFAULT_GIRTH)
 		var rel: Vector3 = enemy.global_position - from
 		var along := rel.dot(dir)
 		if along < 0.0 or along > REACH or along > after or along < before - girth - 0.5:
@@ -146,18 +135,8 @@ func _pierce(enemy: Node3D, lance: Dictionary) -> void:
 	pierced += 1
 	var dmg: float = lance["damage"]
 	combat.effects.spark(enemy.global_position + Vector3.UP, ActiveFx.peak(SHARD_COLOR))
-	combat._hit(enemy, KIND, dmg, lance["dir"], KNOCK, "", SOURCE)
-	var jumps := _pattern("chain_arc")
+	combat.deal_hit(enemy, KIND, dmg, lance["dir"], KNOCK, "", SOURCE)
+	var jumps := pattern_level("chain_arc")
 	if jumps > 0:
-		combat._chain(enemy, enemy.global_position, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
+		combat.chain_hit(enemy, enemy.global_position, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
 			"chain_falloff": CHAIN_FALLOFF, "color": ActiveFx.peak(COLOR), "kind": KIND, "knock": KNOCK, "source": SOURCE})
-
-
-func _girth(enemy: Node3D) -> float:
-	return float(enemy.get("radius")) if enemy.get("radius") != null else 0.6
-
-
-func _pattern(id: String) -> int:
-	if ctx.build != null and ctx.build.has_method("pattern_level"):
-		return int(ctx.build.pattern_level(id))
-	return ctx.run.parts.count(id) if ctx.run != null else 0

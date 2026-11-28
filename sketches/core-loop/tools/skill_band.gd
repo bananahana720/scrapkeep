@@ -26,6 +26,11 @@ static var quiet := false
 static var last_refusal := ""
 
 
+static func reset_for_tests() -> void:
+	quiet = false
+	last_refusal = ""
+
+
 static func make(band_name: String, attempt_number: int, seed_value: int):
 	var key := band_name
 	if not BANDS.has(key):

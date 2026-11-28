@@ -18,14 +18,14 @@ const T := preload("res://tests/support/t.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const BuildReadout := preload("res://src/ui/build_readout.gd")
 const SummaryRows := preload("res://src/ui/summary_rows.gd")
-const Callouts := preload("res://src/ui/callouts.gd")
 const Attachments := preload("res://src/build/attachments.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 # Two tints of one icon must sit at least this far apart in RGB to tell the cards apart.
 const TINT_GAP := 0.3
@@ -95,9 +95,9 @@ func _truth(count: int) -> Array:
 		return []
 	var cap: int = RunState.CORE_TIER_CAP
 	if count > cap:
-		return ["best"] if Parts.gate_rarities(count) == Parts.gate_rarities(cap) else ["?"]
+		return ["best"] if PartOffers.gate_rarities(count) == PartOffers.gate_rarities(cap) else ["?"]
 	var out := []
-	for rarity in Parts.gate_rarities(count):
+	for rarity in PartOffers.gate_rarities(count):
 		if rarity != "common":
 			out.append(rarity)
 	out.sort()

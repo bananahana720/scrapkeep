@@ -3,7 +3,6 @@ extends "res://src/combat/enemy.gd"
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 const HP := 600.0
@@ -22,7 +21,6 @@ const SLAM_RADIUS := 7.0
 const SLAM_HEIGHT := 9.0
 const SLAM_DAMAGE := 24.0
 const SLAM_SHOVE := 9.0
-const WORLD_LAYER := 1
 const LEAP_CLEAR := RADIUS + 0.5
 const LEAP_RAY_LIFT := 0.5
 const LEAP_GROUND_PROBE := 4.0
@@ -74,7 +72,6 @@ var _core_color_cur := Palette.VERDIGRIS
 var _core_energy_cur := 0.0
 static var _shared: Dictionary = {}
 static var _asset_warned := false
-static var _hazard_stripe: StandardMaterial3D
 const POSES := {
 	"stalk": {"body": 0.0, "lean": 0.0, "splay": 0.0, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.0, "hazard": false},
 	"slam_crouch": {"body": -0.3, "lean": 0.0, "splay": 0.6, "tuck": 0.0, "shield_in": 0.45, "shield_drop": 0.0, "hazard": false},
@@ -247,14 +244,14 @@ func _slam_spot(led: Vector3) -> Vector3:
 	var from := ball + Vector3.UP * LEAP_RAY_LIFT
 	var to := Vector3(led.x, terrain.height(led.x, led.z) + 1.0 + LEAP_RAY_LIFT, led.z)
 	var at := led
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, WORLD_LAYER))
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, PhysicsLayers.WORLD_MASK))
 	if not hit.is_empty():
 		var room := Vector3(hit.position.x - ball.x, 0.0, hit.position.z - ball.z).length() - LEAP_CLEAR
 		if room <= 0.0:
 			return ball
 		at = ball + flat.normalized() * room
 	var top := Vector3(at.x, terrain.height(at.x, at.z) + LEAP_GROUND_PROBE, at.z)
-	if space.intersect_ray(PhysicsRayQueryParameters3D.create(top, top + Vector3.DOWN * LEAP_GROUND_PROBE * 2.0, WORLD_LAYER)).is_empty():
+	if space.intersect_ray(PhysicsRayQueryParameters3D.create(top, top + Vector3.DOWN * LEAP_GROUND_PROBE * 2.0, PhysicsLayers.WORLD_MASK)).is_empty():
 		return ball
 	return Vector3(at.x, ball.y, at.z)
 
@@ -296,12 +293,6 @@ func _open_weak_window() -> void:
 	if phase >= 2:
 		charge_brace = maxf(ChallengeDials.TELL_FLOOR, CHARGE_BRACE * PHASE_TWO_WIND)
 	_enter(State.WEAK)
-
-
-func _fill(value: float) -> void:
-	var shown := telegraph()
-	if shown != null:
-		shown.set_progress(value)
 
 
 func _build_model() -> bool:
@@ -479,7 +470,7 @@ func _model_pose(delta: float) -> void:
 			fists = Vector3(0.0, 0.2, -0.5) * t
 	var drop: float = lift if state == State.SLAM_LEAP else float(row.body) * HALF_HEIGHT * t + (lift if state == State.TURN else 0.0)
 	var body_basis := Basis(Vector3.RIGHT, float(row.lean) * t)
-	var calm := UiTokens.reduced_motion or EnemyMotion.motion_scale <= 0.0
+	var calm := Comfort.reduced_motion
 	var body_sec_pos := Vector3.ZERO
 	var body_sec_basis := Basis.IDENTITY
 	var fist_l_pos := Vector3.ZERO
@@ -489,7 +480,6 @@ func _model_pose(delta: float) -> void:
 	var shutter_l_basis := Basis.IDENTITY
 	var shutter_r_basis := Basis.IDENTITY
 	if _motion_rig != null:
-		_motion_rig.reduced_motion = calm
 		if delta > 0.0:
 			if not calm and _prev_pose_state != -1 and _prev_pose_state != state:
 				if _prev_pose_state == State.SLAM_LEAP and (state == State.WEAK or state == State.CUE):
@@ -556,7 +546,7 @@ func _model_pose(delta: float) -> void:
 		_pose_rig.set_bone_pose_position(index, pos)
 		_pose_rig.set_bone_pose_rotation(index, basis.get_rotation_quaternion())
 		_pose_rig.set_bone_pose_scale(index, size)
-	_armour.material_override = hazard_stripe() if row.hazard else _model_plate_material
+	_armour.material_override = Threat.Painter.hazard_stripe() if row.hazard else _model_plate_material
 	var blend := 1.0 if (delta <= 0.0 or not _core_smoothed) else (1.0 - exp(-16.0 * delta))
 	if blend >= 0.9999:
 		blend = 1.0
@@ -595,16 +585,6 @@ func _leap_clearance() -> float:
 	if terrain == null or not is_inside_tree():
 		return 0.0
 	return maxf(0.0, global_position.y - HALF_HEIGHT - terrain.height(global_position.x, global_position.z))
-
-
-static func hazard_stripe() -> StandardMaterial3D:
-	if _hazard_stripe == null:
-		_hazard_stripe = StandardMaterial3D.new()
-		_hazard_stripe.albedo_texture = Threat.Painter.stripe_texture()
-		_hazard_stripe.uv1_triplanar = true
-		_hazard_stripe.uv1_scale = Vector3.ONE / (Threat.STRIPE_PITCH * sqrt(2.0))
-		_hazard_stripe.roughness = 0.6
-	return _hazard_stripe
 
 
 func _build_armour() -> void:

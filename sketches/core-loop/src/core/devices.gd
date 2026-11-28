@@ -1,9 +1,8 @@
 extends RefCounted
 
-const Weapons := preload("res://src/combat/weapons.gd")
 
-
-const STICKY_CAP := Weapons.STICKY_MAX_LIVE
+const STICKY_CAP := 3
+const STICKY_CONTACT_REACH := 0.6
 const QUICK_REFILL := 0.0
 const MINI_CAP := 8
 const SENTRY_CAP := 1

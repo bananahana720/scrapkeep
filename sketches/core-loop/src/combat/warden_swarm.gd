@@ -1,8 +1,8 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
@@ -226,8 +226,8 @@ class _PostBreakPoolFlood extends Node:
 func _build_slab(warden) -> void:
 	var body := StaticBody3D.new()
 	body.name = "SwarmPoolFloor"
-	body.collision_layer = 1
-	body.collision_mask = 0
+	body.collision_layer = PhysicsLayers.WORLD_MASK
+	body.collision_mask = PhysicsLayers.NONE
 	var shape := CollisionShape3D.new()
 	var cylinder := CylinderShape3D.new()
 	cylinder.radius = pool_radius
@@ -243,7 +243,7 @@ func _build_slab(warden) -> void:
 	parent.add_child(body)
 	body.global_position = Vector3(pool_centre.x, pool_floor - POOL_THICKNESS * 0.5, pool_centre.z)
 	_slab = body
-	SignalLifetime.listen(body, warden.tree_exiting, func():
+	SignalWire.listen_until_exit(body, warden.tree_exiting, func():
 		if not is_instance_valid(body):
 			return
 		var broken: bool = is_instance_valid(warden) and warden.has_method("chunks_left") and int(warden.chunks_left()) <= 0
@@ -265,17 +265,17 @@ func _persist_slab(warden, body: Node3D) -> void:
 		var events = fleet.events()
 		if events != null:
 			if events.has_signal("stage_content_cleared"):
-				SignalLifetime.listen(body, events.stage_content_cleared, func(_reason = ""):
+				SignalWire.listen_until_exit(body, events.stage_content_cleared, func(_reason = ""):
 					if is_instance_valid(body):
 						body.queue_free())
 			if events.has_signal("stage_entered"):
-				SignalLifetime.listen(body, events.stage_entered, func(_next_stage = 0, _retry = false):
+				SignalWire.listen_until_exit(body, events.stage_entered, func(_next_stage = 0, _retry = false):
 					if is_instance_valid(body):
 						body.queue_free())
 	var terrain = warden.get("terrain")
 	var own_stage := int(warden.get("stage")) if warden.get("stage") != null else -1
 	if terrain != null and terrain.has_signal("stage_freed"):
-		SignalLifetime.listen(body, terrain.stage_freed, func(freed_stage: int):
+		SignalWire.listen_until_exit(body, terrain.stage_freed, func(freed_stage: int):
 			if (own_stage < 0 or freed_stage == own_stage) and is_instance_valid(body):
 				body.queue_free())
 
@@ -351,7 +351,7 @@ func _listen(warden) -> void:
 	if _listening or warden.fleet == null:
 		return
 	_listening = true
-	SignalLifetime.listen(warden, warden.fleet.events().enemy_struck, func(enemy: Node3D, hit_kind: String, force: float):
+	SignalWire.listen_until_exit(warden, warden.fleet.events().enemy_struck, func(enemy: Node3D, hit_kind: String, force: float):
 		if hit_kind != "ram" or enemy == null or enemy != _lamp or not is_instance_valid(warden) or not is_instance_valid(warden.target):
 			return
 		if SpeedTier.of(force, warden.target.tuning.tier_cruise()) >= SpeedTier.CRUISE:

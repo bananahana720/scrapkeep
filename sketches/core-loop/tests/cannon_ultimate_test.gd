@@ -122,7 +122,7 @@ func _tick() -> void:
 		for h in entry["hazards"]:
 			if not _live.has(h.get_instance_id()) and _combat._clock >= float(entry["options"].get("live_at", INF)):
 				_live[h.get_instance_id()] = _combat._clock
-	_combat._step_cannon(DT)
+	_combat.step_cannon(DT)
 
 
 func _finish_ride() -> void:
@@ -178,10 +178,10 @@ func _cases() -> void:
 	_t.eq("first three families in order", notes.slice(0, 3), [59, 64, 67])
 	_t.eq("middle beat calls the four families", notes.slice(3, 7), [59, 64, 67, 74])
 	_t.check("every called hazard has one shared live time", _live.size() >= calls and _live.values().all(func(at): return absf(float(at) - float(_landed[0][4])) <= DT + 0.0001), str([_live.values(), _landed]))
-	_t.check("zone run-log fields", _ult._record.has("zones") and _ult._record.has("zone_hits") and _ult._record["zone_hits"] > 0 and _ult._record["zone_hits"] <= _ult._record["zones"], str(_ult._record))
+	_t.check("zone run-log fields", _ult.record().has("zones") and _ult.record().has("zone_hits") and _ult.record()["zone_hits"] > 0 and _ult.record()["zone_hits"] <= _ult.record()["zones"], str(_ult.record()))
 	var logged: Dictionary = _game.run_log._record["ultimates"].back()
-	_t.eq("landing snapshot includes zone hits", logged.get("zone_hits", 0), _ult._record["zone_hits"])
-	_t.near("landing snapshot includes zone damage", float(logged["damage"]), float(_ult._record["damage"]), 0.01)
+	_t.eq("landing snapshot includes zone hits", logged.get("zone_hits", 0), _ult.record()["zone_hits"])
+	_t.near("landing snapshot includes zone damage", float(logged["damage"]), float(_ult.record()["damage"]), 0.01)
 	var chord: Array = audio.cannon_log.filter(func(row): return row["kind"] == "cannon_landing")
 	_t.eq("landing chord is all four motif notes", chord.back()["notes"], [59, 64, 67, 74])
 	_t.check("landing is one chord", chord.back()["chord"])
@@ -227,25 +227,25 @@ func _cases() -> void:
 	var w := _enemy(target + Vector3.UP, "warden")
 	var budget := {}
 	for i in 20:
-		_combat._cannon_set_piece_hit(w, 100.0, HOME, i == 19, false, budget)
+		_combat.cannon_set_piece_hit(w, 100.0, HOME, i == 19, false, budget)
 	_t.check("one set piece adds at most the Warden posture cap", float(budget.get(w.get_instance_id(), 0.0)) <= preload("res://src/combat/ultimate.gd").warden_cap(w.monster_build()) and w.posture() > 0.0, str(budget))
 	_t.eq("closed guard loses no chunk", w.chunks_left(), 4)
 	w._apply_posture({"gain": 100.0, "contact": false})
 	_t.check("core fixture is open", w.staggered())
 	await physics_frame
-	_combat._cannon_set_piece_hit(w, 60.0, HOME, true, false, budget)
+	_combat.cannon_set_piece_hit(w, 60.0, HOME, true, false, budget)
 	_t.eq("landing shatters the open core", w.chunks_left(), 3)
 
 	await _reset()
 	foe = _enemy(target + Vector3.UP)
 	var hp: float = foe.hp
-	_combat._cannon_set_piece_hit(foe, 60.0, HOME, true, false, {})
+	_combat.cannon_set_piece_hit(foe, 60.0, HOME, true, false, {})
 	var class_one: float = hp - foe.hp
 	hp = foe.hp
-	_combat._cannon_set_piece_hit(foe, 60.0 * 1.6, HOME, true, false, {})
+	_combat.cannon_set_piece_hit(foe, 60.0 * 1.6, HOME, true, false, {})
 	_t.near("class V damage follows the heft table", (hp - foe.hp) / class_one, 1.6, 0.001)
 	foe.kind = "mind_fixture"
-	_t.near("boss takes half set-piece damage", _combat._cannon_set_piece_hit(foe, 60.0, HOME, true, false, {}), 30.0)
+	_t.near("boss takes half set-piece damage", _combat.cannon_set_piece_hit(foe, 60.0, HOME, true, false, {}), 30.0)
 	_combat._cannon_expose(foe, 2.5, "ram")
 	_t.check("exposure has a visible mark", foe.has_node("CannonExposure"))
 	_combat._clock += 2.499

@@ -1,34 +1,24 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-export const COMMIT = /^[0-9a-f]{7,40}$/;
+import {
+  COMMIT_SHA_RE,
+  commitsMatch,
+  parseReceiptArgs,
+  runReceiptCliSync,
+} from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
+
+export const COMMIT = COMMIT_SHA_RE;
+export { commitsMatch };
 export const BUILD_TXT_REL = "usr/lib/scrapkeep/BUILD.txt";
 
 export function defaultAppImage(env = process.env, home = os.homedir()) {
   const dataHome = env.XDG_DATA_HOME || path.join(home, ".local/share");
   return path.join(dataHome, "scrapkeep", "Scrapkeep.AppImage");
-}
-
-export function commitsMatch(a, b) {
-  return (
-    typeof a === "string" &&
-    typeof b === "string" &&
-    COMMIT.test(a) &&
-    COMMIT.test(b) &&
-    (a.startsWith(b) || b.startsWith(a))
-  );
 }
 
 export function mismatchedCommit(head) {
@@ -180,57 +170,29 @@ export function produce({
 }
 
 export function parseArgs(argv) {
-  const args = { head: null, appImage: null, buildTxt: null, out: null };
-  const take = (i, flag) => {
-    const val = argv[i + 1];
-    if (val === undefined || val === "" || val.startsWith("--")) {
-      throw new Error(`${flag} requires a value`);
-    }
-    return val;
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "--head") args.head = take(i++, a);
-    else if (a.startsWith("--head=")) args.head = a.slice("--head=".length);
-    else if (a === "--appimage") args.appImage = take(i++, a);
-    else if (a.startsWith("--appimage=")) args.appImage = a.slice("--appimage=".length);
-    else if (a === "--build-txt") args.buildTxt = take(i++, a);
-    else if (a.startsWith("--build-txt=")) args.buildTxt = a.slice("--build-txt=".length);
-    else if (a === "--out") args.out = take(i++, a);
-    else if (a.startsWith("--out=")) args.out = a.slice("--out=".length);
-    else throw new Error(`unknown argument: ${a}`);
-  }
+  const args = parseReceiptArgs(argv, {
+    valueFlags: {
+      "--appimage": { key: "appImage" },
+      "--build-txt": { key: "buildTxt" },
+    },
+    defaults: { head: null, appImage: null, buildTxt: null, out: null },
+    head: "optional",
+  });
   if (!args.head) {
     throw new Error(
       "usage: installed-build-receipt.mjs --head <sha> [--appimage <path>] [--build-txt <path>] [--out <file>]",
     );
   }
-  if (!COMMIT.test(args.head)) {
-    throw new Error(`--head requires 7 to 40 lowercase hex characters; got "${args.head}"`);
-  }
   return args;
 }
 
 function main(argv) {
-  let args;
-  let receipt;
-  try {
-    args = parseArgs(argv);
-    receipt = produce(args);
-  } catch (e) {
-    console.error(String(e?.message ?? e));
-    return 2;
-  }
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) {
-    mkdirSync(path.dirname(path.resolve(args.out)), { recursive: true });
-    writeFileSync(args.out, text);
-  } else {
-    process.stdout.write(text);
-  }
-  return receipt.pass ? 0 : 1;
+  return runReceiptCliSync(() => {
+    const args = parseArgs(argv);
+    return { receipt: produce(args), out: args.out };
+  });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   process.exit(main(process.argv.slice(2)));
 }

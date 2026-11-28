@@ -7,7 +7,7 @@ const Progress := preload("res://src/core/progress.gd")
 const Events := preload("res://src/core/game_events.gd")
 const Customize := preload("res://src/ui/customize_page.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
 const T := preload("res://tests/support/t.gd")
 
 const PILOT := "pylon_engineer"

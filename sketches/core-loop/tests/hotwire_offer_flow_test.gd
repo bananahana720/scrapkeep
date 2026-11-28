@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 
 # Unit HW1, after the fold (systems audit pass D): a hot-wired part is a rare part the first
@@ -75,9 +76,9 @@ func _offer_checks() -> void:
 		and build._hotwire_gate_ids() == ["riveted_shell"], "screen offers %d, %s" % [_offers, build.hotwire_pending()])
 	_game.events.beacon_unsealed.emit(2)
 	_check("nothing new after warden II", build._hotwire_gate_ids() == ["riveted_shell"], "gates %s" % [build._hotwire_gate_ids()])
-	_check("a rare part on the ladder", Parts.has("riveted_shell") and Parts.rung_of("riveted_shell") == 1
+	_check("a rare part on the ladder", Parts.has("riveted_shell") and PartOffers.rung_of("riveted_shell", Parts.def) == 1
 		and Parts.def("riveted_shell").verb == HotwireRules.fill(Parts.hotwired("riveted_shell")["label"])
-		and not "riveted_shell" in Parts.ids(), "rung %d, verb '%s'" % [Parts.rung_of("riveted_shell"), Parts.def("riveted_shell").verb])
+		and not "riveted_shell" in Parts.ids(), "rung %d, verb '%s'" % [PartOffers.rung_of("riveted_shell", Parts.def), Parts.def("riveted_shell").verb])
 	build._on_flow_changed("gates")
 	var offered: Array = build.gates.offers.map(func(o): return o["part_id"])
 	var striped: Array = build.gates.offers.filter(func(o): return o["hotwired"]).map(func(o): return o["part_id"])

@@ -15,7 +15,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const Interact := preload("res://src/world/interact.gd")
 const Interactables := preload("res://src/world/interactables.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
