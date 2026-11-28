@@ -37,7 +37,9 @@ import {
   lintL16,
   lintL17,
   lintL18,
+  lintPreloadedTestSupport,
   lintSketch,
+  lintTrackedUids,
   parseBatchDriverRefs,
   parseBatchDriverVars,
   parseLintArgs,
@@ -1212,10 +1214,46 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
   const wiredRefs = parseBatchDriverRefs(driver);
   const wiredVars = parseBatchDriverVars(driver);
   assert.deepEqual(
-    reached.flatMap((file) =>
-      lintL14(file.path, file.rel, file.text, wiredRefs, new Set(), wiredVars),
-    ),
+    lintPreloadedTestSupport(testFiles, toolFiles, "sketches/core-loop", wiredRefs, wiredVars),
     [],
+  );
+
+  const noTools = lintPreloadedTestSupport(
+    testFiles,
+    [],
+    "sketches/core-loop",
+    wiredRefs,
+    wiredVars,
+  );
+  assert.deepEqual(
+    noTools.map((item) => `${item.rule} ${item.path}`),
+    ["L14 sketches/core-loop/tools"],
+  );
+  assert.match(noTools[0].message, /sketches\/core-loop\/tools/);
+
+  const noSupport = lintPreloadedTestSupport(
+    [testFiles[0]],
+    toolFiles,
+    "sketches/core-loop",
+    wiredRefs,
+    wiredVars,
+  );
+  assert.deepEqual(
+    noSupport.map((item) => `${item.rule} ${item.path}`),
+    ["L14 sketches/core-loop/tests/support"],
+  );
+  assert.match(noSupport[0].message, /sketches\/core-loop\/tests\/support/);
+
+  const neither = lintPreloadedTestSupport(
+    [{ path: "sketches/core-loop/tests/plain_test.gd", text: "extends SceneTree\n" }],
+    toolFiles,
+    "sketches/core-loop",
+    wiredRefs,
+    wiredVars,
+  );
+  assert.deepEqual(
+    neither.map((item) => `${item.rule} ${item.path}`),
+    ["L14 sketches/core-loop/tools", "L14 sketches/core-loop/tests/support"],
   );
 
   const liveDriver = readFileSync(path.join(sketchDir, "tools", "test_batch_driver.gd"), "utf8");
@@ -1550,25 +1588,55 @@ test("L18 flags a script with no uid file and a uid file with no script, naming 
     ],
   );
   assert.equal(BASELINE_RULES.L18.shape, "keys");
-  const withoutGitDir = lintSketch("core-loop")
-    .filter((item) => item.rule === "L18")
-    .map((item) => item.path)
-    .sort();
-  const gitDir = spawnSync("git", ["rev-parse", "--git-dir"], {
-    cwd: path.join(sketchDir, "..", ".."),
+
+  const emptyFolders = [
+    "sketches/core-loop/addons",
+    "sketches/core-loop/src",
+    "sketches/core-loop/tests",
+    "sketches/core-loop/tools",
+  ];
+  for (const input of [[], ["sketches/core-loop/src/notes.md"]]) {
+    const emptyFindings = lintL18(input, emptyFolders);
+    assert.equal(emptyFindings.length, 1);
+    assert.equal(emptyFindings[0].rule, "L18");
+    for (const folder of emptyFolders) {
+      assert.ok(emptyFindings[0].message.includes(folder), folder);
+    }
+  }
+
+  const repoRoot = path.resolve(sketchDir, "..", "..");
+  const gitDirRun = spawnSync("git", ["rev-parse", "--git-dir"], {
+    cwd: repoRoot,
     encoding: "utf8",
-  }).stdout.trim();
+  });
+  assert.equal(gitDirRun.status, 0, gitDirRun.stderr);
+  const gitDir = gitDirRun.stdout.trim();
+  assert.ok(gitDir.length > 0);
+
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-l18-"));
   const prevGitDir = process.env.GIT_DIR;
-  process.env.GIT_DIR = gitDir;
   try {
-    const withGitDir = lintSketch("core-loop")
-      .filter((item) => item.rule === "L18")
-      .map((item) => item.path)
-      .sort();
-    assert.deepEqual(withGitDir, withoutGitDir);
+    const run = (cwd, ...args) => {
+      const ran = spawnSync("git", args, { cwd, encoding: "utf8" });
+      assert.equal(ran.status, 0, ran.stderr);
+    };
+    const scratchSrc = path.join(tmp, "sketches", "core-loop", "src");
+    mkdirSync(scratchSrc, { recursive: true });
+    writeFileSync(path.join(scratchSrc, "missing_uid.gd"), "extends RefCounted\n");
+    run(tmp, "init", "-q");
+    run(tmp, "add", "sketches/core-loop/src/missing_uid.gd");
+    run(tmp, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "missing uid");
+
+    process.env.GIT_DIR = path.resolve(repoRoot, gitDir);
+    const hooked = lintTrackedUids("sketches/core-loop", tmp);
+    assert.deepEqual(
+      hooked.map((item) => `${item.rule} ${item.path}`),
+      ["L18 sketches/core-loop/src/missing_uid.gd"],
+    );
   } finally {
     if (prevGitDir === undefined) delete process.env.GIT_DIR;
     else process.env.GIT_DIR = prevGitDir;
+    rmSync(tmp, { recursive: true, force: true });
   }
 });
 

@@ -514,6 +514,12 @@ func _run() -> void:
 	SkillBand.last_refusal = "probe"
 	TraversalLine.graph_notes = 3
 	TraversalLine._graphs["__probe__"] = true
+	var stage1_map_before := TraversalLine.map_of(1)
+	t.check("TraversalLine.use_fixture swaps park defs in memory before reset",
+		stage1_map_before != TraversalLine.FIXTURE_MAP
+		and TraversalLine.use_fixture()
+		and TraversalLine._park_defs_source != ""
+		and TraversalLine.map_of(1) == TraversalLine.FIXTURE_MAP)
 	var fairness_before := BotFairness.config()
 	t.check("BotFairness.config loads before reset", not fairness_before.is_empty())
 	driver._reset()
@@ -523,8 +529,9 @@ func _run() -> void:
 		and BotProfile._physics_end == 0 and not BotProfile._pending and BotProfile._monitors.is_empty())
 	t.check("SkillBand.reset_for_tests clears quiet and last_refusal",
 		not SkillBand.quiet and SkillBand.last_refusal == "")
-	t.check("TraversalLine.reset_for_tests clears graph_notes, _park_defs_source, and _graphs",
-		TraversalLine.graph_notes == 0 and TraversalLine._park_defs_source == "" and TraversalLine._graphs.is_empty())
+	t.check("TraversalLine.reset_for_tests restores park defs and clears graph_notes, _park_defs_source, and _graphs",
+		TraversalLine.graph_notes == 0 and TraversalLine._park_defs_source == "" and TraversalLine._graphs.is_empty()
+		and TraversalLine.map_of(1) == stage1_map_before)
 	var fairness_after := BotFairness.config()
 	t.check("BotFairness.reset_for_tests reloads config cleanly",
 		not fairness_after.is_empty() and not is_same(fairness_before, fairness_after))

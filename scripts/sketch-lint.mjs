@@ -905,6 +905,34 @@ export function preloadedTestSupportFiles(testFiles, toolFiles, relative) {
   return [...seen].sort().map((rel) => byRel.get(rel));
 }
 
+export function lintPreloadedTestSupport(
+  testFiles,
+  toolFiles,
+  relative,
+  driverRefs,
+  driverVars = new Set(),
+) {
+  const reached = preloadedTestSupportFiles(testFiles, toolFiles, relative);
+  const findings = [];
+  for (const folder of ["tools", "tests/support"]) {
+    const prefix = `${folder}/`;
+    if (!reached.some((file) => file.rel.startsWith(prefix))) {
+      findings.push(
+        finding(
+          "L14",
+          `${relative}/${folder}`,
+          1,
+          `no preloaded .gd script reached under ${relative}/${folder}; check the L14 test-support walker`,
+        ),
+      );
+    }
+  }
+  for (const file of reached) {
+    findings.push(...lintL14(file.path, file.rel, file.text, driverRefs, null, driverVars));
+  }
+  return findings;
+}
+
 function resetMethodText(text) {
   let inReset = false;
   const kept = [];
@@ -1177,9 +1205,20 @@ export function lintL17(file, text) {
   return findings;
 }
 
-export function lintL18(paths) {
+export function lintL18(paths, folders = UID_FOLDERS) {
   const tracked = new Set(paths);
   const findings = [];
+  if (!paths.some((file) => file.endsWith(".gd"))) {
+    const list = folders.join(", ");
+    return [
+      finding(
+        "L18",
+        folders[0] ?? "sketches",
+        1,
+        `git ls-files returned no tracked .gd scripts under ${list}; check the repository root and git environment`,
+      ),
+    ];
+  }
   for (const file of paths) {
     if (file.endsWith(".gd") && !tracked.has(`${file}.uid`))
       findings.push(
@@ -1196,6 +1235,14 @@ export function lintL18(paths) {
       );
   }
   return findings;
+}
+
+export function lintTrackedUids(relative, repoRoot = root) {
+  const folders = UID_FOLDERS.map((folder) => `${relative}/${folder}`);
+  const paths = git(["ls-files", "--", ...folders], { cwd: repoRoot })
+    .split("\n")
+    .filter(Boolean);
+  return lintL18(paths, folders);
 }
 
 function walk(directory) {
@@ -1279,9 +1326,9 @@ export function lintSketch(sketch) {
     }
   }
   if (sketch === "core-loop") {
-    for (const file of preloadedTestSupportFiles(testFiles, toolFiles, relative)) {
-      findings.push(...lintL14(file.path, file.rel, file.text, driverRefs, null, driverVars));
-    }
+    findings.push(
+      ...lintPreloadedTestSupport(testFiles, toolFiles, relative, driverRefs, driverVars),
+    );
   }
   const flagFiles = [
     ...testFiles,
@@ -1293,15 +1340,7 @@ export function lintSketch(sketch) {
   findings.push(...lintL3(flagFiles, tuning));
   const tests = walk(path.join(directory, "tests"));
   findings.push(...lintL4(tests, `${relative}/tests`));
-  findings.push(
-    ...lintL18(
-      git(["ls-files", "--", ...UID_FOLDERS.map((folder) => `${relative}/${folder}`)], {
-        cwd: root,
-      })
-        .split("\n")
-        .filter(Boolean),
-    ),
-  );
+  findings.push(...lintTrackedUids(relative));
   const quarantine = path.join(directory, "tests", "QUARANTINE.tsv");
   if (existsSync(quarantine)) {
     const names = new Set(

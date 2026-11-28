@@ -4,8 +4,10 @@ const Combat := preload("res://src/combat/combat.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const BossDouble := preload("res://tests/doubles/boss_spawner_double.gd")
 const SpineDouble := preload("res://tests/doubles/spine_spawner_double.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
+const ROOTS: Array[String] = ["res://tests", "res://tools"]
 const PUSH_OWNER := "res://tests/support/push.gd"
 const ALLOWED_KEY_LOOP_HELPERS: Array[String] = []
 const ALLOWED_SINGLE_EDGE_KEY_PUSHES: Array[String] = [
@@ -65,20 +67,22 @@ func _check_spawner_double_owners() -> void:
 
 
 func _check_push_owners() -> void:
-	var old_path := "res://tests/" + "workshop/push.gd"
-	var stale_refs: Array[String] = []
+	var stale_refs := SourceScan.matching(_t, ROOTS, "res://tests/" + "workshop/push\\.gd")
 	var loop_helpers: Array[String] = []
 	var single_edge_helpers: Array[String] = []
-	var scripts := _scripts("res://tests/")
-	scripts.append_array(_scripts("res://tools/"))
-	scripts.sort()
-	for path in scripts:
-		var text := FileAccess.get_file_as_string(path)
-		if text.contains(old_path):
-			stale_refs.append(path)
+	var loop_re := RegEx.new()
+	var loop_ok := loop_re.compile("for\\s+\\w+\\s+in\\s+\\[\\s*(?:true\\s*,\\s*false|false\\s*,\\s*true)\\s*\\]") == OK
+	_t.check("key loop regex compiles", loop_ok)
+	var key_files := SourceScan.matching(_t, ROOTS, "InputEventKey" + "\\.new\\(\\)")
+	for path in key_files:
 		if path == PUSH_OWNER:
 			continue
-		for block in _key_push_blocks(text):
+		var text := FileAccess.get_file_as_string(path)
+		var open_ok := FileAccess.get_open_error() == OK and not text.is_empty()
+		_t.check("%s readable for push-owner check" % path, open_ok)
+		if not open_ok or not loop_ok:
+			continue
+		for block in _key_push_blocks(text, loop_re):
 			var entry := "%s:%s" % [path, block["name"]]
 			if block["loop"]:
 				loop_helpers.append(entry)
@@ -92,29 +96,8 @@ func _check_push_owners() -> void:
 
 
 func _check_public_read_seams() -> void:
-	var body_token := "screens" + "._body"
-	var posture_read_re := RegEx.create_from_string("\\._pos" + "ture\\.posture\\b(?!\\s*[-+*/]?=(?!=))")
-	var body_files: Array[String] = []
-	var posture_files: Array[String] = []
-	var scripts := _scripts("res://tests/")
-	scripts.append_array(_scripts("res://tools/"))
-	scripts.sort()
-	for path in scripts:
-		var text := FileAccess.get_file_as_string(path)
-		var has_body := false
-		var has_posture := false
-		for raw in text.split("\n"):
-			var code := raw.split("#", true, 1)[0]
-			if not has_body and code.contains(body_token):
-				has_body = true
-			if not has_posture and posture_read_re.search(code) != null:
-				has_posture = true
-			if has_body and has_posture:
-				break
-		if has_body:
-			body_files.append(path)
-		if has_posture:
-			posture_files.append(path)
+	var body_files := SourceScan.matching(_t, ROOTS, "(?m)^[^#\\n]*screens" + "\\._body")
+	var posture_files := SourceScan.matching(_t, ROOTS, "(?m)^[^#\\n]*\\._pos" + "ture\\.posture\\b(?!\\s*[-+*/]?=(?!=))")
 	_check_allowlist("no unlisted file reaches into screens body control", body_files, ALLOWED_SCREENS_BODY_REACHINS)
 	_check_allowlist("no unlisted file reads posture value through private posture field", posture_files, ALLOWED_POSTURE_VALUE_READS)
 
@@ -132,10 +115,9 @@ func _check_allowlist(label: String, found: Array[String], allowed: Array[String
 	_t.eq("%s (no stale allowlist entries)" % label, stale, [])
 
 
-static func _key_push_blocks(text: String) -> Array[Dictionary]:
+static func _key_push_blocks(text: String, loop_re: RegEx) -> Array[Dictionary]:
 	var key_ctor := "InputEventKey" + ".new()"
 	var push_call := "push_" + "input"
-	var loop_re := RegEx.create_from_string("for\\s+\\w+\\s+in\\s+\\[\\s*(?:true\\s*,\\s*false|false\\s*,\\s*true)\\s*\\]")
 	var out: Array[Dictionary] = []
 	var func_name := ""
 	var has_key := false
@@ -172,13 +154,3 @@ static func _extract_func_name(stripped: String) -> String:
 		return ""
 	var paren := rest.find("(")
 	return rest.substr(0, paren).strip_edges() if paren > 0 else ""
-
-
-static func _scripts(dir: String) -> Array[String]:
-	var out: Array[String] = []
-	for file in DirAccess.get_files_at(dir):
-		if file.ends_with(".gd"):
-			out.append(dir + file)
-	for sub in DirAccess.get_directories_at(dir):
-		out.append_array(_scripts(dir + sub + "/"))
-	return out

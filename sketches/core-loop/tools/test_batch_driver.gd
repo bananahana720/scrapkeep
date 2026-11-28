@@ -265,8 +265,7 @@ func _reset() -> void:
 	SkillBand.reset_for_tests()
 	TraversalLine.reset_for_tests()
 	BotFairness.reset_for_tests()
-	RampFlipper._shared.clear()
-	RampFlipper._warned_asset = false
+	RampFlipper.reset_for_tests()
 	CosmeticArt.reset_for_tests()
 	TeardownNoise.reset_for_tests()
 	ContentRegistry.reset_for_tests()

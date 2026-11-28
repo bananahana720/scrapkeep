@@ -103,7 +103,7 @@ func _mechanic_source(source: String) -> String:
 	var skip := false
 	for line in source.split("\n"):
 		if line.begins_with("func ") or line.begins_with("static func "):
-			skip = line.begins_with("func _build_tool(") or line.begins_with("static func _parts(")
+			skip = line.begins_with("func _build_tool(") or line.begins_with("static func _parts(") or line.begins_with("static func reset_for_tests(")
 		if skip or line.begins_with("static var _shared") or line.strip_edges().is_empty() or line.strip_edges().begins_with("#"):
 			continue
 		lines.append(line)
