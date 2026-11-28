@@ -71,7 +71,7 @@ const TABLES := {
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "2fe66bab0c3ad97443d08468976d42efe9a837880a997861530bee798893485e",
 	"cosmetics.ROWS": "2230dc95ee1c1fc6033e8ff830be418a43a7618288b62bbafddc9ad2d7769359",
-	"event_kinds.ROWS": "2230d79b9085adb5057d5dbcc34b5c7d289740816b9cc783630c69f0a2939bf8",
+	"event_kinds.ROWS": "93dbd24ce202521707e54731ae4d19195ae0a64507eab35e1d59254e40c3c8ae",
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "3593d9d4f1a83b2869b23f84f4075ebb33a27a4e57cce85846153c1ef54acb85",
 	"event_kinds.CAUSE_ROWS": "9d20bee7f3e2a23dd09db3c08ab99e3fa0aab0f99d4373ef3398fff8601e0812",

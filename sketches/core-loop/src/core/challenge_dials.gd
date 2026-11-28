@@ -1,6 +1,8 @@
 class_name ChallengeDials
 extends RefCounted
 
+const CliFlags := preload("res://src/core/cli_flags.gd")
+
 const TELL_FLOOR := 0.6
 const WARN_GAP := 0.2
 
@@ -176,21 +178,17 @@ static func _load_cli() -> void:
 	if _cli_loaded:
 		return
 	_cli_loaded = true
-	for args in [OS.get_cmdline_args(), OS.get_cmdline_user_args()]:
-		for arg in args:
-			if String(arg).begins_with("--pack-pressure="):
-				var unknown := []
-				_cli.merge(parse(pack_pressure_spec(String(arg).trim_prefix("--pack-pressure="), unknown)), true)
-				for letter in unknown:
-					_refuse("pack-pressure " + letter, "challenge_dials: --pack-pressure variant '%s' ignored (A, B, C, D or E)" % letter)
-	for args in [OS.get_cmdline_args(), OS.get_cmdline_user_args()]:
-		for arg in args:
-			if String(arg).begins_with("--tune="):
-				_cli.merge(parse(String(arg).trim_prefix("--tune=")), true)
+	for raw in CliFlags.values_of("--pack-pressure=", true):
+		var unknown := []
+		_cli.merge(parse(pack_pressure_spec(raw, unknown)), true)
+		for letter in unknown:
+			_refuse("pack-pressure " + letter, "challenge_dials: --pack-pressure variant '%s' ignored (A, B, C, D or E)" % letter)
+	for raw in CliFlags.values_of("--tune=", true):
+		_cli.merge(parse(raw), true)
 
 
 static func _unruled() -> bool:
-	return "--tune-unruled" in OS.get_cmdline_args() or "--tune-unruled" in OS.get_cmdline_user_args()
+	return CliFlags.has_flag("--tune-unruled", true)
 
 
 static func _is_list(key: String) -> bool:

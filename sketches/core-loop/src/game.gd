@@ -14,6 +14,8 @@ const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const RunMoments := preload("res://src/core/run_moments.gd")
 const Profile := preload("res://src/core/profile.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
+const CliFlags := preload("res://src/core/cli_flags.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 const Progress := preload("res://src/core/progress.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
@@ -465,10 +467,7 @@ func _attach_experimental() -> void:
 static func _experimental_asked() -> bool:
 	if OS.get_environment(EXPERIMENTAL_ENV) != "":
 		return true
-	for arg in OS.get_cmdline_args() + OS.get_cmdline_user_args():
-		if arg.begins_with(EXPERIMENTAL_FLAG):
-			return true
-	return false
+	return CliFlags.has_prefix(EXPERIMENTAL_FLAG, true)
 
 
 func _on_experimental_fact(fact: Dictionary) -> void:
@@ -476,10 +475,7 @@ func _on_experimental_fact(fact: Dictionary) -> void:
 
 
 func _start_self_play() -> void:
-	var script_path := SELF_PLAY
-	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--self-play-script="):
-			script_path = arg.trim_prefix("--self-play-script=")
+	var script_path := CliFlags.value_of("--self-play-script=", SELF_PLAY)
 	if not ResourceLoader.exists(script_path):
 		push_error("game: --self-play needs a pack with tools/ (npm run sketch:export -- --self-play)")
 		get_tree().quit(2)
@@ -501,7 +497,7 @@ func _listen_for_tunes() -> void:
 func _on_tune_heard(id: String) -> void:
 	if not ctx.profile.hear_tune(id):
 		return
-	if ctx.profile.can_save and not ctx.profile.save():
+	if not ctx.profile.save_if_allowed():
 		push_warning("game: tune %s heard but not saved: %s" % [id, ctx.profile.last_error])
 	hud.tune_found(String(TuneRows.row(id).get("name", id)))
 
@@ -509,11 +505,7 @@ func _on_tune_heard(id: String) -> void:
 func _chosen_table():
 	var id := table
 	if id.is_empty():
-		var args := OS.get_cmdline_args()
-		args.append_array(OS.get_cmdline_user_args())
-		for arg in args:
-			if arg.begins_with("--table="):
-				id = arg.trim_prefix("--table=")
+		id = CliFlags.value_of("--table=", "", true)
 	if id.is_empty():
 		return StageDefs if test_mode else TABLES[LAUNCH_TABLE]
 	if not TABLES.has(id):
@@ -734,12 +726,10 @@ func dump_tuning() -> String:
 		"boost_cooldown_scale": tuning.boost_cooldown_scale,
 	}
 	var path := "user://tuning-%d.json" % int(Time.get_unix_time_from_system())
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		push_warning("tuning dump failed: %s" % error_string(FileAccess.get_open_error()))
+	var err := SafeStore.write_atomic(path, JSON.stringify(record, "  "))
+	if err != OK:
+		push_warning("tuning dump failed: %s" % error_string(err))
 		return ""
-	file.store_string(JSON.stringify(record, "  "))
-	file.close()
 	var shown := ProjectSettings.globalize_path(path)
 	print("tuning saved to ", shown)
 	return shown
@@ -997,11 +987,11 @@ func _register_actions() -> void:
 
 
 func apply_saved_bindings() -> void:
-	var store := SettingsStore.new(storage_dir)
+	var store = settings_store()
 	for action in Bindings.actions():
 		if store.binding(action).is_empty() or not InputMap.has_action(action):
 			continue
-		var decoded := store.binding_events(action)
+		var decoded: Array = store.binding_events(action)
 		if decoded.is_empty():
 			continue
 		apply_binding(action, decoded)
@@ -1043,11 +1033,11 @@ func settings_store():
 
 
 func apply_saved_display(args: Array = []) -> void:
-	var launch: Array = args if not args.is_empty() else Array(OS.get_cmdline_user_args())
-	var saved := SettingsStore.new(storage_dir)
+	var launch: Array = args if not args.is_empty() else Array(CliFlags.args())
+	var saved = settings_store()
 	if not launch.any(func(arg): return String(arg).begins_with("--preset=") and GraphicsPreset.PRESETS.has(String(arg).trim_prefix("--preset="))):
 		set_quality(saved.quality())
-	if launches_fullscreen(saved.fullscreen(), Array(OS.get_cmdline_args() + OS.get_cmdline_user_args())):
+	if launches_fullscreen(saved.fullscreen(), Array(CliFlags.args(true))):
 		set_fullscreen(true)
 	set_reduced_motion(saved.reduced_motion())
 	set_reduce_flashes(saved.reduce_flashes())
@@ -1103,9 +1093,9 @@ func set_reduce_flashes(on: bool) -> void:
 func set_frame_smoothing(on: bool) -> void:
 	frame_smoothing = on
 	var smooth := on and not test_mode and _windowed()
-	for arg in OS.get_cmdline_args() + OS.get_cmdline_user_args():
-		if arg == "--smoothing=0" or arg == "--smoothing=1":
-			smooth = arg == "--smoothing=1"
+	for raw in CliFlags.values_of("--smoothing=", true):
+		if raw == "0" or raw == "1":
+			smooth = raw == "1"
 	_smooth(smooth)
 
 
@@ -1121,7 +1111,7 @@ func set_wide_picture(on: bool) -> void:
 
 func _fit_picture() -> void:
 	var window := get_tree().root
-	var fill := wide_fills(wide_picture, not test_mode and _windowed(), OS.get_cmdline_args() + OS.get_cmdline_user_args(), window.size)
+	var fill := wide_fills(wide_picture, not test_mode and _windowed(), Array(CliFlags.args(true)), window.size)
 	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND if fill else Window.CONTENT_SCALE_ASPECT_KEEP
 
 
@@ -1291,15 +1281,14 @@ func _boot(step: String) -> void:
 
 
 static func _self_play_save() -> String:
-	for arg in OS.get_cmdline_user_args():
-		var folder := arg.trim_prefix("--self-play-save=")
-		if arg.begins_with("--self-play-save=") and folder.is_valid_filename() and not folder.contains("."):
+	for folder in CliFlags.values_of("--self-play-save="):
+		if folder.is_valid_filename() and not folder.contains("."):
 			return folder
 	return str(OS.get_process_id())
 
 
 static func _launch_flag(flag: String) -> bool:
-	return flag in OS.get_cmdline_args() or flag in OS.get_cmdline_user_args()
+	return CliFlags.has_flag(flag, true)
 
 
 func _screen_key(key: int) -> bool:

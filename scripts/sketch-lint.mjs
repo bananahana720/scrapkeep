@@ -28,6 +28,7 @@ const QUARANTINE_HEADER = "test\towner\treason\tadded\tdeadline";
 const TEST_FOLDERS = new Set(["unit", "support", "doubles", "fixtures", "trees", "workshop"]);
 const launchesGame = /SMOKE_FLAGS|--flags|tuning\.gd/;
 const SOURCE_EXTENSIONS = new Set([".gd", ".mjs", ".js", ".sh", ".py"]);
+const HOME_SCRIPT_EXTENSIONS = new Set([".py", ".sh", ".gd"]);
 
 const finding = (rule, file, line, message) => ({ rule, path: file, line, message });
 
@@ -347,13 +348,13 @@ export const SIM_READS = {
     sites: 1,
     why: "the landing-sound guard repeats the director's own clearance check, so it asks about the same ball the director does",
   },
-  "src/presentation/hero_assets.gd": {
-    sites: 1,
-    why: "the Warden's lens asks its Sight, which answers with the last seen place while the ball is cloaked and has no drawn place",
-  },
   "src/presentation/reward_ceremony.gd": {
     sites: 1,
     why: "calm() decides whether a ceremony may stop the world: a rule read against threats and enemies at the tick",
+  },
+  "src/presentation/warden_dress.gd": {
+    sites: 1,
+    why: "the Warden's lens asks its Sight, which answers with the last seen place while the ball is cloaked and has no drawn place",
   },
   "src/ui/workshop.gd": {
     sites: 1,
@@ -1058,6 +1059,24 @@ export function lintL16(files) {
   return findings.sort((a, b) => a.path.localeCompare(b.path));
 }
 
+export function lintL17(file, text) {
+  const findings = [];
+  const lines = text.split("\n");
+  for (let index = 0; index < lines.length; index++) {
+    if (lines[index].includes("/home/andrew")) {
+      findings.push(
+        finding(
+          "L17",
+          file,
+          index + 1,
+          "hardcoded /home/andrew path; derive from HOME (os.path.expanduser, Path.home(), or $HOME)",
+        ),
+      );
+    }
+  }
+  return findings;
+}
+
 function walk(directory) {
   return walkSync(directory, { includeDirs: true });
 }
@@ -1081,11 +1100,15 @@ export function lintSketch(sketch) {
   const testFiles = sources(path.join(directory, "tests"), new Set([".gd"]));
   for (const file of testFiles) {
     findings.push(...lintL1(file.path, file.text));
+    findings.push(...lintL17(file.path, file.text));
     if (sketch === "core-loop") {
       const rel = file.path.slice(relative.length + 1);
       findings.push(...lintL15(file.path, rel, file.text));
       findings.push(...lintL13(file.path, rel, file.text));
     }
+  }
+  for (const file of sources(path.join(directory, "tests"), new Set([".py", ".sh"]))) {
+    findings.push(...lintL17(file.path, file.text));
   }
   const lit = new Set();
   const batchDriverPath = path.join(directory, "tools", "test_batch_driver.gd");
@@ -1126,9 +1149,11 @@ export function lintSketch(sketch) {
   }
   const lintSelf = new Set(["scripts/sketch-lint.mjs", "scripts/sketch-lint.test.mjs"]);
   const toolFiles = sources(path.join(directory, "tools"), SOURCE_EXTENSIONS);
-  if (sketch === "core-loop") {
-    for (const file of toolFiles) {
-      if (!file.path.endsWith(".gd")) continue;
+  for (const file of toolFiles) {
+    if (HOME_SCRIPT_EXTENSIONS.has(path.extname(file.path))) {
+      findings.push(...lintL17(file.path, file.text));
+    }
+    if (sketch === "core-loop" && file.path.endsWith(".gd")) {
       findings.push(...lintL13(file.path, file.path.slice(relative.length + 1), file.text));
     }
   }

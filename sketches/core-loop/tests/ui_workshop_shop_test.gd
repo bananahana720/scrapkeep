@@ -4,8 +4,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Shop := preload("res://src/build/shop.gd")
 const Parts := preload("res://src/build/parts.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # Moss's counter and his conversation loop (v2 W8), on a real run with the workshop
 # armed. The bay's catch is the shop's own enter(), the call world makes.

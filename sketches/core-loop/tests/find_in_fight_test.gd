@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const Flow := preload("res://src/core/flow.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")

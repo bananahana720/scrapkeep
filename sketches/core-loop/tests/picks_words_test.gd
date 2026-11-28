@@ -13,7 +13,7 @@ const TreeCard := preload("res://src/ui/tree_card.gd")
 const TreePick := preload("res://src/ui/tree_pick.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const BuildReadout := preload("res://src/ui/build_readout.gd")
 const Parts := preload("res://src/build/parts.gd")
 

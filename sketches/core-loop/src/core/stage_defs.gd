@@ -1,7 +1,5 @@
 extends RefCounted
 
-const Worlds := preload("res://src/core/worlds.gd")
-
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const BOSS := AlphaDefs.BOSS
 const COUNT := AlphaDefs.COUNT
@@ -11,39 +9,39 @@ const RUN_TIER_DIAL_STEPS := {"damage": 0.1, "aggression": 0.1}
 
 
 static func of(stage: int) -> Dictionary:
-	return DEFS[clampi(stage, 1, COUNT) - 1]
+	return AlphaDefs.of(stage)
 
 
 static func is_last(stage: int) -> bool:
-	return stage >= COUNT
+	return AlphaDefs.is_last(stage)
 
 
 static func world_of(stage: int) -> int:
-	return Worlds.world_of(DEFS, stage)
+	return AlphaDefs.world_of(stage)
 
 
 static func local(stage: int) -> int:
-	return Worlds.local(DEFS, stage)
+	return AlphaDefs.local(stage)
 
 
 static func first_of(world: int) -> int:
-	return Worlds.first_of(DEFS, world)
+	return AlphaDefs.first_of(world)
 
 
 static func last_of(world: int) -> int:
-	return Worlds.last_of(DEFS, world)
+	return AlphaDefs.last_of(world)
 
 
 static func worlds() -> Array:
-	return Worlds.worlds(DEFS)
+	return AlphaDefs.worlds()
 
 
 static func is_world_last(stage: int) -> bool:
-	return Worlds.is_world_last(DEFS, stage)
+	return AlphaDefs.is_world_last(stage)
 
 
 static func is_run_last(stage: int) -> bool:
-	return Worlds.is_run_last(DEFS, stage)
+	return AlphaDefs.is_run_last(stage)
 
 
 static func synergy_in_play(synergy_id: String) -> bool:

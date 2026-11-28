@@ -726,10 +726,6 @@ static func settle_stingers() -> void:
 	_stinger_tasks.clear()
 
 
-static func stage_theme(stage = "default") -> int:
-	return int(MusicRows.resolve(stage)["synth_theme"])
-
-
 func schedule_restart(at: int, next_mode: int, next_theme := -1) -> void:
 	_add_action(at, {"type": "restart", "mode": next_mode, "theme": next_theme})
 

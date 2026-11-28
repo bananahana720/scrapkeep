@@ -3,6 +3,7 @@ extends Node
 # MangoHud does not run on macOS; RenderingServer.frame_post_draw emits once per presented frame to match its CSV.
 
 const SafeStore := preload("res://src/core/safe_store.gd")
+const CliFlags := preload("res://src/core/cli_flags.gd")
 
 const FLAG := "--frame-log="
 const WARMUP_FLAG := "--frame-log-warmup="
@@ -20,18 +21,16 @@ var _frames := PackedFloat64Array()
 
 
 static func wanted() -> bool:
-	return Array(OS.get_cmdline_user_args()).any(func(arg: String): return arg.begins_with(FLAG))
+	return CliFlags.has_prefix(FLAG)
 
 
 func _ready() -> void:
 	name = "FrameLog"
-	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with(FLAG):
-			path = arg.trim_prefix(FLAG)
-		elif arg.begins_with(WARMUP_FLAG):
-			warmup_s = maxf(float(arg.trim_prefix(WARMUP_FLAG)), 0.0)
-		elif arg.begins_with(SECONDS_FLAG):
-			seconds = maxf(float(arg.trim_prefix(SECONDS_FLAG)), 0.001)
+	path = CliFlags.value_of(FLAG, path)
+	if CliFlags.has_prefix(WARMUP_FLAG):
+		warmup_s = maxf(float(CliFlags.value_of(WARMUP_FLAG)), 0.0)
+	if CliFlags.has_prefix(SECONDS_FLAG):
+		seconds = maxf(float(CliFlags.value_of(SECONDS_FLAG)), 0.001)
 	if path.is_empty():
 		push_error("frame_log: %s needs a path" % FLAG)
 		written = true

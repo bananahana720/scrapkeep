@@ -482,7 +482,7 @@ func _build_sparks() -> GPUParticles3D:
 	p.seed = FxLibrary.SEED
 	p.visibility_aabb = AABB(Vector3(-0.6, -0.6, -0.8), Vector3(1.2, 1.2, 1.2))
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	p.set_instance_shader_parameter("tint", Color.WHITE)
+	p.set_instance_shader_parameter(FxLibrary.TINT, Color.WHITE)
 	return p
 
 

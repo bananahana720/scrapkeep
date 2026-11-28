@@ -4,6 +4,7 @@ const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 
 static var live: Array[WeakRef] = []
@@ -42,7 +43,7 @@ func _ready() -> void:
 		var p := Kit.build(id)
 		if has_meta("tint"):
 			p.set_meta("tint", get_meta("tint"))
-			p.set_instance_shader_parameter("tint", get_meta("tint"))
+			p.set_instance_shader_parameter(FxLibrary.TINT, get_meta("tint"))
 		Grain.apply(p, Grain.run_seed)
 		add_child(p)
 		emitters.append(p)

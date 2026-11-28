@@ -9,6 +9,8 @@ const DevLook := preload("res://src/dev/dev_look.gd")
 const DevLens := preload("res://src/dev/dev_lens.gd")
 const DevFight := preload("res://src/dev/dev_fight.gd")
 const DevOverlay := preload("res://src/dev/dev_overlay.gd")
+const DevInspect := preload("res://src/dev/dev_inspect.gd")
+const DevAgent := preload("res://src/dev/dev_agent.gd")
 const FrameRead := preload("res://src/presentation/frame_read.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
@@ -30,8 +32,6 @@ const SHEET_HEADER := 28
 const SHEET_CAPTION := 28
 const SHEET_DEAD_EDGE := 4
 const SAME_LUMA := 0.002
-const INSPECT_PATH := "res://src/dev/dev_inspect.gd"
-const AGENT_PATH := "res://src/dev/dev_agent.gd"
 const TAB_PAD := 6
 const DOT_PX := 6.0
 const RESET_PX := 20.0
@@ -45,8 +45,6 @@ const LIGHT_KEYS := ["exposure", "saturation", "contrast", "brightness", "ambien
 const TONEMAPS := ["Linear", "Reinhard", "Filmic", "ACES", "AgX"]
 const LENS_KNOBS := DevLens.LENS_KNOBS
 const SCRIPT_STEPS := ["wait", "tick", "until", "shot", "qa_pack", "sheet", "quit"]
-const LENS_RANGES := {"fov": [10.0, 120.0, 0.5], "distance": [2.0, 200.0, 0.5], "pitch": [-89.5, 60.0, 0.5],
-	"yaw": [-180.0, 180.0, 1.0], "size": [2.0, 300.0, 0.5], "lift": [-5.0, 30.0, 0.1], "spin": [-90.0, 90.0, 1.0], "tilt": [0.0, 1.0, 0.01], "cut": [0.0, 200.0, 0.5]}
 const WORLDS := ["all", "1", "2", "3"]
 
 var game
@@ -55,8 +53,8 @@ var look: DevLook
 var lens: DevLens
 var fight: DevFight
 var overlay: DevOverlay
-var inspect
-var agent
+var inspect: DevInspect
+var agent: DevAgent
 var shot_dir := SHOT_DIR
 var open := false
 var _drawer: PanelContainer
@@ -110,24 +108,18 @@ func setup(game_ref) -> void:
 	_register()
 	if fight.has_method("register_extra"):
 		fight.register_extra(commands)
-	if ResourceLoader.exists(INSPECT_PATH):
-		inspect = load(INSPECT_PATH).new()
-		add_child(inspect)
-		inspect.setup(game, self)
-		inspect.register(commands)
+	inspect = DevInspect.new()
+	add_child(inspect)
+	inspect.setup(game, self)
+	inspect.register(commands)
 	overlay.register(commands)
-	if ResourceLoader.exists(AGENT_PATH):
-		agent = load(AGENT_PATH).new()
-		add_child(agent)
-		agent.setup(game, self)
+	agent = DevAgent.new()
+	add_child(agent)
+	agent.setup(game, self)
 	commands.said.connect(_say)
 	_build()
 	_drawer.visible = false
 	game.events.flow_changed.connect(_on_flow_changed)
-	if agent == null:
-		for arg in OS.get_cmdline_user_args():
-			if arg.begins_with("--dev-run="):
-				run_script.call_deferred(arg.trim_prefix("--dev-run="), true)
 
 
 func _exit_tree() -> void:
@@ -243,55 +235,23 @@ func held_input() -> Array:
 func run(line: String, keep := true) -> void:
 	_echo(line)
 	commands.run(line, keep)
-	_refresh_rows()
+	refresh_rows()
 	_sweep_input.call_deferred()
 
 
 func run_script(script: String, scripted := false) -> void:
-	if agent != null and agent.has_method("run_scenario"):
-		for part in script.split(";", false):
-			var text := part.strip_edges()
-			if not text.is_empty():
-				_echo(text)
-		var receipt: Dictionary = await agent.run_scenario([script], {"scripted": scripted, "reset_assertions": false})
-		_refresh_rows()
-		_sync_dots()
-		_sweep_input.call_deferred()
-		for row in receipt.get("steps", []):
-			if row is Dictionary and row.get("data") is Dictionary and bool(row.data.get("quitting", false)):
-				if is_inside_tree():
-					get_tree().quit(0 if bool(receipt.get("ok", false)) else 1)
-				return
-		return
 	for part in script.split(";", false):
 		var text := part.strip_edges()
-		var words := text.split(" ", false)
-		var head := words[0].to_lower() if not words.is_empty() else ""
-		if head == "wait":
+		if not text.is_empty():
 			_echo(text)
-			for i in DevCommands.whole(words, 1, 30):
-				await get_tree().process_frame
-				if not is_inside_tree():
-					return
-			continue
-		if head == "tick":
-			_echo(text)
-			if fight.has_method("step_physics"):
-				var res: Dictionary = await fight.step_physics(DevCommands.whole(words, 1, 1))
-				_say(String(res.get("text", "")), "ok" if bool(res.get("ok", false)) else "warn")
-			continue
-		if head == "sheet":
-			_echo(text)
-			await sheet_detailed(DevCommands.word(words, 1, "presets"), DevCommands.word(words, 2), scripted)
-		elif head == "shot":
-			_echo(text)
-			await shot(DevCommands.word(words, 1), scripted)
-		elif head == "quit":
-			get_tree().quit()
-			return
-		elif head != "":
-			run(text, false)
-		if not is_inside_tree():
+	var receipt: Dictionary = await agent.run_scenario([script], {"scripted": scripted, "reset_assertions": false})
+	refresh_rows()
+	_sync_dots()
+	_sweep_input.call_deferred()
+	for row in receipt.get("steps", []):
+		if row is Dictionary and row.get("data") is Dictionary and bool(row.data.get("quitting", false)):
+			if is_inside_tree():
+				get_tree().quit(0 if bool(receipt.get("ok", false)) else 1)
 			return
 
 
@@ -398,14 +358,10 @@ func _register() -> void:
 	commands.add("boss", "[phase]", "enter this world's boss, or jump the running boss to a phase", func(args: Array[String]):
 		return fight.boss(DevCommands.whole(args, 0, 0)))
 	commands.add("run", "[pilot number]", "start a run from the title with a pilot (1 is the first)", func(args: Array[String]):
-		var flow = game.flow
-		var index := DevCommands.whole(args, 0, 1) - 1
-		if flow.state_name() != "title":
-			return "!runs start from the title screen"
-		if index < 0 or index >= flow.classes.size():
-			return "!no pilot %d" % (index + 1)
-		flow.launch_from_title(flow.classes[index])
-		return "run started")
+		var res = fight.launch_pilot(["1"] if args.is_empty() else args)
+		if res is Dictionary and bool(res.get("ok", false)):
+			return "run started"
+		return res)
 	commands.add("bake", "<name>", "save the current look to a file", func(args: Array[String]):
 		return look.bake(DevCommands.word(args, 0, "look-%d" % Engine.get_frames_drawn())))
 	commands.add("load", "<name>", "load a baked look", func(args: Array[String]):
@@ -997,7 +953,7 @@ func _page_lens() -> void:
 		_show_tab("Lens"))
 	_page.add_child(ortho)
 	for key in LENS_KNOBS:
-		_slider_row(key, LENS_RANGES[key], lens.knob(key), func(v: float): lens.set_knob(key, v), "cam %s %s" % [key, "%s"], false)
+		_slider_row(key, DevLens.LENS_RANGES[key], lens.knob(key), func(v: float): lens.set_knob(key, v), "cam %s %s" % [key, "%s"], false)
 	_sync_lens_rows()
 
 
@@ -1268,7 +1224,7 @@ func _slider_row(key: String, span: Array, current: float, apply: Callable, echo
 	_page.add_child(row)
 
 
-func _refresh_rows() -> void:
+func refresh_rows() -> void:
 	for key in _rows:
 		var row: Dictionary = _rows[key]
 		if not is_instance_valid(row.slider):

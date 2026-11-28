@@ -2,6 +2,7 @@ extends Resource
 
 
 const EnvTags := preload("res://src/experimental/env_tags.gd")
+const MakerSets := preload("res://src/build/maker_sets.gd")
 
 enum Slot { WEAPON, DASH_LINE, CORE_HUSK }
 
@@ -10,16 +11,6 @@ const SLOT_NAMES := {
 	Slot.DASH_LINE: &"dash_line",
 	Slot.CORE_HUSK: &"core_husk",
 }
-
-const VALID_MAKERS: Array[StringName] = [
-	&"spillway_works",
-	&"fleet_surplus",
-	&"redjaw",
-	&"highdraft_roosts",
-	&"waking",
-	&"mind_glass",
-	&"moss",
-]
 
 const VALID_RARITIES: Array[StringName] = [
 	&"field_kit",
@@ -99,7 +90,7 @@ func validate() -> Array[String]:
 		problems.append("part id is empty")
 	if display_name.strip_edges() == "":
 		problems.append("%s: display_name is empty" % String(id))
-	if not VALID_MAKERS.has(maker):
+	if not MakerSets.SETS.has(String(maker)):
 		problems.append("%s: unknown maker %s" % [String(id), String(maker)])
 	if not SLOT_NAMES.has(slot):
 		problems.append("%s: unknown slot %d" % [String(id), slot])

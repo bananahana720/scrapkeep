@@ -1,8 +1,6 @@
 extends RefCounted
 
-const MUSIC_BUS := "Music"
-const STINGER_BUS := "StingerMusic"
-const SFX_BUS := "SFX"
+const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 const EQ_BAND_1K := 3
 const EQ_BAND_3K2 := 4
@@ -42,7 +40,7 @@ var _dirty := true
 
 
 func setup() -> void:
-	_music_idx = AudioServer.get_bus_index(MUSIC_BUS)
+	_music_idx = AudioServer.get_bus_index(MixRows.BUS_MUSIC)
 	if _music_idx >= 0:
 		_eq_idx = _ensure_effect(_music_idx, func(e): return e is AudioEffectEQ6, func(): return AudioEffectEQ6.new())
 		_lpf_idx = _ensure_effect(_music_idx, func(e): return e is AudioEffectLowPassFilter, func(): return AudioEffectLowPassFilter.new())
@@ -55,12 +53,12 @@ func setup() -> void:
 
 
 func _ensure_stinger_bus() -> void:
-	_stinger_idx = AudioServer.get_bus_index(STINGER_BUS)
+	_stinger_idx = AudioServer.get_bus_index(MixRows.BUS_STINGER)
 	if _stinger_idx < 0:
 		AudioServer.add_bus()
 		_stinger_idx = AudioServer.bus_count - 1
-		AudioServer.set_bus_name(_stinger_idx, STINGER_BUS)
-	var send_target := SFX_BUS if AudioServer.get_bus_index(SFX_BUS) >= 0 else "Master"
+		AudioServer.set_bus_name(_stinger_idx, MixRows.BUS_STINGER)
+	var send_target := MixRows.resolve_bus(MixRows.BUS_SFX)
 	AudioServer.set_bus_send(_stinger_idx, send_target)
 	AudioServer.set_bus_volume_db(_stinger_idx, 0.0)
 	var rev_idx := _ensure_effect(_stinger_idx, func(e): return e is AudioEffectReverb, func(): return AudioEffectReverb.new())
@@ -157,7 +155,7 @@ func snapshot() -> Dictionary:
 		"lpf_enabled": _music_idx >= 0 and _lpf_idx >= 0 and AudioServer.is_bus_effect_enabled(_music_idx, _lpf_idx),
 		"hpf_hz": _hpf.cutoff_hz if _hpf != null else HPF_REST_HZ,
 		"hpf_enabled": _music_idx >= 0 and _hpf_idx >= 0 and AudioServer.is_bus_effect_enabled(_music_idx, _hpf_idx),
-		"stinger_bus": STINGER_BUS,
+		"stinger_bus": MixRows.BUS_STINGER,
 		"stinger_send": AudioServer.get_bus_send(_stinger_idx) if _stinger_idx >= 0 else "",
 		"stinger_reverb": _reverb != null,
 	}

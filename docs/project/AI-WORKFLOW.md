@@ -1,6 +1,6 @@
 # Scrapkeep in Antigravity and Claude Code
 
-Scrapkeep supports **Google Antigravity (Gemini)** and **Claude Code** as first-class hosts (the original Codex lane retired on 17 October 2026; rulings `ec`, `ee`, and `ej` reopen GPT 6.2 Astra and Sol on Codex for world 1 promise cards, QA passes, concept art, model drafts, and non-admitting second review opinions — see [AGENTS.md](../../AGENTS.md) Rule 11 and [START-HERE.md](../../project-guide/handoff/START-HERE.md)). Antigravity loads [GEMINI.md](../../GEMINI.md) with [AGENTS.md](../../AGENTS.md), scoped rules in `.agents/rules/`, subagents in `.agents/agents/`, `PreToolUse` hooks in `.agents/hooks.json`, and skills in `.agents/skills/`. Claude Code loads `CLAUDE.md` (which imports `AGENTS.md`), `.claude/agents/`, and `.claude/skills/` symlinks to `.agents/skills/`.
+Scrapkeep supports **Google Antigravity (Gemini)** and **Claude Code** as first-class hosts (the original Codex lane retired on 17 October 2026; Codex helpers are reopened for optional assisting work under [AGENTS.md](../../AGENTS.md#rules-most-important-first) rule 11 and [START-HERE.md](../../project-guide/handoff/START-HERE.md)). Antigravity loads [GEMINI.md](../../GEMINI.md) with [AGENTS.md](../../AGENTS.md), scoped rules in `.agents/rules/`, subagents in `.agents/agents/`, `PreToolUse` hooks in `.agents/hooks.json`, and skills in `.agents/skills/`. Claude Code loads `CLAUDE.md` (which imports `AGENTS.md`), `.claude/agents/`, and `.claude/skills/` symlinks to `.agents/skills/`.
 
 ## Use it
 
@@ -19,7 +19,7 @@ Scrapkeep supports **Google Antigravity (Gemini)** and **Claude Code** as first-
 | "Audit screenshots, UI legibility, `eye.mjs` films, or Gemini refsheets" | `scrapkeep-visual-review` runs multimodal `read_file` checks, `eye_read_workflow.py`, `image-generator`, and MCP inspection. |
 | "Inspect live game state, spawn encounters, or render offscreen sheets via the dev console" | `scrapkeep-dev-console` drives `scripts/dev-console.mjs` (`npm run dev:console`) and `sketches/core-loop/src/dev/` for headless probes, recipes, and warm sessions. |
 
-Slash commands match the 12 skill names above; see [the skills README](../../.agents/skills/README.md) when adding one. `AGENTS.md` rule 11 (ruling `ej`) owns worker routing (`claude-fable-5-2`, `claude-opus-5-5`, `gemini-4-neon`), and `pstack` (`pstack@cursor-plugins`, ruling `er`) provides shared workflows. `BIBLE.md`, `adr/`, `BACKLOG.md`, `TRACKING.md`, and `ORCHESTRATOR.md` remain the canonical heavy-lane authorities.
+Slash commands match the 12 skill names above; see [the skills README](../../.agents/skills/README.md) when adding one. [AGENTS.md](../../AGENTS.md#rules-most-important-first) rule 11 (ruling `ej`) owns worker routing and [Running workers and machines](../../AGENTS.md#running-workers-and-machines) owns the model IDs; `pstack` (`pstack@cursor-plugins`, ruling `er`) provides shared workflows. `BIBLE.md`, `adr/`, `BACKLOG.md`, `TRACKING.md`, and `ORCHESTRATOR.md` remain the canonical heavy-lane authorities.
 
 ## Host behavior & safety gates
 

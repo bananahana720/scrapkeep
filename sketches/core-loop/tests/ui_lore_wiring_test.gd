@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const Codex := preload("res://src/core/codex.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # Lore wiring rule: zone-entry exchanges follow row order, wait for advance, end on
 # the interact key (never Escape or jump), dismiss at cruise speed, play once per zone per run; exchanges are silent in Warden fights and the Warden intro row plays once at engagement (wave 10 ST2). Notes show

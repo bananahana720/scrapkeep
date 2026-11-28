@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 # IN4: the settings page in four pages (Feel since wave 36). Display (fullscreen, quality), Controls (a key row

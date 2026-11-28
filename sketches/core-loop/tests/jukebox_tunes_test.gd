@@ -6,7 +6,7 @@ const TuneEar := preload("res://src/presentation/tune_ear.gd")
 const Profile := preload("res://src/core/profile.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 

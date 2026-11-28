@@ -1,6 +1,6 @@
 #!/bin/bash
 # Eight copies of the cue test at once, the machine load that made it flake. Exits non-zero if any fails.
-G=${GODOT:-/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64}
+G="${GODOT:-$HOME/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64}"
 LOGS=${LOGS:-/tmp/claude-1000}
 cd "$(dirname "$0")/.."
 pids=()
