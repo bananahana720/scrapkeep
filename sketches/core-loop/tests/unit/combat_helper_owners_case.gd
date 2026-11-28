@@ -113,9 +113,8 @@ func run(t) -> void:
 	t.eq("no src file calls retired combat._* pass-through names", old_combat_privates, [])
 	t.eq("no presentation file reads enemy _atk directly", pres_atk_reach, [])
 
-	var allowed_radius_readers := ["actives/active_base.gd", "swarm_remnant.gd"]
-	var extra_radius_readers := _combat_decl_owners("get\\(\"radius\"\\)").filter(func(rel): return not rel in allowed_radius_readers)
-	t.eq("only ActiveBase and swarm_remnant read get(\"radius\") in src/combat", extra_radius_readers, [])
+	t.eq("only ActiveBase and swarm_remnant read get(\"radius\") in src/combat",
+		_combat_decl_owners("get\\(\"radius\"\\)"), ["actives/active_base.gd", "swarm_remnant.gd"])
 
 	t.eq("overdrive_for has one owner in src/combat",
 		_combat_decl_owners("(?m)^func (_relic_overdrive|_overdrive_for|overdrive_for)\\("), ["relic_swaps.gd"])
