@@ -9,7 +9,7 @@ SURVEY_AGE = (
     "where the code and the survey differ, the code is right and your report says what differed."
 )
 FLIGHT = (
-    "Other units are in flight. One deletes dead code in `sketches/core-loop/src/combat/`, `src/build/`, `src/movement/` and `src/world/` and is with its reviewer: in those four folders change only the lines this brief sends you to, and nothing beside them. "
+    "Other units are in flight. "
     "One moves the source reads of guard tests onto the shared reader `sketches/core-loop/tests/support/source_scan.gd` and adds a lint rule: do not edit that reader, `scripts/sketch-lint.mjs`, `scripts/sketch-lint.test.mjs`, "
     "`sketches/core-loop/tests/test_tool_owners_test.gd`, or the way an existing guard test reads source. {beside} "
     "If the integration branch moves while you work and your pull request conflicts, merge `origin/entropy/gate` into your branch; never rebase or force-push. "
@@ -124,7 +124,7 @@ UNITS = {
             "Extend that case, through the shared reader it already uses, with an exact list of the files under `src/` that declare an instance field named `reduced_motion` (after your change the list is what is left, each with its reason in the report), so a new one fails. Prove it fails on a new copy and passes again when the copy is removed."
         ),
         done="damage numbers and the showcase rigs follow the one owner; with the setting off every number a test pinned on the base is unchanged; with it on, the calm branches that were already written run; `sync_accessibility` is gone or has a real caller; the guard holds the exact list of files that still keep their own field; and no entry was added to any lint list.",
-        flight=FLIGHT.format(beside="Three more units of this round run beside you: one in `src/ui/screens.gd`, `src/ui/hud.gd` and `src/presentation/codex_banner.gd`, one in `src/experimental/` and `src/world/stage_locks.gd`, and one in the mesh builders under `src/presentation/` (it may change single builder calls in the craft files; stay out of the mesh-building functions)."),
+        flight=FLIGHT.format(beside="Three more units of this round run beside you: one in `src/ui/screens.gd`, `src/ui/hud.gd` and `src/presentation/codex_banner.gd`, one in `src/experimental/` and `src/world/stage_locks.gd`, and one in the mesh builders under `src/presentation/` (it is with its reviewer; stay out of the mesh-building functions). That unit adds a test that pins the bytes of every mesh `VistaMegastructures.build_all()` builds, so what the showcase builds with the setting off must not change by one vertex: change how things move, not what is built."),
         checks=GODOT_CHECKS.format(base=BASE) + UNIT_SUITE + MODEL_PAGES,
     ),
 }
