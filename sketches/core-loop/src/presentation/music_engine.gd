@@ -5,6 +5,7 @@ signal parameter_commit(at: int, values: Dictionary, released: bool, lift: bool,
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 
@@ -697,6 +698,12 @@ func _warm_stinger(id: String, at: int, home := false, made_for := 0) -> void:
 	var shift: int = 0 if home else stinger_key(at)
 	var step := made_for if made_for > 0 else step_len
 	var theme_now := theme
+	if id.begins_with(VoiceSynth.SAY):
+		if VoiceSynth.cached_at(id, step, shift):
+			return
+		_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
+		_stinger_tasks.append(WorkerThreadPool.add_task(func(): VoiceSynth.samples_at(id, step, shift), true, "stinger warm"))
+		return
 	if SfxBank.cached_at(id, step, shift, theme_now):
 		return
 	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
@@ -1598,8 +1605,11 @@ func _run(action: Dictionary) -> void:
 			var music: bool = action.get("music", false)
 			var live_key: int = key if grid == null else grid.key_at(clock)
 			var made_for := int(action.get("step", 0))
-			var buf := SfxBank.samples_at(action["id"], made_for if made_for > 0 else step_len, 0 if music or action.get("home", false) else live_key, theme)
-			var gain := db_to_linear(SfxBank.trim_db(action["id"]) + float(action["db"]))
+			var stinger_step: int = made_for if made_for > 0 else step_len
+			var stinger_shift: int = 0 if music or action.get("home", false) else live_key
+			var is_say: bool = action["id"].begins_with(VoiceSynth.SAY)
+			var buf := VoiceSynth.samples_at(action["id"], stinger_step, stinger_shift) if is_say else SfxBank.samples_at(action["id"], stinger_step, stinger_shift, theme)
+			var gain := db_to_linear((VoiceSynth.trim_db(action["id"]) if is_say else SfxBank.trim_db(action["id"])) + float(action["db"]))
 			var voice := _start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			if voice != null:
 				voice.stinger = action["id"]

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 
 
 func _gd_files(root_dir: String, out: Array[String]) -> void:
@@ -75,12 +76,14 @@ func run(t) -> void:
 		ending.contains("audio.play_ending_summary()") and not ending.contains("audio.engine.menu_theme"),
 	)
 
-	t.eq("SfxBank.parse_said splits speaker and text", SfxBank.parse_said("say|sable|line|two"), ["sable", "line|two"])
-	t.eq("SfxBank.parse_said handles missing text", SfxBank.parse_said("say|sable"), ["sable", ""])
+	t.eq("VoiceSynth.parse_said splits speaker and text", VoiceSynth.parse_said("say|sable|line|two"), ["sable", "line|two"])
+	t.eq("VoiceSynth.parse_said handles missing text", VoiceSynth.parse_said("say|sable"), ["sable", ""])
 	var method_names := (SfxBank as GDScript).get_script_method_list().map(func(m): return m["name"])
+	var voice_methods := (VoiceSynth as GDScript).get_script_method_list().map(func(m): return m["name"])
 	t.check(
-		"SfxBank promotes parse_said and motif_score without forwarding copies",
-		method_names.has("parse_said") and method_names.has("motif_score") and not method_names.has("_said") and not method_names.has("_motif_score"),
+		"SfxBank promotes motif_score and VoiceSynth owns parse_said without forwarding copies",
+		method_names.has("motif_score") and not method_names.has("_motif_score") and not method_names.has("_said") and not method_names.has("parse_said")
+		and voice_methods.has("parse_said") and not voice_methods.has("_said"),
 	)
 
 	var bus_index_allowed := [

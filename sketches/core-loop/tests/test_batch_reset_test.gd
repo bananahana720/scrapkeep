@@ -76,6 +76,7 @@ const Audio := preload("res://src/presentation/audio.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -132,11 +133,11 @@ func _run() -> void:
 	t.check("WorldFxWord.quiet(true) hides newly stamped words", not hushed_word.visible)
 	Synth.score_step = Harmony.BOSS_STEP
 	Synth.score_transpose = 3
-	SfxBank.unknown_callers["probe_caller"] = true
 	SfxBank._shift = 4
 	SfxBank._theme = 2
 	SfxBank.bake_cancel = true
-	SfxBank.set_voice_sidecar(true, {"sable|probe": "res://missing.wav"})
+	VoiceSynth.unknown_callers["probe_caller"] = true
+	VoiceSynth.set_voice_sidecar(true, {"sable|probe": "res://missing.wav"})
 	MusicEngine._park_tasks["probe"] = -1
 	MusicEngine._park_warm["probe"] = PackedFloat32Array([0.1])
 	Footings.plant_ignore_lines = true
@@ -374,8 +375,10 @@ func _run() -> void:
 	t.eq("Synth.score_step resets to Harmony.STEP", Synth.score_step, Harmony.STEP)
 	t.eq("Synth.score_transpose resets to 0", Synth.score_transpose, 0)
 	t.check("SfxBank.reset_for_tests clears mutable statics",
-		SfxBank.unknown_callers.is_empty() and SfxBank._shift == 0 and SfxBank._theme == 0
-		and not SfxBank.bake_cancel and not SfxBank._voice_tts and SfxBank._voice_clips.is_empty())
+		SfxBank._shift == 0 and SfxBank._theme == 0 and not SfxBank.bake_cancel)
+	t.check("VoiceSynth.reset_for_tests clears caller and sidecar statics",
+		VoiceSynth.unknown_callers.is_empty() and not VoiceSynth._voice_tts
+		and VoiceSynth._voice_clips.is_empty() and VoiceSynth._samples.is_empty())
 	t.check("MusicEngine.reset_for_tests clears stinger and park warm state",
 		MusicEngine._stinger_tasks.is_empty() and MusicEngine._park_tasks.is_empty() and MusicEngine._park_warm.is_empty())
 	t.check("Footings.plant_ignore_lines resets to false", not Footings.plant_ignore_lines)
