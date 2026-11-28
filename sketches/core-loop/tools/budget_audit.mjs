@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { inspectGlb, webpSide } from "../../../scripts/asset-inspect.mjs";
+import { isMain } from "../../../scripts/lib/cli.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SKETCH = "sketches/core-loop";
@@ -389,5 +390,4 @@ export function main(argv) {
   return 0;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exitCode = main(process.argv.slice(2));
+if (isMain(import.meta.url)) process.exitCode = main(process.argv.slice(2));

@@ -4,7 +4,7 @@ out=$1
 seed=$2
 policy=$3
 seconds=${4:-120}
-godot="$HOME/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64"
+godot="$(node "$(dirname "${BASH_SOURCE[0]}")/../../../../scripts/godot-home.mjs" --bin)" || exit 2
 project="$HOME/Projects/scrapkeep-worktrees/core-loop-v3/sketches/core-loop"
 mkdir -p "$out"
 rm -f "$out/capture.json"

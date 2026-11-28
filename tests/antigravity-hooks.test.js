@@ -428,3 +428,91 @@ test("denies macOS live Godot save paths across shell quoting, escapes, %20, cas
     );
   }
 });
+
+test("decodes every percent code in a live save path, never throws on a malformed code, and keeps scratch paths allowed unless they leave artifacts/local", async () => {
+  const decide = (toolCall) => evaluateHook({ toolCall, cwd: root }).decision;
+  const command = (cmd) => decide({ name: "run_command", args: { CommandLine: cmd } });
+  const edit = (target) => decide({ name: "edit_file", args: { Path: target } });
+
+  for (const cmd of [
+    "open file:///Users/andrew/Library/Application%20Support/godot/app_userdata/core%2Dloop/profile.json",
+    "open file:///Users/andrew/Library%2FApplication%20Support%2Fgodot%2Fapp_userdata%2Fcore-loop%2Fsave.json",
+    "cat /home/andrew/%2Elocal/share/godot/app_userdata/core-loop/save.json",
+    "cat /home/andrew/%2elocal%2fshare/godot/app_userdata/core-loop/save.json",
+    "cat /home/andrew/.local/share/godot/app%5Fuserdata/core-loop/save.json",
+    "cat '/Users/andrew/Library/Applic%61tion Support/godot/app_userdata/core-loop/save.json'",
+  ]) {
+    assert.equal(command(cmd), "deny", `Expected deny for an encoded live save path: ${cmd}`);
+  }
+  for (const target of [
+    "/Users/andrew/Library/Application%20Support/godot/app_userdata/core%2Dloop/save.json",
+    "/home/andrew/.local%2Fshare%2Fgodot%2Fapp_userdata%2Fcore-loop/profile.json",
+  ]) {
+    assert.equal(edit(target), "deny", `Expected deny for an encoded live save edit: ${target}`);
+  }
+
+  for (const cmd of [
+    "cat /home/andrew/.local/share/godot/app_userdata/core-loop%32/save.json",
+    "cat artifacts%2Flocal%2Fx/.local/share/godot/app_userdata/core-loop/save.json",
+  ]) {
+    assert.equal(command(cmd), "deny", `Expected the path as written to stay denied: ${cmd}`);
+  }
+
+  for (const cmd of [
+    "cat /home/andrew/.local/share/godot/app_userdata/core%2Dloop/%zz/save.json",
+    "cat /home/andrew/%/.local%2Fshare/godot/app_userdata/core-loop/save.json%",
+  ]) {
+    assert.equal(
+      command(cmd),
+      "deny",
+      `Expected a malformed code to leave the rest decoded: ${cmd}`,
+    );
+  }
+  for (const cmd of ["echo 100%zz done %", "echo %", "echo %2", "echo %%%", "echo %E9%C3%28"]) {
+    assert.equal(command(cmd), "allow", `Expected allow without a throw: ${cmd}`);
+  }
+  assert.equal(
+    (await runHookCli({ toolCall: { name: "run_command", args: { CommandLine: "echo %zz %" } } }))
+      .decision,
+    "allow",
+  );
+
+  for (const cmd of [
+    "cat artifacts/local/%2E%2E/%2E%2E/home/andrew/.local/share/godot/app_userdata/core-loop/save.json",
+    "cat artifacts/local/run/%2e%2e%2f%2e%2e%2f%2e%2e%2fhome/andrew/.local/share/godot/app_userdata/core-loop/save.json",
+  ]) {
+    assert.equal(
+      command(cmd),
+      "deny",
+      `Expected deny for an encoded way out of artifacts/local: ${cmd}`,
+    );
+  }
+  assert.equal(
+    edit(
+      "artifacts/local/x/%2E%2E/%2E%2E/%2E%2E/Users/andrew/Library/Application Support/godot/app_userdata/core-loop/save.json",
+    ),
+    "deny",
+  );
+
+  for (const cmd of [
+    "cat artifacts/local/run/%zz/.local/share/godot/app_userdata/core-loop/profile.json",
+    "cat artifacts/local/run1/Library/Application%20Support/godot/app_userdata/core%2Dloop/profile.json",
+    "cat artifacts/local/x%24y/.local/share/godot/app_userdata/core-loop/save.json",
+  ]) {
+    assert.equal(command(cmd), "allow", `Expected allow for a scratch save path: ${cmd}`);
+  }
+  for (const target of [
+    "artifacts/local/test-home/.local%2Fshare/godot/app_userdata/core-loop/settings.cfg",
+    "artifacts/local/test-home/Library/Application%20Support/godot/app_userdata/core%2Dloop/%E9%C3%28.cfg",
+  ]) {
+    assert.equal(edit(target), "allow", `Expected allow for a scratch save edit: ${target}`);
+  }
+
+  assert.equal(
+    command(
+      "open file:///Users/andrew/Library/Application%2520Support/godot/app_userdata/core-loop/save.json",
+    ),
+    "allow",
+    "a code encoded twice is decoded once, as a file:// reader does: it names a folder called Application%20Support",
+  );
+});

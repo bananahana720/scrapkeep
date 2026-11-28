@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "../../scripts/lib/cli.mjs";
 import { gitOptional } from "../../scripts/lib/git.mjs";
 
 const LIVE_SAVE_SEGMENT =
@@ -11,6 +11,7 @@ const LIVE_SAVE_SEGMENT_GLOBAL =
 const SCRATCH_ARTIFACTS_PREFIX = /(?:^|\/)artifacts\/local\//;
 const PARENT_TRAVERSAL = /(?:^|\/)\.\.(?:\/|$)/;
 const SHELL_EXPANSION = /[{}*$?[\]`\\'"]/;
+const PERCENT_CODE = /%([0-9a-f]{2})/gi;
 const NPM_PUBLISH = /\bnpm\s+publish\b/;
 const GH_REPO_DELETE = /\bgh\s+repo\s+delete\b/;
 const NPM_PKG_MUTATE = /\bnpm\s+(?:install|i|uninstall)(?:\s|$)/;
@@ -68,8 +69,17 @@ function splitShellWords(text) {
   return String(text).match(/(?:"(?:\\.|[^"])*"|'[^']*'|\\.|[^\s"'])+/g) ?? [];
 }
 
-function normalizeForLiveSaveMatch(text) {
-  return String(text).replace(/\\ /g, " ").replace(/%20/gi, " ").replace(/["']/g, "");
+function decodePercentCodes(text, decode = (hex) => String.fromCharCode(Number.parseInt(hex, 16))) {
+  return text.replace(PERCENT_CODE, (_, hex) => decode(hex));
+}
+
+const PATH_READINGS = [
+  (text) => decodePercentCodes(text, (hex) => (hex === "20" ? " " : `%${hex}`)),
+  decodePercentCodes,
+];
+
+function normalizeForLiveSaveMatch(text, decode) {
+  return decode(String(text).replace(/\\ /g, " ")).replace(/["']/g, "");
 }
 
 function unwrapScratchPart(part) {
@@ -81,12 +91,13 @@ function unwrapScratchPart(part) {
   ) {
     cleaned = cleaned.slice(1, -1);
   }
-  return cleaned.replace(/\\ /g, " ").replace(/%20/gi, " ");
+  return cleaned.replace(/\\ /g, " ");
 }
 
-function isAllowedScratchSavePath(part) {
-  const cleaned = unwrapScratchPart(part);
-  if (PARENT_TRAVERSAL.test(cleaned) || SHELL_EXPANSION.test(cleaned) || cleaned.startsWith("~")) {
+function isAllowedScratchSavePath(part, decode) {
+  const written = unwrapScratchPart(part);
+  const cleaned = decode(written);
+  if (PARENT_TRAVERSAL.test(cleaned) || SHELL_EXPANSION.test(written) || written.startsWith("~")) {
     return false;
   }
   const scratchMatch = SCRATCH_ARTIFACTS_PREFIX.exec(cleaned);
@@ -96,25 +107,28 @@ function isAllowedScratchSavePath(part) {
   return scratchMatch.index < liveMatch.index;
 }
 
-function touchesLiveSavePath(text, { isFilePath = false } = {}) {
-  const str = String(text);
-  const normalizedFull = normalizeForLiveSaveMatch(str);
+function touchesLiveSavePathAs(str, decode, isFilePath) {
+  const normalizedFull = normalizeForLiveSaveMatch(str, decode);
   const totalMatches = normalizedFull.match(LIVE_SAVE_SEGMENT_GLOBAL)?.length ?? 0;
   if (totalMatches === 0) return false;
   if (isFilePath) {
-    return !isAllowedScratchSavePath(str);
+    return !isAllowedScratchSavePath(str, decode);
   }
   let allowedMatches = 0;
   for (const word of splitShellWords(str)) {
     for (const part of word.split(/[=<>|;&()]+/).filter(Boolean)) {
       const partMatches =
-        normalizeForLiveSaveMatch(part).match(LIVE_SAVE_SEGMENT_GLOBAL)?.length ?? 0;
+        normalizeForLiveSaveMatch(part, decode).match(LIVE_SAVE_SEGMENT_GLOBAL)?.length ?? 0;
       if (partMatches === 0) continue;
-      if (!isAllowedScratchSavePath(part)) return true;
+      if (!isAllowedScratchSavePath(part, decode)) return true;
       allowedMatches += partMatches;
     }
   }
   return allowedMatches < totalMatches;
+}
+
+function touchesLiveSavePath(text, { isFilePath = false } = {}) {
+  return PATH_READINGS.some((decode) => touchesLiveSavePathAs(String(text), decode, isFilePath));
 }
 
 function parseGitInvocation(segment) {
@@ -475,9 +489,6 @@ function main() {
   process.stdout.write(JSON.stringify(result) + "\n");
 }
 
-if (
-  process.argv[1] &&
-  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
-) {
+if (isMain(import.meta.url)) {
   main();
 }

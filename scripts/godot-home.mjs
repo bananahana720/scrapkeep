@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { isMain, parseCliArgs } from "./lib/cli.mjs";
 
 export const TOOLCHAIN = JSON.parse(
   readFileSync(new URL("./toolchain.json", import.meta.url), "utf8"),
@@ -91,6 +93,15 @@ export async function withScratchGodotEnv(
 
 export const GODOT_VERSION = TOOLCHAIN.godotNumericVersion;
 
+export function whichTool(toolName, env = process.env) {
+  const found = spawnSync("which", [toolName], { env, encoding: "utf8" });
+  if (found.status === 0) {
+    const resolved = found.stdout.trim().split(/\r?\n/)[0];
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
 export function resolveGodotBinary({
   env = process.env,
   platform = process.platform,
@@ -139,4 +150,15 @@ export function requireGodotBinary(options = {}) {
     throw new Error(`Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN`);
   }
   return binary;
+}
+
+if (isMain(import.meta.url)) {
+  try {
+    const { bin } = parseCliArgs(process.argv.slice(2), { flags: { "--bin": "bin" } });
+    if (!bin) throw new Error("usage: node scripts/godot-home.mjs --bin");
+    console.log(requireGodotBinary({ which: whichTool }));
+  } catch (error) {
+    console.error(`godot-home: ${error.message}`);
+    process.exitCode = 1;
+  }
 }
