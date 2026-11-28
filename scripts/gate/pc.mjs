@@ -8,7 +8,6 @@ import {
   openSync,
   readFileSync,
   readdirSync,
-  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -16,13 +15,13 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { fileURLToPath } from "node:url";
 
 import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
 import { checkImportStamp, sketchState, stampPath, writeImportStamp } from "../import-stamp.mjs";
 import { defaultChallengeJobs } from "../challenge/lib.mjs";
 import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
 import { REPO_ROOT, git as runGit } from "../lib/git.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 const root = REPO_ROOT;
 const SKETCH = "sketches/core-loop";
@@ -1221,7 +1220,7 @@ async function main() {
   return run(options);
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = await main();
   } catch (error) {

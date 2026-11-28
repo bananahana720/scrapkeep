@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { parseReceiptArgs, writeJsonReceipt } from "./receipt-cli.mjs";
 import { git } from "../lib/git.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 const SKILL = ".agents/skills/scrapkeep-verify-formal";
 const SRC = "sketches/core-loop/src";
@@ -597,5 +597,4 @@ function main(argv) {
   return ok ? 0 : 1;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import {
   COMMIT_SHA_RE,
@@ -11,6 +10,7 @@ import {
   parseReceiptArgs,
   runReceiptCliSync,
 } from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const COMMIT = COMMIT_SHA_RE;
 export { commitsMatch };
@@ -193,6 +193,6 @@ function main(argv) {
   });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   process.exit(main(process.argv.slice(2)));
 }

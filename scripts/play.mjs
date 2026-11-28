@@ -5,7 +5,6 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   watch as watchFs,
   writeFileSync,
@@ -18,6 +17,7 @@ import { resolveGodotBinary } from "./godot-home.mjs";
 import { judge, sketchDirectories, testScripts } from "./lib/godot-test-runner.mjs";
 import { pool, runProcess } from "./lib/proc.mjs";
 import { gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const binary = resolveGodotBinary();
 
@@ -687,5 +687,4 @@ async function main(argv) {
   }
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

@@ -1,9 +1,8 @@
 #!/usr/bin/env node
-import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
 import { cleanHead, parseReceiptArgs, root, runReceiptCliSync } from "./receipt-cli.mjs";
 import { runAlone } from "./solo-run.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const TEST = "contact_orders_all_test";
 export const PINNED_ORDERS = 62;
@@ -98,5 +97,4 @@ function main(argv) {
   });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

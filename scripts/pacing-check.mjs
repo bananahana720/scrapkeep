@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 import { pool, runProcess } from "./lib/proc.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
@@ -418,5 +419,4 @@ async function main() {
   process.exit(result.measured ? (result.pass ? 0 : 1) : 2);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  await main();
+if (isMain(import.meta.url)) await main();

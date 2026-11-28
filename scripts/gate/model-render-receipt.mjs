@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import { mkdirSync, mkdtempSync, realpathSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { runWindowed } from "./display-run.mjs";
 import { cleanHead, parseReceiptArgs, root, runReceiptCli } from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const TOOL = "tools/model_render_check.gd";
 export const ENGINE_ARGS = ["--resolution", "800x600", "--audio-driver", "Dummy"];
@@ -120,5 +120,4 @@ function main(argv) {
   });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  main(process.argv.slice(2)).then((code) => process.exit(code));
+if (isMain(import.meta.url)) main(process.argv.slice(2)).then((code) => process.exit(code));

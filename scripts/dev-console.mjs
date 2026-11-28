@@ -9,7 +9,6 @@ import {
   openSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   renameSync,
   rmSync,
   unlinkSync,
@@ -30,6 +29,7 @@ import { formatLedgerAudit, runLedgerAudit } from "./ledger-audit.mjs";
 import { runProcess as runChild } from "./lib/proc.mjs";
 import { buildVisualQaPack } from "./visual-qa-pack.mjs";
 import { materializeSandbox, releaseSlotLock, validateSlotName } from "./worktree-sandbox.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SKETCH_DIR = path.join(REPO_ROOT, "sketches", "core-loop");
@@ -1716,16 +1716,7 @@ export async function main(argv = process.argv.slice(2)) {
   return 2;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   main()
     .then((code) => {
       process.exitCode = code;
