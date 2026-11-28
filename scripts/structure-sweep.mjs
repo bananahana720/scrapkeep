@@ -51,11 +51,10 @@ export function render(pool, units) {
   const stage = (name) => units.filter((unit) => unit.stage === name).length;
   const leads = pool.filter((row) => row.id.startsWith("LEAD-")).length;
   const counts =
-    `Of the ${pool.length} items in the pool (${pool.length - leads} survey findings and ${leads} leads), ` +
-    `${count("landed")} have landed, ${count("in flight")} are with a unit, ${count("open")} are open, ` +
-    `${count("waits on Andrew")} wait on Andrew and ${count("closed")} are closed. Of the ${units.length} units, ` +
-    `${stage("landed")} have landed, ${stage("in review")} are in review and ` +
-    `${stage("with writer")} are with their writers.`;
+    `The pool holds ${pool.length} items (${pool.length - leads} survey findings and ${leads} leads): ` +
+    `${count("landed")} landed, ${count("in flight")} with a unit, ${count("open")} open, ` +
+    `${count("waits on Andrew")} waiting on Andrew and ${count("closed")} closed. There are ${units.length} units: ` +
+    `${stage("landed")} landed, ${stage("in review")} in review and ${stage("with writer")} with a writer.`;
   const rounds = [
     "| Unit | What it did | Pool rows | Writer | Pull request | Stage | Notes |",
     "| --- | --- | --- | --- | --- | --- | --- |",

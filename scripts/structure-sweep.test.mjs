@@ -105,7 +105,7 @@ test("a line number is refused in the page and in a lead", () => {
 test("a hand-edited count or table is refused and names the command that rewrites it", () => {
   const units = [unit("M2", "landed")];
   const pool = [row("A-01", "landed", "M2")];
-  const stale = pageFor(pool, units).replace("1 have landed", "2 have landed");
+  const stale = pageFor(pool, units).replace("1 landed", "2 landed");
   assert.deepEqual(messages(pool, units, stale), [
     `${PAGE}: the "counts" block does not match pool.tsv and units.tsv; run node scripts/structure-sweep.mjs --write`,
   ]);
@@ -123,7 +123,7 @@ test("the table lists each unit's pool rows, marking a row several units share",
   assert.match(rounds, /\| B4 \| what B4 did \| A-02 \(part\) \|/);
   assert.match(
     counts,
-    /^Of the 2 items in the pool \(2 survey findings and 0 leads\), 1 have landed, 1 are with a unit/,
+    /^The pool holds 2 items \(2 survey findings and 0 leads\): 1 landed, 1 with a unit/,
   );
 });
 
