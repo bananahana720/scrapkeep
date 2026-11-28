@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { findMentions } from "./no-caller.mjs";
+import { findMentions, main } from "./no-caller.mjs";
 import { git } from "./lib/git.mjs";
 
 const cli = path.join(path.dirname(fileURLToPath(import.meta.url)), "no-caller.mjs");
@@ -146,7 +146,7 @@ test("a missing, wrong-prefix, untracked or directory path exits 2, names the pa
 });
 
 test("a search that cannot run exits 2 and prints no result", () => {
-  const dir = mkdtempSync(path.join(os.tmpdir(), "no-caller-bare-"));
+  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "no-caller-bare-")));
   try {
     writeFileSync(path.join(dir, "dead.gd"), "extends Node\n");
     const r = spawnSync(process.execPath, [cli, "dead.gd"], {
@@ -157,6 +157,26 @@ test("a search that cannot run exits 2 and prints no result", () => {
     assert.equal(r.status, 2);
     assert.equal(r.stdout, "");
     assert.match(r.stderr, /the search could not run, so nothing is known about callers/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a search that fails while it prints its result exits 2, never the code for a caller", () => {
+  const dir = scratchRepo();
+  try {
+    const file = "sketches/core-loop/tools/called.gd";
+    const quiet = { cwd: dir, log: () => {}, error: () => {} };
+    assert.equal(main([file], quiet), 1);
+    assert.equal(main(["sketches/core-loop/tools/dead.gd"], quiet), 0);
+    const errors = [];
+    const closed = () => {
+      throw new Error("write EPIPE");
+    };
+    assert.equal(main([file], { cwd: dir, log: closed, error: (line) => errors.push(line) }), 2);
+    assert.deepEqual(errors, [
+      "the search could not run, so nothing is known about callers: write EPIPE",
+    ]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

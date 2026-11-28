@@ -399,6 +399,7 @@ test("denies macOS live Godot save paths across shell quoting, escapes, %20, cas
   for (const cmd of [
     'cat "artifacts/local/verify-game/run1/Library/Application Support/Godot/app_userdata/core-loop/profile.json"',
     "cat artifacts/local/verify-game/run1/Library/Application\\ Support/godot/app_userdata/core-loop/profile.json",
+    "cat artifacts/local/verify-game/run1/Library/Application%20Support/godot/app_userdata/core-loop/profile.json",
     'HOME=/repo/artifacts/local/home ls "/repo/artifacts/local/home/Library/Application Support/godot/app_userdata/core-loop"',
   ]) {
     const res = evaluateHook({
@@ -414,6 +415,7 @@ test("denies macOS live Godot save paths across shell quoting, escapes, %20, cas
       "artifacts/local/verify-game/run1/Library/Application Support/Godot/app_userdata/core-loop/profile.json",
     ),
     "artifacts/local/test-home/Library/Application Support/godot/app_userdata/core-loop/settings.cfg",
+    "artifacts/local/test-home/Library/Application%20Support/godot/app_userdata/core-loop/settings.cfg",
   ]) {
     const res = evaluateHook({
       toolCall: { name: "edit_file", args: { Path: scratchPath } },
