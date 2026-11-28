@@ -8,6 +8,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Director := preload("res://src/world/director.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 
 
 const Flow := preload("res://src/core/flow.gd")
@@ -342,8 +343,8 @@ func _prebake_band() -> void:
 	if audio.live_output:
 		audio.finish_band_bakes()
 	else:
-		MusicEngine.prepare_opening()
-		MusicEngine.prepare_rest()
+		MusicPrebake.prepare_opening()
+		MusicPrebake.prepare_rest()
 
 
 func _grant() -> void:

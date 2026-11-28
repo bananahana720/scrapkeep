@@ -5,7 +5,6 @@ import {
   mkdirSync,
   readFileSync,
   realpathSync,
-  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -14,6 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 import * as testRunner from "./lib/godot-test-runner.mjs";
+import { acquireSlot } from "./lib/machine-lock.mjs";
 import { pool, runProcess as runChild } from "./lib/proc.mjs";
 import { runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
 import {
@@ -534,28 +534,16 @@ function gitState() {
   };
 }
 
-async function acquireMachine(deadline) {
-  const lock = path.join(process.env.SCRAPKEEP_LOCK_DIR || "/tmp", "scrapkeep-sketch-smoke.lock");
-  while (Date.now() < deadline) {
-    try {
-      mkdirSync(lock);
-      writeFileSync(path.join(lock, "pid"), String(process.pid));
-      return () => rmSync(lock, { recursive: true, force: true });
-    } catch (error) {
-      if (error.code !== "EEXIST") throw error;
-      let alive = true;
-      try {
-        process.kill(Number(readFileSync(path.join(lock, "pid"), "utf8")), 0);
-      } catch (error) {
-        alive = error.code !== "ESRCH";
-      }
-      if (!alive) rmSync(lock, { recursive: true, force: true });
-      await new Promise((resolve) =>
-        setTimeout(resolve, Math.max(0, Math.min(2000, deadline - Date.now()))),
-      );
-    }
-  }
-  throw new Error("nightly wall budget exhausted waiting for the smoke machine lock");
+export async function acquireNightlySlot(deadline, options = {}) {
+  const lease = await acquireSlot({
+    ...options,
+    sleep: (ms) => {
+      if (Date.now() >= deadline)
+        throw new Error("nightly wall budget exhausted waiting for the smoke machine lock");
+      return new Promise((resolve) => setTimeout(resolve, Math.min(ms, deadline - Date.now())));
+    },
+  });
+  return lease.release;
 }
 
 export function writeReceipt(receipt) {
@@ -579,7 +567,7 @@ async function main() {
   let release;
   let outcome;
   try {
-    release = await acquireMachine(started + MAX_WALL_MS - FINISH_RESERVE_MS);
+    release = await acquireNightlySlot(started + MAX_WALL_MS - FINISH_RESERVE_MS);
     process.once("exit", release);
     outcome = await runNightly(options, {
       plan,

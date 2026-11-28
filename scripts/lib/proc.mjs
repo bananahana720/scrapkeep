@@ -92,9 +92,24 @@ export function runProcess(
     const started = Date.now();
     const detached = Boolean(reapGroup && process.platform !== "win32");
     let child;
+    let interrupted;
+    const onSignal = (sig) => {
+      interrupted = sig === "SIGINT" ? 130 : 143;
+      process.exitCode = interrupted;
+      terminate(true);
+    };
+    const forward = (listen) => {
+      if (!forwardSignals) return;
+      for (const sig of ["SIGINT", "SIGTERM"]) {
+        if (listen) process.on(sig, onSignal);
+        else process.off(sig, onSignal);
+      }
+    };
+    forward(true);
     try {
       child = spawn(command, args, { cwd, env, stdio, detached });
     } catch (error) {
+      forward(false);
       const msg = String(error?.message ?? error);
       resolve({
         pid: null,
@@ -120,7 +135,6 @@ export function runProcess(
     const chunksOut = [];
     let timedOut = false;
     let aborted = false;
-    let interrupted;
     let stopping = null;
     let killTimer = null;
     let drainTimer = null;
@@ -156,16 +170,6 @@ export function runProcess(
       terminate(true);
     };
     signal?.addEventListener("abort", onAbort, { once: true });
-
-    const onSignal = (sig) => {
-      interrupted = sig === "SIGINT" ? 130 : 143;
-      process.exitCode = interrupted;
-      terminate(true);
-    };
-    if (forwardSignals) {
-      process.on("SIGINT", onSignal);
-      process.on("SIGTERM", onSignal);
-    }
 
     if (child.stdout) {
       if (binaryOutput) {
@@ -204,10 +208,7 @@ export function runProcess(
       if (timer) clearTimeout(timer);
       if (killTimer) clearTimeout(killTimer);
       if (drainTimer) clearTimeout(drainTimer);
-      if (forwardSignals) {
-        process.off("SIGINT", onSignal);
-        process.off("SIGTERM", onSignal);
-      }
+      forward(false);
       signal?.removeEventListener("abort", onAbort);
       if (reapOnClose && !error) {
         if (stopping) await stopping;

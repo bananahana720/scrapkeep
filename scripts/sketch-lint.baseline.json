@@ -263,11 +263,7 @@
     "sketches/core-loop/src/presentation/ink_outline.gd:_shaders",
     "sketches/core-loop/src/presentation/jolt_layer_audio.gd:_streams",
     "sketches/core-loop/src/presentation/landmark_proxy.gd:_materials",
-    "sketches/core-loop/src/presentation/music_engine.gd:_park_tasks",
-    "sketches/core-loop/src/presentation/music_engine.gd:_park_warm",
     "sketches/core-loop/src/presentation/music_engine.gd:_park_warm_lock",
-    "sketches/core-loop/src/presentation/music_engine.gd:_rest_lock",
-    "sketches/core-loop/src/presentation/music_engine.gd:_stinger_tasks",
     "sketches/core-loop/src/presentation/park_props.gd:_cache_owner",
     "sketches/core-loop/src/presentation/park_props.gd:_far_sources",
     "sketches/core-loop/src/presentation/park_props.gd:_material",
@@ -284,13 +280,7 @@
     "sketches/core-loop/src/presentation/sfx_bank.gd:_lock",
     "sketches/core-loop/src/presentation/sfx_bank.gd:_rendered",
     "sketches/core-loop/src/presentation/sfx_bank.gd:_samples",
-    "sketches/core-loop/src/presentation/sfx_bank.gd:_shift",
     "sketches/core-loop/src/presentation/sfx_bank.gd:_streams",
-    "sketches/core-loop/src/presentation/sfx_bank.gd:_theme",
-    "sketches/core-loop/src/presentation/sfx_bank.gd:_voice_clips",
-    "sketches/core-loop/src/presentation/sfx_bank.gd:_voice_tts",
-    "sketches/core-loop/src/presentation/sfx_bank.gd:bake_cancel",
-    "sketches/core-loop/src/presentation/sfx_bank.gd:unknown_callers",
     "sketches/core-loop/src/presentation/site_markers.gd:_materials",
     "sketches/core-loop/src/presentation/site_markers.gd:_meshes",
     "sketches/core-loop/src/presentation/spillway_scenery.gd:_prop_materials",
@@ -299,7 +289,6 @@
     "sketches/core-loop/src/presentation/spillway_scenery.gd:flow_scale",
     "sketches/core-loop/src/presentation/synth.gd:_lock",
     "sketches/core-loop/src/presentation/synth.gd:_notes",
-    "sketches/core-loop/src/presentation/synth.gd:score_step",
     "sketches/core-loop/src/presentation/title_intro_player.gd:_finishes",
     "sketches/core-loop/src/presentation/tune_moments.gd:_available",
     "sketches/core-loop/src/presentation/weapon_rig_fx.gd:_mesh_cache",
@@ -601,5 +590,18 @@
   "W7": {
     "sketches/core-loop/src/core/class_def.gd": 1
   },
-  "S8": {}
+  "S8": {},
+  "L18": [
+    "sketches/core-loop/tests/bot_harpoon_hold_leak_test.gd.uid",
+    "sketches/core-loop/tests/burst_key_rule_agreement_test.gd.uid",
+    "sketches/core-loop/tests/combat_slam_landing_test.gd.uid",
+    "sketches/core-loop/tests/dead_screen_keep_key_test.gd.uid",
+    "sketches/core-loop/tests/drop_cage_frames_test.gd.uid",
+    "sketches/core-loop/tests/harpoon_burst_route_test.gd.uid",
+    "sketches/core-loop/tests/harpoon_smash_landing_test.gd.uid",
+    "sketches/core-loop/tests/harpoon_stale_tow_test.gd.uid",
+    "sketches/core-loop/tests/harpoon_toggle_off_test.gd.uid",
+    "sketches/core-loop/tests/warden_contacts_query_test.gd.uid",
+    "sketches/core-loop/tests/warden_window_standing_test.gd.uid"
+  ]
 }
