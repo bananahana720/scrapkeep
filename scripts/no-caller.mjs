@@ -90,29 +90,40 @@ export function findMentions(files, cwd = process.cwd()) {
   return result;
 }
 
-if (isMain(import.meta.url)) {
-  const files = process.argv.slice(2);
+const unknown = (err) =>
+  `the search could not run, so nothing is known about callers: ${err?.message ?? err}`;
+
+export function main(
+  files,
+  { cwd = process.cwd(), log = console.log, error = console.error } = {},
+) {
   if (files.length === 0) {
-    console.error("usage: node scripts/no-caller.mjs <file>...");
-    process.exit(2);
+    error("usage: node scripts/no-caller.mjs <file>...");
+    return 2;
   }
-  let found;
   try {
-    const bad = badPaths(files);
+    const bad = badPaths(files, cwd);
     if (bad.length) {
-      for (const line of bad) console.error(line);
-      process.exit(2);
+      for (const line of bad) error(line);
+      return 2;
     }
-    found = findMentions(files);
+    let mentioned = false;
+    for (const [rel, hits] of findMentions(files, cwd)) {
+      log(`${rel}: ${hits.length} mention${hits.length === 1 ? "" : "s"}`);
+      for (const h of hits) log(`  ${h}`);
+      if (hits.length) mentioned = true;
+    }
+    return mentioned ? 1 : 0;
   } catch (err) {
-    console.error(`the search could not run, so nothing is known about callers: ${err.message}`);
+    error(unknown(err));
+    return 2;
+  }
+}
+
+if (isMain(import.meta.url)) {
+  process.on("uncaughtException", (err) => {
+    console.error(unknown(err));
     process.exit(2);
-  }
-  let mentioned = false;
-  for (const [rel, hits] of found) {
-    console.log(`${rel}: ${hits.length} mention${hits.length === 1 ? "" : "s"}`);
-    for (const h of hits) console.log(`  ${h}`);
-    if (hits.length) mentioned = true;
-  }
-  process.exit(mentioned ? 1 : 0);
+  });
+  process.exitCode = main(process.argv.slice(2));
 }
