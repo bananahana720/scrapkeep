@@ -97,7 +97,7 @@ NODE_CHECKS = (
 GODOT_CHECKS = (
     "Start every shell line with `export PATH=/opt/homebrew/bin:$PATH GODOT_BIN=\"$HOME/Applications/Godot_4.7.2.app/Contents/MacOS/Godot\"`, and run Godot only with `HOME` set to a scratch folder under `artifacts/local/` as the rules page says. "
     "After your last commit make one call of `npm run sketch:fast -- --base {base}`; it picks tests from the changed files and may wait several minutes for a machine slot before it starts: wait for it, and make one call rather than several. "
-    "Then `npm run sketch:lint`, `npm test`, `npm run lint:js` and `npm run check:docs`. Known failures that are not yours: `tests/profile_purity_test.gd` and `tests/slice1_patch_and_w1_craft_test.gd` are red on the base; rerun any other red alone before you call it red."
+    "Then `npm run sketch:lint`, `npm test`, `npm run lint:js` and `npm run check:docs`. Known failures that are not yours: `tests/slice1_patch_and_w1_craft_test.gd` is red on `main`, and `tests/profile_purity_test.gd` is red on the integration branch because of an earlier unit of this sweep, which unit W4 repairs (it passes on `main`); rerun any other red alone before you call it red, and call a red old only when it is red on `main`, not when it is red on the integration branch."
 )
 
 UNITS = runpy.run_path(str(pathlib.Path(__file__).with_name(f"units-r{ROUND}.py")), init_globals=dict(BASE=BASE, DELETE=DELETE, NODE_CHECKS=NODE_CHECKS, GODOT_CHECKS=GODOT_CHECKS))["UNITS"]
