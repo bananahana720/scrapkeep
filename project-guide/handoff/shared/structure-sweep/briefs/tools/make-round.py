@@ -47,7 +47,10 @@ STANDING = (
     "6. **A stray file committed.** Stage files by name. Never `git add -A` or `git add .`: your checkout may hold an untracked `node_modules` link.\n"
     "7. **A test filter that matched nothing or everything.** `npm run sketch:fast` refuses an argument it does not know. Each `--test` takes one pattern matched against the test file's name, and each is its own argument: `--test unit_suite_test --test boss_owners_test`. A `--test` replaces the tests the call would have picked from your changed files; it never adds to them, so the call that qualifies your unit carries no `--test`.\n"
     "8. **A grown list.** `scripts/sketch-lint.baseline.json` only shrinks. If it conflicts when you merge, keep the integration branch's blocks and remove only what `npm run sketch:lint` says no longer offends.\n"
-    "9. **Git started by hand in a script.** A Node script starts git through `scripts/lib/git.mjs`, which reads the repository of its `cwd` even inside a git hook."
+    "9. **Git started by hand in a script.** A Node script starts git through `scripts/lib/git.mjs`, which reads the repository of its `cwd` even inside a git hook.\n"
+    "10. **A pin that holds only on the machine that made it, and a report sent before CI answered.** You work on a Mac (arm64); the pull request's CI runs Linux on x86-64, where floating-point results can differ in the last bit. "
+    "A test that pins bytes or hashes of computed floats (mesh arrays, audio samples, positions after a simulation) recorded on one of them fails on the other: make such a test exact only on the platform its pin names and tolerant elsewhere, and never round and then hash. "
+    "After your last push, wait for the pull request's CI to finish (`gh pr checks <number>` until no check is pending; a Godot job takes a few minutes) and put its result in your report. A red check that your change caused is yours to fix before you report; one it did not cause, name with the reason."
 )
 
 HEAD = """You are the writer of unit {unit} of the Scrapkeep structure sweep. Scrapkeep is a Godot 4.7.2 GDScript game under `sketches/core-loop` with a Node toolchain under `scripts/`. The sweep removes duplicate code, dead code, wrong-way dependencies and facts kept in two places, without changing anything a player or a test can observe.
