@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -93,9 +94,18 @@ describe("auditFormalSync", () => {
 });
 
 describe("runLedgerAudit", () => {
-  it("runs quickly (<2000ms) on the live repository and produces structured output", () => {
-    const report = runLedgerAudit({ repoRoot: REPO_ROOT, today: "2026-11-26" });
-    assert.ok(report.ms < 2000, `expected ledger-audit < 2000ms, got ${report.ms}ms`);
+  it("starts at most one git process per formal model on the live repository and produces structured output", () => {
+    const started = [];
+    const spawn = (command, args, options) => {
+      started.push([command, ...args].join(" "));
+      return spawnSync(command, args, options);
+    };
+    const report = runLedgerAudit({ repoRoot: REPO_ROOT, today: "2026-11-26", spawn });
+    assert.ok(started.length > 0 && started.length <= report.formal.total, started.join("\n"));
+    assert.ok(
+      started.every((line) => line.startsWith("git -C ")),
+      started.join("\n"),
+    );
     assert.ok(report.formal.total >= 10);
     assert.equal(typeof report.known_failing.red_count, "number");
     assert.equal(typeof report.placeholders.finding_count, "number");

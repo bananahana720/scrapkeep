@@ -15,7 +15,8 @@ import { filterFormatTargets } from "../ci/format-changed.mjs";
 import { datedRecordPaths } from "../dated-records.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
-import { REPO_ROOT } from "../lib/git.mjs";
+import { REPO_ROOT, git } from "../lib/git.mjs";
+import { BASELINE_PATH, baselineGrowth, formatFinding, readBaselineAt } from "../sketch-lint.mjs";
 
 const root = REPO_ROOT;
 const ZERO_SHA = "0000000000000000000000000000000000000000";
@@ -102,7 +103,8 @@ export function planHookChecks(changedFiles, exists = (f) => existsSync(path.joi
   const hasSkills = changedFiles.some((f) => isSkillPath(f) || f === "scripts/check-skills.mjs");
   const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
   const hasKnownFailing = changedFiles.includes(KNOWN_FAILING_LEDGER);
-  return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing };
+  const hasBaseline = changedFiles.includes(BASELINE_PATH);
+  return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing, hasBaseline };
 }
 
 function runStep(label, cmd, args, { cwd = root, spawn = spawnSync } = {}) {
@@ -133,6 +135,8 @@ export function executeHookPlan(
     spawn = spawnSync,
     ensureModules = ensureNodeModules,
     errLog = console.error,
+    ranges = [],
+    readBaseline = (ref) => readBaselineAt(ref, { cwd }),
   } = {},
 ) {
   let ok = true;
@@ -215,6 +219,14 @@ export function executeHookPlan(
       { cwd, spawn },
     );
     if (!r.ok) ok = false;
+  }
+  if (plan.hasBaseline) {
+    ranLabels.push("baseline");
+    for (const { base, head } of ranges) {
+      const grew = baselineGrowth(readBaseline(base), readBaseline(head));
+      for (const item of grew) errLog(formatFinding(item));
+      if (grew.length > 0) ok = false;
+    }
   }
   if (plan.hasKnownFailing) {
     ranLabels.push("known-failing");
@@ -321,6 +333,7 @@ if (isMain(import.meta.url)) {
     let files = [];
     let ranges = [];
     if (opts.base) {
+      ranges = [{ base: git(["merge-base", opts.base, "HEAD"]), head: "HEAD" }];
       const ran = spawnSync("git", ["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`], {
         cwd: root,
         encoding: "utf8",
@@ -341,7 +354,7 @@ if (isMain(import.meta.url)) {
 
     const dated = runDatedRecords(files, opts.base ? [{ base: opts.base, head: "HEAD" }] : ranges);
     const plan = planHookChecks(files);
-    const { ok, ranLabels } = executeHookPlan(plan);
+    const { ok, ranLabels } = executeHookPlan(plan, { ranges });
     const loadEnd = os.loadavg()[0];
     const elapsedS = (performance.now() - started) / 1000;
     const outcome = evaluateHookOutcome({

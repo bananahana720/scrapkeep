@@ -305,13 +305,7 @@ test("the real registry audits clean with every counted category nonzero", () =>
     "texture sides read",
   );
   assert.ok(
-    measured
-      .filter((a) => a.class === "pilot")
-      .every((a) =>
-        a.id === "pilot_patch_anim"
-          ? a.bones === 0 && a.clips === 0 && a.tris > 0
-          : a.bones > 0 && a.clips > 0,
-      ),
+    measured.filter((a) => a.class === "pilot").every((a) => a.bones > 0 && a.clips > 0),
     "pilot rigs read",
   );
 });

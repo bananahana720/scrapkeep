@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -13,6 +15,7 @@ import {
   L13_ALLOWED,
   applyBaseline,
   baselineFrom,
+  baselineGrowth,
   buildScriptGraph,
   formatFinding,
   lintL1,
@@ -33,10 +36,13 @@ import {
   lintL15,
   lintL16,
   lintL17,
+  lintL18,
   lintSketch,
   parseBatchDriverRefs,
   parseBatchDriverVars,
   parseTuning,
+  parseLintArgs,
+  readBaselineAt,
   stronglyConnectedComponents,
 } from "./sketch-lint.mjs";
 import {
@@ -718,6 +724,7 @@ test("the baseline silences listed offenders and shrinks only", () => {
     W6: {},
     W7: {},
     S8: {},
+    L18: [],
   });
 });
 
@@ -1377,4 +1384,120 @@ test("L17 flags hardcoded /home/andrew paths in scripts and passes HOME-based pa
 
   const realL17 = lintSketch("core-loop").filter((item) => item.rule === "L17");
   assert.deepEqual(realL17, []);
+});
+
+test("baselineGrowth fails a rule whose list gained an entry and names the rule, both counts, the new entry and the fix", () => {
+  const base = { L1: ["a.gd", "b.gd"], L14: ["s.gd:_x"], L15: { "c.gd": 2 } };
+  const [grew, ...rest] = baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "d.gd"] });
+  assert.deepEqual(rest, []);
+  assert.equal(grew.rule, "BASELINE");
+  assert.equal(grew.path, "scripts/sketch-lint.baseline.json");
+  assert.equal(
+    grew.message,
+    "L1 list grew from 2 to 3 entries (new: d.gd): fix the offence instead of listing it",
+  );
+  assert.match(
+    formatFinding(baselineGrowth(base, { ...base, L14: ["s.gd:_x", "t.gd:_y"] })[0]),
+    /L14 list grew from 1 to 2 entries \(new: t\.gd:_y\): register a reset in sketches\/core-loop\/tools\/test_batch_driver\.gd/,
+  );
+  assert.equal(
+    baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "b.gd"] })[0].message,
+    "L1 list grew from 2 to 3 entries (new: b.gd): fix the offence instead of listing it",
+  );
+  assert.equal(
+    baselineGrowth(base, { ...base, L15: { "c.gd": 3 } })[0].message,
+    "L15 list grew from 2 to 3 entries (new: c.gd (2 to 3)): fix the offence instead of listing it",
+  );
+});
+
+test("baselineGrowth passes a moved or removed entry, fails a rule with an empty list that gains one, and allows a new rule's first list", () => {
+  const base = { L1: ["a.gd", "b.gd"], L2: [], L15: { "c.gd": 2 }, W1: {} };
+  assert.deepEqual(baselineGrowth(base, { ...base, L1: ["a.gd", "moved/b.gd"] }), []);
+  assert.deepEqual(baselineGrowth(base, { ...base, L15: { "moved/c.gd": 2 } }), []);
+  assert.deepEqual(baselineGrowth(base, { ...base, L1: ["a.gd"], L15: {} }), []);
+  assert.deepEqual(baselineGrowth(base, { ...base, L99: ["new.gd"] }), []);
+  assert.deepEqual(
+    baselineGrowth(base, { ...base, L2: ["x.gd"], W1: { "y.gd": 1 } }).map((item) => item.message),
+    [
+      "L2 list grew from 0 to 1 entries (new: x.gd): fix the offence instead of listing it",
+      "W1 list grew from 0 to 1 entries (new: y.gd (0 to 1)): fix the offence instead of listing it",
+    ],
+  );
+});
+
+test("readBaselineAt reads the committed baseline at a commit and refuses a ref that is not one", () => {
+  assert.ok(Array.isArray(readBaselineAt("HEAD").L1));
+  assert.throws(() => readBaselineAt("no-such-ref-g1"), /rev-parse/);
+});
+
+test("L18 flags a script with no uid file and a uid file with no script, naming the file and the fix", () => {
+  const out = lintL18([
+    "sketches/core-loop/src/a.gd",
+    "sketches/core-loop/src/a.gd.uid",
+    "sketches/core-loop/src/b.gd",
+    "sketches/core-loop/tests/gone_test.gd.uid",
+    "sketches/core-loop/src/notes.md",
+  ]);
+  assert.deepEqual(
+    out.map((item) => formatFinding(item)),
+    [
+      "L18 sketches/core-loop/src/b.gd:1 script has no tracked NAME.gd.uid beside it; run a Godot import and commit the .uid file",
+      "L18 sketches/core-loop/tests/gone_test.gd.uid:1 uid file has no NAME.gd beside it; delete the orphan",
+    ],
+  );
+  assert.equal(BASELINE_RULES.L18.shape, "keys");
+});
+
+test("readBaselineAt throws when a blob-less clone cannot fetch the base copy, and returns {} when the commit has no baseline file", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-partial-"));
+  try {
+    const run = (cwd, ...args) => {
+      const ran = spawnSync("git", args, { cwd, encoding: "utf8" });
+      assert.equal(ran.status, 0, ran.stderr);
+      return ran.stdout.trim();
+    };
+    const source = path.join(tmp, "source");
+    mkdirSync(path.join(source, "scripts"), { recursive: true });
+    run(source, "init", "-q");
+    run(source, "config", "uploadpack.allowFilter", "true");
+    const commit = (message) => {
+      run(source, "add", "-A");
+      run(source, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", message);
+      return run(source, "rev-parse", "HEAD");
+    };
+    writeFileSync(path.join(source, "README"), "x\n");
+    const bare = commit("no baseline");
+    const file = path.join(source, "scripts", "sketch-lint.baseline.json");
+    writeFileSync(file, JSON.stringify({ L1: ["a.gd"] }));
+    const base = commit("one entry");
+    writeFileSync(file, JSON.stringify({ L1: ["a.gd", "b.gd"] }));
+    const head = commit("two entries");
+    const clone = path.join(tmp, "clone");
+    run(tmp, "clone", "-q", "--filter=blob:none", "--no-checkout", `file://${source}`, clone);
+    run(clone, "checkout", "-q", head);
+    renameSync(source, path.join(tmp, "gone"));
+    assert.deepEqual(readBaselineAt(head, { cwd: clone }), { L1: ["a.gd", "b.gd"] });
+    assert.deepEqual(readBaselineAt(bare, { cwd: clone }), {});
+    assert.throws(
+      () => readBaselineAt(base, { cwd: clone }),
+      new RegExp(`base copy of scripts/sketch-lint\\.baseline\\.json at ${base} could not be read`),
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("parseLintArgs refuses a --base with no ref and a flag it does not know", () => {
+  assert.deepEqual(parseLintArgs(["--sketch", "core-loop", "--base", "origin/main"]), {
+    sketch: "core-loop",
+    writeBaseline: false,
+    base: "origin/main",
+  });
+  assert.throws(() => parseLintArgs(["--sketch", "core-loop", "--base"]), /--base requires a ref/);
+  assert.throws(() => parseLintArgs(["--base", ""]), /--base requires a ref/);
+  assert.throws(() => parseLintArgs(["--base", "--sketch", "core-loop"]), /--base requires a ref/);
+  assert.throws(
+    () => parseLintArgs(["--base=origin/main"]),
+    /unknown argument --base=origin\/main/,
+  );
 });

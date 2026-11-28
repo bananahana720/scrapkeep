@@ -11,6 +11,7 @@ import {
   parsePushStdin,
   runDatedRecords,
   planHookChecks,
+  rangeBase,
 } from "./pre-push.mjs";
 
 test("parsePushStdin skips branch deletions and keeps updates and new branches", () => {
@@ -112,6 +113,7 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     hasSkills: false,
     hasBriefs: false,
     hasKnownFailing: false,
+    hasBaseline: false,
   });
 
   const jsOnly = planHookChecks(["scripts/ci/affected.mjs"], (f) => existing.has(f));
@@ -122,6 +124,7 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     hasSkills: false,
     hasBriefs: false,
     hasKnownFailing: false,
+    hasBaseline: false,
   });
 
   const knownFailing = planHookChecks(["project-guide/handoff/KNOWN-FAILING.tsv"], (f) =>
@@ -134,6 +137,7 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     hasSkills: false,
     hasBriefs: false,
     hasKnownFailing: true,
+    hasBaseline: false,
   });
 
   assert.equal(
@@ -149,7 +153,10 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     hasSkills: false,
     hasBriefs: false,
     hasKnownFailing: false,
+    hasBaseline: false,
   });
+
+  assert.equal(planHookChecks(["scripts/sketch-lint.baseline.json"], () => true).hasBaseline, true);
 
   const skillsAndBriefs = planHookChecks(
     [
@@ -165,6 +172,7 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     hasSkills: true,
     hasBriefs: true,
     hasKnownFailing: false,
+    hasBaseline: false,
   });
 });
 
@@ -272,4 +280,54 @@ test("executeHookPlan runs all planned checks strictly with zero skipped checks 
   );
   assert.equal(missingBins.ok, false);
   assert.deepEqual(missingBins.ranLabels, ["oxfmt/oxlint(missing)", "sketch:lint"]);
+});
+
+test("rangeBase is the remote tip for an update and the parent of the oldest unpushed commit for a new branch", () => {
+  assert.equal(rangeBase({ localSha: "def456", remoteSha: "abc123" }), "abc123");
+  let args = null;
+  const base = rangeBase(
+    { localSha: "ccc", remoteSha: null },
+    {
+      spawn: (_cmd, a) => {
+        args = a;
+        return { status: 0, stdout: "ccc\nbbb\naaa\n" };
+      },
+    },
+  );
+  assert.deepEqual(args, ["rev-list", "--first-parent", "ccc", "--not", "--remotes"]);
+  assert.equal(base, "aaa^");
+  assert.equal(
+    rangeBase({ localSha: "ccc", remoteSha: null }, { spawn: () => ({ status: 0, stdout: "" }) }),
+    "ccc",
+  );
+});
+
+test("executeHookPlan fails a push whose lint baseline list grew and passes one that shrank", () => {
+  const lists = {
+    base: { L1: ["a.gd", "b.gd"], L15: { "c.gd": 2 } },
+    grown: { L1: ["a.gd", "b.gd", "d.gd"], L15: { "c.gd": 2 } },
+    shrunk: { L1: ["a.gd"], L15: { "c.gd": 2 } },
+  };
+  const plan = {
+    jsFiles: [],
+    hasSketch: false,
+    hasDocsOrPkg: false,
+    hasKnownFailing: false,
+    hasBaseline: true,
+  };
+  const errors = [];
+  const grown = executeHookPlan(plan, {
+    ranges: [{ base: "base", head: "grown" }],
+    readBaseline: (ref) => lists[ref],
+    errLog: (line) => errors.push(line),
+  });
+  assert.equal(grown.ok, false);
+  assert.deepEqual(grown.ranLabels, ["baseline"]);
+  assert.match(errors.join("\n"), /L1 list grew from 2 to 3 entries \(new: d\.gd\)/);
+  const shrunk = executeHookPlan(plan, {
+    ranges: [{ base: "base", head: "shrunk" }],
+    readBaseline: (ref) => lists[ref],
+    errLog: () => assert.fail("no growth to report"),
+  });
+  assert.equal(shrunk.ok, true);
 });

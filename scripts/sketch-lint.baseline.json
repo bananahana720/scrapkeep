@@ -604,5 +604,18 @@
   "W7": {
     "sketches/core-loop/src/core/class_def.gd": 1
   },
-  "S8": {}
+  "S8": {},
+  "L18": [
+    "sketches/core-loop/tests/bot_harpoon_hold_leak_test.gd.uid",
+    "sketches/core-loop/tests/burst_key_rule_agreement_test.gd.uid",
+    "sketches/core-loop/tests/combat_slam_landing_test.gd.uid",
+    "sketches/core-loop/tests/dead_screen_keep_key_test.gd.uid",
+    "sketches/core-loop/tests/drop_cage_frames_test.gd.uid",
+    "sketches/core-loop/tests/harpoon_burst_route_test.gd.uid",
+    "sketches/core-loop/tests/harpoon_smash_landing_test.gd.uid",
+    "sketches/core-loop/tests/harpoon_stale_tow_test.gd.uid",
+    "sketches/core-loop/tests/harpoon_toggle_off_test.gd.uid",
+    "sketches/core-loop/tests/warden_contacts_query_test.gd.uid",
+    "sketches/core-loop/tests/warden_window_standing_test.gd.uid"
+  ]
 }
