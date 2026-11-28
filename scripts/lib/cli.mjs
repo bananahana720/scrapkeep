@@ -12,6 +12,11 @@ export function isMain(metaUrl, argv1 = process.argv[1]) {
   }
 }
 
+export function flagValue(argv, at, needs) {
+  if (!argv[at] || argv[at].startsWith("-")) throw new Error(`${argv[at - 1]} requires ${needs}`);
+  return argv[at];
+}
+
 export function parseCliArgs(
   argv,
   { flags = {}, values = {}, multi = {}, allowPositionals = false, defaults = {} } = {},

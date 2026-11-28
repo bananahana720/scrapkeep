@@ -366,7 +366,6 @@ const STARTS_GIT_BY_HAND = {
   "scripts/lib/git.mjs": "the helper itself",
   "scripts/ci/affected.mjs":
     "treeFiles still starts git by hand; its own error text (git ls-tree <ref> failed) is pinned by tests in affected.test.mjs and pre-push.test.mjs, while diffFiles starts git through git()",
-  "scripts/sketch-lint.test.mjs": "pull request 1332 holds this file",
 };
 
 function filesStartingGit(cwd) {

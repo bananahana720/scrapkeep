@@ -401,6 +401,39 @@ test("parseArgs reads tests, receipt label and the strict switch", () => {
   assert.equal(parseArgs([]).strict, false);
 });
 
+test("parseArgs refuses a bare argument, an unknown flag and a value flag with no value, and the command exits 2 on each", () => {
+  assert.throws(
+    () => parseArgs(["core-loop"]),
+    /^Error: unknown argument core-loop; use --sketch NAME/,
+  );
+  assert.throws(() => parseArgs(["--sketch", "core-loop", "extra"]), /unknown argument extra/);
+  assert.throws(() => parseArgs(["--nope"]), /unknown argument --nope/);
+  assert.throws(
+    () => parseArgs(["--sketch"]),
+    /^Error: --sketch requires a name, as in --sketch core-loop/,
+  );
+  assert.throws(() => parseArgs(["--sketch", "--bots"]), /--sketch requires a name/);
+  assert.throws(
+    () => parseArgs(["--sketch", "core-loop", "--test"]),
+    /--test requires a test name or glob/,
+  );
+  assert.throws(() => parseArgs(["--receipt"]), /--receipt requires a label/);
+  assert.throws(() => parseArgs(["--flags"]), /--flags requires text/);
+  assert.deepEqual(parseArgs(["--flags", ""]).flags, []);
+  const smoke = path.join(path.dirname(new URL(import.meta.url).pathname), "sketch-smoke.mjs");
+  for (const [args, said] of [
+    [["core-loop"], "sketch:smoke: unknown argument core-loop;"],
+    [["--sketch"], "sketch:smoke: --sketch requires a name, as in --sketch core-loop"],
+    [["--sketch", "--test", "x"], "sketch:smoke: --sketch requires a name"],
+    [["--sketch", "core-loop", "--test"], "sketch:smoke: --test requires a test name or glob"],
+  ]) {
+    const ran = spawnSync(process.execPath, [smoke, ...args], { encoding: "utf8" });
+    assert.equal(ran.status, 2, `${args.join(" ")}: ${ran.stderr}`);
+    assert.ok(ran.stderr.startsWith(said), `${args.join(" ")}: ${ran.stderr}`);
+    assert.equal(ran.stdout, "");
+  }
+});
+
 test("a named run needs exactly one known sketch and at least one match", () => {
   const available = ["core-loop", "other"];
   assert.match(validateRun(parseArgs(["--test", "x"]), available), /exactly one --sketch/);

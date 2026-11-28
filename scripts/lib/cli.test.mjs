@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
-import { isMain, parseCliArgs } from "./cli.mjs";
+import { flagValue, isMain, parseCliArgs } from "./cli.mjs";
 import { git, nulSeparated, REPO_ROOT } from "./git.mjs";
 
 const READS_ARGV1 = [
@@ -59,6 +59,16 @@ test("isMain resolves direct paths, symlinks, missing argv1, and non-existent fa
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("flagValue returns the value after a flag and refuses a missing, empty or flag-shaped one", () => {
+  assert.equal(flagValue(["--sketch", "core-loop"], 1, "a name"), "core-loop");
+  for (const argv of [["--sketch"], ["--sketch", ""], ["--sketch", "--bots"], ["--sketch", "-x"]])
+    assert.throws(
+      () => flagValue(argv, 1, "a name"),
+      /^Error: --sketch requires a name$/,
+      argv.join(" "),
+    );
 });
 
 test("parseCliArgs parses flags, values, multi values, inline = syntax, positionals, and errors", () => {

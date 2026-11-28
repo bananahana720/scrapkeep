@@ -75,6 +75,7 @@ import {
 } from "./sketch-fast.mjs";
 import { IMPORT_TRIES, importTry, importWithRetry, scriptErrorCount } from "./sketch-smoke.mjs";
 import { cwdDecidesRepository, git } from "./lib/git.mjs";
+import { runProcess } from "./lib/proc.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
 const READER = 'const SourceScan := preload("res://tests/support/source_scan.gd")\n';
@@ -217,6 +218,29 @@ test("a top-level test that reaches a folder scan through two other test files i
   assert.deepEqual([...picked.keys()].sort(), [
     "tests/folder_guard_test.gd",
     "tests/two_hops_test.gd",
+  ]);
+});
+
+test("a folder guard is also a test that lists a folder of scanning helpers, builds a path from parts, or calls the reader by a string name", () => {
+  const scan = 'SourceScan.sources(t, ["res://src"])';
+  const index = files({
+    "tests/support/source_scan.gd": "",
+    "tests/unit/scan_case.gd": READER + scan,
+    "tests/suite_test.gd": 'const CASE_DIR := "res://tests/unit/"',
+    "tests/checks/scanner.gd": READER + scan,
+    "tests/parts_test.gd": 'var s = load("res://tests/" + "checks/scanner.gd")',
+    "tests/built_reader_test.gd":
+      'const S := preload("res://tests/support/" + "source_scan.gd")\nvar all = S.sources(t, ["res://src"])',
+    "tests/by_name_test.gd": READER + 'var rows = SourceScan.call("captures", t, ["res://src"], P)',
+    "tests/plain_test.gd":
+      'const T := preload("res://tests/support/t.gd")\nvar s := "my_scanner.gd"',
+    "tests/one_file_test.gd": READER + 'SourceScan.text(_t, "res://src/core/flow.gd")',
+  });
+  assert.deepEqual([...selectTests(index, ["src/world/a.gd"]).picked.keys()].sort(), [
+    "tests/built_reader_test.gd",
+    "tests/by_name_test.gd",
+    "tests/parts_test.gd",
+    "tests/suite_test.gd",
   ]);
 });
 
@@ -2090,7 +2114,7 @@ test("a listed test is a known red only when every run of it qualifies, its firs
   }
 });
 
-test("a warm-batch run that was cut short or thrown away reaches the known-red rule with the test's later runs, and never qualifies", () => {
+test("a warm-batch run that was cut short or thrown away reaches the known-red rule with the test's later runs, and never qualifies", async () => {
   const ledger = [
     "test\tkind\tcause\towner\tadded\treview\tcheck",
     "a_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
@@ -2154,6 +2178,69 @@ test("a warm-batch run that was cut short or thrown away reaches the known-red r
   assert.match(
     passedThenRed.said,
     /run 1 of 3 \(in a warm batch\): its warm batch was discarded \(an unexpected exit\)/,
+  );
+
+  const keptCut = interpret(
+    [...part("tests/b_test.gd", green("b_test"), 0), ...part("tests/a_test.gd", listed)],
+    { code: 0 },
+  );
+  assert.deepEqual(
+    [keptCut.outsideError, keptCut.unexpectedExit, keptCut.runs.map((run) => run.test)],
+    [false, false, ["tests/b_test.gd"]],
+    "the batch is kept: it exited 0 and its finished test passed",
+  );
+  assert.deepEqual(keptCut.unfinished, ["tests/a_test.gd", "tests/c_test.gd"]);
+  const cutInKept = settleRequeued(keptCut);
+  assert.equal(
+    cutInKept.kind,
+    "pr-red",
+    "the listed test was cut from a kept batch, then failed only its check twice",
+  );
+  assert.match(
+    cutInKept.said,
+    /counts as this change's red: run 1 of 3 \(in a warm batch\): the warm batch ended while it ran, before its BATCH END line, so this run cannot speak for the test$/,
+  );
+  assert.deepEqual(
+    cutInKept.earlier.map((run) => [run.test, run.batched, run.failure]),
+    [["tests/a_test.gd", true, null]],
+  );
+
+  const sleeper = [
+    `console.log(${JSON.stringify(part("tests/a_test.gd", listed, 1).join("\n"))});`,
+    `console.log(${JSON.stringify(part("tests/b_test.gd", "[ok] begun -> PASS").join("\n"))});`,
+    "setTimeout(() => {}, 60000);",
+  ].join("\n");
+  const limited = await runProcess(process.execPath, ["-e", sleeper], { timeoutMs: 1500 });
+  assert.equal(limited.timedOut, true, "the batch ran past its total time limit");
+  const stopped = interpret(limited.output.split("\n"), {
+    code: limited.exit,
+    signal: limited.signal,
+  });
+  assert.equal(
+    stopped.unexpectedExit,
+    true,
+    `a batch stopped at its time limit: exit ${limited.exit} ${limited.signal}`,
+  );
+  assert.deepEqual(
+    [stopped.runs, stopped.unfinished],
+    [[], tests],
+    "the stopped batch is thrown away whole",
+  );
+  const redBeforeStop = settleRequeued(stopped);
+  assert.equal(
+    redBeforeStop.kind,
+    "pr-red",
+    "red in a batch stopped at its time limit, then red alone",
+  );
+  assert.match(
+    redBeforeStop.said,
+    /run 1 of 3 \(in a warm batch\): its warm batch was discarded \(an unexpected exit\)/,
+  );
+  const runningAtStop = settleRequeued(stopped, "tests/b_test.gd");
+  assert.equal(runningAtStop.kind, "pr-red");
+  assert.match(
+    runningAtStop.said,
+    /run 1 of 3 \(in a warm batch\): the warm batch ended while it ran, before its BATCH END line/,
   );
 
   const outside = interpret(
