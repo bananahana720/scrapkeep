@@ -115,6 +115,7 @@ var _settings
 var _camp
 var _jukebox
 var _radio
+var _pages: Array[Control] = []
 var _walking := false
 var _walk_page: Control
 var _walk_on_close := Callable()
@@ -258,6 +259,7 @@ func setup(game_ref) -> void:
 	_radio.tune_button.pressed.connect(press_key.bind("key_t"))
 	_radio.back.pressed.connect(press_key.bind("key_r"))
 	_content.add_child(_radio)
+	_pages = [_help, _achievements, _work_orders, _logbook, _settings, _camp, _jukebox, _radio]
 	_ending = VBoxContainer.new()
 	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
 	_ending.add_theme_constant_override("separation", 24)
@@ -375,14 +377,8 @@ func _on_flow_changed(state: String) -> void:
 	_content.visible = true
 	_veil.visible = true
 	_state = state
-	_help.visible = false
-	_achievements.visible = false
-	_work_orders.visible = false
-	_logbook.visible = false
-	_settings.visible = false
-	_camp.visible = false
-	_jukebox.visible = false
-	_radio.visible = false
+	for page in _pages:
+		page.visible = false
 	_ending.visible = false
 	_ending_left = 0.0
 	_prologue_line = -1
@@ -647,24 +643,32 @@ func _prologue_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
-func toggle_help() -> void:
+func _other_page_open(except: Array) -> bool:
+	return _pages.any(func(page: Control) -> bool: return page.visible and not page in except)
+
+
+func _toggle_page(page: Control, except: Array, opened: Callable, closed: Callable) -> void:
 	_close_camp_silently()
-	if _state != "title" or _achievements.visible or _settings.visible or _work_orders.visible or _logbook.visible:
+	if _state != "title" or _other_page_open(except):
 		return
-	var opening: bool = not _help.visible
-	if opening:
+	if not page.visible:
 		_actions.visible = false
 		_show("", Palette.AMBER, "")
-		_help.visible = true
-		_help.page_button.grab_focus()
+		page.visible = true
+		opened.call()
 	else:
-		_help.visible = false
+		page.visible = false
 		_actions.visible = true
+		closed.call()
+	_fade(true)
+
+
+func toggle_help() -> void:
+	_toggle_page(_help, [_help, _camp, _jukebox, _radio], func() -> void: _help.page_button.grab_focus(), func() -> void:
 		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 		var help_button = button_for("help")
 		if help_button != null:
-			help_button.grab_focus()
-	_fade(true)
+			help_button.grab_focus())
 
 
 func help_open() -> bool:
@@ -672,60 +676,24 @@ func help_open() -> bool:
 
 
 func toggle_achievements() -> void:
-	_close_camp_silently()
-	if _state != "title" or _help.visible or _settings.visible or _work_orders.visible or _logbook.visible:
-		return
-	var opening: bool = not _achievements.visible
-	if opening:
-		_actions.visible = false
-		_show("", Palette.AMBER, "")
-		_achievements.visible = true
+	_toggle_page(_achievements, [_achievements, _camp, _jukebox, _radio], func() -> void:
 		_achievements.refresh(game.ctx.profile, game.progress, game.tuning != null and game.tuning.sitting())
 		_achievements.back.set_key("key_esc")
-		_sync_walk()
-	else:
-		_achievements.visible = false
-		_actions.visible = true
-		_back_to_base()
-	_fade(true)
+		_sync_walk(), _back_to_base)
 
 
 func toggle_work_orders() -> void:
-	_close_camp_silently()
-	if _state != "title" or _help.visible or _achievements.visible or _settings.visible or _logbook.visible:
-		return
-	var opening: bool = not _work_orders.visible
-	if opening:
-		_actions.visible = false
-		_show("", Palette.AMBER, "")
-		_work_orders.visible = true
+	_toggle_page(_work_orders, [_work_orders, _camp, _jukebox, _radio], func() -> void:
 		_work_orders.refresh(game.ctx.profile, game.tuning != null and game.tuning.sitting())
 		_sync_walk()
-		_work_orders.focus_first()
-	else:
-		_work_orders.visible = false
-		_actions.visible = true
-		_back_to_base()
-	_fade(true)
+		_work_orders.focus_first(), _back_to_base)
 
 
 func toggle_logbook() -> void:
-	_close_camp_silently()
-	if _state != "title" or _help.visible or _achievements.visible or _settings.visible or _work_orders.visible:
-		return
-	var opening: bool = not _logbook.visible
-	if opening:
-		_actions.visible = false
-		_show("", Palette.AMBER, "")
-		_logbook.visible = true
+	_toggle_page(_logbook, [_logbook, _camp, _jukebox, _radio], func() -> void:
 		_logbook.refresh(game.ctx.codex, game.ctx.profile, game.tuning != null and game.tuning.sitting(), _journal_pages())
 		_sync_walk()
-		_logbook.focus_first()
-	else:
-		_logbook.visible = false
-		_actions.visible = true
-		_back_to_base()
-	_fade(true)
+		_logbook.focus_first(), _back_to_base)
 
 
 func _open_work_orders_from_achievements() -> void:
@@ -748,28 +716,17 @@ func _journal_pages() -> Array:
 
 
 func toggle_settings() -> void:
-	_close_camp_silently()
-	if _state != "title" or _help.visible or _achievements.visible or _work_orders.visible or _logbook.visible:
-		return
-	var opening: bool = not _settings.visible
-	if opening:
-		_actions.visible = false
-		_show("", Palette.AMBER, "")
-		_settings.visible = true
+	_toggle_page(_settings, [_settings, _camp, _jukebox, _radio], func() -> void:
 		_settings.refresh()
 		_settings.focus("fullscreen")
 		refresh_lab_row()
-		_sync_walk()
-	else:
-		_settings.visible = false
-		_actions.visible = true
+		_sync_walk(), func() -> void:
 		_breath_row.visible = false
-		_back_to_base()
-	_fade(true)
+		_back_to_base())
 
 
 func toggle_camp() -> void:
-	if _state != "title" or _help.visible or _achievements.visible or _settings.visible or _work_orders.visible or _logbook.visible:
+	if _state != "title" or _other_page_open([_camp, _jukebox, _radio]):
 		return
 	if _walking:
 		if not walk_live():
@@ -836,7 +793,7 @@ func walk_live() -> bool:
 
 
 func page_open() -> bool:
-	if _help.visible or _achievements.visible or _work_orders.visible or _logbook.visible or _settings.visible or _jukebox.visible or _radio.visible:
+	if _other_page_open([_camp]):
 		return true
 	if _camp.customize != null and _camp.customize.visible:
 		return true
@@ -1188,7 +1145,7 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible or _work_orders.visible or _logbook.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible or ending_open()
+	return _other_page_open([_settings]) or _walking or ending_open()
 
 
 func ending_open() -> bool:
@@ -1690,7 +1647,7 @@ func _fade(show: bool) -> void:
 
 
 func _layout_backdrop() -> void:
-	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _work_orders.visible or _logbook.visible or _settings.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible)
+	var title_deck: bool = _state == "title" and not (_other_page_open([]) or _walking)
 	_veil.anchor_left = 0.0
 	_veil.anchor_top = 0.0
 	_veil.anchor_right = 1.0

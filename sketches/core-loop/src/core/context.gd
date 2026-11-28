@@ -40,6 +40,7 @@ var build: Node
 var codex: Node
 var run_log: Node
 var profile: RefCounted
+var ui_profile: RefCounted
 var progress: Node
 var boss: Node
 var stages = StageDefs
