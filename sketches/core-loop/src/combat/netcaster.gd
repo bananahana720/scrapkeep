@@ -1,6 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const FIELD_RADIUS := 5.5
@@ -186,10 +185,10 @@ func _commit(_to_ball: Vector3) -> Node3D:
 	if world_root != null and is_inside_tree():
 		var top := _net.global_position + Vector3.UP * 0.8 if is_instance_valid(_net) else global_position + Vector3(0.0, MAST_HEIGHT - 0.5, -0.3)
 		if is_drop:
-			FxLibrary.burst(world_root, "arc_fizz", top, 12)
-			FxLibrary.burst(world_root, "brass_spark", top, 10)
+			burst(world_root, "arc_fizz", top, 12)
+			burst(world_root, "brass_spark", top, 10)
 		else:
-			FxLibrary.burst(world_root, "brass_spark", top, 8)
+			burst(world_root, "brass_spark", top, 8)
 	return ring
 
 
@@ -199,12 +198,12 @@ func _go_live() -> void:
 		if world_root != null and is_inside_tree():
 			var field := telegraph()
 			if field != null:
-				FxLibrary.burst(world_root, "arc_fizz", field.center + Vector3.UP * 0.6, 10)
+				burst(world_root, "arc_fizz", field.center + Vector3.UP * 0.6, 10)
 
 
 func _on_broken(method: String) -> void:
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "arc_fizz", _real_ball() + Vector3.UP * 0.6, 10)
+		burst(world_root, "arc_fizz", _real_ball() + Vector3.UP * 0.6, 10)
 	if _dropping and not _emp_triggered and (method == "smash" or method == "boost"):
 		var field := telegraph()
 		_trigger_emp(field.center if field != null else _real_ball())
@@ -310,9 +309,9 @@ func _trigger_emp(origin: Vector3) -> void:
 			if is_ordinary_kind(other_kind) and node.has_method("take_damage") and not node.is_dead():
 				node.take_damage(EMP_DAMAGE)
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "arc_fizz", origin + Vector3.UP * 0.8, 16)
-		FxLibrary.burst(world_root, "phase_ring", origin + Vector3.UP * 0.5, 24, Palette.BRASS)
-		FxLibrary.burst(world_root, "brass_spark", origin + Vector3.UP * 0.8, 12)
+		burst(world_root, "arc_fizz", origin + Vector3.UP * 0.8, 16)
+		burst(world_root, "phase_ring", origin + Vector3.UP * 0.5, 24, Palette.BRASS)
+		burst(world_root, "brass_spark", origin + Vector3.UP * 0.8, 12)
 	if holds != null and holds.held(self):
 		_release("smash")
 	if phase != Phase.ROAM:

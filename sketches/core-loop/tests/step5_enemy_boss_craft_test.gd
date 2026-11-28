@@ -14,6 +14,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const BossHarness := preload("res://tests/doubles/boss_harness.gd")
 const Comfort := preload("res://src/core/comfort.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 var t := T.new("step5_enemy_boss_craft_test")
 
@@ -336,3 +337,6 @@ class _MockReactorWarden extends RefCounted:
 	var world_root: Node3D
 	var home := Vector3.ZERO
 	var terrain = null
+
+	func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> void:
+		FxLibrary.burst(parent, id, at, count, tint, toward, isolate)

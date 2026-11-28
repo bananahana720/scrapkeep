@@ -1,7 +1,6 @@
 extends "res://src/combat/counter.gd"
 
 const SpeedTier := preload("res://src/core/speed_tier.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 const BODY := "res://assets/models/world_one/enemy_boom_tender.glb"
 const HULL_RADIUS := 1.3
@@ -211,7 +210,7 @@ func _commit(to_ball: Vector3) -> Node3D:
 	if is_buoy:
 		_buoy_pos = global_position + _heading * 2.0 + Vector3.UP * 0.65
 		if world_root != null and is_inside_tree():
-			FxLibrary.burst(world_root, "brass_spark", global_position + Vector3.UP * 1.4, 8)
+			burst(world_root, "brass_spark", global_position + Vector3.UP * 1.4, 8)
 	var lane_len := BUOY_RANGE if is_buoy else LANE_LENGTH
 	var lane_w := BUOY_WIDTH if is_buoy else LANE_WIDTH
 	return _commit_lane(Threat.Type.LANE, global_position, _heading, lane_len, lane_w)
@@ -222,7 +221,7 @@ func _go_live() -> void:
 		buoy_throws += 1
 		_buoy_pos = _origin + _heading * 2.0 + Vector3.UP * 0.65
 		if world_root != null and is_inside_tree():
-			FxLibrary.burst(world_root, "steam_puff", _origin + Vector3.UP * 1.4, 6)
+			burst(world_root, "steam_puff", _origin + Vector3.UP * 1.4, 6)
 
 
 func _live(delta: float) -> bool:
@@ -267,9 +266,9 @@ func _live_buoy(delta: float) -> bool:
 			buoy_knockouts += 1
 			scrap_value = BASE_SCRAP * 2
 			if world_root != null and is_inside_tree():
-				FxLibrary.burst(world_root, "plate_chunks", global_position + Vector3.UP * 0.8, 14)
-				FxLibrary.burst(world_root, "brass_spark", global_position + Vector3.UP * 1.0, 16, Palette.BRASS)
-				FxLibrary.burst(world_root, "steam_puff", global_position + Vector3.UP * 0.8, 8)
+				burst(world_root, "plate_chunks", global_position + Vector3.UP * 0.8, 14)
+				burst(world_root, "brass_spark", global_position + Vector3.UP * 1.0, 16, Palette.BRASS)
+				burst(world_root, "steam_puff", global_position + Vector3.UP * 0.8, 8)
 			take_damage(hp)
 			return false
 		return true
@@ -295,8 +294,8 @@ func _live_buoy(delta: float) -> bool:
 				live_seconds = _t + BUOY_RETURN_S + 0.1
 				_clear_telegraph()
 				if world_root != null and is_inside_tree():
-					FxLibrary.burst(world_root, "brass_spark", _buoy_pos, 14, Palette.BRASS)
-					FxLibrary.burst(world_root, "steam_puff", _buoy_pos, 6)
+					burst(world_root, "brass_spark", _buoy_pos, 14, Palette.BRASS)
+					burst(world_root, "steam_puff", _buoy_pos, 6)
 				return true
 			if not _buoy_hit_player:
 				_buoy_hit_player = true
@@ -324,9 +323,9 @@ func _bowl_through(ball: Vector3) -> void:
 		_pops_live += 1
 		_pop_float(i)
 		if world_root != null and is_inside_tree():
-			FxLibrary.burst(world_root, "plate_chunks", at + Vector3.UP * 0.5, 8)
-			FxLibrary.burst(world_root, "brass_spark", at + Vector3.UP * 0.6, 10)
-			FxLibrary.burst(world_root, "steam_puff", at + Vector3.UP * 0.5, 5)
+			burst(world_root, "plate_chunks", at + Vector3.UP * 0.5, 8)
+			burst(world_root, "brass_spark", at + Vector3.UP * 0.6, 10)
+			burst(world_root, "steam_puff", at + Vector3.UP * 0.5, 5)
 		_pay(at)
 		if fleet != null:
 			fleet.discover("boom_pop", at)
@@ -334,8 +333,8 @@ func _bowl_through(ball: Vector3) -> void:
 		_pops_live = 0
 		strikes += 1
 		if world_root != null and is_inside_tree():
-			FxLibrary.burst(world_root, "brass_spark", ball + Vector3.UP * 1.2, 16, Palette.BRASS)
-			FxLibrary.burst(world_root, "steam_puff", ball + Vector3.UP * 0.8, 8)
+			burst(world_root, "brass_spark", ball + Vector3.UP * 1.2, 16, Palette.BRASS)
+			burst(world_root, "steam_puff", ball + Vector3.UP * 0.8, 8)
 		if fleet != null:
 			fleet.discover("boom_strike", ball)
 

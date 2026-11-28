@@ -1,7 +1,6 @@
 extends "res://src/combat/counter.gd"
 
 const SpeedTier := preload("res://src/core/speed_tier.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 const PLATE_RADIUS := 3.6
 const LEAD := 0.9
@@ -163,14 +162,14 @@ func _commit(_to_ball: Vector3) -> Node3D:
 	_plate.scale = Vector3.ONE
 	_plate.global_position = ring.center + Vector3.UP * 0.1
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "slam_dust", _plate.global_position, 10)
+		burst(world_root, "slam_dust", _plate.global_position, 10)
 	return ring
 
 
 func _go_live() -> void:
 	if world_root != null and is_inside_tree() and _plate != null:
-		FxLibrary.burst(world_root, "brass_spark", _plate.global_position + Vector3.UP * 0.4, 10)
-		FxLibrary.burst(world_root, "slam_dust", _plate.global_position, 8)
+		burst(world_root, "brass_spark", _plate.global_position + Vector3.UP * 0.4, 10)
+		burst(world_root, "slam_dust", _plate.global_position, 8)
 	if _turbo_used:
 		broken_by = "jump"
 		return
@@ -263,8 +262,8 @@ func _turbo_launch() -> void:
 		player.state.velocity = launch_vel
 		player.state.tier = SpeedTier.BLAZING
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "brass_spark", _real_ball(), 16)
-		FxLibrary.burst(world_root, "steam_puff", _plate.global_position if _plate != null else global_position, 10)
+		burst(world_root, "brass_spark", _real_ball(), 16)
+		burst(world_root, "steam_puff", _plate.global_position if _plate != null else global_position, 10)
 	if fleet != null:
 		fleet.discover("flap_ride", _real_ball())
 
@@ -324,7 +323,7 @@ func _pose() -> void:
 			else:
 				if not _ratchet_sparked and world_root != null and is_inside_tree():
 					_ratchet_sparked = true
-					FxLibrary.burst(world_root, "brass_spark", _plate.global_position + Vector3.UP * 0.3, 8)
+					burst(world_root, "brass_spark", _plate.global_position + Vector3.UP * 0.3, 8)
 				var b := (u - 0.55) / 0.45
 				tilt = lerpf(0.26, 0.56, b * b * (3.0 - 2.0 * b))
 		elif phase == Phase.LIVE:

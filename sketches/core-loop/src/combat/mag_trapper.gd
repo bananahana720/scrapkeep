@@ -1,7 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
-
 const PIT_RADIUS := 4.5
 const PIT_REACH := 1.4
 const LEAD := 0.7
@@ -230,7 +228,7 @@ func _start_polarity_flip(pit: Node3D) -> void:
 	polarity_flips += 1
 	live_seconds = maxf(live_seconds, _t + REPULSE_WARN + 0.15)
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "brass_spark", center + Vector3.UP * 0.4, 12)
+		burst(world_root, "brass_spark", center + Vector3.UP * 0.4, 12)
 
 
 class PuntedDisc extends Node3D:
@@ -240,6 +238,7 @@ class PuntedDisc extends Node3D:
 	var terrain_ref
 	var combat_ref
 	var root_ref: Node3D
+	var burst_fx: Callable
 	var speed := 36.0
 	var blast_radius := 7.0
 	var hit_radius := 2.4
@@ -299,9 +298,9 @@ class PuntedDisc extends Node3D:
 					enemy.take_damage(damage)
 				if enemy.has_method("knock"):
 					enemy.knock(dir + Vector3.UP * 0.25, knock_force)
-		if root_ref != null and is_instance_valid(root_ref):
-			FxLibrary.burst(root_ref, "brass_spark", global_position + Vector3.UP * 0.3, 18)
-			FxLibrary.burst(root_ref, "slam_dust", global_position, 14)
+		if root_ref != null and is_instance_valid(root_ref) and burst_fx.is_valid():
+			burst_fx.call(root_ref, "brass_spark", global_position + Vector3.UP * 0.3, 18)
+			burst_fx.call(root_ref, "slam_dust", global_position, 14)
 		var trapper = owner_ref.get_ref() if owner_ref != null else null
 		if trapper != null and is_instance_valid(trapper):
 			trapper.last_punt_hits = hits
@@ -341,6 +340,7 @@ func _punt_disc() -> void:
 		puck.terrain_ref = terrain
 		puck.combat_ref = fleet.combat if fleet != null and is_instance_valid(fleet) else null
 		puck.root_ref = world_root
+		puck.burst_fx = burst_fx
 		puck.speed = PUNT_SPEED
 		puck.blast_radius = PUNT_BLAST_RADIUS
 		puck.hit_radius = PUNT_HIT_RADIUS
@@ -360,7 +360,7 @@ func _punt_disc() -> void:
 		world_root.add_child(puck)
 		puck.global_position = _flip_center + Vector3.UP * 0.35
 		puck.setup_visual(_top_disc.mesh if _top_disc != null else null)
-		FxLibrary.burst(world_root, "brass_spark", _flip_center + Vector3.UP * 0.4, 14)
+		burst(world_root, "brass_spark", _flip_center + Vector3.UP * 0.4, 14)
 	if fleet != null:
 		fleet.discover("heavy_roll", _real_ball())
 
@@ -399,8 +399,8 @@ func _live(delta: float) -> bool:
 				var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
 				hit_player.emit(REPULSE_DAMAGE, dir * REPULSE_SHOVE + Vector3.UP * 4.0)
 			if world_root != null and is_inside_tree():
-				FxLibrary.burst(world_root, "brass_spark", pit.center + Vector3.UP * 0.4, 16)
-				FxLibrary.burst(world_root, "slam_dust", pit.center, 12)
+				burst(world_root, "brass_spark", pit.center + Vector3.UP * 0.4, 16)
+				burst(world_root, "slam_dust", pit.center, 12)
 			return false
 		return true
 	if not pit.contains(ball) or player.heft() >= rating:
