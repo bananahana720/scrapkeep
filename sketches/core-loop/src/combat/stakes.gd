@@ -152,7 +152,7 @@ func _on_hooked(_at: Vector3) -> void:
 	if not is_instance_valid(stake) or not stake is Stake or not nodes.has(stake):
 		return
 	hooked += 1
-	var rec := ultimate.record()
+	var rec: Dictionary = ultimate.record()
 	rec["stakes_hooked"] = hooked
 	ctx.run.set_meta("ultimate_record", rec)
 	if ctx.run_log != null:
@@ -170,7 +170,7 @@ func arc(at: Vector3, targets: int, damage: float, radius := 10.0) -> int:
 func beat(number: int, at: Vector3, heft_mult: float) -> int:
 	_heft = heft_mult
 	plant(at)
-	var state := ultimate.leg_state()
+	var state: Dictionary = ultimate.leg_state()
 	beat_log.append({"beat": number, "time": state["elapsed"], "expected": number * float(state["beat_length"])})
 	_note("stake", number)
 	return arc(at, ultimate.volley_targets(), 12.0 * heft_mult)

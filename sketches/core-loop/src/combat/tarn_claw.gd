@@ -336,7 +336,7 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 					if enemy.has_method("open_ring_out"):
 						enemy.open_ring_out()
 				elif id == "vice_leap":
-					var state := combat.ultimate.leg_state()
+					var state: Dictionary = combat.ultimate.leg_state()
 					var left := maxf(0.05, float(state["remaining"]))
 					if enemy.has_method("open_ring_out"):
 						enemy.open_ring_out()

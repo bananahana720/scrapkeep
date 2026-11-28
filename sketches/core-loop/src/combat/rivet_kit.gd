@@ -1348,7 +1348,7 @@ func peak(id: String, at: Vector3) -> void:
 	else:
 		hits = full_cut(at, _beam_aim(at, _peak_aim(), Weapons.FULL_CUT_REACH), heft)
 	if combat.ultimate != null:
-		var rec := combat.ultimate.record()
+		var rec: Dictionary = combat.ultimate.record()
 		if not rec.is_empty():
 			rec["volley_hits"] = int(rec.get("volley_hits", 0)) + hits
 

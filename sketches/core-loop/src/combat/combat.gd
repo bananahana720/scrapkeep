@@ -4295,7 +4295,7 @@ func _densest_knot(ball: Vector3):
 
 
 func tally_peak(id: String, at: Vector3) -> void:
-	var state := ultimate.leg_state()
+	var state: Dictionary = ultimate.leg_state()
 	var b: Vector3 = state["final_to"] if state["final_to"] != null else at
 	var left := float(state["total_remaining"])
 	if plate.is_empty() or _flat_gap(plate["at"], b) > 1.0:
@@ -4363,7 +4363,7 @@ func _step_tally_piece(delta: float) -> void:
 			_gather_pull(p["at"], Weapons.GATHER_RADIUS)
 	if tally_piece != "plate_flywheel" or _fly_pulled or ultimate == null or ultimate.phase() != Ultimate.FLIGHT:
 		return
-	var state := ultimate.leg_state()
+	var state: Dictionary = ultimate.leg_state()
 	if not bool(state["is_last"]):
 		return
 	if float(state["remaining"]) > Weapons.FLY_PULL_LEAD:

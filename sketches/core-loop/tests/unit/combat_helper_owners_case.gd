@@ -122,10 +122,10 @@ func run(t) -> void:
 	t.eq("part_synergy_info has one owner in src/combat",
 		_combat_decl_owners("(?m)^static func (_part_synergy_info|_part_info|part_synergy_info)\\("), ["orbital_satellites.gd"])
 
-	var foe := Enemy.new()
+	var foe = Enemy.new()
 	t.eq("Enemy.attack_state is empty at rest", foe.attack_state(), {})
 	foe._atk = {"phase": "windup", "progress": 0.4, "tele": null}
-	var st := foe.attack_state()
+	var st: Dictionary = foe.attack_state()
 	t.eq("Enemy.attack_state exposes phase", st["phase"], "windup")
 	t.near("Enemy.attack_state exposes progress", float(st["progress"]), 0.4)
 	foe.free()
