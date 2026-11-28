@@ -68,6 +68,7 @@ Every `var` declared on `src/core/context.gd` (checked by `npm run check:docs`):
 | `codex` | `Node` (`Codex`) | `game.gd` | Discovery registry and persistent codex. |
 | `run_log` | `Node` (`RunLog`) | `game.gd` | Run telemetry collector writing `user://runs.ndjson`. |
 | `profile` | `RefCounted` (`Profile`) | `game.gd` | Durable player profile (`user://profile.json`). |
+| `ui_profile` | `RefCounted` (`UiProfile`) | `game.gd` | The one in-memory copy of `user://ui-profile.json` (key-glyph uses, callouts and discovery cards seen); the HUD and the discovery banner both read it. |
 | `progress` | `Node` (`Progress`) | `game.gd` | Achievement, shift-board, work-order, and story progression observer. |
 | `boss` | `Node` | `boss.setup(ctx)` | World boss encounter controller (`enter_arena`, `live_plating`, `floor_y`, `rescue_point`). |
 | `stages` | `StageDefs` (launch default `ParkDefs`) | `game.gd` | Active stage/world definition table (`ParkDefs`, `AlphaDefs`, `SliceDefs`, or `StageDefs`). |

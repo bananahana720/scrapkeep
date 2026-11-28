@@ -86,8 +86,6 @@ const KNOWN := [
 		"why": "Palette.live() on the open weak point: live means your verb works on this now"},
 	{"path": "res://src/combat/miniboss.gd", "colour": "ARC", "kind": "ruled",
 		"why": "Palette.live() on the open core, as rogue.gd"},
-	{"path": "res://src/combat/enemy.gd", "colour": "ARC", "kind": "ruled",
-		"why": "rim_color's default before a run sets the pilot's class colour (identity only)"},
 	{"path": "res://src/core/event_kinds.gd", "colour": "COPPER", "kind": "overload",
 		"why": "every pilot's hit and kill star is copper, Rivet's class colour; yours is the class colour"},
 	{"path": "res://src/core/event_kinds.gd", "colour": "AMBER", "kind": "overload",

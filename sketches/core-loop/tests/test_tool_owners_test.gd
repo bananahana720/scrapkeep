@@ -9,6 +9,7 @@ const T := preload("res://tests/support/t.gd")
 
 const ROOTS: Array[String] = ["res://tests", "res://tools"]
 const PUSH_OWNER := "res://tests/support/push.gd"
+const KEY_LOOP := "for\\s+\\w+\\s+in\\s+\\[\\s*(?:true\\s*,\\s*false|false\\s*,\\s*true)\\s*\\]"
 const ALLOWED_KEY_LOOP_HELPERS: Array[String] = []
 const ALLOWED_SINGLE_EDGE_KEY_PUSHES: Array[String] = [
 	"res://tests/death_summary_loop_test.gd:_key",
@@ -44,7 +45,7 @@ func _check_spawner_double_owners() -> void:
 		"res://tests/doubles/boss_spawner_double.gd",
 		"res://tests/doubles/spine_spawner_double.gd",
 	]:
-		var text := FileAccess.get_file_as_string(path)
+		var text := SourceScan.text(_t, path)
 		var dupes: Array[String] = []
 		for token in [
 			"const STRIKE_DAMAGE",
@@ -70,19 +71,14 @@ func _check_push_owners() -> void:
 	var stale_refs := SourceScan.matching(_t, ROOTS, "res://tests/" + "workshop/push\\.gd")
 	var loop_helpers: Array[String] = []
 	var single_edge_helpers: Array[String] = []
-	var loop_re := RegEx.new()
-	var loop_ok := loop_re.compile("for\\s+\\w+\\s+in\\s+\\[\\s*(?:true\\s*,\\s*false|false\\s*,\\s*true)\\s*\\]") == OK
-	_t.check("key loop regex compiles", loop_ok)
 	var key_files := SourceScan.matching(_t, ROOTS, "InputEventKey" + "\\.new\\(\\)")
 	for path in key_files:
 		if path == PUSH_OWNER:
 			continue
-		var text := FileAccess.get_file_as_string(path)
-		var open_ok := FileAccess.get_open_error() == OK and not text.is_empty()
-		_t.check("%s readable for push-owner check" % path, open_ok)
-		if not open_ok or not loop_ok:
+		var text := SourceScan.text(_t, path)
+		if text.is_empty():
 			continue
-		for block in _key_push_blocks(text, loop_re):
+		for block in _key_push_blocks(_t, text):
 			var entry := "%s:%s" % [path, block["name"]]
 			if block["loop"]:
 				loop_helpers.append(entry)
@@ -115,7 +111,7 @@ func _check_allowlist(label: String, found: Array[String], allowed: Array[String
 	_t.eq("%s (no stale allowlist entries)" % label, stale, [])
 
 
-static func _key_push_blocks(text: String, loop_re: RegEx) -> Array[Dictionary]:
+static func _key_push_blocks(t, text: String) -> Array[Dictionary]:
 	var key_ctor := "InputEventKey" + ".new()"
 	var push_call := "push_" + "input"
 	var out: Array[Dictionary] = []
@@ -137,7 +133,7 @@ static func _key_push_blocks(text: String, loop_re: RegEx) -> Array[Dictionary]:
 				has_key = true
 			if line.contains(push_call):
 				has_push = true
-			if loop_re.search(line) != null:
+			if line.contains("for") and line.contains("[") and not SourceScan.search(t, line, KEY_LOOP).is_empty():
 				has_loop = true
 	if func_name != "" and has_key and has_push:
 		out.append({"name": func_name, "loop": has_loop})

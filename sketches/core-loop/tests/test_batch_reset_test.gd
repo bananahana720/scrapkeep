@@ -44,7 +44,6 @@ const StageLocks := preload("res://src/world/stage_locks.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
-const Enemy := preload("res://src/combat/enemy.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const Footings := preload("res://src/world/park/footings.gd")
@@ -117,7 +116,6 @@ func _run() -> void:
 	Synergies.set_table(AlphaDefs)
 	EnemyMotion.headless_idle = true
 	EnemyClips.headless = true
-	Enemy.rim_color = Color.RED
 	WorldFxWord.quiet(true)
 	var hushed_word := WorldFxWord.stamp(root, "QUIET", Vector3.ZERO)
 	t.check("WorldFxWord.quiet(true) hides newly stamped words", not hushed_word.visible)
@@ -346,7 +344,6 @@ func _run() -> void:
 	t.eq("Synergies.table resets to null", Synergies.table, null)
 	t.check("EnemyMotion.headless_idle resets to false", not EnemyMotion.headless_idle)
 	t.check("EnemyClips.headless resets to false", not EnemyClips.headless)
-	t.eq("Enemy.rim_color resets to Palette.ARC", Enemy.rim_color, Palette.ARC)
 	var after_word := WorldFxWord.stamp(root, "LOUD", Vector3.ZERO)
 	t.check("WorldFxWord un-hushes after reset", after_word.visible)
 	after_word.free()

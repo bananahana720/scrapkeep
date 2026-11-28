@@ -8,7 +8,6 @@ const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 
 
 const TELL_S := 1.2
-const MIN_TELL_S := 0.6
 const LIVE_S := 0.1
 const SLOW_S := 1.5
 const REST_S := 5.0

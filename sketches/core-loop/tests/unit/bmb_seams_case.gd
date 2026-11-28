@@ -49,15 +49,6 @@ func run(t) -> void:
 	_check_explicit_setters(t)
 
 
-func _read_src(t, path: String) -> String:
-	var text := FileAccess.get_file_as_string(path)
-	var err := FileAccess.get_open_error()
-	if err != OK or text.is_empty():
-		t.check("reads " + path, false, "error %d, %d characters" % [err, text.length()])
-		return ""
-	return text
-
-
 func _strip_comment(line: String) -> String:
 	var idx := line.find("#")
 	return line.substr(0, idx) if idx >= 0 else line
@@ -78,7 +69,7 @@ func _check_single_sources(t) -> void:
 	var set_candidates := SourceScan.matching(t, ["res://src"], "(?m)^[^#\\n]*const\\s+SETS\\s*:=\\s*\\{")
 	var maker_set_owners: Array[String] = []
 	for path in set_candidates:
-		var text := _read_src(t, path)
+		var text := SourceScan.text(t, path)
 		if text.is_empty():
 			return
 		if text.contains("spillway_works"):
@@ -158,7 +149,7 @@ func _check_closed_reach_ins(t) -> void:
 	var candidates := SourceScan.matching(t, ["res://src"], scan_pattern)
 	var hits: Array = []
 	for path in candidates:
-		var text := _read_src(t, path)
+		var text := SourceScan.text(t, path)
 		if text.is_empty():
 			return
 		var lines := text.split("\n")
@@ -222,12 +213,12 @@ func _check_seeded_roll_determinism(t) -> void:
 
 
 func _check_preload_and_seams_hygiene(t) -> void:
-	var boss_src := _read_src(t, "res://src/boss/boss.gd")
+	var boss_src := SourceScan.text(t, "res://src/boss/boss.gd")
 	if boss_src.is_empty():
 		return
 	t.check("boss omits reward_gates.gd preload", not boss_src.contains("reward_gates.gd"))
 	t.check("boss calls shove_planar unconditionally", boss_src.contains("\tctx.player.shove_planar("))
-	var mind_dress_src := _read_src(t, "res://src/boss/mind_dress.gd")
+	var mind_dress_src := SourceScan.text(t, "res://src/boss/mind_dress.gd")
 	if mind_dress_src.is_empty():
 		return
 	var inline_preload := false
@@ -235,11 +226,11 @@ func _check_preload_and_seams_hygiene(t) -> void:
 		if line.begins_with("\t") and line.contains("preload("):
 			inline_preload = true
 	t.check("mind_dress hoists inline preloads", not inline_preload)
-	var waking_src := _read_src(t, "res://src/boss/waking.gd")
+	var waking_src := SourceScan.text(t, "res://src/boss/waking.gd")
 	if waking_src.is_empty():
 		return
 	t.check("waking routes planar speed through body_planar_speed", waking_src.contains("body_planar_speed()"))
-	var offers_src := _read_src(t, "res://src/build/part_offers.gd")
+	var offers_src := SourceScan.text(t, "res://src/build/part_offers.gd")
 	if offers_src.is_empty():
 		return
 	t.check("part_offers reads PartDef.RARITIES directly", offers_src.contains("PartDef.RARITIES"))
@@ -249,22 +240,17 @@ func _check_explicit_setters(t) -> void:
 	var assign_pattern := "(Parts\\.(seams|opened_items)|Synergies\\.table)(\\[[^\\]]+\\])?\\s*=(?!=)"
 	var line_pattern := "(?m)^[^#\\n]*" + assign_pattern
 	var candidates := SourceScan.matching(t, ["res://src", "res://tests", "res://tools"], line_pattern)
-	var assign_re := RegEx.new()
-	var compile_ok := assign_re.compile(assign_pattern, false) == OK and assign_re.is_valid()
-	t.check("explicit setter pattern compiles", compile_ok, assign_pattern)
-	if not compile_ok:
-		return
 	var direct_writes: Array = []
 	for path in candidates:
 		if path in ["res://src/build/parts.gd", "res://src/build/synergies.gd"]:
 			continue
-		var text := _read_src(t, path)
+		var text := SourceScan.text(t, path)
 		if text.is_empty():
 			return
 		var lines := text.split("\n")
 		for i in lines.size():
 			var code := _strip_comment(lines[i])
-			if assign_re.search(code) != null:
+			if not SourceScan.search(t, code, assign_pattern).is_empty():
 				direct_writes.append("%s:%d" % [path, i + 1])
 	t.eq("no file under src/tests/tools assigns Parts.seams, Parts.opened_items or Synergies.table", direct_writes, [])
 	var prev_seams: Dictionary = Parts.seams.duplicate(true)
