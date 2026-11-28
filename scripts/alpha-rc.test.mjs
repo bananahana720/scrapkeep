@@ -349,9 +349,23 @@ test("launch env drops GODOT_BIN and shadows each godot on PATH with a failing s
 
 function fake(dir, name, body) {
   const file = path.join(dir, name);
-  writeFileSync(file, `#!/bin/sh\n${body}\n`);
+  writeFileSync(file, `#!/bin/sh\necho $$ >> "${path.join(dir, "groups")}"\n${body}\n`);
   chmodSync(file, 0o755);
   return file;
+}
+
+function reapFakes(t, dir) {
+  t.after(() => {
+    const groups = path.join(dir, "groups");
+    if (!existsSync(groups)) return;
+    for (const pgid of readFileSync(groups, "utf8").split("\n").filter(Boolean)) {
+      try {
+        process.kill(-Number(pgid), "SIGKILL");
+      } catch (error) {
+        if (error.code !== "ESRCH") throw error;
+      }
+    }
+  });
 }
 
 const alive = processAlive;
@@ -372,8 +386,9 @@ test("processAlive detects a live child on both Linux and macOS and clears once 
 test(
   "cold launch: menu-ready line passes on a fresh XDG profile, and the profile and the game's process group go away",
   { timeout: GUARD_S * 1000 },
-  async () => {
+  async (t) => {
     const dir = tmp();
+    reapFakes(t, dir);
     const pidFile = path.join(dir, "pid");
     const before = readdirSync(os.tmpdir()).filter((n) =>
       n.startsWith("scrapkeep-rc-home-"),
@@ -408,20 +423,24 @@ test(
 );
 
 describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD_S * 1000 }, () => {
-  test("cold launch fails on an early exit, on silence, and outlasts a game that ignores SIGTERM", async () => {
+  test("cold launch fails on an early exit, on silence, and outlasts a game that ignores SIGTERM", async (t) => {
     const dir = tmp();
+    reapFakes(t, dir);
     const [crash, silent, noMenu, late, stubborn] = await Promise.all([
       launchAppImage(fake(dir, "crash.sh", "exit 3"), { seconds: GUARD_S }),
-      launchAppImage(fake(dir, "silent.sh", "exec sleep 30"), { seconds: 0.5 }),
-      launchAppImage(fake(dir, "nomenu.sh", `echo "${TITLE_INTERACTIVE} ms=900"; exec sleep 30`), {
-        seconds: GUARD_S,
-        menuWaitSeconds: 0.6,
-      }),
+      launchAppImage(fake(dir, "silent.sh", `exec sleep ${LATE_S}`), { seconds: 0.5 }),
+      launchAppImage(
+        fake(dir, "nomenu.sh", `echo "${TITLE_INTERACTIVE} ms=900"; exec sleep ${LATE_S}`),
+        {
+          seconds: GUARD_S,
+          menuWaitSeconds: 0.6,
+        },
+      ),
       launchAppImage(
         fake(
           dir,
           "late.sh",
-          `sleep 0.8; echo "${TITLE_INTERACTIVE} ms=800"; echo "${MENU_READY} ms=900"; sleep 30`,
+          `sleep ${LATE_S}; echo "${TITLE_INTERACTIVE} ms=800"; echo "${MENU_READY} ms=900"; sleep ${LATE_S}`,
         ),
         { seconds: 0.4 },
       ),
@@ -441,8 +460,9 @@ describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD
     assert.equal(stubborn.status, "fail");
   });
 
-  test("cold launch: a build that says it did not load fails at once, with the boot's reason, and does not wait out the menu", async () => {
+  test("cold launch: a build that says it did not load fails at once, with the boot's reason, and does not wait out the menu", async (t) => {
     const dir = tmp();
+    reapFakes(t, dir);
     const [card, headless, held, quoted] = await Promise.all([
       launchAppImage(
         fake(
@@ -468,7 +488,7 @@ describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD
         fake(
           dir,
           "quoted.sh",
-          `echo "note: ${BOOT_FAILED} is the failure marker"; echo "${TITLE_INTERACTIVE} ms=300"; echo "${MENU_READY} ms=400"; exec sleep 30`,
+          `echo "note: ${BOOT_FAILED} is the failure marker"; echo "${TITLE_INTERACTIVE} ms=300"; echo "${MENU_READY} ms=400"; exec sleep ${LATE_S}`,
         ),
         { seconds: GUARD_S },
       ),
@@ -491,8 +511,9 @@ describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD
     assert.equal(quoted.status, "pass");
   });
 
-  test("runProcess returns the exit, and a timeout kills the group and reads as killed", async () => {
+  test("runProcess returns the exit, and a timeout kills the group and reads as killed", async (t) => {
     const dir = tmp();
+    reapFakes(t, dir);
     const pidFile = path.join(dir, "pid");
     const [ok, hung] = await Promise.all([
       runProcess({ command: fake(dir, "ok.sh", "echo hi; exit 4"), args: [] }),

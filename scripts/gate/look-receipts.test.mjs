@@ -6,12 +6,11 @@ import {
   existsSync,
   mkdtempSync,
   openSync,
+  read,
   readFileSync,
   rmSync,
-  watch,
   writeFileSync,
 } from "node:fs";
-import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { after, describe, test } from "node:test";
@@ -29,6 +28,47 @@ const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
 const GUARDED = { concurrency: CONCURRENCY, timeout: 30_000 };
 const LATE_S = GUARDED.timeout / 1000 + 15;
 const tempDirs = [];
+
+function heldPipe(file) {
+  assert.equal(spawnSync("mkfifo", [file]).status, 0, "mkfifo");
+  const probe = openSync(file, constants.O_RDONLY | constants.O_NONBLOCK);
+  let keep = openSync(file, constants.O_WRONLY | constants.O_NONBLOCK);
+  const reader = openSync(file, constants.O_RDONLY);
+  closeSync(probe);
+  let reading = Promise.resolve("");
+  const chunk = () =>
+    new Promise((resolve, reject) =>
+      read(reader, Buffer.alloc(4096), 0, 4096, null, (error, n, buffer) =>
+        error ? reject(error) : resolve(buffer.toString("utf8", 0, n)),
+      ),
+    );
+  const next = () => (reading = reading.then(chunk, chunk));
+  const drained = async () => {
+    if (keep !== null) closeSync(keep);
+    keep = null;
+    let text = "";
+    for (let part = await next(); part; part = await next()) text += part;
+    return text;
+  };
+  let closed = false;
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+    await drained();
+    closeSync(reader);
+  };
+  return { file, next, drained, close };
+}
+
+function killGroupIn(file) {
+  if (!existsSync(file)) return;
+  try {
+    process.kill(-Number(readFileSync(file, "utf8")), "SIGKILL");
+  } catch (error) {
+    if (error.code !== "ESRCH") throw error;
+  }
+}
+
 after(() => {
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
 });
@@ -365,17 +405,22 @@ test("display-run: releases the slot when the launch throws", async () => {
 });
 
 describe("display-run timeouts and signals", GUARDED, () => {
-  test("display-run: the timeout kills the whole run's group, a forked child or an exec", async () => {
+  test("display-run: the timeout kills the whole run's group, a forked child or an exec", async (t) => {
     const { dir } = repo();
     await Promise.all(
       [`sleep ${LATE_S} &\nwait\n`, `exec sleep ${LATE_S}\n`].map(async (body) => {
         const fake = path.join(dir, `fake-${body.length}.sh`);
-        const held = path.join(dir, `held-${body.length}`);
-        assert.equal(spawnSync("mkfifo", [held]).status, 0, "mkfifo");
-        writeFileSync(fake, `#!/bin/sh\nexec 3<> "${held}"\necho started "$@"\n${body}`, {
-          mode: 0o755,
+        const group = path.join(dir, `group-${body.length}`);
+        const pipe = heldPipe(path.join(dir, `held-${body.length}`));
+        t.after(async () => {
+          killGroupIn(group);
+          await pipe.close();
         });
-        const gone = readFile(held, "utf8");
+        writeFileSync(
+          fake,
+          `#!/bin/sh\necho $$ > "${group}"\nexec 3> "${pipe.file}"\necho started "$@"\n${body}`,
+          { mode: 0o755 },
+        );
         const events = [];
         const r = await display.runWindowed({
           platform: "linux",
@@ -387,28 +432,22 @@ describe("display-run timeouts and signals", GUARDED, () => {
           acquire: noSlot(events),
         });
         assert.equal(r.timedOut, true);
-        try {
-          closeSync(openSync(held, constants.O_WRONLY | constants.O_NONBLOCK));
-        } catch (error) {
-          if (error.code !== "ENXIO") throw error;
-        }
         assert.equal(r.exit, null);
         assert.match(r.output, /^started --path .* --script res:\/\/x\.gd --/);
-        assert.equal(await gone, "", `${body.trim()}: the shell and its child are gone`);
+        assert.equal(await pipe.drained(), "", `${body.trim()}: the shell and its child are gone`);
         assert.deepEqual(events, ["acquire", "release"]);
       }),
     );
   });
 
-  test("display-run: SIGTERM to the node process kills the run's group", async () => {
+  test("display-run: SIGTERM to the node process kills the run's group", async (t) => {
     const { dir } = repo();
-    const pids = path.join(dir, "pids");
-    const held = path.join(dir, "held");
-    assert.equal(spawnSync("mkfifo", [held]).status, 0, "mkfifo");
+    const group = path.join(dir, "group");
+    const pipe = heldPipe(path.join(dir, "held"));
     const fake = path.join(dir, "fake-group.sh");
     writeFileSync(
       fake,
-      `#!/bin/sh\nexec 3<> "${held}"\nsleep ${LATE_S} &\necho $$ $! > "${pids}.tmp"\nmv "${pids}.tmp" "${pids}"\nwait\n`,
+      `#!/bin/sh\necho $$ > "${group}"\nexec 3> "${pipe.file}"\nsleep ${LATE_S} &\necho $$ $! >&3\nwait\n`,
       { mode: 0o755 },
     );
     const runner = path.join(dir, "runner.mjs");
@@ -419,19 +458,25 @@ await runWindowed({ platform: "linux", env: { DISPLAY: ":0" }, cwd: ${JSON.strin
 process.exit(1); // An interrupted receipt producer must never reach its next step.
 `,
     );
-    const started = new Promise((resolve) => {
-      const watcher = watch(dir, () => existsSync(pids) && (watcher.close(), resolve()));
-      watcher.unref();
-    });
     const node = spawn(process.execPath, [runner], { stdio: "ignore" });
-    const exited = new Promise((r) => node.on("exit", (code) => r(code)));
-    await started;
-    const [shell, sleeper] = readFileSync(pids, "utf8").trim().split(" ").map(Number);
+    const exited = new Promise((resolve, reject) => {
+      node.once("exit", (code) => resolve(code));
+      node.once("error", reject);
+    });
+    t.after(async () => {
+      if (node.exitCode === null && node.signalCode === null) node.kill("SIGKILL");
+      killGroupIn(group);
+      await pipe.close();
+    });
+    const ready = await Promise.race([
+      pipe.next(),
+      exited.then((code) => assert.fail(`the runner exited (${code}) before the fake started`)),
+    ]);
+    const [shell, sleeper] = ready.trim().split(" ").map(Number);
     assert.ok(shell > 0 && sleeper > 0, "the fake started its shell and its child");
-    const gone = readFile(held, "utf8");
     node.kill("SIGTERM");
     assert.equal(await exited, 143);
-    assert.equal(await gone, "", "the shell and its child are gone");
+    assert.equal(await pipe.drained(), "", "the shell and its child are gone");
   });
 });
 
