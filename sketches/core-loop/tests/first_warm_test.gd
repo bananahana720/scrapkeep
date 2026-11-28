@@ -89,7 +89,7 @@ func _run() -> void:
 	var pickups: Array = views.get("scrap_pickup", [])
 	var variants := ScrapField.PICKUP_VARIANTS.size()
 	t.check("each scrap pickup and recovery cluster and the cog stands, in the pickup shader a field piece wears",
-		pickups.size() == 2 * variants + 1 and pickups.all(func(v): return v["shader"] == ScrapField._pickup_material(Palette.ARC).shader), "%d views" % pickups.size())
+		pickups.size() == 2 * variants + 1 and pickups.all(func(v): return v["shader"] == ScrapField.pickup_material(Palette.ARC).shader), "%d views" % pickups.size())
 	var arc: Array = views.get("arc_mark", [])
 	t.check("the arc mark draws the shared ring every mark draws", arc.size() == 1 and arc[0]["mesh"] == Combat._arc_ring())
 	var machine := []

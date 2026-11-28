@@ -32,17 +32,20 @@ const PanelShell := preload("res://src/build/panel_shell.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
+const HotwireShell := preload("res://src/build/hotwire_shell.gd")
+const RelicSync := preload("res://src/build/relic_sync.gd")
+const SynergyRuntime := preload("res://src/build/synergy_runtime.gd")
 
 
 const GATE_CHOICES := 2
-const SHELL_SCRAP_PER_HP := 5.0
-const SHELL_AIR_FACTOR := 0.75
-const RIVETED_SHELL := "riveted_shell"
-const RIVETED_ARMOUR := HotwireRules.RIVETED_ARMOUR
-const RIVETED_AIR_FACTOR := HotwireRules.RIVETED_AIR_FACTOR
-const SHELL_VAULT_WINDOW := 2.0
-const SHELL_AIR_FACTOR_VAULT := 1.25
-const SHELL_AIR_FACTOR_SPRINT := 1.0
+const SHELL_SCRAP_PER_HP := HotwireShell.SHELL_SCRAP_PER_HP
+const SHELL_AIR_FACTOR := HotwireShell.SHELL_AIR_FACTOR
+const RIVETED_SHELL := HotwireShell.RIVETED_SHELL
+const RIVETED_ARMOUR := HotwireShell.RIVETED_ARMOUR
+const RIVETED_AIR_FACTOR := HotwireShell.RIVETED_AIR_FACTOR
+const SHELL_VAULT_WINDOW := HotwireShell.SHELL_VAULT_WINDOW
+const SHELL_AIR_FACTOR_VAULT := HotwireShell.SHELL_AIR_FACTOR_VAULT
+const SHELL_AIR_FACTOR_SPRINT := HotwireShell.SHELL_AIR_FACTOR_SPRINT
 signal shell_air_changed(factor: float, rose: bool)
 signal set_completed(set_id: String, title: String, text: String, color: Color)
 const PARTICIPANTS := ["player"]
@@ -53,28 +56,28 @@ const ARC_RADIUS := 8.0
 const ARC_DAMAGE := 18.0
 const REFREEZE_RING := 4.0
 const WARDEN_LINE := 20.0
-const ROD_REACH := 12.0
-const ROD_DAMAGE := 10.0
-const ROD_PER_SECOND := 6.0
-const TESLA_REACH := 12.0
-const TESLA_DAMAGE := 12.0
-const TESLA_EVERY := 0.5
-const TESLA_TARGETS := 2
-const WRECK_RADIUS := 6.0
-const SYNERGY_KIND := "synergy"
-const SYNERGY_PUNCH := 1.2
-const WRECK_FORCE := 18.0
-const SHRAPNEL_RADIUS := 6.0
-const SHRAPNEL_FORCE := 14.0
-const SHRAPNEL_TARGETS := 3
-const SHRAPNEL_PER_SECOND := 6.0
-const GLACIER_IMPACT := 9.0
-const GLACIER_RADIUS := 5.0
-const PINWHEEL_RADIUS := 4.5
-const PINWHEEL_FORCE := 10.0
-const PINWHEEL_EVERY := 0.3
-const PINWHEEL_TIER := 2
-const PINWHEEL_TARGETS := 4
+const ROD_REACH := SynergyRuntime.ROD_REACH
+const ROD_DAMAGE := SynergyRuntime.ROD_DAMAGE
+const ROD_PER_SECOND := SynergyRuntime.ROD_PER_SECOND
+const TESLA_REACH := SynergyRuntime.TESLA_REACH
+const TESLA_DAMAGE := SynergyRuntime.TESLA_DAMAGE
+const TESLA_EVERY := SynergyRuntime.TESLA_EVERY
+const TESLA_TARGETS := SynergyRuntime.TESLA_TARGETS
+const WRECK_RADIUS := SynergyRuntime.WRECK_RADIUS
+const SYNERGY_KIND := SynergyRuntime.SYNERGY_KIND
+const SYNERGY_PUNCH := SynergyRuntime.SYNERGY_PUNCH
+const WRECK_FORCE := SynergyRuntime.WRECK_FORCE
+const SHRAPNEL_RADIUS := SynergyRuntime.SHRAPNEL_RADIUS
+const SHRAPNEL_FORCE := SynergyRuntime.SHRAPNEL_FORCE
+const SHRAPNEL_TARGETS := SynergyRuntime.SHRAPNEL_TARGETS
+const SHRAPNEL_PER_SECOND := SynergyRuntime.SHRAPNEL_PER_SECOND
+const GLACIER_IMPACT := SynergyRuntime.GLACIER_IMPACT
+const GLACIER_RADIUS := SynergyRuntime.GLACIER_RADIUS
+const PINWHEEL_RADIUS := SynergyRuntime.PINWHEEL_RADIUS
+const PINWHEEL_FORCE := SynergyRuntime.PINWHEEL_FORCE
+const PINWHEEL_EVERY := SynergyRuntime.PINWHEEL_EVERY
+const PINWHEEL_TIER := SynergyRuntime.PINWHEEL_TIER
+const PINWHEEL_TARGETS := SynergyRuntime.PINWHEEL_TARGETS
 
 var ctx
 var scrap
@@ -99,8 +102,54 @@ var _caches_wait := 0
 var _cache_spots: Array = []
 var kill_log: Array = []
 const KILL_LOG_CAP := 4000
-var _woken := {}
-var _sets_fresh: Array = []
+var _hotwire := HotwireShell.new()
+var _relic_sync := RelicSync.new()
+var _synergies := SynergyRuntime.new()
+var _woken: Dictionary:
+	get:
+		return _synergies.woken
+	set(v):
+		_synergies.woken = v
+var _found: Dictionary:
+	get:
+		return _synergies.found_map
+	set(v):
+		_synergies.found_map = v
+var _kills: Array[Vector3]:
+	get:
+		return _synergies.kills
+	set(v):
+		_synergies.kills = v
+var _rams: Array[Vector3]:
+	get:
+		return _synergies.rams
+	set(v):
+		_synergies.rams = v
+var _relic_fx: Dictionary:
+	get:
+		return _relic_sync.fx
+	set(v):
+		_relic_sync.fx = v
+var _shell_window: float:
+	get:
+		return _hotwire.shell_window
+	set(v):
+		_hotwire.shell_window = v
+var _hotwire_state: String:
+	get:
+		return _hotwire.state
+	set(v):
+		_hotwire.state = v
+var _hotwire_spent: bool:
+	get:
+		return _hotwire.spent
+	set(v):
+		_hotwire.spent = v
+var tread_fires: int:
+	get:
+		return _hotwire.tread_fires
+	set(v):
+		_hotwire.tread_fires = v
 var sheet
 var stat_cache = StatCache.new()
 var _shot_masks: Array = []
@@ -124,41 +173,14 @@ var _mass_hp := 0.0
 var _trail := 0.0
 var _trail_ticks := 0
 var _slams: Array[Dictionary] = []
-var _rams: Array[Vector3] = []
-var _kills: Array[Vector3] = []
-var _landings: Array[float] = []
 var _shots: Array[Vector3] = []
-var _rod_budget := ROD_PER_SECOND
-var _shrapnel_budget := SHRAPNEL_PER_SECOND
-var _shell_window := 0.0
-var _air_seen := 0.0
-var _air_rest := 0.0
-var _sprint_seen := false
-var _glide_seen := false
-var _hotwire_id := ""
-var _hotwire_state := ""
-var _hotwire_spent := false
-var _hotwire_world := 1
-var _tread_recovery := 0.0
-var _tread_frame := -1
-var _tread_kind := ""
-var _tread_hits: Array[Dictionary] = []
-var tread_fires := 0
-var _tesla_clock := 0.0
-var _pinwheel_clock := 0.0
-var _pinwheel_cut := {}
-var _live: Array = []
-var _discovered := {}
-var _armed := {}
-var _fired := {}
-var _found := {}
 var _declared := false
 
 
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "Build"
-	Synergies.table = ctx.stages
+	Synergies.set_table(ctx.stages)
 	sheet = stat_cache.sync([])
 	scrap = ScrapField.new()
 	scrap.name = "Scrap"
@@ -311,18 +333,15 @@ func codex_declarations() -> Array:
 
 
 func discovered() -> Array:
-	return _discovered.keys()
+	return _synergies.discovered()
 
 
 func found() -> Array:
-	return _found.values()
+	return _synergies.found()
 
 
 func is_known(synergy_id: String) -> bool:
-	var codex = _codex()
-	if codex != null and codex.known(synergy_id):
-		return true
-	return _discovered.has(synergy_id)
+	return _synergies.is_known(self, synergy_id)
 
 
 func apply_element(element_id: String, at: Vector3, source := "") -> Dictionary:
@@ -420,13 +439,13 @@ func clock_paused() -> bool:
 func _refresh_seams() -> void:
 	var spawner = ctx.spawner
 	var patterns: PackedStringArray = spawner.transformer_ids() if spawner != null and spawner.has_method("transformer_ids") else PackedStringArray()
-	Parts.seams = {
+	Parts.set_seams({
 		"spawner.extend_cloak": spawner != null and spawner.has_method("extend_cloak"),
 		"spawner.fan_spread": "fan_spread" in patterns,
 		"spawner.helix_drill": "helix_drill" in patterns,
 		"player.set_vault_cooldown_scale": ctx.player.has_method("set_vault_cooldown_scale"),
 		"player.set_vault_charges": ctx.player.has_method("set_vault_charges"),
-	}
+	})
 
 
 func _post(kind: int, source: String, proc: float, at: Vector3, enemy: Node3D = null, amount := 0.0) -> void:
@@ -518,24 +537,7 @@ func recompute() -> void:
 	effects.apply_abilities(ctx.player)
 	scrap.magnet_scale = sheet.magnet * Companion.vacuum_scale(ctx.run.companion)
 	field.shatter_scale = sheet.dial("shatter_damage")
-	for synergy_id in _live:
-		if not synergy_id in sheet.synergies:
-			_fired.erase(synergy_id)
-	for synergy_id in sheet.synergies:
-		if not synergy_id in _live:
-			_on_synergy_live(synergy_id)
-	_live = sheet.synergies.duplicate()
-	_sets_fresh = []
-	for trick_id in sheet.synergies:
-		if Synergies.told_on_wake(trick_id) and not _woken.has(trick_id):
-			_woken[trick_id] = true
-			_sets_fresh.append(trick_id)
-			_discovered[trick_id] = true
-			var codex = _codex()
-			if codex != null:
-				if not _declared:
-					_declare()
-				codex.mark_known(trick_id, PARTICIPANTS)
+	_synergies.sync_live(self)
 	_redraw()
 
 
@@ -554,188 +556,122 @@ func _fold_panels() -> void:
 
 
 func shell_fitted() -> bool:
-	return ctx != null and ctx.tuning != null and ctx.tuning.option("hotwire_shell") == "on"
+	return _hotwire.shell_fitted(self)
 
 
 func shell_held() -> bool:
-	return shell_fitted() and ctx.run != null and RIVETED_SHELL in ctx.run.parts
+	return _hotwire.shell_held(self)
 
 
 func shell_rest_factor() -> float:
-	if not shell_fitted():
-		return 1.0
-	return SHELL_AIR_FACTOR * (RIVETED_AIR_FACTOR if shell_held() else 1.0)
+	return _hotwire.shell_rest_factor(self)
 
 
 func shell_air_factor() -> float:
-	if not shell_fitted():
-		return 1.0
-	var factor := shell_rest_factor()
-	if _shell_window > 0.0 and _face_runner_s4():
-		factor = maxf(factor, SHELL_AIR_FACTOR_VAULT)
-	if _sprinting() and _second_wind_r6():
-		factor = maxf(factor, SHELL_AIR_FACTOR_SPRINT)
-	if _gliding() and _smoke_trail_k5():
-		factor = maxf(factor, SHELL_AIR_FACTOR_VAULT)
-	return factor
+	return _hotwire.shell_air_factor(self)
 
 
 func _second_wind_r6() -> bool:
-	var tree = ctx.player.tree if ctx != null and ctx.player != null else null
-	return tree != null and tree.world_one and "r_second_wind" in tree.picks
+	return _hotwire.second_wind_r6(self)
 
 
 func _smoke_trail_k5() -> bool:
-	var tree = ctx.player.tree if ctx != null and ctx.player != null else null
-	return tree != null and tree.world_one and "k_smoke_trail" in tree.picks
-
-
-func _gliding() -> bool:
-	return ctx != null and ctx.player != null and ctx.player.kit != null and ctx.player.kit.gliding
-
-
-func _sprinting() -> bool:
-	return ctx != null and ctx.player != null and ctx.player.kit != null and ctx.player.kit.sprinting
+	return _hotwire.smoke_trail_k5(self)
 
 
 func _face_runner_s4() -> bool:
-	var tree = ctx.player.tree if ctx != null and ctx.player != null else null
-	return tree != null and tree.world_one and "s_face_runner" in tree.picks
+	return _hotwire.face_runner_s4(self)
 
 
 func _open_shell_window() -> void:
-	if not shell_fitted() or not _face_runner_s4():
-		return
-	_shell_window = SHELL_VAULT_WINDOW
-	_refresh_air_mod()
+	_hotwire.open_shell_window(self)
 
 
-func _refresh_air_mod() -> void:
-	ctx.tuning.set_mod("air_control", sheet.mod("air_control") * shell_air_factor())
-	_note_air_factor()
-
-
-func _note_air_factor() -> void:
-	if not shell_fitted():
-		_air_seen = 0.0
-		_air_rest = 0.0
-		return
-	var factor := shell_air_factor()
-	var rest := shell_rest_factor()
-	var before := _air_seen
-	var rest_before := _air_rest
-	_air_seen = factor
-	_air_rest = rest
-	if before > 0.0 and not is_equal_approx(before, factor) and is_equal_approx(rest_before, rest):
-		shell_air_changed.emit(factor, factor > rest)
+func emit_shell_air_changed(factor: float, rose: bool) -> void:
+	shell_air_changed.emit(factor, rose)
 
 
 func shell_scrap_per_hp() -> float:
-	if not shell_fitted():
-		return RunState.SCRAP_PER_HP
-	return SHELL_SCRAP_PER_HP / (RIVETED_ARMOUR if shell_held() else 1.0)
+	return _hotwire.shell_scrap_per_hp(self)
 
 
-func _on_warden_broken_hotwire(_stage: int) -> void:
-	var world := maxi(ctx.run.world, 1)
-	if world != _hotwire_world:
-		_hotwire_world = world
-		_hotwire_spent = false
-		_hotwire_id = ""
-		_hotwire_state = ""
-	if _hotwire_spent:
-		return
-	_hotwire_spent = true
-	_hotwire_save()
-	var ids := Parts.hotwire_offer(ctx.run.armor_mode, ctx.run.parts, ctx.run.world)
-	if ids.is_empty():
-		return
-	_hotwire_id = ids[0]
-	_hotwire_state = "fit"
-	_hotwire_save()
-	_hotwire_to_open_gates()
-
-
-func _hotwire_to_open_gates() -> void:
-	if gates.is_open() and not _hotwire_id in gates.offers.map(func(offer): return offer["part_id"]):
-		var ids: Array = gates.offers.map(func(offer): return offer["part_id"])
-		ids.append(_hotwire_id)
-		ctx.events.reward_offered.emit(gates.open(ids, ctx.player.ball_position(), _heading(), ctx.run.parts))
+func _on_warden_broken_hotwire(stage: int) -> void:
+	_hotwire.on_warden_broken(self, stage)
 
 
 func _hotwire_save() -> void:
-	if ctx != null and ctx.run != null:
-		ctx.run.extra["hotwire"] = {"id": _hotwire_id, "state": _hotwire_state, "spent": _hotwire_spent, "world": _hotwire_world}
+	_hotwire.save(self)
 
 
 func _hotwire_restore(retry := false) -> void:
-	if ctx == null or ctx.run == null:
-		return
-	if retry and not ctx.run.extra.has("hotwire"):
-		_hotwire_id = ""
-		_hotwire_state = ""
-		_hotwire_spent = false
-		_hotwire_world = 1
-		return
-	if (_hotwire_spent and not retry) or not ctx.run.extra.has("hotwire"):
-		return
-	var saved: Dictionary = ctx.run.extra["hotwire"]
-	_hotwire_id = String(saved.get("id", ""))
-	_hotwire_state = String(saved.get("state", ""))
-	_hotwire_spent = bool(saved.get("spent", false))
-	_hotwire_world = int(saved.get("world", 1))
-	if _hotwire_state == "open":
-		_hotwire_state = "fit"
-		_hotwire_save()
+	_hotwire.restore(self, retry)
 
 
 func hotwire_pending() -> Dictionary:
-	return {"part_id": _hotwire_id, "state": _hotwire_state}
+	return _hotwire.pending()
 
 
 func _hotwire_gate_ids() -> Array:
-	if _hotwire_state == "fit" and not _hotwire_id in ctx.run.parts:
-		return [_hotwire_id]
-	return []
+	return _hotwire.gate_ids(self)
 
 
 func tread_fitted() -> bool:
-	return ctx != null and ctx.run != null and ctx.tuning != null \
-		and HotwireRules.fitted(ctx.run.parts, ctx.tuning.option("hotwire_tread"))
+	return _hotwire.tread_fitted(self)
 
 
 func _on_tread_struck(enemy: Node3D, kind: String, force: float) -> void:
-	if _own_strikes > 0 or not tread_fitted() or not is_instance_valid(enemy):
-		return
-	var frame := Engine.get_physics_frames()
-	if frame != _tread_frame or kind != _tread_kind:
-		var speed: float = ctx.player.planar_velocity().length()
-		if not HotwireRules.eligible(kind, _tread_recovery, speed, ctx.tuning.f("cruise"), ctx.run.mass):
-			return
-		_tread_frame = frame
-		_tread_kind = kind
-		_tread_recovery = HotwireRules.RECOVERY
-		tread_fires += 1
-	var punch: float = ctx.spawner.punch_of(kind, force) if ctx.spawner != null and ctx.spawner.has_method("punch_of") else force
-	_tread_hits.append({"enemy": enemy, "damage": HotwireRules.bonus_damage(punch)})
-
-
-func _step_tread(delta: float) -> void:
-	_tread_recovery = maxf(0.0, _tread_recovery - delta)
-	var hits := _tread_hits
-	_tread_hits = []
-	_own_strikes += 1
-	for hit in hits:
-		if is_instance_valid(hit["enemy"]):
-			_strike(hit["enemy"], SYNERGY_KIND, hit["damage"])
-	_own_strikes -= 1
+	_hotwire.on_tread_struck(self, enemy, kind, force)
 
 
 func _apply_shell() -> void:
-	ctx.run.scrap_per_hp = shell_scrap_per_hp()
-	if shell_fitted():
-		ctx.tuning.set_mod("air_control", ctx.tuning.mod("air_control") * shell_air_factor())
-	_note_air_factor()
+	_hotwire.apply_shell(self)
+
+
+func in_own_strikes() -> bool:
+	return _own_strikes > 0
+
+
+func begin_own_strikes() -> void:
+	_own_strikes += 1
+
+
+func end_own_strikes() -> void:
+	_own_strikes -= 1
+
+
+func heading_dir() -> Vector3:
+	return _heading()
+
+
+func strike_enemy(enemy: Node3D, kind: String, force: float) -> void:
+	_strike(enemy, kind, force)
+
+
+func frost_ring(at: Vector3) -> void:
+	_frost_ring(at)
+
+
+func codex_ref():
+	return _codex()
+
+
+func ensure_declared() -> void:
+	if not _declared:
+		_declare()
+
+
+func roll_cobalt_boss_picks(rng: RandomNumberGenerator, class_id: String, held: Array, count := 2) -> Array:
+	return RewardGates.roll_cobalt_boss_picks(rng, class_id, held, count)
+
+
+func open_cobalt_boss_gates(parent: Node, ground_query, picks: Array, at: Vector3, heading: Vector3, held: Array, on_chosen: Callable) -> Node3D:
+	var cobalt_gates := RewardGates.new()
+	cobalt_gates.name = "BrindleCobaltGates"
+	parent.add_child(cobalt_gates)
+	cobalt_gates.setup(ground_query)
+	cobalt_gates.chosen.connect(on_chosen)
+	cobalt_gates.open(picks, at, heading, held)
+	return cobalt_gates
 
 
 func _redraw() -> void:
@@ -759,34 +695,15 @@ func _declare() -> void:
 
 func _exit_tree() -> void:
 	if Synergies.table == ctx.stages:
-		Synergies.table = null
-
-
-func _on_synergy_live(synergy_id: String) -> void:
-	if _armed.has(synergy_id):
-		return
-	_armed[synergy_id] = true
-	ctx.events.cause_armed.emit(synergy_id)
+		Synergies.set_table(null)
 
 
 func _fire(synergy_id: String, body: Node3D, at: Vector3) -> void:
-	ctx.events.cause_fired.emit(synergy_id, body, at)
-	if _fired.has(synergy_id):
-		return
-	_fired[synergy_id] = true
-	_discovered[synergy_id] = true
-	var codex = _codex()
-	if codex != null:
-		if not _declared:
-			_declare()
-		codex.mark_discovered(synergy_id, ctx.player.ball_position(), PARTICIPANTS)
+	_synergies.fire(self, synergy_id, body, at)
 
 
 func _note_found(key: String, text: String) -> void:
-	_found[key] = text
-	var codex = _codex()
-	if codex != null:
-		codex.mark_found(text, Synergies.CATEGORY, PARTICIPANTS)
+	_synergies.note_found(self, key, text)
 
 
 func _on_element_resolved(result: Dictionary) -> void:
@@ -815,7 +732,7 @@ func set_element(trick_id: String) -> String:
 
 func _on_part_gained(part_id: String, source: String) -> void:
 	recompute()
-	for trick_id in _sets_fresh.duplicate():
+	for trick_id in _synergies.sets_fresh.duplicate():
 		var row: Dictionary = Synergies.ROWS[trick_id]
 		set_completed.emit(trick_id, row["name"], row["text"], row["color"])
 	_grant_evolutions()
@@ -866,25 +783,10 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 
 
 func _on_run_started(_class_id_value: String) -> void:
-	_relic_fx.clear()
-	_live = []
-	_armed.clear()
-	_fired.clear()
+	_relic_sync.reset()
+	_synergies.reset_run()
 	_mass_hp = 0.0
-	_shell_window = 0.0
-	_air_seen = 0.0
-	_air_rest = 0.0
-	_hotwire_id = ""
-	_hotwire_state = ""
-	_hotwire_spent = false
-	_hotwire_world = 1
-	_tread_recovery = 0.0
-	_tread_frame = -1
-	_tread_hits = []
-	tread_fires = 0
-	_discovered.clear()
-	_found.clear()
-	_woken.clear()
+	_hotwire.reset_run()
 	_refresh_seams()
 	bus.clear()
 	effects.reset_run()
@@ -907,20 +809,15 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	sync_relics()
 	_hotwire_restore(retry)
 	if retry:
-		_fired.clear()
+		_synergies.clear_fired()
 		shop.inside = false
 		shop.rewind_stage()
 	gates.close()
 	field.clear()
 	_trail = 0.0
 	_slams.clear()
-	_rams.clear()
-	_kills.clear()
-	_landings.clear()
 	_shots.clear()
-	_pinwheel_cut.clear()
-	_rod_budget = ROD_PER_SECOND
-	_shrapnel_budget = SHRAPNEL_PER_SECOND
+	_synergies.reset_stage()
 	bus.clear()
 	effects.reset_stage()
 	clock.enter_stage(stage)
@@ -949,7 +846,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 
 func _on_stage_content_cleared(reason: String) -> void:
 	if reason == "arena_retry":
-		_fired.clear()
+		_synergies.clear_fired()
 	sync_relics()
 	scrap.clear()
 	fabricators.clear()
@@ -960,8 +857,7 @@ func _on_stage_content_cleared(reason: String) -> void:
 
 
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
-	if has_transformer("shrapnel_bloom") and not ctx.run.last_kill_triggerless:
-		_kills.append(at)
+	_synergies.on_enemy_killed(self, at)
 	if not ctx.flow.in_stage():
 		return
 	var stage_pay := float(ctx.flow.stage_def().get("kill_scrap", 1.0))
@@ -1264,22 +1160,17 @@ func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 
 
 func _on_landed(impact: float) -> void:
-	if has_transformer("glacier_hull") and impact >= GLACIER_IMPACT:
-		_landings.append(impact)
+	_synergies.on_landed(self, impact)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
-	if kind == "ram" and has_transformer("wrecking_ball") and is_instance_valid(enemy):
-		_rams.append(enemy.global_position)
+	_synergies.on_enemy_struck(self, enemy, kind)
 
 
 func _on_shot_fired(_weapon_id: String, _from: Vector3, to: Vector3) -> void:
-	if has_transformer("storm_lattice"):
-		_fire("storm_lattice", null, ctx.player.ball_position())
 	if not sheet.elements_for("shot").is_empty():
 		_shots.append(to)
-	if has_transformer("linked_spiral"):
-		_note_found("trick:linked_spiral", Synergies.ROWS["linked_spiral"]["found"])
+	_synergies.on_shot_fired(self)
 
 
 func _heading() -> Vector3:
@@ -1359,25 +1250,9 @@ func _physics_process(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var speed: float = ctx.player.planar_velocity().length()
 	scrap.heft = ctx.run.heft()
-	if _shell_window > 0.0:
-		_shell_window -= delta
-		if _shell_window <= 0.0:
-			_shell_window = 0.0
-			_refresh_air_mod()
-	var sprinting_now := _sprinting()
-	if sprinting_now != _sprint_seen:
-		_sprint_seen = sprinting_now
-		if shell_fitted():
-			_refresh_air_mod()
-	var gliding_now := _gliding()
-	if gliding_now != _glide_seen:
-		_glide_seen = gliding_now
-		if shell_fitted():
-			_refresh_air_mod()
-	_step_tread(delta)
+	_hotwire.step(self, delta)
 	makers.step(delta)
-	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
-	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
+	_synergies.refill_budgets(delta)
 	scrap.magnet_scale = sheet.magnet * effects.magnet_boost()
 	clock.paused = shop.clock_paused()
 	clock.cursed = ctx.run.cursed()
@@ -1479,73 +1354,11 @@ func synergy_read() -> Array:
 
 
 func _step_synergies(ball: Vector3, delta: float) -> void:
-	for at in _rams:
-		field.flash_ring(at, WRECK_RADIUS, Palette.AMBER)
-		var wrecked := false
-		for enemy in _enemies_near(at, WRECK_RADIUS, 99):
-			if enemy.global_position.distance_to(at) > 0.5:
-				wrecked = true
-				_synergy_hit(enemy, WRECK_FORCE, "wrecking_ball")
-		if not wrecked:
-			_fire("wrecking_ball", null, at)
-	_rams.clear()
-	for at in _kills:
-		if _shrapnel_budget < 1.0:
-			break
-		_shrapnel_budget -= 1.0
-		field.shard_burst(at)
-		var burst_targets := _enemies_near(at, SHRAPNEL_RADIUS, SHRAPNEL_TARGETS)
-		for enemy in burst_targets:
-			_synergy_hit(enemy, SHRAPNEL_FORCE, "shrapnel_bloom")
-		if burst_targets.is_empty():
-			_fire("shrapnel_bloom", null, at)
-	_kills.clear()
-	for impact in _landings:
-		field.flash_ring(ball + Vector3.DOWN * 0.8, GLACIER_RADIUS, Palette.ICE)
-		var ring_targets := _enemies_near(ball, GLACIER_RADIUS, 99)
-		for enemy in ring_targets:
-			_synergy_hit(enemy, impact * 1.5, "glacier_hull")
-		if ring_targets.is_empty():
-			_fire("glacier_hull", null, ball)
-		_frost_ring(ball)
-	_landings.clear()
-	if has_transformer("tesla_pylon") and (ctx.player.kit.mounted or ctx.player.kit.hooked):
-		_tesla_clock -= delta
-		if _tesla_clock <= 0.0:
-			_tesla_clock = TESLA_EVERY
-			for enemy in _enemies_near(ball, TESLA_REACH, TESLA_TARGETS):
-				field.zap_line(ball, enemy.global_position)
-				_strike(enemy, "arc", TESLA_DAMAGE * sheet.mod("weapon_damage"))
-				_fire("tesla_pylon", enemy, enemy.global_position)
-	else:
-		_tesla_clock = 0.0
-	for id in _pinwheel_cut.keys():
-		_pinwheel_cut[id] -= delta
-		if _pinwheel_cut[id] <= 0.0:
-			_pinwheel_cut.erase(id)
-	if has_transformer("pinwheel") and ctx.player.speed_tier() >= PINWHEEL_TIER:
-		_pinwheel_clock -= delta
-		if _pinwheel_clock <= 0.0:
-			_pinwheel_clock = PINWHEEL_EVERY
-			field.flash_ring(ball, PINWHEEL_RADIUS, Palette.AMBER)
-		for enemy in _enemies_near(ball, PINWHEEL_RADIUS, PINWHEEL_TARGETS):
-			if not _pinwheel_cut.has(enemy.get_instance_id()):
-				_pinwheel_cut[enemy.get_instance_id()] = PINWHEEL_EVERY
-				_synergy_hit(enemy, PINWHEEL_FORCE, "pinwheel")
-	else:
-		_pinwheel_clock = 0.0
+	_synergies.step(self, ball, delta)
 
 
 func _lightning_rod(ball: Vector3) -> void:
-	if _rod_budget < 1.0:
-		return
-	var targets := _enemies_near(ball, ROD_REACH, 1)
-	if targets.is_empty():
-		return
-	_rod_budget -= 1.0
-	field.zap_line(ball, targets[0].global_position)
-	_strike(targets[0], "arc", ROD_DAMAGE * sheet.mod("weapon_damage"))
-	_fire("lightning_rod", targets[0], targets[0].global_position)
+	_synergies.lightning_rod(self, ball)
 
 
 func _enemies_near(at: Vector3, radius: float, count: int) -> Array[Node3D]:
@@ -1565,74 +1378,9 @@ func _strike(enemy: Node3D, kind: String, force: float) -> void:
 		ctx.spawner.strike(enemy, kind, force)
 
 
-func _synergy_hit(enemy: Node3D, force: float, synergy_id: String) -> void:
-	_strike(enemy, SYNERGY_KIND, force * SYNERGY_PUNCH * ctx.run.heft())
-	_fire(synergy_id, enemy, enemy.global_position)
-
-
-var _relic_fx := {}
-
-
 func _on_relic_gained(_part_id: String, _source: String) -> void:
 	sync_relics()
 
 
 func sync_relics() -> void:
-	var abilities = ctx.player.get("abilities") if ctx.player != null else null
-	if abilities == null:
-		return
-	_adopt_saved_relics()
-	var held := Relics.held(ctx.run.parts)
-	var touched := false
-	for slot in AbilityState.SLOTS:
-		var want: String = held.get(slot, "")
-		if not Relics.has(want):
-			want = ""
-		var fx: Dictionary = _relic_fx.get(slot, {})
-		if String(fx.get("relic", "")) == want:
-			continue
-		if not fx.is_empty():
-			_relic_undo(abilities, slot, fx)
-			_relic_fx.erase(slot)
-		if want != "":
-			_relic_fx[slot] = _relic_apply(abilities, slot, want)
-		touched = true
-	if touched and ctx.player.has_method("_refit"):
-		ctx.player._refit()
-
-
-func _adopt_saved_relics() -> void:
-	if ctx.run.relics.is_empty():
-		return
-	for slot in ctx.run.relics:
-		var part_id := Relics.part_of(String(ctx.run.relics[slot]))
-		if part_id != "" and not part_id in ctx.run.parts:
-			ctx.run.parts.append(part_id)
-	ctx.run.relics.clear()
-	recompute()
-
-
-func _relic_apply(abilities, slot: String, relic_id: String) -> Dictionary:
-	var row := Relics.row(relic_id)
-	var fx := {"relic": relic_id, "prev": abilities.id_of(slot), "swapped": false,
-		"cooldown": float(row.get("cooldown", 1.0)), "charges": int(row.get("charges", 0))}
-	if Relics.swap_of(relic_id) != "":
-		abilities.swap(slot, Relics.swap_of(relic_id))
-		fx["swapped"] = true
-	var s = abilities.slot(slot)
-	abilities.set_cooldown_scale(slot, s.cooldown_scale * fx["cooldown"])
-	if fx["charges"] > 0:
-		abilities.set_max_charges(slot, s.max_charges + fx["charges"])
-		abilities.grant(slot, fx["charges"])
-	return fx
-
-
-func _relic_undo(abilities, slot: String, fx: Dictionary) -> void:
-	var s = abilities.slot(slot)
-	if fx["charges"] > 0:
-		abilities.set_max_charges(slot, s.max_charges - fx["charges"])
-	abilities.set_cooldown_scale(slot, s.cooldown_scale / fx["cooldown"])
-	var tree = ctx.player.tree if ctx.player != null else null
-	var tree_owns: bool = tree != null and tree.gives_swap(slot, Relics.swap_of(fx["relic"]))
-	if fx["swapped"] and abilities.id_of(slot) == Relics.swap_of(fx["relic"]) and not tree_owns:
-		abilities.swap(slot, fx["prev"])
+	_relic_sync.sync(self)

@@ -139,7 +139,7 @@ func _check_world_relics_all_pilots() -> void:
 	_t.eq("Relics.validate_alt() clean", Relics.validate_alt(), [])
 	_t.eq("MakerSets.validate() clean", MakerSets.validate(), [])
 	_t.eq("WORLD_SWAPS defines 6 missing W2/W3 swaps", Relics.WORLD_SWAPS.size(), 6)
-	for pilot in Relics.PILOTS:
+	for pilot in Relics.pilots():
 		for world in [1, 2, 3]:
 			var swaps := Relics.eligible_swaps(pilot, {}, null, world)
 			_t.check("%s has >= 1 kit-swap relic in World %d" % [pilot, world],
@@ -154,7 +154,7 @@ func _check_world_relics_all_pilots() -> void:
 		var icon := String(AbilityState.ABILITIES.get(swap, {}).get("icon", ""))
 		_t.check("WORLD_SWAP %s respects word caps, overdrive, suffix, maker" % id,
 			name_words <= Relics.MAX_NAME_WORDS and text_words <= Relics.MAX_TEXT_WORDS
-			and Relics.overdrive_of(id) > 1.0 and String(r["maker"]) in Relics.VALID_MAKERS
+			and Relics.overdrive_of(id) > 1.0 and String(r["maker"]) in Relics.valid_makers()
 			and icon.ends_with(String(Relics.SUFFIX[slot])), str(r))
 
 

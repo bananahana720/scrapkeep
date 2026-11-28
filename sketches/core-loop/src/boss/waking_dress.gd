@@ -60,7 +60,7 @@ static func attach(owner_module):
 	dress.name = "WakingDress"
 	dress.module = owner_module
 	owner_module.add_child(dress)
-	dress.global_position = owner_module._center
+	dress.global_position = owner_module.arena_center()
 	dress.setup(base_scene, kit_scene)
 	return dress
 
@@ -206,13 +206,13 @@ func _physics_process(delta: float) -> void:
 		if open != _open:
 			_open = open
 			BossModel.play(_core_anim, "core_open", not open)
-		var charging: bool = warden._charging
+		var charging: bool = warden.is_charging()
 		if charging != _charging:
 			_charging = charging
 			var pulse := "pulse_warn" if charging else "pulse"
 			BossModel.play(_pulse_base_anim, pulse)
 			BossModel.play(_pulse_kit_anim, pulse)
-	var dropping: int = module._dropping
+	var dropping: int = module.is_dropping()
 	if dropping != _dropping:
 		if dropping != 0:
 			_both(FLOOR_CLIPS[dropping - 1][0])

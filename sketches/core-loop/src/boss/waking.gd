@@ -239,9 +239,19 @@ func _end_combo() -> void:
 	_combo_left = -1
 
 
+func arena_center() -> Vector3:
+	return _center
+
+
+func is_dropping() -> int:
+	return _dropping
+
+
 func _planar_speed() -> float:
 	if ctx == null or ctx.player == null:
 		return 0.0
+	if ctx.player.has_method("planar_velocity"):
+		return float(ctx.player.planar_velocity().length())
 	var body = ctx.player.body() if ctx.player.has_method("body") else null
 	if body == null:
 		return 0.0
@@ -283,7 +293,8 @@ func _pulse_due() -> bool:
 	if not is_instance_valid(warden) or warden.staggered() or warden.state_name() == "charging":
 		return false
 	var due: float = Warden.pulse_cycle(warden.stage) - Warden.pulse_telegraph(warden.stage)
-	return warden._pulse_clock >= due - GAP and warden._pulse_clock < due + GAP and warden.flat_to_ball().length() <= warden.reach
+	var pc: float = warden.pulse_clock()
+	return pc >= due - GAP and pc < due + GAP and warden.flat_to_ball().length() <= warden.reach
 
 
 func _read_pulse() -> void:

@@ -172,6 +172,23 @@ func state_name() -> String:
 	return "charging" if _charging else "idle"
 
 
+func is_charging() -> bool:
+	return _charging
+
+
+func pulse_clock() -> float:
+	return _pulse_clock
+
+
+func visual_rig() -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	if _look != null:
+		out.append(_look)
+	if _kit != null:
+		out.append(_kit)
+	return out
+
+
 func knock(_direction: Vector3, _force: float) -> void:
 	pass
 

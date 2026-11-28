@@ -26,7 +26,7 @@ func _initialize() -> void:
 	var long_name := Relics.ids().filter(func(i): return Relics.name_of(i).split(" ", false).size() > 3)
 	var long_text := Relics.ids().filter(func(i): return String(Relics.row(i)["text"]).split(" ", false).size() > 8)
 	_report("caps", long_name.is_empty() and long_text.is_empty(), "name over 3 words %s, text over 8 words %s" % [long_name, long_text])
-	for pilot in Relics.PILOTS:
+	for pilot in Relics.pilots():
 		var mine := Relics.eligible(pilot, {})
 		_report("pilot " + pilot, mine.size() >= 2, "%d relics %s" % [mine.size(), mine])
 	var held := {AbilityState.SPECIAL: "quick_fuse"}

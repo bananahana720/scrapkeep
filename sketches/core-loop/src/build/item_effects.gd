@@ -58,6 +58,7 @@ var _held_parts: Array = []
 var procs := {}
 
 var _clock := 0.0
+var _dt := 1.0 / 90.0
 var _ready_at := {}
 var _timers := {}
 var _armed_hit := 0.0
@@ -400,6 +401,8 @@ func magnet_boost() -> float:
 
 
 func tick(delta: float, bus) -> void:
+	if delta > 0.0:
+		_dt = delta
 	_clock += delta
 	for entry in timed:
 		var every: float = entry["def"].effect.get("every", 10.0)
@@ -544,7 +547,7 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			if dir.length() < 0.5:
 				dir = ctx.aim_forward()
 			dir.y = 0.0
-			ctx.player.add_external_accel(dir.normalized() * power / _step())
+			ctx.player.add_external_accel(dir.normalized() * power / _dt)
 			return true
 		"air_jump":
 			ctx.player.refresh_air()
@@ -750,7 +753,7 @@ func _surge(gain: float, cap_speed: float, c) -> bool:
 	if speed < 1.0 or speed >= cap_speed:
 		return false
 	var target: float = minf(cap_speed, speed * (1.0 + gain))
-	ctx.player.add_external_accel(v.normalized() * (target - speed) / _step())
+	ctx.player.add_external_accel(v.normalized() * (target - speed) / _dt)
 	return true
 
 
@@ -872,7 +875,3 @@ func _clear_buff(id: String) -> void:
 	var ledger = _buffs()
 	if ledger != null:
 		ledger.clear_id(id)
-
-
-func _step() -> float:
-	return 1.0 / float(Engine.physics_ticks_per_second)

@@ -9,6 +9,10 @@ const AT := 2
 
 static var table = null
 
+
+static func set_table(next) -> void:
+	table = next
+
 const ROWS := {
 	"ballast_rig": {
 		"name": "Ballast Rig", "maker": "spillway_works", "tags": ["frost"], "color": Palette.RUST,

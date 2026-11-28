@@ -137,10 +137,10 @@ static func hide_warden_body(warden: Node) -> void:
 	var hero := warden.get_node_or_null("HeroWarden") as Node3D
 	if hero != null:
 		hero.visible = false
-	for key in ["_look", "_kit"]:
-		var part = warden.get(key)
-		if part is Node3D:
-			(part as Node3D).visible = false
+	if warden.has_method("visual_rig"):
+		for part in warden.visual_rig():
+			if part is Node3D:
+				(part as Node3D).visible = false
 
 
 const FALLBACK_BLEND := 0.12

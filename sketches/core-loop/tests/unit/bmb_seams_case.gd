@@ -1,0 +1,142 @@
+extends RefCounted
+
+const Parts := preload("res://src/build/parts.gd")
+const MakerSets := preload("res://src/build/maker_sets.gd")
+const MakerDefs := preload("res://src/build/maker_defs.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
+const PartDef := preload("res://src/build/part_def.gd")
+const Relics := preload("res://src/build/relics.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const Synergies := preload("res://src/build/synergies.gd")
+const ScrapField := preload("res://src/build/scrap_field.gd")
+const MindHand := preload("res://src/combat/mind_hand.gd")
+const Warden := preload("res://src/combat/warden.gd")
+const Waking := preload("res://src/boss/waking.gd")
+const RigidBall := preload("res://src/movement/rigid_ball.gd")
+const PlayerBall := preload("res://src/movement/player_ball.gd")
+
+
+func run(t) -> void:
+	_check_single_sources(t)
+	_check_closed_reach_ins(t)
+	_check_seeded_roll_determinism(t)
+	_check_preload_and_tick_hygiene(t)
+	_check_explicit_setters(t)
+
+
+func _read_src(path: String) -> String:
+	return FileAccess.get_file_as_string(path)
+
+
+func _check_single_sources(t) -> void:
+	t.eq("ItemGen.RARITIES aliases PartDef.RARITIES", ItemGen.RARITIES, PartDef.RARITIES)
+	var expected_pilots: Array = []
+	for c in ClassDef.all():
+		expected_pilots.append(String(c.id))
+	t.eq("Relics.pilots derives from ClassDef.all", Relics.pilots(), expected_pilots)
+	t.eq("Relics.valid_makers derives from MakerSets.SETS", Relics.valid_makers(), MakerSets.SETS.keys())
+	t.check("Parts drops MAKER_SET_PIECES", not ("MAKER_SET_PIECES" in Parts))
+	t.eq("MakerSets.SETS matches MakerDefs.SETS", MakerSets.SETS, MakerDefs.SETS)
+	t.eq("MakerSets.GRAPPLE_MUTATIONS matches MakerDefs", MakerSets.GRAPPLE_MUTATIONS, MakerDefs.GRAPPLE_MUTATIONS)
+	var maker: String = String(MakerSets.GRAPPLE_MUTATIONS.keys()[0])
+	var need: int = int(MakerSets.SETS[maker]["pieces"])
+	var held: Array = []
+	for part_id in Parts.ids():
+		if MakerSets.maker_of(part_id) == maker:
+			held.append(part_id)
+			if held.size() >= need:
+				break
+	var expected_mut: String = String(MakerSets.GRAPPLE_MUTATIONS[maker])
+	t.check("MakerSets.live_grapple_mutations activates maker mutation", expected_mut in MakerSets.live_grapple_mutations(held))
+	var active: Dictionary = Parts.active_grapple_mutations(held)
+	var found_mut := false
+	for slot in active:
+		if String(active[slot].get("id", "")) == expected_mut:
+			found_mut = true
+	t.check("Parts.active_grapple_mutations delegates maker completion", found_mut)
+
+
+func _check_closed_reach_ins(t) -> void:
+	var checks := [
+		["res://src/boss/boss.gd", ["._pickup_material"]],
+		["res://src/boss/mind.gd", ["._rest", "._takeover_cd"]],
+		["res://src/boss/waking.gd", ["._pulse_clock"]],
+		["res://src/boss/mind_dress.gd", ["._charging"]],
+		["res://src/boss/waking_dress.gd", ["._charging", "._center", "._dropping"]],
+		["res://src/boss/boss_model.gd", ["\"_look\"", "\"_kit\""]],
+		["res://src/movement/player_ball.gd", ["._probe"]],
+		["res://src/movement/speed_bank.gd", ["._probe"]],
+		["res://src/build/build.gd", ["._refit("]],
+		["res://src/build/relic_sync.gd", ["._refit("]],
+	]
+	for entry in checks:
+		var src := _read_src(entry[0])
+		t.check("read " + String(entry[0]), not src.is_empty())
+		for bad in entry[1]:
+			t.check("%s omits %s" % [entry[0], bad], not src.contains(bad))
+	t.check("ScrapField exposes pickup_material", ScrapField.pickup_material(Color.WHITE) is ShaderMaterial)
+	var hand := MindHand.new()
+	t.check("MindHand exposes reset_rest", hand.has_method("reset_rest"))
+	hand.free()
+	var warden := Warden.new()
+	t.check("Warden exposes is_charging/pulse_clock/visual_rig",
+		warden.has_method("is_charging") and warden.has_method("pulse_clock") and warden.has_method("visual_rig"))
+	warden.free()
+	var waking := Waking.new()
+	t.check("Waking exposes arena_center/is_dropping",
+		waking.has_method("arena_center") and waking.has_method("is_dropping"))
+	waking.free()
+	var rigid := RigidBall.new()
+	t.check("RigidBall exposes probe", rigid.has_method("probe"))
+	rigid.free()
+	var player := PlayerBall.new()
+	t.check("PlayerBall exposes refit and shove_planar",
+		player.has_method("refit") and player.has_method("shove_planar"))
+	player.free()
+
+
+func _check_seeded_roll_determinism(t) -> void:
+	for seed_val in [101, 20260927, 9981]:
+		var rng_a := RandomNumberGenerator.new()
+		var rng_b := RandomNumberGenerator.new()
+		rng_a.seed = seed_val
+		rng_b.seed = seed_val
+		var a1: Array = Parts.roll(rng_a, ["common", "rare"], "pylon_engineer", [], 3)
+		var b1: Array = Parts.roll(rng_b, ["common", "rare"], "pylon_engineer", [], 3)
+		t.eq("Parts.roll deterministic picks seed %d" % seed_val, a1, b1)
+		t.eq("Parts.roll deterministic rng state seed %d" % seed_val, rng_a.randi(), rng_b.randi())
+		var a2: Array = Parts.roll_for_stage(rng_a, ["common", "rare", "relic"], "rail_gunner", a1, 3, 2)
+		var b2: Array = Parts.roll_for_stage(rng_b, ["common", "rare", "relic"], "rail_gunner", b1, 3, 2)
+		t.eq("Parts.roll_for_stage deterministic picks seed %d" % seed_val, a2, b2)
+		t.eq("Parts.roll_for_stage deterministic rng state seed %d" % seed_val, rng_a.randi(), rng_b.randi())
+
+
+func _check_preload_and_tick_hygiene(t) -> void:
+	var item_fx_src := _read_src("res://src/build/item_effects.gd")
+	t.check("item_effects omits physics_ticks_per_second", not item_fx_src.contains("physics_ticks_per_second"))
+	var boss_src := _read_src("res://src/boss/boss.gd")
+	t.check("boss omits reward_gates.gd preload", not boss_src.contains("reward_gates.gd"))
+	var mind_dress_src := _read_src("res://src/boss/mind_dress.gd")
+	var inline_preload := false
+	for line in mind_dress_src.split("\n"):
+		if line.begins_with("\t") and line.contains("preload("):
+			inline_preload = true
+	t.check("mind_dress hoists inline preloads", not inline_preload)
+	var waking_src := _read_src("res://src/boss/waking.gd")
+	t.check("waking routes planar speed through planar_velocity", waking_src.contains("planar_velocity()"))
+
+
+func _check_explicit_setters(t) -> void:
+	var prev_seams: Dictionary = Parts.seams.duplicate(true)
+	var prev_opened: Dictionary = Parts.opened_items.duplicate(true)
+	var prev_table = Synergies.table
+	Parts.set_seams({"probe_flag": true})
+	t.eq("Parts.set_seams writes Parts.seams", Parts.seams.get("probe_flag", false), true)
+	Parts.set_opened_items({"probe_item": true})
+	t.eq("Parts.set_opened_items writes Parts.opened_items", Parts.opened_items.get("probe_item", false), true)
+	var sentinel := {"tag": "probe"}
+	Synergies.set_table(sentinel)
+	t.eq("Synergies.set_table writes Synergies.table", Synergies.table, sentinel)
+	Parts.set_seams(prev_seams)
+	Parts.set_opened_items(prev_opened)
+	Synergies.set_table(prev_table)
