@@ -1789,3 +1789,27 @@ test("selectStage1NodeTests keeps unbundled NODE_PATH_RULES and script tests und
     [],
   );
 });
+
+test("interpretBatchOutput keeps a macOS batch whose exit lines hold the resources line and flags it for the leak warning", () => {
+  const tests = ["tests/a_test.gd", "tests/b_test.gd"];
+  const output = [
+    "BATCH START tests/a_test.gd",
+    "a_test: PASS (1 checks)",
+    "BATCH END tests/a_test.gd exit=0 ms=15",
+    "BATCH START tests/b_test.gd",
+    "b_test: PASS (1 checks)",
+    "BATCH END tests/b_test.gd exit=0 ms=18",
+    "BATCH DONE 2 tests",
+    "ERROR: 1 resources still in use at exit (run with --verbose for details).",
+  ].join("\n");
+  const onMac = interpretBatchOutput(output, tests, { code: 0, platform: "darwin" });
+  assert.deepEqual([onMac.runs.length, onMac.outsideError, onMac.linuxLeak], [2, false, true]);
+  const onLinux = interpretBatchOutput(output, tests, { code: 0, platform: "linux" });
+  assert.deepEqual([onLinux.runs.length, onLinux.outsideError], [0, true]);
+  assert.deepEqual(onLinux.unfinished, tests);
+  const quiet = interpretBatchOutput(output.replace(/\nERROR: .*$/, ""), tests, {
+    code: 0,
+    platform: "darwin",
+  });
+  assert.equal(quiet.linuxLeak, false);
+});

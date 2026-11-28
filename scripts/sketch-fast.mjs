@@ -39,6 +39,7 @@ import {
   isBot,
   isSolo,
   judge,
+  linuxLeakLines,
   matchesGlob,
   runGodotBatch,
   scriptErrorCount,
@@ -799,6 +800,7 @@ async function runGodot(sketchDir, test, timeoutMs, onChild = () => {}, fixedFps
     killed,
     timedOut: res.timedOut,
     output: res.output,
+    linuxLeak: verdict.linuxLeak,
   };
 }
 
@@ -846,6 +848,7 @@ export function interpretBatchOutput(
     killed,
     outsideError: false,
     unexpectedExit: false,
+    linuxLeak: parsed.linuxLeak,
   };
 }
 
@@ -1522,6 +1525,7 @@ async function main() {
   const ledgerFlaky = [];
   const flakeRows = ledgerFlakes((await readLedger(root))?.rows ?? []);
   const baseRed = [];
+  const linuxLeaks = [];
   let prRed = null;
   let bootFailed = false;
   const shouldStop = () => Boolean(prRed || bootFailed);
@@ -1734,6 +1738,7 @@ async function main() {
     log(
       `${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s`,
     );
+    if (result.linuxLeak) linuxLeaks.push([result.test]);
     if (result.ok || result.killed) return;
     const { kind, newChecks, ledger, ledgerRuns } = await confirm(result);
     log(
@@ -1787,6 +1792,7 @@ async function main() {
     );
     receipt.batch.batches++;
     receipt.batch.tests += batch.runs.length;
+    if (batch.linuxLeak) linuxLeaks.push(tests);
     if (!batch.killed && (batch.outsideError || batch.unexpectedExit)) {
       log(
         `  warm batch hit ${batch.outsideError ? "an outside-batch error" : "an unexpected exit"}; rerunning ${batch.unfinished.length} test(s) alone`,
@@ -1887,6 +1893,8 @@ async function main() {
     log(`flaky (red then green on rerun; make deterministic, never skip): ${flaky.join(", ")}`);
   if (baseRed.length)
     log(`base-red (red on the merge base too; not this PR): ${baseRed.join(", ")}`);
+  receipt.linux_leaks = linuxLeaks;
+  for (const line of linuxLeakLines(linuxLeaks)) log(line);
   if (receipt.selection.bot_shards.length)
     log(
       `bot shards to run: ${receipt.selection.bot_shards.map((test) => path.posix.basename(test, ".gd")).join(" ")}`,
