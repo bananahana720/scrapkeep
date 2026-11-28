@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import test from "node:test";
+import test, { after } from "node:test";
 
 import { acquireDrawnSlot, launch, measureFrame, runCapture, runWindowed } from "./display-run.mjs";
 import { watchDrawnRun, windowCounts } from "./window-watch.mjs";
@@ -46,8 +46,14 @@ function capture(cwd, samples = clean) {
     observe: async (run) => ({ ...(await run()), watch: windowCounts(samples, 12) }),
   };
 }
+const scratchDirs = [];
+after(() => {
+  for (const dir of scratchDirs) rmSync(dir, { recursive: true, force: true });
+});
 function scratch() {
-  return mkdtempSync(path.join(os.tmpdir(), "scrapkeep-capture-test-"));
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-capture-test-"));
+  scratchDirs.push(dir);
+  return dir;
 }
 
 test("the probe uses embedded Metal before the project is loaded, with a scratch home", async () => {
