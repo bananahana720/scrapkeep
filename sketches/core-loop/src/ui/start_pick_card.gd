@@ -7,6 +7,7 @@ signal tier_requested(tier: int)
 const RunTier := preload("res://src/core/run_tier.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
+const Parts := preload("res://src/build/parts.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -103,7 +104,7 @@ func show_picks(run, profile = null) -> void:
 	if taken == "" and int(run.stage) == 1:
 		var options: Array = run.start_pick_options()
 		for i in mini(options.size(), KEYS.size()):
-			var row := StartPicks.row(pilot, String(options[i]))
+			var row := StartPicks.row(pilot, String(options[i]), func(id: String) -> Dictionary: return {"name": Parts.display_name(id), "icon": Parts.icon_of(id), "effect": String(Parts.row(id).get("verb", ""))})
 			if row.is_empty():
 				continue
 			_tiles.append({"key": KEYS[i], "icon": row["icon"], "name": row["name"], "id": row["id"], "effect": String(row.get("effect", ""))})

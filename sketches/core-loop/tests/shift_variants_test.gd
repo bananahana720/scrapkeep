@@ -337,7 +337,7 @@ func _physics_process(_delta: float) -> bool:
 			_game.flow.enter_stage(2, Vector3.ZERO, false)
 			_break_warden()
 			_t.eq("stage 2 Warden break pays the run's panel after stage 1 retry+vanish", _game.ctx.run.panels.size(), panels_before + 1)
-			_t.eq("later claim in same run pays nothing extra", ShiftVariants.claim_overtime_panel(_game.ctx.run), "")
+			_t.eq("later claim in same run pays nothing extra", ShiftVariants.claim_overtime_panel(_game.ctx.run, Panels.draw), "")
 			# Normal path: break stage 1 Warden, advance to stage 2, retry stage 2, break stage 2
 			# Warden -> still only 1 panel total across the run.
 			_start_run([ShiftVariants.OVERTIME], 405)

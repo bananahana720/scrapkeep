@@ -5,8 +5,6 @@ signal page_ready(page: Dictionary)
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const Worlds := preload("res://src/core/worlds.gd")
-const Roster := preload("res://src/combat/roster.gd")
-const Parts := preload("res://src/build/parts.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
 
 const SCHEMA := 1
@@ -67,9 +65,11 @@ var _opening_due := false
 var _shot_wait := 0.0
 var _grabs_pending := 0
 var _top_speed := 0.0
+var _part_info_fn := Callable()
+var _warden_name_fn := Callable()
 
 
-func setup(events_ref, run_ref, player_ref, flow_ref, stages_ref, dir: String) -> void:
+func setup(events_ref, run_ref, player_ref, flow_ref, stages_ref, dir: String, part_info_fn := Callable(), warden_name_fn := Callable()) -> void:
 	name = "RunMoments"
 	events = events_ref
 	run = run_ref
@@ -77,6 +77,8 @@ func setup(events_ref, run_ref, player_ref, flow_ref, stages_ref, dir: String) -
 	flow = flow_ref
 	stages = stages_ref
 	storage_dir = dir
+	_part_info_fn = part_info_fn
+	_warden_name_fn = warden_name_fn
 	events.run_started.connect(func(_class_id: String): _reset())
 	events.stage_entered.connect(_on_stage_entered)
 	events.enemy_struck.connect(_on_enemy_struck)
@@ -156,9 +158,10 @@ func _on_player_died() -> void:
 
 
 func _on_part(part_id: String, evolved: int) -> void:
-	var d: Resource = Parts.def(part_id)
-	var tier: int = d.tier if d != null else 1
-	_offer("key_item", float(tier + evolved * 3), {"part": part_id, "name": Parts.display_name(part_id), "tier": tier, "evolved": evolved == 1})
+	var info: Dictionary = _part_info_fn.call(part_id) if _part_info_fn.is_valid() else {}
+	var tier: int = int(info.get("tier", 1))
+	var label := String(info.get("name", part_id.replace("_", " ").capitalize()))
+	_offer("key_item", float(tier + evolved * 3), {"part": part_id, "name": label, "tier": tier, "evolved": evolved == 1})
 
 
 func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> void:
@@ -387,10 +390,10 @@ func _stagger_name(enemy: Node3D, boss: bool) -> String:
 	if boss:
 		return _boss_name()
 	var family = enemy.get("family")
-	if family == null or String(family) == "":
+	if family == null or String(family) == "" or not _warden_name_fn.is_valid():
 		return "The Warden"
 	var variant = enemy.get("variant")
-	return "The %s" % Roster.warden_name(String(family), String(variant) if variant != null else "")
+	return "The %s" % String(_warden_name_fn.call(String(family), String(variant) if variant != null else ""))
 
 
 func _boss_name() -> String:

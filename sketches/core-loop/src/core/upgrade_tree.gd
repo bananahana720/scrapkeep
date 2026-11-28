@@ -2,6 +2,7 @@ extends RefCounted
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Devices := preload("res://src/core/devices.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Sable := preload("res://src/core/trees/sable.gd")
 const Rivet := preload("res://src/core/trees/rivet.gd")
@@ -11,7 +12,6 @@ const Tally := preload("res://src/core/trees/tally.gd")
 const Cannon := preload("res://src/core/trees/cannon.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
-const Sticky := preload("res://src/combat/sticky.gd")
 
 
 const DEPTHS := 4
@@ -46,9 +46,9 @@ const KNOBS := {
 	"blast_pull": {"default": false}, "sprint_full_blast": {"default": false}, "skid_keep": {"default": Augments.SKID_KEEP},
 	"overdrive_immune": {"default": false}, "skid_pins": {"default": 1.0}, "crush_refund": {"default": 0.0},
 	"sprint_perpetual": {"default": false}, "sprint_kick": {"default": 0.0}, "sprint_float": {"default": 1.0},
-	"sticky_fuse": {"default": Weapons.STICKY_FUSE}, "sticky_max_live": {"default": Weapons.STICKY_MAX_LIVE},
+	"sticky_fuse": {"default": Weapons.STICKY_FUSE}, "sticky_max_live": {"default": Devices.STICKY_CAP},
 	"cloak_sight": {"default": Weapons.CLOAK_SIGHT},
-	"sticky_reach": {"default": Sticky.CONTACT_REACH}, "mini_count": {"default": Weapons.MINI_COUNT}, "glide_cloak": {"default": false},
+	"sticky_reach": {"default": Devices.STICKY_CONTACT_REACH}, "mini_count": {"default": Weapons.MINI_COUNT}, "glide_cloak": {"default": false},
 	"cloak_keep": {"default": false}, "glide_bombs": {"default": 0.0, "time": true}, "rocket_auto": {"default": false},
 	"line_marks": {"default": 0.0}, "sticky_chain": {"default": 0.0}, "sticky_breach": {"default": 1.0},
 	"sticky_grow": {"default": false}, "slam_fall_scale": {"default": false}, "mini_linger": {"default": 0.0},

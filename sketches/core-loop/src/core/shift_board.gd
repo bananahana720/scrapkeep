@@ -2,7 +2,6 @@ extends RefCounted
 
 
 const Achievements := preload("res://src/core/achievements.gd")
-const Items := preload("res://src/build/items.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const WorkOrders := preload("res://src/core/work_orders.gd")
@@ -359,15 +358,15 @@ static func item_name(id: String) -> String:
 	return String(row.get("name", id))
 
 
-static func validate(rows: Dictionary, grants: Dictionary, tunes: Array) -> Array:
-	return _validate_rung_set(rows, grants, tunes, false)
+static func validate(rows: Dictionary, grants: Dictionary, tunes: Array, items_table: Dictionary) -> Array:
+	return _validate_rung_set(rows, grants, tunes, items_table, false)
 
 
-static func validate_world_rungs(all_grants: Dictionary, tunes: Array, rows_to_check: Dictionary = WORLD_RUNGS) -> Array:
-	return _validate_rung_set(rows_to_check, all_grants, tunes, true)
+static func validate_world_rungs(all_grants: Dictionary, tunes: Array, items_table: Dictionary, rows_to_check: Dictionary = WORLD_RUNGS) -> Array:
+	return _validate_rung_set(rows_to_check, all_grants, tunes, items_table, true)
 
 
-static func _validate_rung_set(rows: Dictionary, grants: Dictionary, tunes: Array, world_mode: bool) -> Array:
+static func _validate_rung_set(rows: Dictionary, grants: Dictionary, tunes: Array, items_table: Dictionary, world_mode: bool) -> Array:
 	var problems: Array = []
 	var fields := WORLD_FIELDS if world_mode else FIELDS
 	var pay_kinds := WORLD_PAY_KINDS if world_mode else PAY_KINDS
@@ -429,7 +428,7 @@ static func _validate_rung_set(rows: Dictionary, grants: Dictionary, tunes: Arra
 		else:
 			problems.append("%s: when key %s is unknown" % [id, when.keys()[0]])
 		if kind == "item":
-			if not Items.TABLE.has(target):
+			if not items_table.has(target):
 				problems.append("%s: item %s is not an items.gd row" % [id, target])
 			elif items_seen.has(target):
 				problems.append("%s: item %s already opened by %s" % [id, target, items_seen[target]] if world_mode else "%s: item %s is already opened by %s" % [id, target, items_seen[target]])
@@ -437,7 +436,7 @@ static func _validate_rung_set(rows: Dictionary, grants: Dictionary, tunes: Arra
 				items_seen[target] = id
 	for card in cards:
 		var item := String(card.get("pays", {}).get("item", ""))
-		if not Items.TABLE.has(item):
+		if not items_table.has(item):
 			problems.append("%s %s: item %s is not an items.gd row" % [card_prefix, card.get("name", ""), item])
 		elif items_seen.has(item):
 			problems.append("%s %s: item %s already opened by %s" % [card_prefix, card.get("name", ""), item, items_seen[item]] if world_mode else "%s %s: item %s is already opened by %s" % [card_prefix, card.get("name", ""), item, items_seen[item]])
@@ -449,14 +448,14 @@ static func _validate_rung_set(rows: Dictionary, grants: Dictionary, tunes: Arra
 			if not (reward is Dictionary) or not reward.has("item"):
 				continue
 			var item := String(reward["item"])
-			if not Items.TABLE.has(item):
+			if not items_table.has(item):
 				problems.append("%s: reward item %s is not an items.gd row" % [grant, item])
 			elif not rows.keys().any(func(r): return rows[r].get("when", {}).get("earned", "") == grant):
 				problems.append("%s: pays item %s but no rung reads it, so the item could never show" % [grant, item])
 	for item in items_seen:
 		if world_mode and items_seen[item] == "w1_board":
 			continue
-		var row: Dictionary = Items.TABLE[item]
+		var row: Dictionary = items_table[item]
 		if row.has("class") or row.has("needs"):
 			problems.append("%s: an opened item must suit every pilot and need no seam" % item)
 		if world_mode and ParkDefs.part_in_play(item):
