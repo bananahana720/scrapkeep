@@ -455,7 +455,7 @@ describe("display-run timeouts and signals", GUARDED, () => {
     const fake = path.join(dir, "fake-group.sh");
     writeFileSync(
       fake,
-      `#!/bin/sh\nexec 3<> "${pipe.file}"\nsleep ${LATE_S} &\necho $$ $! >&3\nwait\n`,
+      `#!/bin/sh\nexec 3<> "${pipe.file}"\necho $$ >&3\nsleep ${LATE_S} &\necho $! >&3\nwait\n`,
       { mode: 0o755 },
     );
     const runner = path.join(dir, "runner.mjs");
@@ -474,11 +474,17 @@ process.exit(1); // An interrupted receipt producer must never reach its next st
     t.after(() => {
       if (node.exitCode === null && node.signalCode === null) node.kill("SIGKILL");
     });
-    const ready = await Promise.race([
-      pipe.next(),
-      exited.then((code) => assert.fail(`the runner exited (${code}) before the fake started`)),
-    ]);
-    const [shell, sleeper] = ready.trim().split(" ");
+    const early = exited.then((code) =>
+      assert.fail(`the runner exited (${code}) before the fake forked its child`),
+    );
+    let said = "";
+    while (said.split("\n").length < 3) {
+      const part = await Promise.race([pipe.next(), early]);
+      assert.ok(part, "the fake closed the pipe before it forked its child");
+      said += part;
+      if (said.includes("\n")) groups.add(said.split("\n")[0]);
+    }
+    const [shell, sleeper] = said.split("\n");
     assert.equal(groups.add(shell), Number(shell), "the fake reported its shell");
     assert.ok(Number(sleeper) > 1, "the fake reported its child");
     node.kill("SIGTERM");
