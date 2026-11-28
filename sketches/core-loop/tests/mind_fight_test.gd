@@ -6,6 +6,7 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Habits := preload("res://src/combat/habits.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
+const BossAttacks := preload("res://src/boss/boss_attacks.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const T := preload("res://tests/support/t.gd")
@@ -163,7 +164,7 @@ func _check_movement_pressure(game, mod) -> void:
 	var safe_roll := MindAttacks.commit_safe("", 17, ball, center, 2, cruise, mod.PAD_RADIUS, [], mod.effective_warn_scale())
 	_t.check("rolling escape corridor stays intact",
 		not safe_roll["descriptors"].is_empty()
-		and MindAttacks.escape_point(safe_roll["descriptors"], ball, cruise, center, mod.PAD_RADIUS) != null,
+		and BossAttacks.escape_point(safe_roll["descriptors"], ball, cruise, center, mod.PAD_RADIUS) != null,
 		"path=%s" % safe_roll["path"])
 	game.player.body().linear_velocity = Vector3.FORWARD * (0.4 * cruise)
 	game.player.state.velocity = Vector3.FORWARD * (0.4 * cruise)
@@ -176,7 +177,7 @@ func _check_movement_pressure(game, mod) -> void:
 	var safe_stall := MindAttacks.commit_safe("", 17, ball, center, 3, cruise, mod.PAD_RADIUS, [], mod.effective_warn_scale())
 	var warn_ok: bool = (safe_stall["descriptors"] as Array).all(func(d): return float(d["warn"]) >= MindAttacks.WARN_FLOOR)
 	_t.check("stalled warns stay >= WARN_FLOOR and keep escape corridor at cruise",
-		warn_ok and MindAttacks.escape_point(safe_stall["descriptors"], ball, cruise, center, mod.PAD_RADIUS) != null,
+		warn_ok and BossAttacks.escape_point(safe_stall["descriptors"], ball, cruise, center, mod.PAD_RADIUS) != null,
 		"warn_ok=%s path=%s" % [warn_ok, safe_stall["path"]])
 	game.player.body().linear_velocity = saved_vel
 	game.player.state.velocity = saved_vel

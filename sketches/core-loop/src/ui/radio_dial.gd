@@ -106,7 +106,7 @@ static func tint(name: String) -> Color:
 
 
 func _process(delta: float) -> void:
-	visible = deck != null and deck._live()
+	visible = deck != null and deck.live()
 	if not visible:
 		_said = ""
 		_peek = 0.0
@@ -120,13 +120,10 @@ func _process(delta: float) -> void:
 	if said != _said:
 		_said = said
 		_peek = PEEK
-	var engine = deck._audio.engine if deck._audio != null else null
 	for i in LAYERS:
 		var want := 0.0
-		if engine != null and not _read.get("off", false):
-			want = clampf(float(engine.layer_gain(METER[i])), 0.0, 1.0)
-			var beat: int = maxi(1, engine.beat_len())
-			want *= 0.75 + 0.25 * (1.0 - float(engine.clock % beat) / beat)
+		if not _read.get("off", false):
+			want = deck.meter_level(METER[i])
 		_bars[i] = move_toward(_bars[i], want, delta * 6.0)
 	size = size.lerp(target_size(), clampf(delta * 12.0, 0.0, 1.0))
 	var screen := get_viewport().get_visible_rect().size

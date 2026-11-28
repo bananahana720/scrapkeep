@@ -282,7 +282,7 @@ func _runtime(_specs: Array) -> void:
 
 	var interior: Node = s.get_node("Interior_" + String(s.interior.id))
 	t.eq("drawn unvisited interior has no collision", _bodies(interior), 0)
-	game.player.active_body().global_position = s.global_position + Vector3(0, 1, 0)
+	game.player.body().global_position = s.global_position + Vector3(0, 1, 0)
 	acts._physics_process(0.0)
 	await physics_frame
 	t.eq("drawn entered terrain has collision", _bodies(interior), s.interior.terrain.size())

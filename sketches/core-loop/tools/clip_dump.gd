@@ -4,6 +4,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const MAX_TRIS := 60000
 const MAX_INSTANCE_TRIS := 4000
@@ -34,7 +35,7 @@ func _initialize() -> void:
 		printerr("clip_dump: pass --area=dam|flume|brindle|camp --out=<absolute dir> [--seed=N] [--shots=<json>]")
 		quit(2)
 		return
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		printerr("clip_dump: needs a display (xvfb-run, opengl3): headless multimesh buffers read back empty")
 		quit(2)
 		return

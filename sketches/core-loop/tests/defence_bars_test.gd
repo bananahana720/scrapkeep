@@ -1,9 +1,9 @@
 extends SceneTree
 # SG7 (W13-INTEGRATION-3.md, comps/gunfire/enemies-and-bosses.md "three-defence-bars"): armour,
 # shield and health are three bar classes with one rule each, so a bar's look predicts how to
-# attack it. Every check reads src/core/defence_bars.gd; no table is copied here.
+# attack it. Every check reads tests/support/defence_bars.gd; no table is copied here.
 
-const DefenceBars := preload("res://src/core/defence_bars.gd")
+const DefenceBars := preload("res://tests/support/defence_bars.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 

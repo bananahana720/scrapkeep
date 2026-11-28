@@ -27,7 +27,7 @@ const CallerTile := preload("res://src/ui/caller_tile.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("w50_ui_stage_d_test")
@@ -79,7 +79,7 @@ func _run() -> void:
 	await _check_hud_consumable_carousel_and_shop_faces()
 	_check_settings_and_callers_and_slop_guards()
 
-	Consumables._reset()
+	Consumables.reset_for_tests()
 	_game.queue_free()
 	quit(_t.verdict())
 

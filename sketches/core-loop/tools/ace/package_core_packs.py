@@ -33,7 +33,7 @@ from package_music import RATE, PRE_ROLL, POST_ROLL, STEMS, cut_clip, encode, sh
 
 SKETCH = Path(__file__).resolve().parents[2]
 OUT = SKETCH / 'assets/music_ace'
-SPICE = Path('/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice')
+SPICE = Path.home() / 'Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice'
 SOUND = SKETCH / 'design-v3/sound'
 TARGET_LUFS = -16.0
 CEILING = -3.0

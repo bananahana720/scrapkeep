@@ -5,7 +5,7 @@ const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
 const Waking := preload("res://src/boss/waking.gd")
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
-const MindAttacks := preload("res://src/boss/mind_attacks.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const T := preload("res://tests/support/t.gd")
@@ -160,7 +160,7 @@ func _shatter(mod) -> void:
 func _ring(mod, family: String, center: Vector3, band: Vector2, height: float) -> Dictionary:
 	var d := {"family": family, "family_index": 1, "id": "waking_test_ring", "shape": "annulus", "type": Threat.Type.INSTANT,
 		"warn": 1.0, "live": 1.0, "height": height, "at": center, "band": band, "delay": 0.0}
-	var h = MindAttacks.build(d)
+	var h = Hazard.from_def(d)
 	h.ground = Callable(mod, "ground_height_at")
 	mod.ctx.root.add_child(h)
 	var attack := {"hazards": [h], "family": family, "landed": false, "descs": [d]}

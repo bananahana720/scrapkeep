@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const T := preload("res://tests/support/t.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 var _t := T.new("ending_routes_test")
 var _game

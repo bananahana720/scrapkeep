@@ -2,19 +2,13 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { binary } from "./sketch-smoke.mjs";
+import { requireGodotBinary } from "./godot-home.mjs";
+import { isMain } from "./lib/cli.mjs";
+import { PILOT_IDS } from "./lib/game-defs.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches", "core-loop");
 
-export const PILOTS = [
-  "pylon_engineer",
-  "runner_gunner",
-  "demolitions_caster",
-  "tarn",
-  "tally",
-  "remembered_cannon",
-];
 export const PILOT_NAMES = {
   pylon_engineer: "Sable",
   runner_gunner: "Rivet",
@@ -270,13 +264,13 @@ export function parseArgs(argv) {
   }
   if (args["scrap-at"] !== null && !(args["scrap-at"] > 0))
     throw new Error("first-timer: --scrap-at takes seconds above zero");
-  args.pilots = args.pilots === "all" ? PILOTS : args.pilots.split(",");
+  args.pilots = args.pilots === "all" ? PILOT_IDS : args.pilots.split(",");
   for (const pilot of args.pilots)
-    if (!PILOTS.includes(pilot)) throw new Error(`first-timer: unknown pilot ${pilot}`);
+    if (!PILOT_IDS.includes(pilot)) throw new Error(`first-timer: unknown pilot ${pilot}`);
   return args;
 }
 
-function probe(pilot, args) {
+function probe(pilot, args, binary) {
   const out = path.join(args.out, `probe-${pilot}-${args.seed}.json`);
   const argv = [
     "--headless",
@@ -310,31 +304,33 @@ function probe(pilot, args) {
 }
 
 async function runProbes(args) {
+  const binary = requireGodotBinary();
+  mkdirSync(args.out, { recursive: true });
   const queue = [...args.pilots];
   const probes = [];
   const worker = async () => {
     while (queue.length) {
       const pilot = queue.shift();
       console.log(`first-timer: probing ${pilot}`);
-      probes.push(await probe(pilot, args));
+      probes.push(await probe(pilot, args, binary));
     }
   };
   await Promise.all(Array.from({ length: Math.max(1, args.jobs) }, worker));
-  return probes.sort((a, b) => PILOTS.indexOf(a.pilot) - PILOTS.indexOf(b.pilot));
+  return probes.sort((a, b) => PILOT_IDS.indexOf(a.pilot) - PILOT_IDS.indexOf(b.pilot));
 }
 
 function readProbes(dir) {
   return readdirSync(dir)
     .filter((name) => /^probe-[^.]*\.json$/.test(name))
     .map((name) => JSON.parse(readFileSync(path.join(dir, name), "utf8")))
-    .sort((a, b) => PILOTS.indexOf(a.pilot) - PILOTS.indexOf(b.pilot));
+    .sort((a, b) => PILOT_IDS.indexOf(a.pilot) - PILOT_IDS.indexOf(b.pilot));
 }
 
 export async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
-  mkdirSync(args.out, { recursive: true });
   const probes = args.from ? readProbes(args.from) : await runProbes(args);
   if (!probes.length) throw new Error("first-timer: no probes");
+  mkdirSync(args.out, { recursive: true });
   const result = audit(probes);
   const page = markdown(result, probes);
   writeFileSync(
@@ -348,7 +344,7 @@ export async function main(argv = process.argv.slice(2)) {
   return result.ok ? 0 : 1;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main().then(
     (code) => process.exit(code),
     (error) => {

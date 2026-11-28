@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://src/combat/actives/active_base.gd"
 
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -8,6 +8,7 @@ const BASE_DAMAGE := 16.0
 const SPLASH := 0.5
 const BLAST_RADIUS := 3.0
 const HIT_RADIUS := 1.4
+const DEFAULT_GIRTH := 0.6
 const LOCK_REACH := 42.0
 const SEEK_REACH := 24.0
 const LAUNCH_SPEED := 18.0
@@ -23,16 +24,9 @@ const COLOR := Palette.AMBER
 const KIND := "rocket"
 const SOURCE := "special"
 
-var ctx
-var combat
 var rockets: Array = []
 var bursts := 0
 var _generation := 0
-
-
-func setup(context, owner_combat) -> void:
-	ctx = context
-	combat = owner_combat
 
 
 func clear() -> void:
@@ -41,24 +35,19 @@ func clear() -> void:
 
 
 func count_for(bonus: int) -> int:
-	return ROCKETS + bonus + _pattern("cross_split")
+	return ROCKETS + bonus + pattern_level("cross_split")
 
 
 func damage() -> float:
-	var punch := 0.0
-	if ctx.build != null and ctx.build.has_method("punch_bonus"):
-		punch = float(ctx.build.punch_bonus())
-	return (BASE_DAMAGE + punch) * ctx.tuning.mod("weapon_damage")
+	return scaled_damage(BASE_DAMAGE)
 
 
 func fire(_rack, _row: Dictionary, bonus: int) -> int:
 	var count := count_for(bonus)
 	var ball: Vector3 = ctx.player.ball_position()
-	var forward: Vector3 = ctx.aim_forward()
-	forward.y = 0.0
-	forward = forward.normalized() if forward.length() > 0.01 else Vector3.FORWARD
+	var forward := flat_aim()
 	var side := forward.cross(Vector3.UP).normalized()
-	var targets: Array = combat._nearest_list(ball, LOCK_REACH, count)
+	var targets: Array = combat.nearest_enemies(ball, LOCK_REACH, count)
 	for target in targets:
 		combat.effects.spark(target.global_position + Vector3.UP, ActiveFx.peak(COLOR))
 	var dmg := damage()
@@ -113,14 +102,10 @@ func _fly(rocket: Dictionary, delta: float) -> bool:
 
 
 func _contact(at: Vector3):
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
-		if not enemy.is_dead() and enemy.global_position.distance_to(at) <= HIT_RADIUS + _girth(enemy):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
+		if not enemy.is_dead() and enemy.global_position.distance_to(at) <= HIT_RADIUS + enemy_girth(enemy, DEFAULT_GIRTH):
 			return enemy
 	return null
-
-
-func _girth(enemy: Node3D) -> float:
-	return float(enemy.get("radius")) if enemy.get("radius") != null else 0.6
 
 
 func _burst(rocket: Dictionary, struck) -> void:
@@ -132,16 +117,10 @@ func _burst(rocket: Dictionary, struck) -> void:
 	ctx.break_props(at, BLAST_RADIUS, "scrap_rocket")
 	if struck != null:
 		combat._hit(struck, KIND, dmg, push, KNOCK, "", SOURCE)
-	for enemy in combat._nearest_list(at, BLAST_RADIUS, 16):
+	for enemy in combat.nearest_enemies(at, BLAST_RADIUS, 16):
 		if enemy != struck and not enemy.is_dead():
 			combat._hit(enemy, KIND, dmg * SPLASH, enemy.global_position - at, KNOCK * 0.6, "", SOURCE)
-	var jumps := _pattern("chain_arc")
+	var jumps := pattern_level("chain_arc")
 	if struck != null and jumps > 0:
 		combat._chain(struck, at, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
 			"chain_falloff": CHAIN_FALLOFF, "color": ActiveFx.peak(COLOR), "kind": KIND, "knock": KNOCK, "source": SOURCE})
-
-
-func _pattern(id: String) -> int:
-	if ctx.build != null and ctx.build.has_method("pattern_level"):
-		return int(ctx.build.pattern_level(id))
-	return ctx.run.parts.count(id) if ctx.run != null else 0

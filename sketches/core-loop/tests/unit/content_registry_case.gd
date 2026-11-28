@@ -3,7 +3,9 @@ extends RefCounted
 # T5 rule: registered content is well formed, resolves references, is selectable,
 # meets its admission floor, and matches a typed golden hash. Each bad-row fixture
 # must fail its named rule; deleting any registered table must fail minimum_rows.
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
+const PhaseMusic := preload("res://src/presentation/phase_music.gd")
 const FIXTURES := "res://tests/fixtures/content_registry/"
 const TABLE_COUNT := 27
 # These two content pins exclude the stage table; unrelated registry pins stay canonical.
@@ -36,7 +38,10 @@ func run(t) -> void:
 		var covered := []
 		for index in fixture.cases.size():
 			var edit: Dictionary = fixture.cases[index]
-			var changed := tables.duplicate(true)
+			var changed := tables.duplicate(false)
+			changed[edit.table] = tables[edit.table].duplicate(true)
+			if edit.op == "drop_category":
+				changed["event_kinds.CODEX_CATEGORIES"] = tables["event_kinds.CODEX_CATEGORIES"].duplicate(true)
 			_mutate(changed, edit)
 			var issues := Registry.validate_table(edit.table, changed[edit.table], changed, rule == "golden_hash")
 			var matched: Array = issues.filter(func(issue): return issue.rule == rule)
@@ -50,6 +55,11 @@ func run(t) -> void:
 	_hash_rules(t)
 	_missing_tables(t, tables)
 	_cross_references(t, tables)
+	for id in PhaseMusic.TRACKS:
+		t.check(
+			"PhaseMusic.TRACKS entry exists in MusicRows.ROWS: " + id,
+			MusicRows.ROWS.has(id) and MusicRows.ROWS[id]["ace_manifest"] == MusicRows.manifest_path(PhaseMusic.theme_of(id)),
+		)
 
 
 func _sorted(values: Array) -> Array:
@@ -124,25 +134,32 @@ func _hash_rules(t) -> void:
 
 func _missing_tables(t, tables: Dictionary) -> void:
 	for name in tables:
-		var changed := tables.duplicate(true)
+		var changed := tables.duplicate(false)
 		changed.erase(name)
+		# Avoid repeating the 81,920-state objective chooser sweep for unrelated table-absence checks;
+		# objectives.ROWS itself is checked below and in the full validate() calls.
+		if name != "objectives.ROWS":
+			changed["objectives.ROWS"] = {}
 		var issues := Registry.validate(changed, false)
 		t.check("absent table fails minimum " + name, issues.any(func(issue): return issue.table == name and issue.rule == "minimum_rows"))
-	var changed := tables.duplicate(true)
+	var changed := tables.duplicate(false)
 	changed["unknown.ROWS"] = {}
 	t.check("unregistered tables are refused", Registry.validate(changed, false).any(func(issue): return issue.table == "unknown.ROWS" and issue.rule == "well_formed"))
 
 
 func _cross_references(t, tables: Dictionary) -> void:
-	var changed := tables.duplicate(true)
+	var changed := tables.duplicate(false)
+	changed["event_kinds.REACTIONS"] = tables["event_kinds.REACTIONS"].duplicate(true)
 	changed["event_kinds.REACTIONS"].erase("flinch")
 	var issues := Registry.validate_table("event_kinds.IMPACT", changed["event_kinds.IMPACT"], changed, false)
 	t.check("impact resolves against supplied reaction table", issues.any(func(issue): return issue.rule == "references"))
-	changed = tables.duplicate(true)
+	changed = tables.duplicate(false)
+	changed["item_gen.RARITY"] = tables["item_gen.RARITY"].duplicate(true)
 	changed["item_gen.RARITY"].erase("common")
 	issues = Registry.validate_table("parts.rows", changed["parts.rows"], changed, false)
 	t.check("parts resolve against supplied rarity table", issues.any(func(issue): return issue.rule == "references"))
-	changed = tables.duplicate(true)
+	changed = tables.duplicate(false)
+	changed["cosmetics.ROWS"] = tables["cosmetics.ROWS"].duplicate(true)
 	changed["cosmetics.ROWS"].erase("paint_any_night")
 	issues = Registry.validate_table("achievements.ROWS", changed["achievements.ROWS"], changed, false)
 	t.check("achievements resolve against supplied cosmetic table", issues.any(func(issue): return issue.rule == "references"))

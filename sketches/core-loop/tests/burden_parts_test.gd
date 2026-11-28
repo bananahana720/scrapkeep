@@ -7,7 +7,7 @@ const BuildSheet := preload("res://src/build/build_sheet.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const Icons := preload("res://src/ui/icons.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 # SG4 (W13-INTEGRATION-3, comps/gunfire/scrolls-and-synergies.md:86): burden parts are rare,
 # pure stated downsides that only a visible optional pocket pays out, held under a per-world

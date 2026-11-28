@@ -7,6 +7,7 @@ const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const NEAR_M := 60.0
 const FAR_M := 120.0
@@ -126,7 +127,7 @@ func _initialize() -> void:
 		printerr("park_props_audit: --vignettes draws its own poses: no --counts-only or --poses")
 		quit(2)
 		return
-	if DisplayServer.get_name() == "headless" and not counts_only:
+	if AppShell.headless() and not counts_only:
 		printerr("park_props_audit: needs a display for draws and stills (xvfb-run, opengl3), or --counts-only")
 		quit(2)
 		return

@@ -22,6 +22,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ensureNodeModules } from "./ensure-node-modules.mjs";
+import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import { isMain } from "./lib/cli.mjs";
 import {
   godotIdentity,
   hasValidUidCache,
@@ -680,20 +682,13 @@ export function ensureSandboxImport({
   }
 
   const importHome = path.resolve(homeDir);
-  const dataDir = path.join(importHome, "data");
-  const configDir = path.join(importHome, "config");
-  const cacheDir = path.join(importHome, "cache");
-  mkdirSync(dataDir, { recursive: true });
-  mkdirSync(configDir, { recursive: true });
-  mkdirSync(cacheDir, { recursive: true });
-
   const env = {
-    ...process.env,
+    ...scratchGodotEnv(importHome, {
+      baseEnv: process.env,
+      forceHome: true,
+      create: true,
+    }),
     GODOT_BIN: godotBin,
-    HOME: importHome,
-    XDG_DATA_HOME: dataDir,
-    XDG_CONFIG_HOME: configDir,
-    XDG_CACHE_HOME: cacheDir,
   };
   if (process.platform === "linux") {
     env.SDL_AUDIODRIVER = "dummy";
@@ -909,24 +904,16 @@ function parseCliArgs(argv) {
   return { cmd, opts };
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const { cmd, opts } = parseCliArgs(process.argv.slice(2));
     if (cmd === "prepare") {
+      const godotBin = resolveGodotBinary({ requireExplicit: true });
       const box = materializeSandbox({
         ref: opts.ref,
         slot: opts.slot,
-        godotBin: process.env.GODOT_BIN || null,
-        skipImport: opts.skipImport || !process.env.GODOT_BIN,
+        godotBin,
+        skipImport: opts.skipImport || !godotBin,
         overlayMode: opts.overlayMode,
       });
       box.release();

@@ -64,7 +64,7 @@ func _run() -> void:
 	await _check_isaac_consumables_and_trade_contracts()
 	await _check_salvage_magnet_companion()
 
-	Consumables._reset()
+	Consumables.reset_for_tests()
 	_game.free()
 	quit(_t.verdict())
 

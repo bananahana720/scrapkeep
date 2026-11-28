@@ -442,3 +442,16 @@ test("by-hand rows never count as a pass or a miss", () => {
   assert.ok(BY_HAND.length >= 3);
   for (const row of BY_HAND) assert.deepEqual([row.pass, row.byHand], [null, true]);
 });
+
+test("checkpoint --before exits 2 with a clear GODOT_BIN message when Godot is missing", () => {
+  const result = spawnSync(process.execPath, ["scripts/checkpoint.mjs", "--before"], {
+    cwd: root,
+    encoding: "utf8",
+    env: { ...process.env, GODOT_BIN: "/does/not/exist/checkpoint-godot" },
+  });
+  assert.equal(result.status, 2);
+  assert.match(
+    result.stderr,
+    /Godot binary not found at \/does\/not\/exist\/checkpoint-godot; set GODOT_BIN/,
+  );
+});

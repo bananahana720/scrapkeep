@@ -7,46 +7,7 @@ const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
-const WARDEN_BASE := "res://assets/models/warden_clamp_base.glb"
-const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
-const WARDEN_MANTLES := {
-	2: {"family": "reactor", "path": "res://assets/models/warden_mantle_meltdown.glb"},
-	4: {"family": "swarm", "path": "res://assets/models/warden_mantle_brood.glb"},
-	5: {"family": "mind", "path": "res://assets/models/warden_mantle_hand.glb"},
-	6: {"family": "mind", "path": "res://assets/models/warden_mantle_choir.glb"},
-}
-const WARDEN_BODIES := {
-	"reactor": {"body": "res://assets/models/warden_reactor.glb", "kits": [], "point": "WeakPoint",
-		"mount_parts": {"dam_face": ["GateL", "GateR"], "flume": ["PourLip"]}},
-	"swarm": {"body": "res://assets/models/warden_swarm.glb", "kits": ["res://assets/models/warden_swarm_kit_drones.glb"],
-		"point": "WeakPoint", "hang": "Suspension", "grips": ["Grip0", "Grip1", "Grip2"],
-		"shed_rings": ["Ring5", "Ring4", "Ring3", "Ring2"]},
-	"mind": {"body": "res://assets/models/warden_mind.glb", "kits": [], "point": "WeakPoint"},
-}
-const WARDEN_BODY_BLENDS := {
-	"reactor": {"idle": 1.0, "pulse_warn": 0.5, "pulse": 0.1, "active": 0.5, "chunk_lost": 0.8, "chunk_lost_1": 0.8,
-		"chunk_lost_2": 0.8, "chunk_lost_3": 0.8, "shrug": 0.2, "gates_open": 0.3, "pour": 0.3, "final_quiet": 2.0},
-	"swarm": {"idle": 1.0, "pulse": 0.1, "active": 0.5, "hoist_ride": 0.3, "snip": 0.2, "stagger_open": 0.5,
-		"chunk_shed": 0.8, "brood_dark": 0.5, "break": 2.0},
-	"mind": {"idle": 1.0, "pulse_warn": 0.5, "pulse": 0.1, "active": 0.5, "chunk_lost": 0.8, "chunk_lost_ring": 0.8,
-		"chunk_lost_middle": 0.8, "chunk_lost_index": 0.8, "shrug": 0.2, "grip_falter": 0.5, "takeoff": 0.3,
-		"glide": 0.3, "land": 0.2, "knocked_down": 0.2, "final_quiet": 2.0},
-}
-const WARDEN_BODY_CHARGE := {"reactor": "pulse_warn", "swarm": "pulse", "mind": "pulse_warn"}
-const WARDEN_BODY_FINAL := {"reactor": "final_quiet", "swarm": "break", "mind": "final_quiet"}
-const WARDEN_REACTOR_PULSE_EXTRA := {"dam_face": "gates_open", "flume": "pour"}
-const MIND_CHUNK_FINGERS := [
-	{"clip": "chunk_lost", "seam": "ancient_light_seam3"},
-	{"clip": "chunk_lost_ring", "seam": "ancient_light_seam2"},
-	{"clip": "chunk_lost_middle", "seam": "ancient_light_seam1"},
-	{"clip": "chunk_lost_index", "seam": "ancient_light_seam0"},
-]
-const MIND_LENS_BONES := ["Lens", "LensIris", "SmallLens0", "SmallLens1", "SmallLens2", "SmallLens3", "SmallLens4"]
-const MIND_FLIGHT_CLIPS := ["takeoff", "glide", "land", "knocked_down"]
-const MANTLE_MOUNTS := {
-	"MountBody": "Body", "MountVent0": "Vent0", "MountVent1": "Vent1", "MountVent2": "Vent2",
-	"MountArmL": "ArmL", "MountArmR": "ArmR",
-}
+const WardenDress := preload("res://src/presentation/warden_dress.gd")
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Accretion := preload("res://src/build/accretion.gd")
@@ -1421,12 +1382,8 @@ func sync_weapon_rig(pod: Node3D, shot_bits_mask: int, part_ids: Array) -> Node3
 	var rig := WeaponRigFx.ensure_on(ring)
 	if rig != null:
 		rig.sync_build(shot_bits_mask, part_ids)
-		if BallLooks.PLATED.has(ball_look()) and not bool(rig.get("_cutaway_dressed")):
-			var ring_mount := rig.get_node_or_null("RingMount")
-			if ring_mount != null:
-				BallLooks._cut_kit(ring_mount, "")
-				InkOutline.apply(ring_mount, "pilot")
-			rig.set("_cutaway_dressed", true)
+		if BallLooks.PLATED.has(ball_look()):
+			rig.dress_cutaway()
 	return rig
 
 
@@ -2131,13 +2088,13 @@ func _warden_scene(path: String) -> Node3D:
 func _dress_warden(warden) -> void:
 	if not is_inside_tree() or not is_instance_valid(warden) or not warden.is_inside_tree() or _wardens.has(warden.get_instance_id()):
 		return
-	if warden._look == null or warden._kit == null or not WARDEN_KITS.has(warden.family):
+	if warden._look == null or warden._kit == null or not WardenDress.KITS.has(warden.family):
 		return
-	if _wears_body(warden):
+	if WardenDress.wears_body(warden):
 		_dress_warden_body(warden)
 		return
-	var base := _warden_scene(WARDEN_BASE)
-	var kit := _warden_scene("res://assets/models/warden_kit_%s.glb" % WARDEN_KITS[warden.family])
+	var base := _warden_scene(WardenDress.BASE)
+	var kit := _warden_scene("res://assets/models/warden_kit_%s.glb" % WardenDress.KITS[warden.family])
 	if base == null or kit == null:
 		if base != null: base.free()
 		if kit != null: kit.free()
@@ -2146,7 +2103,7 @@ func _dress_warden(warden) -> void:
 	var tower := base.get_node_or_null("Tower") as MeshInstance3D
 	var mount := base.get_node_or_null("Tower/KitMount") as Node3D
 	var weak := kit.get_node_or_null("WeakPoint") as Node3D
-	if tower == null or mount == null or weak == null or not base.has_node("JawL") or not base.has_node("JawR") or not _has_warden_chunk_nodes(base):
+	if tower == null or mount == null or weak == null or not base.has_node("JawL") or not base.has_node("JawR") or not WardenDress.has_warden_chunk_nodes(base):
 		base.free()
 		kit.free()
 		_warn_once("warden_nodes", "hero_assets: incomplete Warden asset hierarchy; keeping placeholders")
@@ -2158,7 +2115,7 @@ func _dress_warden(warden) -> void:
 	var target: Vector3 = warden._kit.point_offset() + Vector3.UP * warden.HALF_HEIGHT
 	kit.position = target - weak.position
 	var old_mount: Vector3 = tower.position + mount.position
-	_adapt_warden_tower(tower, kit.position - old_mount, old_mount.y)
+	WardenDress.adapt_warden_tower(tower, kit.position - old_mount, old_mount.y)
 	mount.position = kit.position - tower.position
 	base.add_child(kit)
 	var rec := {"warden": warden, "base": base, "kit": kit, "weak": weak,
@@ -2169,7 +2126,7 @@ func _dress_warden(warden) -> void:
 		_split_queen_hatch(weak, rec)
 	_paint_warden(base, rec)
 	if warden._look.posture_fight():
-		_rig_warden_jaws(base, rec)
+		WardenDress.rig_warden_jaws(base, rec)
 	_rig_warden_chunks(base, rec)
 	if warden.family == "mind":
 		var lens := Node3D.new()
@@ -2233,10 +2190,6 @@ void fragment() {
 
 # Godot glTF importer keys rest tracks on every channel; persistent poses apply after mixer_applied.
 
-func _wears_body(warden) -> bool:
-	return WARDEN_BODIES.has(warden.family) and bool(warden.get("harpoon_anchor"))
-
-
 func _body_scene(path: String) -> Node3D:
 	var packed := _packed(path)
 	return packed.instantiate() as Node3D if packed != null else null
@@ -2244,7 +2197,7 @@ func _body_scene(path: String) -> Node3D:
 
 func _dress_warden_body(warden) -> void:
 	var kind: String = warden.family
-	var row: Dictionary = WARDEN_BODIES[kind]
+	var row: Dictionary = WardenDress.BODIES[kind]
 	var body := _body_scene(row.body)
 	var weak := body.find_child(row.point, true, false) as Node3D if body != null else null
 	var player := body.find_child("AnimationPlayer", true, false) as AnimationPlayer if body != null else null
@@ -2265,7 +2218,7 @@ func _dress_warden_body(warden) -> void:
 		"players": body.find_children("*", "AnimationPlayer", true, false), "skeleton": null, "queue": [], "lost": [],
 		"dark": [], "final": false, "pose": null, "pose_base": Transform3D.IDENTITY, "perch_pose": {}, "lens": -1,
 		"seen": {"charging": false, "pulses": warden.pulses, "staggered": warden.staggered(),
-			"chunks": warden.chunks_left(), "rides": _driver_count(warden, "rides")}}
+			"chunks": warden.chunks_left(), "rides": WardenDress.driver_count(warden, "rides")}}
 	rec.skeleton = body.find_child("Skeleton3D", true, false) as Skeleton3D
 	_paint_body(body, rec)
 	match kind:
@@ -2276,9 +2229,9 @@ func _dress_warden_body(warden) -> void:
 					if node != null:
 						node.visible = mount == warden.mounting
 		"swarm":
-			_own_clip(rec.players[0], "chunk_shed")
+			WardenDress.own_clip(rec.players[0], "chunk_shed")
 		"mind":
-			_rig_mind_body(warden, rec)
+			WardenDress.rig_mind_body(warden, rec)
 	for child in warden._look.get_children():
 		if child is MeshInstance3D and child.material_override == warden._look.body_material:
 			_hide_warden_mesh(child, rec)
@@ -2291,12 +2244,12 @@ func _dress_warden_body(warden) -> void:
 		(p as AnimationPlayer).mixer_applied.connect(_hold_body.bind(id))
 	(rec.players[0] as AnimationPlayer).animation_finished.connect(_body_clip_finished.bind(id))
 	if kind == "mind" and warden.mount_driver != null and warden.mount_driver.has_signal("took_off"):
-		SignalLifetime.listen(body, warden.mount_driver.took_off, func(_a: int, _b: int): _play_body(rec, ["takeoff", "glide"]))
-		SignalLifetime.listen(body, warden.mount_driver.landed, func(_p: int): _play_body(rec, ["land"]))
+		SignalLifetime.listen(body, warden.mount_driver.took_off, func(_a: int, _b: int): WardenDress.play_body(rec, ["takeoff", "glide"]))
+		SignalLifetime.listen(body, warden.mount_driver.landed, func(_p: int): WardenDress.play_body(rec, ["land"]))
 	_wardens[id] = rec
 	warden.fit_camera_shell()
 	warden.tree_exiting.connect(_forget_warden.bind(id), CONNECT_ONE_SHOT)
-	_play_body(rec, ["idle"])
+	WardenDress.play_body(rec, ["idle"])
 	_update_warden(rec)
 	if warden.fight() == "posture" and warden.fleet != null:
 		var bus = warden.fleet.events()
@@ -2312,13 +2265,6 @@ func _warden_owned(rec: Dictionary) -> Array:
 	if rec.get("mantle_tool") != null:
 		out.append(rec.mantle_tool)
 	return out
-
-
-func _driver_count(warden, key: String) -> int:
-	var driver = warden.mount_driver
-	if driver == null or not (key in driver):
-		return 0
-	return int(driver.get(key))
 
 
 func _paint_body(root: Node, rec: Dictionary) -> void:
@@ -2337,98 +2283,16 @@ func _paint_body(root: Node, rec: Dictionary) -> void:
 				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
-func _own_clip(player: AnimationPlayer, clip: String) -> void:
-	var shared := player.get_animation_library(&"")
-	if shared == null or not shared.has_animation(clip):
-		return
-	var own := AnimationLibrary.new()
-	for clip_name in shared.get_animation_list():
-		var anim := shared.get_animation(clip_name)
-		own.add_animation(clip_name, anim.duplicate() if clip_name == clip else anim)
-	player.remove_animation_library(&"")
-	player.add_animation_library(&"", own)
-
-
-func _rig_mind_body(warden, rec: Dictionary) -> void:
-	var body: Node3D = rec.body
-	var skel: Skeleton3D = rec.skeleton
-	rec.pose = body.find_child("Pose", true, false) as Node3D
-	rec.lens = skel.find_bone("Lens") if skel != null else -1
-	if rec.weak.get_parent() is BoneAttachment3D:
-		rec.weak.position = Vector3.ZERO
-	if warden.mounting == "spires":
-		var perch := body.find_child("PosePerch", true, false) as Node3D
-		if perch != null and rec.pose != null:
-			rec.pose.transform = perch.transform
-			rec.pose_base = perch.transform
-		var player: AnimationPlayer = rec.players[0]
-		if player.has_animation("perch"):
-			rec.perch_pose = _clip_end_pose(player.get_animation("perch"), skel, MIND_LENS_BONES, true)
-		else:
-			push_error("hero_assets: mind body has no clip 'perch'")
-
-
-func _clip_end_pose(anim: Animation, skel: Skeleton3D, names: Array, exclude := false) -> Dictionary:
-	var out := {}
-	for t in anim.get_track_count():
-		var path := anim.track_get_path(t)
-		if path.get_subname_count() == 0:
-			continue
-		var bone_name := String(path.get_subname(0))
-		if (bone_name in names) == exclude:
-			continue
-		var bone := skel.find_bone(bone_name)
-		if bone < 0:
-			continue
-		var entry: Dictionary = out.get(bone, {})
-		match anim.track_get_type(t):
-			Animation.TYPE_POSITION_3D:
-				entry["position"] = anim.position_track_interpolate(t, anim.length)
-			Animation.TYPE_ROTATION_3D:
-				entry["rotation"] = anim.rotation_track_interpolate(t, anim.length)
-			Animation.TYPE_SCALE_3D:
-				entry["scale"] = anim.scale_track_interpolate(t, anim.length)
-		out[bone] = entry
-	return out
-
-
-func _set_bone_pose(skel: Skeleton3D, bone: int, entry: Dictionary) -> void:
-	if entry.has("position"):
-		skel.set_bone_pose_position(bone, entry.position)
-	if entry.has("rotation"):
-		skel.set_bone_pose_rotation(bone, entry.rotation)
-	if entry.has("scale"):
-		skel.set_bone_pose_scale(bone, entry.scale)
-
-
-func _play_body(rec: Dictionary, clips: Array, backwards := false) -> void:
-	rec.queue = clips.slice(1)
-	_start_body_clip(rec, String(clips[0]), backwards)
-
-
-func _start_body_clip(rec: Dictionary, clip: String, backwards := false) -> void:
-	var blend: float = WARDEN_BODY_BLENDS[rec.body_kind].get(clip, -1.0)
-	for p in rec.players:
-		var player := p as AnimationPlayer
-		if not player.has_animation(clip):
-			push_error("hero_assets: %s Warden body player %s has no clip '%s'" % [rec.body_kind, player.get_parent().name, clip])
-			continue
-		if backwards:
-			player.play_backwards(clip, blend)
-		else:
-			player.play(clip, blend)
-
-
 func _body_clip_finished(clip: StringName, id: int) -> void:
 	var rec: Dictionary = _wardens.get(id, {})
 	if rec.is_empty() or not is_instance_valid(rec.warden):
 		return
 	if not rec.queue.is_empty():
-		_start_body_clip(rec, String(rec.queue.pop_front()))
+		WardenDress.start_body_clip(rec, String(rec.queue.pop_front()))
 		return
 	if rec.final or (String(clip) == "grip_falter" and rec.warden.staggered() and rec.players[0].get_playing_speed() > 0.0):
 		return
-	_start_body_clip(rec, "idle")
+	WardenDress.start_body_clip(rec, "idle")
 
 
 func _update_warden_body(rec: Dictionary) -> void:
@@ -2450,119 +2314,8 @@ func _update_warden_body(rec: Dictionary) -> void:
 	var enamel := rec.materials.get("ancient_enamel") as StandardMaterial3D
 	if enamel != null:
 		enamel.albedo_color = Color.WHITE.lerp(warden._look.body_material.albedo_color, warden._flash)
-	_drive_body(rec)
+	WardenDress.drive_body(rec)
 	_hold_body(warden.get_instance_id())
-
-
-func _drive_body(rec: Dictionary) -> void:
-	var warden = rec.warden
-	var seen: Dictionary = rec.seen
-	var kind: String = rec.body_kind
-	var staggered: bool = warden.staggered()
-	if staggered != seen.staggered:
-		seen.staggered = staggered
-		_body_stagger(rec, staggered)
-	var charging: bool = warden.state_name() == "charging"
-	if charging and not seen.charging:
-		_play_body(rec, [WARDEN_BODY_CHARGE[kind]])
-	seen.charging = charging
-	if warden.pulses != seen.pulses:
-		seen.pulses = warden.pulses
-		_body_pulse(rec)
-	var chunks: int = warden.chunks_left()
-	if chunks < seen.chunks:
-		for n in range(5 - seen.chunks, 5 - chunks):
-			_body_chunk(rec, n)
-		seen.chunks = chunks
-	if kind == "swarm":
-		var rides := _driver_count(warden, "rides")
-		if rides != seen.rides:
-			seen.rides = rides
-			_play_body(rec, ["hoist_ride"])
-
-
-func _body_pulse(rec: Dictionary) -> void:
-	var warden = rec.warden
-	match rec.body_kind:
-		"swarm":
-			var player: AnimationPlayer = rec.players[0]
-			if player.current_animation == "pulse":
-				rec.queue = ["active"]
-			else:
-				_play_body(rec, ["active"])
-		"reactor":
-			var clips := ["pulse"]
-			if WARDEN_REACTOR_PULSE_EXTRA.has(warden.mounting):
-				clips.append(WARDEN_REACTOR_PULSE_EXTRA[warden.mounting])
-			clips.append("active")
-			_play_body(rec, clips)
-		"mind":
-			_play_body(rec, ["pulse", "active"])
-
-
-func _body_stagger(rec: Dictionary, open: bool) -> void:
-	var warden = rec.warden
-	match rec.body_kind:
-		"reactor":
-			if open:
-				_play_body(rec, ["active"])
-		"swarm":
-			if open:
-				_play_body(rec, ["stagger_open"])
-		"mind":
-			if warden.mounting == "spires":
-				var driver = warden.mount_driver
-				var flying: bool = driver != null and driver.has_method("flying") and driver.flying()
-				if open:
-					_play_body(rec, ["knocked_down" if flying else "active"])
-			elif open:
-				_play_body(rec, ["grip_falter"])
-			elif rec.players[0].assigned_animation == "grip_falter":
-				_play_body(rec, ["grip_falter", "idle"], true)
-
-
-func _body_chunk(rec: Dictionary, n: int) -> void:
-	var body: Node3D = rec.body
-	var clip := ""
-	var entry := {}
-	match rec.body_kind:
-		"reactor":
-			clip = "chunk_lost" if n == 1 else "chunk_lost_%d" % (n - 1)
-			entry = {"node": body.find_child("Jacket%d" % (n - 1), true, false)}
-		"swarm":
-			var ring: String = WARDEN_BODIES.swarm.shed_rings[n - 1]
-			clip = "chunk_shed"
-			_filter_shed(rec.players[0], ring)
-			entry = {"bone": rec.skeleton.find_bone(ring) if rec.skeleton != null else -1}
-		"mind":
-			var finger: Dictionary = MIND_CHUNK_FINGERS[n - 1]
-			clip = finger.clip
-			var digit := String(finger.seam).right(1)
-			var bones := ["Finger%s_0" % digit, "Finger%s_1" % digit, "Finger%s_2" % digit]
-			var player: AnimationPlayer = rec.players[0]
-			if player.has_animation(clip):
-				entry = {"pose": _clip_end_pose(player.get_animation(clip), rec.skeleton, bones)}
-			rec.dark.append(finger.seam)
-	entry["clip"] = clip
-	rec.lost.append(entry)
-	var clips := [clip]
-	if n >= 4:
-		rec.final = true
-		clips.append(WARDEN_BODY_FINAL[rec.body_kind])
-		if rec.body_kind == "mind":
-			rec.dark.append("ancient_light_thumb")
-	_play_body(rec, clips)
-
-
-func _filter_shed(player: AnimationPlayer, ring: String) -> void:
-	if not player.has_animation("chunk_shed"):
-		return
-	var anim := player.get_animation("chunk_shed")
-	var rings: Array = WARDEN_BODIES.swarm.shed_rings
-	for t in anim.get_track_count():
-		var bone := String(anim.track_get_path(t)).get_slice(":", 1)
-		if bone in rings:
-			anim.track_set_enabled(t, bone == ring)
 
 
 func _hold_body(id: int) -> void:
@@ -2586,51 +2339,11 @@ func _hold_body(id: int) -> void:
 				if i != falling and rec.lost[i].bone >= 0:
 					skel.set_bone_pose_scale(rec.lost[i].bone, Vector3.ZERO)
 		"mind":
-			_hold_mind(rec, current, falling)
-
-
-func _hold_mind(rec: Dictionary, current: String, falling: int) -> void:
-	var warden = rec.warden
-	var skel: Skeleton3D = rec.skeleton
-	if skel == null:
-		return
-	var moving: Dictionary = rec.lost[falling].get("pose", {}) if falling >= 0 else {}
-	if not rec.perch_pose.is_empty() and not current in MIND_FLIGHT_CLIPS:
-		for bone in rec.perch_pose:
-			if not moving.has(bone):
-				_set_bone_pose(skel, bone, rec.perch_pose[bone])
-	for i in rec.lost.size():
-		if i != falling:
-			var held: Dictionary = rec.lost[i].get("pose", {})
-			for bone in held:
-				_set_bone_pose(skel, bone, held[bone])
-	var to_ball: Vector3 = warden.flat_to_ball()
-	if rec.pose != null and to_ball.length() > 0.1:
-		var yaw: float = atan2(-to_ball.x, -to_ball.z) - rec.body.global_rotation.y
-		rec.pose.transform = Transform3D(Basis(Vector3.UP, yaw), Vector3.ZERO) * rec.pose_base
-	_track_lens(rec)
-
-
-func _track_lens(rec: Dictionary) -> void:
-	var skel: Skeleton3D = rec.skeleton
-	var lens: int = rec.lens
-	var target = rec.warden.target
-	if lens < 0 or target == null or not target.has_method("ball_position"):
-		return
-	var parent := skel.get_bone_parent(lens)
-	var parent_pose := skel.get_bone_global_pose(parent) if parent >= 0 else Transform3D.IDENTITY
-	var origin: Vector3 = parent_pose * skel.get_bone_pose_position(lens)
-	var dir: Vector3 = skel.global_transform.affine_inverse() * (target.ball_position() as Vector3) - origin
-	if dir.length() < 0.1:
-		return
-	dir = dir.normalized()
-	var look := Basis.looking_at(dir, Vector3.UP if absf(dir.y) < 0.95 else Vector3.FORWARD)
-	var turned := parent_pose.basis.orthonormalized().inverse() * look * skel.get_bone_global_rest(lens).basis.orthonormalized()
-	skel.set_bone_pose_rotation(lens, turned.get_rotation_quaternion())
+			WardenDress.hold_mind(rec, current, falling)
 
 
 func _mount_mantle(warden, kit: Node3D, rec: Dictionary) -> void:
-	var row: Dictionary = WARDEN_MANTLES.get(int(warden.stage), {})
+	var row: Dictionary = WardenDress.MANTLES.get(int(warden.stage), {})
 	if row.is_empty() or row.family != warden.family:
 		return
 	var mantle := _warden_scene(row.path)
@@ -2639,11 +2352,11 @@ func _mount_mantle(warden, kit: Node3D, rec: Dictionary) -> void:
 		return
 	var groups: Array[Node3D] = []
 	for child in mantle.get_children():
-		if child is Node3D and MANTLE_MOUNTS.has(String(child.name)):
+		if child is Node3D and WardenDress.MANTLE_MOUNTS.has(String(child.name)):
 			groups.append(child)
 	var ok := not groups.is_empty()
 	for group in groups:
-		ok = ok and kit.get_node_or_null(MANTLE_MOUNTS[String(group.name)]) is Node3D
+		ok = ok and kit.get_node_or_null(WardenDress.MANTLE_MOUNTS[String(group.name)]) is Node3D
 	if not ok:
 		mantle.free()
 		_warn_once("mantle_nodes:" + row.path, "hero_assets: mantle '%s' does not fit the kit; keeping the bare kit" % row.path)
@@ -2655,7 +2368,7 @@ func _mount_mantle(warden, kit: Node3D, rec: Dictionary) -> void:
 	tool.emission_energy_multiplier = 0.0
 	var mounted: Array[Node3D] = []
 	for group in groups:
-		var socket := kit.get_node(MANTLE_MOUNTS[String(group.name)]) as Node3D
+		var socket := kit.get_node(WardenDress.MANTLE_MOUNTS[String(group.name)]) as Node3D
 		mantle.remove_child(group)
 		group.transform = Transform3D.IDENTITY
 		socket.add_child(group)
@@ -2689,31 +2402,6 @@ func _paint_mantle(root: Node, rec: Dictionary, seam: Material, tool: Material) 
 				_surface_material(root, i, mat)
 	for child in root.get_children():
 		_paint_mantle(child, rec, seam, tool)
-
-
-func _update_mantle(rec: Dictionary) -> void:
-	var tool := rec.mantle_tool as StandardMaterial3D
-	if tool == null:
-		return
-	var warden = rec.warden
-	var lit: float = 0.0 if warden.staggered() else warden.charge_fraction()
-	tool.emission_energy_multiplier = lit * 2.0
-	if tool.albedo_texture != null:
-		tool.emission = Color.WHITE
-		var brightness := lerpf(0.03, 1.0, lit)
-		tool.albedo_color = Color(brightness, brightness, brightness)
-	else:
-		tool.albedo_color = Palette.HAZARD.lerp(Palette.CHARCOAL, 1.0 - lit)
-
-
-func _rig_warden_jaws(base: Node3D, rec: Dictionary) -> void:
-	for side in [-1.0, 1.0]:
-		var jaw := base.get_node("JawL" if side < 0 else "JawR") as MeshInstance3D
-		var bounds := jaw.mesh.get_aabb()
-		var edge := Vector3(0.0, bounds.position.y, bounds.position.z if side < 0 else bounds.end.z)
-		rec.jaws.append({"node": jaw, "rest": jaw.transform, "pivot": jaw.transform * edge, "out": side})
-	for key in ["ancient_light_base", "ancient_light"]:
-		rec.light_rest[key] = (rec.materials[key] as StandardMaterial3D).emission
 
 
 func _split_queen_hatch(weak: MeshInstance3D, rec: Dictionary) -> void:
@@ -2756,7 +2444,7 @@ func _step_prewarm() -> void:
 
 
 func _prewarm_warden_strokes() -> void:
-	var base := _warden_scene(WARDEN_BASE)
+	var base := _warden_scene(WardenDress.BASE)
 	if base == null or not base.has_node("JawL") or not base.has_node("JawR"):
 		if base != null: base.free()
 		return
@@ -2859,25 +2547,6 @@ func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: Pack
 	stroke.mesh = ribbon
 
 
-func _adapt_warden_tower(tower: MeshInstance3D, shift: Vector3, top: float) -> void:
-	var adapted := ArrayMesh.new()
-	for surface in tower.mesh.get_surface_count():
-		var arrays := tower.mesh.surface_get_arrays(surface)
-		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
-		for i in vertices.size():
-			var y := vertices[i].y + tower.position.y
-			if y > 2.2:
-				vertices[i] += shift * ((y - 2.2) / (top - 2.2))
-				var shear := Basis(Vector3.RIGHT, Vector3.UP + shift / (top - 2.2), Vector3.BACK)
-				normals[i] = (shear.inverse().transposed() * normals[i]).normalized()
-		arrays[Mesh.ARRAY_VERTEX] = vertices
-		arrays[Mesh.ARRAY_NORMAL] = normals
-		adapted.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-		adapted.surface_set_material(surface, tower.mesh.surface_get_material(surface))
-	tower.mesh = adapted
-
-
 func _paint_warden(root: Node, rec: Dictionary, kit := false) -> void:
 	kit = kit or root.name == "HeroKit"
 	if root is MeshInstance3D:
@@ -2938,7 +2607,7 @@ func _update_warden(rec: Dictionary) -> void:
 	if not rec.jaws.is_empty():
 		_update_warden_open(rec)
 	_update_warden_chunks(rec)
-	_update_mantle(rec)
+	WardenDress.update_mantle(rec)
 
 
 func _update_warden_open(rec: Dictionary) -> void:
@@ -2964,16 +2633,6 @@ func _warden_stage_entered(_stage: int, _retry: bool) -> void:
 	for child in get_children():
 		if child.has_meta("warden_flight"):
 			_clear_warden_fragment(child)
-
-
-func _has_warden_chunk_nodes(base: Node3D) -> bool:
-	for path in ["CoreAssembly", "JawL/InnerL", "JawR/InnerR"]:
-		if not base.has_node(path):
-			return false
-	for i in 4:
-		if base.find_child("ArmourSegment%d" % i, true, false) == null:
-			return false
-	return true
 
 
 func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
@@ -3083,7 +2742,7 @@ func _step_warden_fragments() -> void:
 			continue
 		var flight: Dictionary = fragment.get_meta("warden_flight")
 		flight.seconds = float(Engine.get_physics_frames() - flight.born) / Engine.physics_ticks_per_second
-		_move_warden_fragment(flight.seconds, flight)
+		WardenDress.move_warden_fragment(flight.seconds, flight)
 		if flight.seconds >= 0.55:
 			_clear_warden_fragment(fragment)
 	_rest_warden_fragments()
@@ -3099,19 +2758,6 @@ func _clear_warden_fragment(fragment: MeshInstance3D) -> void:
 func _rest_warden_fragments() -> void:
 	if _warden_fragments.is_empty() and is_inside_tree() and get_tree().physics_frame.is_connected(_step_warden_fragments):
 		get_tree().physics_frame.disconnect(_step_warden_fragments)
-
-
-func _move_warden_fragment(seconds: float, flight: Dictionary) -> void:
-	if not is_instance_valid(flight.node):
-		return
-	var pose: Transform3D = flight.start
-	pose.origin += flight.normal * (14.0 * seconds) + Vector3.DOWN * (18.0 * seconds * seconds)
-	var turn := Basis(flight.normal.cross(Vector3.UP), seconds * 5.0)
-	var offset: Vector3 = flight.centre - flight.start.origin
-	pose.origin += offset - turn * offset
-	pose.basis = turn * pose.basis
-	flight.node.global_transform = pose
-	flight.node.visible = seconds < 0.18
 
 
 func _forget_warden(id: int) -> void:

@@ -35,7 +35,7 @@ func _run() -> void:
 	t.eq("stage 5 builds three column effects", fx.thermals.size(), 3)
 	t.eq("FX contain no physics bodies", fx.find_children("*", "CollisionObject3D", true, false).size(), 0)
 	game.process_mode = Node.PROCESS_MODE_DISABLED
-	game.ctx.player.active_body().freeze = true
+	game.ctx.player.body().freeze = true
 	var column: Dictionary = fx.thermals[0]
 	var base: Vector3 = column.presence.base
 	game.ctx.player.reset_to(base + Vector3.UP * 16.0, Vector3(4.0, -2.0, 3.0))
@@ -119,7 +119,7 @@ func _run() -> void:
 	# landing signal carries the catch even when no rendered frame samples the contact.
 	presence.set_process(false)
 	game.process_mode = Node.PROCESS_MODE_INHERIT
-	game.ctx.player.active_body().freeze = false
+	game.ctx.player.body().freeze = false
 	game.ctx.player.reset_to(contact + Vector3.UP * 3.0, Vector3.DOWN * 12.0)
 	var caught := false
 	for tick in 90:
@@ -129,7 +129,7 @@ func _run() -> void:
 			break
 	t.check("real physics landing catches without render polling", caught)
 	game.process_mode = Node.PROCESS_MODE_DISABLED
-	game.ctx.player.active_body().freeze = true
+	game.ctx.player.body().freeze = true
 	game.flow.enter_stage(6, Vector3.ZERO, false)
 	t.check("stage 6 builds FX on entry", game.ctx.terrain.geometry_root(6).get_node_or_null("HighdraftScenery/WindEffects") != null)
 	game.flow.enter_stage(1, Vector3.ZERO, false)

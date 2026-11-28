@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # RS6: the title offers Continue only when the run store holds a valid unfinished run.
 #   - no file: no Continue, the start button reads Start, C does nothing;

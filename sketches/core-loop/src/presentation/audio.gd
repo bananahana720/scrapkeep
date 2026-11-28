@@ -11,7 +11,6 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
-const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -360,7 +359,7 @@ func setup(ctx_ref) -> void:
 		engine.set_parameter_source(sample_run_parameters)
 		engine.parameter_commit.connect(_commit_band_parameters)
 	_music_player = _generator_player("Music", "MusicStream")
-	_stinger_player = _generator_player(MusicDsp.STINGER_BUS, "StingerStream")
+	_stinger_player = _generator_player(MixRows.BUS_STINGER, "StingerStream")
 	_sfx_player = _poly_player("SFX", "SfxVoices")
 	_ui_player = _poly_player("UI", "UiVoices")
 	_make_overlay()
@@ -535,6 +534,13 @@ static func _finish_opening() -> void:
 		_opening_task = -1
 
 
+static func finish_band_bakes() -> void:
+	_finish_opening()
+	if _rest_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_rest_task)
+		_rest_task = -1
+
+
 static func _start_band_bakes() -> void:
 	if _opening_task < 0:
 		_opening_task = WorkerThreadPool.add_task(MusicEngine.prepare_opening, false, "presentation opening band bake")
@@ -553,16 +559,24 @@ func bake_now() -> void:
 	_on_ready()
 
 
+func set_threat_watch(enabled: bool) -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	if enabled and not tree.node_added.is_connected(_on_node_added):
+		tree.node_added.connect(_on_node_added)
+	elif not enabled and tree.node_added.is_connected(_on_node_added):
+		tree.node_added.disconnect(_on_node_added)
+
+
 func _enter_tree() -> void:
-	if not get_tree().node_added.is_connected(_on_node_added):
-		get_tree().node_added.connect(_on_node_added)
+	set_threat_watch(true)
 	if not get_viewport().gui_focus_changed.is_connected(_on_focus_changed):
 		get_viewport().gui_focus_changed.connect(_on_focus_changed)
 
 
 func _exit_tree() -> void:
-	if get_tree().node_added.is_connected(_on_node_added):
-		get_tree().node_added.disconnect(_on_node_added)
+	set_threat_watch(false)
 	if get_viewport().gui_focus_changed.is_connected(_on_focus_changed):
 		get_viewport().gui_focus_changed.disconnect(_on_focus_changed)
 	_settle_workers()
@@ -586,10 +600,7 @@ func _settle_workers() -> void:
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
 		_bake_task = -1
 		_baked = _bake_done
-	_finish_opening()
-	if _rest_task >= 0:
-		WorkerThreadPool.wait_for_task_completion(_rest_task)
-		_rest_task = -1
+	finish_band_bakes()
 	SfxBank.bake_cancel = false
 	if _ace_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_ace_task)
@@ -960,7 +971,7 @@ func _render_music(frames: int, ace_live: bool) -> void:
 
 func _commit_band_parameters(at: int, values: Dictionary, released: bool, lift: bool, reason: String) -> void:
 	if ace != null:
-		ace.commit_parameters(at, values, released and not _release_answered, lift, reason, {"phrase_step": engine._bar_step, "phrase": engine._parameter_phrase_due})
+		ace.commit_parameters(at, values, released and not _release_answered, lift, reason, engine.parameter_timing())
 	if values.has("approach"):
 		landmark_moment(_landmark_id(), float(values["approach"]))
 
@@ -1026,6 +1037,10 @@ func _fade_in_band(from: int, frames: int, landmark := PackedVector2Array()) -> 
 # Godot audio buffer (512-1024 frames) is under half the queue.
 func _gap_is_stall(gap_usec: int) -> bool:
 	return gap_usec * Harmony.RATE * 2 > queue_target * 1000000
+
+
+func music_skips() -> int:
+	return _music_pb.get_skips() if _music_pb != null else -1
 
 
 func _deepen_on_skip() -> void:
@@ -1108,22 +1123,18 @@ func ace_ready() -> bool:
 
 
 func _ace_fight_floor() -> float:
-	if engine.mode != MusicEngine.PLAY or engine.track == "level":
-		return 0.0
-	if engine.track == "warden" and engine.section == "open" and engine._cadence_bar < 0:
-		return 0.0
-	return engine._floor()
+	return engine.fight_floor()
 
 
 func _prime_band_parameters() -> void:
 	ace.set_fight_floor(_ace_fight_floor())
-	ace.parameter_enabled = engine.parameter_source.is_valid()
-	if ace.parameter_enabled:
-		ace.parameters = engine.parameter_committed_values.duplicate()
-		ace.parameter_released = engine.parameter_committed_released and not _release_answered
-		ace._parameter_danger_floor = engine.parameter_committed_danger_floor
-		ace.pressure = float(ace.parameters.get("threat", 0.0))
-		ace.ultimate_lift = engine.ultimate_lift
+	ace.prime_parameters(
+		engine.parameter_source.is_valid(),
+		engine.parameter_committed_values,
+		engine.parameter_committed_released and not _release_answered,
+		engine.parameter_committed_danger_floor,
+		engine.ultimate_lift,
+	)
 
 
 var _music_warned := {}
@@ -2172,6 +2183,14 @@ func wire_optional() -> void:
 		end_moment("shop", "bay"))
 	_listen_optional(events, "world_fact", func(kind: String, at: Vector3):
 		var row := EventKinds.world_row(kind)
+		var director = _park_director()
+		if director != null and director.is_park_land_fact(kind) and not row.is_empty():
+			var sound := Rows.heard(row, cue_context())
+			var pitch := Harmony.ratio(live_key())
+			if _admit("world_fact", sound, pitch):
+				_start("world_fact", sound, SfxBank.stream(sound),
+					SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority("world_fact")], pitch, "SFX")
+			return
 		if kind == "kindness_offered" and not row.is_empty():
 			_play_kindness_chime(row)
 		elif not row.is_empty():
@@ -2608,16 +2627,15 @@ func _park_director():
 	if ctx == null or ctx.get("root") == null:
 		return null
 	var world = ctx.root.get("world")
-	return world.events if world != null else null
+	if world != null:
+		return world.events
+	var events = ctx.root.get("events")
+	return events if events != null and events.has_method("is_park_land_fact") else null
 
 
 func _park_event_state(event_id: String) -> Dictionary:
 	var director = _park_director()
-	if director != null:
-		for state in director._park_states:
-			if state.row.id == event_id and not state.weather:
-				return state
-	return {}
+	return director.park_event_state(event_id) if director != null else {}
 
 
 func _park_event_row(event_id: String) -> Dictionary:
@@ -2653,9 +2671,8 @@ func _on_event_announced(event_id: String, seconds: float, _at: Vector3) -> void
 	var lead := roundi(seconds * Harmony.RATE)
 	var landing_s := -1.0
 	if not state.is_empty():
-		var fact: Dictionary = _park_director()._park_fact(state, "announced")
-		landing_s = float(fact.landing_s)
-		lead = roundi((landing_s - float(fact.time_s)) * Harmony.RATE)
+		landing_s = float(state.due_s)
+		lead = roundi((landing_s - float(state.time_s)) * Harmony.RATE)
 	_set_incoming_at = clock + float(lead) / Harmony.RATE
 	_park_cues[event_id] = {"row": row, "options": options, "due": engine.clock + lead,
 		"landing_s": landing_s, "booked": true, "transport": _park_transport_snapshot.duplicate()}
@@ -2694,9 +2711,8 @@ func _guard_park_bookings() -> void:
 		if state.phase == director.LIVE:
 			_restore_park_drop(event_id, cue)
 			continue
-		var safe: bool = not state.holding and director.stage_time >= director._park_quiet_until \
-			and director._park_capacity(state) and director._park_route_safe(state) \
-			and director._park_clear(state, ctx.player.ball_position(), ctx.player.state.velocity, state.context)
+		var safe: bool = ctx != null and ctx.get("player") != null \
+			and director.park_booking_safe(event_id, ctx.player.ball_position(), ctx.player.state.velocity)
 		if not safe:
 			engine.cancel_park_drop(event_id)
 			cue.booked = false
@@ -3752,7 +3768,7 @@ func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) 
 		var at: int
 		if _id.begins_with("cannon_"):
 			at = touchdown
-			engine._add_action(at, {"type": "drop", "bars": 4, "weight": 0.85, "then": {}, "theme": -1, "set": {"ult": false}})
+			engine.drop_at_sample(at, 4, 0.85, {}, -1, {"ult": false})
 		else:
 			at = engine.drop_now(4, 0.85, {}, -1, {"ult": false})
 		_log_drop([touchdown, at])
@@ -4304,6 +4320,11 @@ func _on_pressure(pressure: float) -> void:
 		ace.set_pressure(pressure)
 
 
+func play_ending_summary() -> void:
+	_flush_flow()
+	engine.menu_theme("summary", true)
+
+
 func _flush_flow() -> void:
 	if _flow_queue.is_empty():
 		return
@@ -4781,9 +4802,10 @@ func _tend_tally() -> void:
 	if combat != null and combat.get("ultimate") != null and combat.get("tally_piece") != null:
 		var ult = combat.ultimate
 		if ult.phase() == "flight" and String(combat.tally_piece) != "":
-			if int(ult._beat) != _tally_beat and int(ult._beat) > 0:
-				_tally_cue("tally_stroke", int(ult._beat) - 1)
-			_tally_beat = int(ult._beat)
+			var beat: int = ult.current_beat()
+			if beat != _tally_beat and beat > 0:
+				_tally_cue("tally_stroke", beat - 1)
+			_tally_beat = beat
 		else:
 			_tally_beat = -1
 	var waiting: Array = []
@@ -5224,7 +5246,7 @@ func _ingest_voice_manifest(data: Dictionary, clip_root: String, base_dir: Strin
 				var key_s := String(k)
 				var val = items[k]
 				if val is String and key_s.begins_with(SfxBank.SAY):
-					var parts := SfxBank._said(key_s)
+					var parts := SfxBank.parse_said(key_s)
 					_register_voice_clip(String(parts[0]).to_lower(), String(parts[1]), val, clip_root, base_dir)
 				elif val is Dictionary:
 					for line_text in val:

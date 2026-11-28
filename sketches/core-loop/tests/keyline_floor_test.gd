@@ -13,7 +13,7 @@ extends SceneTree
 
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
-const DefenceBars := preload("res://src/core/defence_bars.gd")
+const DefenceBars := preload("res://tests/support/defence_bars.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const T := preload("res://tests/support/t.gd")
 

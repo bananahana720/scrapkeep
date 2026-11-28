@@ -1,5 +1,7 @@
 # Gate: bot-tier shards
 
+> **Historical archive (waves 18–21):** This note preserves the retired 3-shard cloud split, board issue `#241` workflow, and retired lesson 21 cloud list. For active shard and gate execution on flat `main` (`Mac Studio` Gate / `ahana`), use [GATE.md](../../GATE.md) and `scripts/gate/pc.mjs` / `scripts/gate/shard.mjs`.
+
 The Gate lane splits the bot tier into shards so each fits the cloud box (4 vCPU, 15 GB, 2 h background cap). Each shard runs on the exact commit the Gate lane names, in a cloud lane's own checkout. Shards don't push, comment on PRs or fix anything. They report the result to the Gate lane through a receipt comment on the PR or a comment on board issue #241.
 
 ## Run a shard

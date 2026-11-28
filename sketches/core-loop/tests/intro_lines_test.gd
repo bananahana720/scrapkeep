@@ -4,7 +4,7 @@ const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 

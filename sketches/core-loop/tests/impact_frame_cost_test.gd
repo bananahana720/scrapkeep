@@ -8,6 +8,7 @@ extends SceneTree
 # do not read the wall clock.
 const T := preload("res://tests/support/t.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const ImpactFrame := preload("res://src/presentation/impact_frame.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -40,13 +41,13 @@ func _run() -> void:
 
 func _planted(first: Vector4) -> PackedVector4Array:
 	var out := PackedVector4Array()
-	out.resize(PlayerFx.ImpactFrame.MAX_RECTS)
+	out.resize(ImpactFrame.MAX_RECTS)
 	out[0] = first
 	return out
 
 
 func _inactive() -> void:
-	var frame := PlayerFx.ImpactFrame.new()
+	var frame := ImpactFrame.new()
 	var polled := [0]
 	var redraws := [0]
 	frame.rect_source = func() -> Array[Rect2]:
@@ -70,10 +71,10 @@ func _inactive() -> void:
 	t.eq("inactive: no uniform is written (a planted value survives)", (frame.material.get_shader_parameter("rects") as PackedVector4Array)[0], marker)
 
 	frame.fire(Vector2(900.0, 500.0), 1.0, 7, 0.9)
-	await _frames(PlayerFx.FRAME_FRAMES + 3)
+	await _frames(ImpactFrame.FRAMES + 3)
 	t.check("fired: the frame spent its frames", not frame.active() and not frame.visible)
-	t.eq("fired: the rect source is called once per live frame", polled[0] - base_polled, PlayerFx.FRAME_FRAMES)
-	t.eq("fired: one refresh per live frame is counted", frame.rect_calls, PlayerFx.FRAME_FRAMES)
+	t.eq("fired: the rect source is called once per live frame", polled[0] - base_polled, ImpactFrame.FRAMES)
+	t.eq("fired: one refresh per live frame is counted", frame.rect_calls, ImpactFrame.FRAMES)
 	t.eq("fired: the pieces are built once", frame.shape_calls, 1)
 	t.eq("fired: and drawn once, not once per live frame", redraws[0] - base_draws, 1)
 	t.check("fired: the frame drew", frame.drawn > 0, str(frame.drawn))
@@ -101,7 +102,7 @@ func _inactive() -> void:
 # The pieces are drawn once per fire, but the rects go up on every live frame: a source that
 # answers with a rect that moves is followed on frames 2 and 3, with no redraw.
 func _moving() -> void:
-	var frame := PlayerFx.ImpactFrame.new()
+	var frame := ImpactFrame.new()
 	var calls := [0]
 	frame.rect_source = func() -> Array[Rect2]:
 		calls[0] += 1
@@ -122,8 +123,8 @@ func _moving() -> void:
 # More warnings than the shader holds: the frame cannot promise to stay off all of them, so
 # it draws nothing for that refresh, counts it, and draws again once the rects fit.
 func _overflow() -> void:
-	var frame := PlayerFx.ImpactFrame.new()
-	var count := [PlayerFx.ImpactFrame.MAX_RECTS + 1]
+	var frame := ImpactFrame.new()
+	var count := [ImpactFrame.MAX_RECTS + 1]
 	frame.rect_source = func() -> Array[Rect2]:
 		var out: Array[Rect2] = []
 		for k in count[0]:
@@ -136,18 +137,18 @@ func _overflow() -> void:
 	t.eq("overflow: %d rects draw nothing" % count[0], frame.drawn, 0)
 	t.check("overflow: the hide is counted", frame.overflow_hides >= 1, str(frame.overflow_hides))
 	t.eq("overflow: the shader is sent no rects", frame.material.get_shader_parameter("rect_count"), 0)
-	await _frames(PlayerFx.FRAME_FRAMES + 2)
-	count[0] = PlayerFx.ImpactFrame.MAX_RECTS
+	await _frames(ImpactFrame.FRAMES + 2)
+	count[0] = ImpactFrame.MAX_RECTS
 	frame.fire(Vector2(900.0, 500.0), 1.0, 7, 0.9)
 	await _frames(1)
 	t.check("overflow: exactly %d rects still draw" % count[0], frame.drawn > 0, str(frame.drawn))
-	t.eq("overflow: and are all sent", frame.material.get_shader_parameter("rect_count"), PlayerFx.ImpactFrame.MAX_RECTS)
+	t.eq("overflow: and are all sent", frame.material.get_shader_parameter("rect_count"), ImpactFrame.MAX_RECTS)
 	# Overflow part way through a live frame hides it, and fitting again shows it.
 	count[0] = 3
 	frame.fire(Vector2(900.0, 500.0), 1.0, 7, 0.9)
 	await _frames(1)
 	t.check("overflow: a fitting refresh shows the frame", frame.visible and frame.active())
-	count[0] = PlayerFx.ImpactFrame.MAX_RECTS + 1
+	count[0] = ImpactFrame.MAX_RECTS + 1
 	frame._refresh_rects()
 	t.check("overflow: an overflowing refresh hides the live frame", not frame.visible)
 	count[0] = 3
@@ -179,7 +180,7 @@ func _hostile(count: int) -> Array[Rect2]:
 # The hostile rects reach the shader whole: written by the same function the live refresh
 # uses, and the frame is every wedge and the wash whatever the rect count.
 func _placement() -> void:
-	var frame := PlayerFx.ImpactFrame.new()
+	var frame := ImpactFrame.new()
 	frame._focus = Vector2(960.0, 540.0)
 	frame._strength = 1.0
 	frame._heat = 0.9

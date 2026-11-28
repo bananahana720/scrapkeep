@@ -39,16 +39,15 @@ func _plates() -> void:
 		for pair in [["normal", _edge(), UiTokens.EDGE if _edge() == UiTokens.LINE else UiTokens.FOCUS_EDGE, true],
 				["hover", UiTokens.TEXT if _edge() == UiTokens.LINE else _edge(), UiTokens.EDGE if _edge() == UiTokens.LINE else UiTokens.FOCUS_EDGE, true],
 				["pressed", UiTokens.ACCENT, UiTokens.FOCUS_EDGE, true],
-				["focus", UiTokens.TEXT, UiTokens.FOCUS_EDGE, false],
+				["focus"],
 				["disabled", UiTokens.disabled(UiTokens.LINE), UiTokens.EDGE, true]]:
-			var box := UiTokens.plate(pair[1], pair[2], pair[3])
+			var box := UiTokens.focus_ring(0.0) if pair[0] == "focus" else UiTokens.plate(pair[1], pair[2], pair[3])
 			box.expand_margin_top = -LABEL_H
 			box.content_margin_left = 0.0
 			box.content_margin_right = 0.0
 			box.content_margin_top = 0.0
 			box.content_margin_bottom = UiTokens.TARGET
 			if pair[0] == "focus":
-				box.set_expand_margin_all(UiTokens.FOCUS_EDGE + 1.0)
 				box.expand_margin_top = -LABEL_H + UiTokens.FOCUS_EDGE + 1.0
 			add_theme_stylebox_override(pair[0], box)
 		return

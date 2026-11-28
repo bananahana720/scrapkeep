@@ -74,6 +74,7 @@ var ward_hook := Callable()
 var death_save_hook := Callable()
 var death_save_spent := false
 var defend_hook := Callable()
+var invulnerable := false
 var ride_hook := Callable()
 var taken_hook := Callable()
 var _wear_accum := 0.0
@@ -353,6 +354,10 @@ func remove_part(part_id: String) -> bool:
 	parts.remove_at(i)
 	_publish_heft_class()
 	return true
+
+
+func clear_parts() -> void:
+	parts.clear()
 
 
 func _publish_heft_class() -> void:
@@ -651,7 +656,7 @@ func heal(amount: float) -> void:
 
 
 func damage(amount: float, source: String) -> void:
-	if not alive() or amount <= 0.0:
+	if not alive() or amount <= 0.0 or invulnerable:
 		return
 	if consumable_grace_active() and amount < SCRIPTED_KILL and source != "foreman_memo":
 		return

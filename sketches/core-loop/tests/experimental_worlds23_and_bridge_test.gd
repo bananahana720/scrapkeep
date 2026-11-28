@@ -75,14 +75,14 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	LiveRunBridge._reset()
+	ExperimentalAudioBank._reset()
 	_test_worlds23_configs_elites_and_w4_clarity()
 	_test_worlds23_hazards_and_encounters()
 	_test_batch2_parts_and_cross_world_synergies()
 	await _test_live_run_bridge_and_audio_bank()
 	_test_graph_and_code_hygiene()
 	_run_three_world_monte_carlo_proof()
-	LiveRunBridge._reset()
+	ExperimentalAudioBank._reset()
 	quit(t.verdict())
 
 

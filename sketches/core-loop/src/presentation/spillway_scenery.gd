@@ -703,7 +703,7 @@ static func _placed_rock(rock: ArrayMesh, placement: Transform3D) -> ArrayMesh:
 static func _unit_bevel_block() -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	PropMeshes._bevel_box(st, Vector3.ZERO, Vector3.ONE, 0.055, 0.5)
+	PropMeshes.bevel_box(st, Vector3.ZERO, Vector3.ONE, 0.055, 0.5)
 	st.index()
 	return st.commit()
 
@@ -711,7 +711,7 @@ static func _unit_bevel_block() -> ArrayMesh:
 static func _insignia_medallion() -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	PropMeshes._bevel_cyl(st, Vector3.ZERO, 0.96, 0.96, 1.5, 8, 0.24, 0.6, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3.ZERO))
+	PropMeshes.bevel_cyl(st, Vector3.ZERO, 0.96, 0.96, 1.5, 8, 0.24, 0.6, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3.ZERO))
 	st.index()
 	return st.commit()
 

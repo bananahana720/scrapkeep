@@ -30,7 +30,7 @@ from common import Part
 ROOT = HERE.parents[3]
 OUT = ROOT / "artifacts/local/dress-preview/PCN"
 MODEL = HERE.parents[1] / "assets/models/pilot_cannon_anim.glb"
-SHEET_ROOT = Path("/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out")
+SHEET_ROOT = Path.home() / "Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out"
 REFERENCES = {
     "pilot-cannon.png": "77ac207048c0954c1b70b4dccf8df5b8211bde7003225be1ea65879b4b37fb1d",
     "shell-cannon.png": "a8b6fbac36c93b0b33588bef90ac8a3df372cf1053150da33a67580251ae5bf6",

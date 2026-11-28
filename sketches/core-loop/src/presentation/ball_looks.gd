@@ -143,7 +143,7 @@ static func dress(look: String, shell: Dictionary) -> void:
 		return
 	if look == "cutaway":
 		_cut(shell.core)
-		_cut_kit(shell.pod, String(shell.get("pilot", "")))
+		cut_kit(shell.pod, String(shell.get("pilot", "")))
 	elif look == "bell":
 		for view in (shell.pod as Node).find_children("*", "MeshInstance3D", true, false):
 			for i in view.mesh.get_surface_count():
@@ -298,7 +298,7 @@ const KIT_KEEP_WITHIN := 0.93
 const PLATING_RADIUS := 0.965
 const LOW_SEAT_BACK := {"runner_gunner": -0.24}
 
-static func _cut_kit(pod: Node, pilot: String) -> void:
+static func cut_kit(pod: Node, pilot: String) -> void:
 	var cuts := {}
 	var dome := pod.find_child("Dome", true, false)
 	for view in _views(pod):

@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
+const BossAttacks := preload("res://src/boss/boss_attacks.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const StubBoss := preload("res://src/boss/stub_boss.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -69,7 +70,7 @@ func _static() -> void:
 				worst = maxf(worst, reach)
 				if reach > PAD_R + SLACK:
 					off += 1
-			var escape = MindAttacks.escape_point(descs, ball, cruise, CENTER, PAD_R)
+			var escape = BossAttacks.escape_point(descs, ball, cruise, CENTER, PAD_R)
 			if escape == null:
 				nulls += 1
 			elif _flat(escape - CENTER).length() > PAD_R - MindAttacks.CLEAR + SLACK:

@@ -1,11 +1,4 @@
-extends RefCounted
-
-# A six-stage table, two worlds of three, on the surviving maps, so a two-world run
-# can be driven before world two exists. Same statics as stage_defs.gd.
-
-const Worlds := preload("res://src/core/worlds.gd")
-
-const BOSS := "brindle"
+extends "res://tests/doubles/stage_table_base.gd"
 
 const COUNT := 6
 
@@ -32,7 +25,7 @@ const DEFS := [
 
 
 static func of(stage: int) -> Dictionary:
-	return DEFS[clampi(stage, 1, COUNT) - 1]
+	return of_defs(DEFS, stage)
 
 
 static func is_last(stage: int) -> bool:
@@ -40,46 +33,31 @@ static func is_last(stage: int) -> bool:
 
 
 static func world_of(stage: int) -> int:
-	return Worlds.world_of(DEFS, stage)
+	return StageTable.world_of(DEFS, stage)
 
 
 static func local(stage: int) -> int:
-	return Worlds.local(DEFS, stage)
+	return StageTable.local(DEFS, stage)
 
 
 static func first_of(world: int) -> int:
-	return Worlds.first_of(DEFS, world)
+	return StageTable.first_of(DEFS, world)
 
 
 static func last_of(world: int) -> int:
-	return Worlds.last_of(DEFS, world)
+	return StageTable.last_of(DEFS, world)
 
 
 static func worlds() -> Array:
-	return Worlds.worlds(DEFS)
+	return StageTable.worlds(DEFS)
 
 
 static func is_world_last(stage: int) -> bool:
-	return Worlds.is_world_last(DEFS, stage)
+	return StageTable.is_world_last(DEFS, stage)
 
 
 static func is_run_last(stage: int) -> bool:
-	return Worlds.is_run_last(DEFS, stage)
-
-
-static func synergy_in_play(_synergy_id: String) -> bool:
-	return true
-
-
-static func part_in_play(_part_id: String) -> bool:
-	return true
-
-
-static func parts_listed() -> bool:
-	return false
-
-
-const PICK_ON_CLASS_UP := false
+	return StageTable.is_last(DEFS, stage)
 
 
 static func packs() -> Array:
@@ -94,14 +72,6 @@ static func elite_arrival() -> int:
 	return 0
 
 
-static func has_vault() -> bool:
-	return true
-
-
-# Legacy single-world tests need a third stage and a final-stage arena. Keep their
-# rules on this double, with the relay geometry now supplied by Spillway.
-# 2026-10-04: retire with F6 the plating cases; retain multi-stage flow coverage.
-# Snapshot the retired default dials, including the authored event mixes.
 const FIRST_WORLD_DEFS := [
 	{"stage": 1, "world": 1, "music": {"theme": 0, "ace": "spillway"}, "warden_family": "reactor", "name": "Spillway: the top shelf", "map": "spillway", "threat": 1.0, "unlock_base": 2, "ancient": "reactor_relic",
 		"event_mix": {"flood": 1.0, "scrap_stampede": 1.0}, "scrap_density": 1.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -114,48 +84,37 @@ const FIRST_WORLD_DEFS := [
 		"warden_plating": 140.0, "warden_hp": 7500.0, "warden_lesson": "", "warden_hint": "Break its guard, then smash the core."},
 ]
 
-class FirstWorld:
-	const BOSS := "brindle"
+
+class FirstWorld extends "res://tests/doubles/stage_table_base.gd":
 	const COUNT := 3
 	const DEFS := FIRST_WORLD_DEFS
-	const PICK_ON_CLASS_UP := false
 
 	static func of(stage: int) -> Dictionary:
-		return DEFS[clampi(stage, 1, COUNT) - 1]
+		return of_defs(DEFS, stage)
 
 	static func is_last(stage: int) -> bool:
 		return stage >= COUNT
 
 	static func world_of(stage: int) -> int:
-		return Worlds.world_of(DEFS, stage)
+		return StageTable.world_of(DEFS, stage)
 
 	static func local(stage: int) -> int:
-		return Worlds.local(DEFS, stage)
+		return StageTable.local(DEFS, stage)
 
 	static func first_of(world: int) -> int:
-		return Worlds.first_of(DEFS, world)
+		return StageTable.first_of(DEFS, world)
 
 	static func last_of(world: int) -> int:
-		return Worlds.last_of(DEFS, world)
+		return StageTable.last_of(DEFS, world)
 
 	static func worlds() -> Array:
-		return Worlds.worlds(DEFS)
+		return StageTable.worlds(DEFS)
 
 	static func is_world_last(stage: int) -> bool:
-		return Worlds.is_world_last(DEFS, stage)
+		return StageTable.is_world_last(DEFS, stage)
 
 	static func is_run_last(stage: int) -> bool:
-		return Worlds.is_run_last(DEFS, stage)
-
-	static func synergy_in_play(_synergy_id: String) -> bool:
-		return true
-
-	static func part_in_play(_part_id: String) -> bool:
-		return true
-
-	static func parts_listed() -> bool:
-		return false
-
+		return StageTable.is_last(DEFS, stage)
 
 	static func packs() -> Array:
 		return []
@@ -165,6 +124,3 @@ class FirstWorld:
 
 	static func elite_arrival() -> int:
 		return 0
-
-	static func has_vault() -> bool:
-		return true

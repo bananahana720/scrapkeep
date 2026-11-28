@@ -79,7 +79,7 @@ class ElectricAura extends Node3D:
 		player.set_meta("electric_aura_left", left)
 		if not is_inside_tree():
 			return
-		for enemy in get_tree().get_nodes_in_group("enemy"):
+		for enemy in get_tree().get_nodes_in_group(GROUP):
 			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 				continue
 			var id := enemy.get_instance_id()

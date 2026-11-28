@@ -4,8 +4,8 @@ out=$1
 seed=$2
 policy=$3
 seconds=${4:-120}
-godot=/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
-project=/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3/sketches/core-loop
+godot="$HOME/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64"
+project="$HOME/Projects/scrapkeep-worktrees/core-loop-v3/sketches/core-loop"
 mkdir -p "$out"
 rm -f "$out/capture.json"
 exec 9>/tmp/scrapkeep-gpu.lock

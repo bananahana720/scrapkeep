@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Interactables := preload("res://src/world/interactables.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 # The interact key (LOOP-REDESIGN section 9) in the running game, as Sable on stage 1 in
 # calm. E takes an interactable in reach over a steep face and mounts at a bare face;

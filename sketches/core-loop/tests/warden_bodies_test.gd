@@ -4,11 +4,12 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
+const WardenDress := preload("res://src/presentation/warden_dress.gd")
 const T := preload("res://tests/support/t.gd")
 
 # KF8a (wave 13): a park Warden of each kind (spec "harpoon_anchor": true) wears its recipe body
 # (warden_reactor.glb, warden_swarm.glb plus warden_swarm_kit_drones.glb, warden_mind.glb) in
-# place of the clamp base and kit, through hero_assets.gd's WARDEN_BODIES. A stepped headless
+# place of the clamp base and kit, through warden_dress.gd's BODIES. A stepped headless
 # fight on the alpha table checks, per kind and mounting:
 #   body      HeroWarden at y -HALF_HEIGHT, the swarm's drone kit under it, no clamp or HeroKit;
 #   point     the body's WeakPoint within 0.05 m of warden.family_point_at(), and the point where
@@ -88,9 +89,9 @@ func _run() -> void:
 			enemy.queue_free()
 	await _frames(2)
 	_hook = _game.presentation.hero_assets
-	_t.check("WARDEN_BODIES names the three bodies", "WARDEN_BODIES" in _hook and _hook.WARDEN_BODIES.has("reactor")
-			and _hook.WARDEN_BODIES.has("swarm") and _hook.WARDEN_BODIES.has("mind"), "")
-	if not ("WARDEN_BODIES" in _hook):
+	var bodies_named := WardenDress.BODIES.has("reactor") and WardenDress.BODIES.has("swarm") and WardenDress.BODIES.has("mind")
+	_t.check("WardenDress.BODIES names the three bodies", bodies_named, "")
+	if not bodies_named:
 		_finish()
 		return
 	for case in CASES:
@@ -392,7 +393,7 @@ func _chunk_clip(family: String, n: int) -> String:
 		"swarm":
 			return "chunk_shed"
 		"mind":
-			return _hook.MIND_CHUNK_FINGERS[n - 1].clip
+			return WardenDress.MIND_CHUNK_FINGERS[n - 1].clip
 	return ""
 
 
@@ -408,14 +409,14 @@ func _check_held(label: String, case: Dictionary, rec: Dictionary, lost: int) ->
 				detail += "Jacket%d %s " % [n - 1, jacket.visible if jacket != null else null]
 			"swarm":
 				var skel := body.find_child("Skeleton3D", true, false) as Skeleton3D
-				var ring: String = _hook.WARDEN_BODIES.swarm.shed_rings[n - 1]
+				var ring: String = WardenDress.BODIES.swarm.shed_rings[n - 1]
 				var s := skel.get_bone_pose_scale(skel.find_bone(ring))
 				ok = ok and s.length() <= 0.01
 				detail += "%s %s " % [ring, s]
 			"mind":
 				var skel := body.find_child("Skeleton3D", true, false) as Skeleton3D
 				var player := body.find_child("AnimationPlayer", true, false) as AnimationPlayer
-				var finger: Dictionary = _hook.MIND_CHUNK_FINGERS[n - 1]
+				var finger: Dictionary = WardenDress.MIND_CHUNK_FINGERS[n - 1]
 				var digit: String = String(finger.seam).right(1)
 				var bone := "Finger%s_2" % digit
 				var held := _end_pose(player.get_animation(finger.clip), bone)
@@ -430,7 +431,7 @@ func _check_held(label: String, case: Dictionary, rec: Dictionary, lost: int) ->
 # The shed rings not yet lost (shed_rings[lost ..]) sit at their rest place at full size.
 func _check_unlost(label: String, rec: Dictionary, lost: int) -> void:
 	var skel := (rec.body as Node3D).find_child("Skeleton3D", true, false) as Skeleton3D
-	var rings: Array = _hook.WARDEN_BODIES.swarm.shed_rings
+	var rings: Array = WardenDress.BODIES.swarm.shed_rings
 	var ok := skel != null and lost < rings.size()
 	var detail := ""
 	for i in range(lost, rings.size()):

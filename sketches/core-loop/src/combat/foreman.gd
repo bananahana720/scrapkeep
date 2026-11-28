@@ -444,7 +444,7 @@ func take_damage(amount: float) -> float:
 
 func _claim() -> void:
 	var pack := int(get_meta(AttackBudget.PACK_META, -1))
-	for other in get_tree().get_nodes_in_group("enemy"):
+	for other in get_tree().get_nodes_in_group(GROUP):
 		if other == self or other in crew or not _crewable(other):
 			continue
 		if pack >= 0:

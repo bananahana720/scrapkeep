@@ -64,7 +64,7 @@ func _spawn(offset: Vector3, height: float, rest := 0.0):
 
 
 func _speed() -> float:
-	return game.player.active_body().linear_velocity.length()
+	return game.player.body().linear_velocity.length()
 
 
 # Drives `count` drones (0.2 m apart, same forecast) through one dive onto a ball rolling at `roll`

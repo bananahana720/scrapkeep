@@ -171,6 +171,10 @@ func _static_checks() -> void:
 	_game.ctx.run.mass = 612.0
 	var wired: bool = _game.player.mass_of.is_valid() and is_equal_approx(float(_game.player.mass_of.call()), 612.0)
 	_check("combat wires mass_of to the run's scrap mass", wired, "mass_of valid %s" % _game.player.mass_of.is_valid())
+	var strikes: Dictionary = _game.player.strike_damage
+	_check("combat wires enemy_heft_of and strike_damage into the ball",
+		_game.player.enemy_heft_of.is_valid() and strikes.get("slam", []).size() >= 2 and strikes.has("stomp"),
+		"enemy_heft_of valid %s, strike keys %s" % [_game.player.enemy_heft_of.is_valid(), strikes.keys()])
 	_game.ctx.run.mass = 0.0
 	_arm(false, true, 990.0)
 	var base := _launches(20.0, 30.0, 20.0)

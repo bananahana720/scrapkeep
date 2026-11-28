@@ -42,35 +42,6 @@ const TRY_FIRST := [
 	"Against Brindle, read the line at the top of the screen. Shoot the crane magnets in phase 1 and slam the vent caps in phase 2. In phase 3, bait his charge into the rim wall and hit the open cockpit. Then ram or stomp the scooter when he runs.",
 ]
 
-const VERB_ROWS := [
-	["roll", "drive, relative to where the camera looks. At top speed walls and overhang lips count as ground", "drive"],
-	["look", "look", "look"],
-	["jump", "jump and double jump. Sable vault-kicks off a steep face in the air, and mounted she holds and releases to slingshot. Kest holds falling to glide, and holds in his own blast to rocket jump", "jump"],
-	["fire", "left click fires your pick, the weapon unless you picked 2 or 3. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw. A special fills while held and fires on release", "fire"],
-	["select", "1, 2, 3 pick what left click does. 1 is the weapon, 2 the special and 3 the line skill. A cast, or 3 s without one, returns to 1", "pick"],
-	["harpoon", "the harpoon. Press hooks the aim point, hold keeps the line, release flings. During a charge it cancels. With a line skill loaded, the next hook carries it", "harpoon"],
-	["haul", "haul the line in. It smashes on a body and winches on the world. With no line it brakes on the ground and slams in the air", "haul"],
-	["boost", "your go verb, which is Sable's boost, Rivet's sprint (hold) and Kest's smoke blink", "boost"],
-	["ultimate", "your ultimate, when the ring round the crosshair is full. It rides a line or a launch to where you aim and your tech fires on the way. Jump bails out", "ultimate"],
-	["interact", "interact with the device you face within 18 m (the lock holds after you pass it). Hold it for anything with a cost or a bet, press it for a cache. At a relay mast each hold raises the bet one step (up to x4, one more clears it) until you roll into its ring. Inside an amber lane it arms the ride. Sable, with nothing in reach, plants a pylon on a steep face or a close wall hook, and again to drop off", "use / ride"],
-]
-const MENU_ROWS := [
-	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
-	{"keys": ". , / ;", "does": "the radio, with . for the next station, , for back, / to skip the track and ; to keep the track on through a boss"},
-	{"keys": "F", "does": "fire the racked active, when actives are on (the D-pad down on a pad); nothing is racked otherwise"},
-	{"keys": "C", "does": "use a held consumable"},
-	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
-	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
-	{"keys": "M", "does": "mute or unmute"},
-	{"keys": "P / Esc", "does": "opens the pause menu with resume, new run, field notes, music and effects volume, and quit with X (hold)", "caps": ["key_p"], "short": "pause"},
-	{"keys": "R (hold)", "does": "new run as the same pilot, from world 1. Release before holding again", "caps": ["key_r"], "short": "hold restart"},
-	{"keys": "F1", "does": "with --dev only, the tuning panel (frees the mouse)"},
-	{"keys": "F3", "does": "with --dev only, frame smoothing on or off for this session (Settings, Display keeps it)"},
-	{"keys": "F4", "does": "with --dev only, saves every tuning value to user://tuning-<time>.json"},
-	{"keys": "Esc", "does": "quit, outside play"},
-]
-static var CONTROLS := controls()
-
 const FIELD_RULES := [
 	{"id": "grip", "say": "Stay fast against a wall and you climb it."},
 	{"id": "radio", "say": "Radio", "keys": [["cl_radio_next", "next"], ["cl_radio_prev", "back"], ["cl_radio_skip", "skip"]]},
@@ -99,27 +70,6 @@ static func rule_parts(rule: Dictionary) -> Array:
 	if rule.has("then"):
 		parts.append({"say": rule["then"]})
 	return parts
-
-
-static func controls() -> Array:
-	var out := []
-	for spec in VERB_ROWS:
-		var verb: String = spec[0]
-		out.append({"keys": Bindings.label(verb), "does": spec[1], "caps": verb_caps(verb), "short": spec[2]})
-	out.append_array(MENU_ROWS)
-	return out
-
-
-static func verb_caps(verb: String) -> Array:
-	if verb == "select":
-		return Bindings.SELECT_ACTIONS.map(func(action):
-			return "key_" + OS.get_keycode_string(Bindings.VERBS["select"]["actions"][action]["keys"][0]).to_lower())
-	if verb != "roll":
-		return [Bindings.glyph(verb)]
-	var caps := []
-	for action in ["cl_forward", "cl_left", "cl_back", "cl_right"]:
-		caps.append("key_" + OS.get_keycode_string(Bindings.VERBS["roll"]["actions"][action]["keys"][0]).to_lower())
-	return caps
 
 
 const SHAPE_GLYPHS := {

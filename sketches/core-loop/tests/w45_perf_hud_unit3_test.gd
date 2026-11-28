@@ -10,6 +10,7 @@ const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 var _t := T.new("w45_perf_hud_unit3_test")
 
@@ -441,7 +442,7 @@ func _ability_bar() -> void:
 	var tint := Color(0.85, 0.45, 0.2)
 	var list := [_slot("a", "ready"), _slot("b", "cooling", {"cooldown_frac": 0.5}), _slot("c", "active"),
 		_slot("d", "unavailable"), _slot("e", "ready", {"selected": true, "key": "key_3"})]
-	var headless := DisplayServer.get_name() == "headless"
+	var headless := AppShell.headless()
 	var view := SubViewport.new()
 	view.size = Vector2i(1600, 900)
 	view.transparent_bg = false

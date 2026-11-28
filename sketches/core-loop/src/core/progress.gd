@@ -77,7 +77,7 @@ func setup(events, run, profile, now := Callable(), codex = null) -> void:
 	backfill_rewards()
 	backfill_discoveries()
 	backfill_secrets()
-	if open_met_pilots() > 0 and _profile.can_save and not _profile.save():
+	if open_met_pilots() > 0 and not _profile.save_if_allowed():
 		warnings += 1
 		push_warning("progress: earned pilots opened but not saved: %s" % _profile.last_error)
 
@@ -192,7 +192,7 @@ func settle(id: String, save := true) -> bool:
 	if _profile != null:
 		if not _profile.settle(id):
 			fresh = false
-		elif fresh and save and _profile.can_save and not _profile.save():
+		elif fresh and save and not _profile.save_if_allowed():
 			warnings += 1
 			push_warning("progress: %s settled but not saved: %s" % [id, _profile.last_error])
 	return fresh
@@ -211,8 +211,8 @@ func reconcile_settled() -> void:
 			continue
 		if _profile.settle(id):
 			added = true
-	if added and _profile.can_save:
-		_profile.save()
+	if added:
+		_profile.save_if_allowed()
 	if not _is_bot_driven() and "extra" in _run and _run.extra is Dictionary:
 		var saved_wo = _run.extra.get(WorkOrders.RUN_KEY)
 		if saved_wo is Dictionary and not (saved_wo as Dictionary).is_empty():
@@ -235,7 +235,7 @@ func grant_once(id: String, kind: String, target: String) -> bool:
 			_profile.unlock_world(target)
 		"item":
 			pass
-	if _profile.can_save and not _profile.save():
+	if not _profile.save_if_allowed():
 		warnings += 1
 		push_warning("progress: %s granted but not saved: %s" % [id, _profile.last_error])
 	return true
@@ -273,7 +273,7 @@ func return_leaves(at: Vector3) -> Array:
 			returned.append(w)
 	if returned.is_empty():
 		return returned
-	if _profile.can_save and not _profile.save():
+	if not _profile.save_if_allowed():
 		warnings += 1
 		push_warning("progress: ledger leaves %s returned but not saved: %s" % [returned, _profile.last_error])
 	for w in returned:
@@ -380,8 +380,8 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 		_record_run_habits()
 		WorkOrders.close_run(_run, _profile, _wo_tracker, _is_bot_driven(), _is_sitting())
 		_close_shift()
-	if SAVE_POINTS.has(signal_name) and _profile.can_save:
-		_profile.save()
+	if SAVE_POINTS.has(signal_name):
+		_profile.save_if_allowed()
 	if signal_name == "run_ended":
 		_won = false
 
@@ -452,7 +452,7 @@ func _complete_work_order_now(order_id: String) -> Dictionary:
 		var lic_key := "%s%s:%d" % [WorkOrders.SETTLE_LICENSE_PREFIX, maker, t]
 		if settle(lic_key, false):
 			new_tiers.append(t)
-	if _profile.can_save and not _profile.save():
+	if not _profile.save_if_allowed():
 		warnings += 1
 		push_warning("progress: work order %s completed but not saved: %s" % [order_id, _profile.last_error])
 	return {

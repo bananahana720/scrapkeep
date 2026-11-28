@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Ace := preload("res://src/presentation/ace_sequencer.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Where the ACE manifest is found: the source tree path first, the music_ace/ sidecar
@@ -33,19 +34,19 @@ func _initialize() -> void:
 
 	# Neither: an empty executable folder and a manifest that is not in the source tree.
 	DirAccess.make_dir_recursive_absolute(tmp)
-	t.eq("neither resolves to nothing", Ace.resolve_manifest(absent, tmp), "")
+	t.eq("neither resolves to nothing", MusicRows.resolve_manifest(absent, tmp), "")
 	var none := Ace.new(absent, tmp)
 	t.check("neither is not ready", not none.ready() and not none.missing.is_empty(), "ready=%s missing=%s" % [none.ready(), none.missing])
 
 	# Sidecar: only the folder beside the executable holds it.
 	var sidecar_manifest := tmp.path_join("music_ace").path_join(absent.trim_prefix("res://assets/music_ace/"))
 	_write(sidecar_manifest)
-	t.eq("sidecar found", Ace.resolve_manifest(absent, tmp), sidecar_manifest)
+	t.eq("sidecar found", MusicRows.resolve_manifest(absent, tmp), sidecar_manifest)
 
 	# Source first: the committed manifest in the source tree wins over a sidecar copy of it.
 	_write(tmp.path_join("music_ace").path_join(REL))
 	t.check("the committed manifest is in the source tree", FileAccess.file_exists(ProjectSettings.globalize_path(res_path)), res_path)
-	t.eq("source tree first over sidecar", Ace.resolve_manifest(res_path, tmp), ProjectSettings.globalize_path(res_path))
+	t.eq("source tree first over sidecar", MusicRows.resolve_manifest(res_path, tmp), ProjectSettings.globalize_path(res_path))
 
 	_remove(tmp)
 	quit(t.verdict())

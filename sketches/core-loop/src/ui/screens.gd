@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-const ResultsOdds := preload("res://src/ui/results_odds.gd")
+const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
@@ -201,7 +201,7 @@ func setup(game_ref) -> void:
 	_help = HelpPage.new()
 	_help.tuning = game.tuning
 	_help.visible = false
-	_help.back.pressed.connect(_press.bind("key_h"))
+	_help.back.pressed.connect(press_key.bind("key_h"))
 	_content.add_child(_help)
 	_achievements = AchievementsPage.new()
 	_achievements.visible = false
@@ -223,39 +223,39 @@ func setup(game_ref) -> void:
 	_settings.back_requested.connect(toggle_settings)
 	_content.add_child(_settings)
 	_breath_row = ChoiceButton.new("breath", "key_b", "")
-	_breath_row.pressed.connect(_press.bind("key_b"))
+	_breath_row.pressed.connect(press_key.bind("key_b"))
 	_breath_row.visible = false
 	_breath_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_content.add_child(_breath_row)
 	_camp = CampMenu.new()
 	_camp.visible = false
-	_camp.button_for("launch").pressed.connect(_press.bind("key_space"))
+	_camp.button_for("launch").pressed.connect(press_key.bind("key_space"))
 	_camp.button_for("work_orders").pressed.connect(toggle_work_orders)
 	_camp.button_for("logbook").pressed.connect(toggle_logbook)
-	_camp.button_for("achievements").pressed.connect(_press.bind("key_a"))
-	_camp.button_for("settings").pressed.connect(_press.bind("key_s"))
-	_camp.back.pressed.connect(_press.bind("key_k"))
+	_camp.button_for("achievements").pressed.connect(press_key.bind("key_a"))
+	_camp.button_for("settings").pressed.connect(press_key.bind("key_s"))
+	_camp.back.pressed.connect(press_key.bind("key_k"))
 	_camp.companion_button().pressed.connect(walk_companion)
-	_camp.button_for("jukebox").pressed.connect(_press.bind("key_j"))
+	_camp.button_for("jukebox").pressed.connect(press_key.bind("key_j"))
 	_content.add_child(_camp)
 	_camp.customize.back_requested.connect(_sync_walk)
 	_jukebox = JukeboxPage.new()
 	_jukebox.visible = false
 	_jukebox.sleeve_chosen.connect(_spin_toggle)
-	_jukebox.play_button.pressed.connect(_press.bind("key_space"))
+	_jukebox.play_button.pressed.connect(press_key.bind("key_space"))
 	for i in 3:
-		_jukebox.detent_button(i).pressed.connect(_press.bind("key_%d" % (i + 1)))
-	_jukebox.back.pressed.connect(_press.bind("key_j"))
+		_jukebox.detent_button(i).pressed.connect(press_key.bind("key_%d" % (i + 1)))
+	_jukebox.back.pressed.connect(press_key.bind("key_j"))
 	_content.add_child(_jukebox)
-	_camp.button_for("radio").pressed.connect(_press.bind("key_r"))
+	_camp.button_for("radio").pressed.connect(press_key.bind("key_r"))
 	_radio = RadioPage.new()
 	_radio.visible = false
 	_radio.track_chosen.connect(_radio_track)
 	_radio.tape_chosen.connect(func(i: int): radio_key(KEY_1 + i))
-	_radio.new_button.pressed.connect(_press.bind("key_n"))
-	_radio.shuffle_button.pressed.connect(_press.bind("key_x"))
-	_radio.tune_button.pressed.connect(_press.bind("key_t"))
-	_radio.back.pressed.connect(_press.bind("key_r"))
+	_radio.new_button.pressed.connect(press_key.bind("key_n"))
+	_radio.shuffle_button.pressed.connect(press_key.bind("key_x"))
+	_radio.tune_button.pressed.connect(press_key.bind("key_t"))
+	_radio.back.pressed.connect(press_key.bind("key_r"))
 	_content.add_child(_radio)
 	_ending = VBoxContainer.new()
 	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -481,7 +481,7 @@ func _on_flow_changed(state: String) -> void:
 				if game.flow.death_tip != "":
 					memo = DeathCause.memo(game.run.run_seed, game.run.stage, game.flow.death_cause, game.ctx.profile, _journal_pages(), game.run)
 			var after := PackedStringArray()
-			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets) if game.ctx.dev else ""
+			var trade_lines := OddsReadout.results_text(game.run.summary().trade_pockets) if game.ctx.dev else ""
 			if trade_lines != "":
 				after.append(trade_lines)
 			var epitaph := String(_victory_boss.get("epitaph", ""))
@@ -1091,7 +1091,7 @@ func radio_key(key: int) -> bool:
 		KEY_N:
 			var made: int = radio.new_mixtape()
 			if made >= 0:
-				radio.mixtape = made
+				radio.pick_mixtape(made)
 		KEY_X:
 			var rng := RandomNumberGenerator.new()
 			rng.randomize()
@@ -1100,7 +1100,7 @@ func radio_key(key: int) -> bool:
 			radio.tune(radio.MIXTAPE)
 		_:
 			if key >= KEY_1 and key < KEY_1 + radio.mixtapes.size():
-				radio.mixtape = key - KEY_1
+				radio.pick_mixtape(key - KEY_1)
 			else:
 				return true
 	_radio.refresh(game.ctx.profile, radio)
@@ -1124,7 +1124,7 @@ func _radio_track(id: String, on_tape: bool) -> void:
 
 func _save_radio() -> void:
 	if game.get("radio_deck") != null:
-		game.radio_deck._save()
+		game.radio_deck.save()
 
 
 func camp_page():
@@ -1340,7 +1340,7 @@ func _input(event: InputEvent) -> void:
 	var quit := button_for("quit")
 	if code == KEY_C and _state == "summary":
 		if not game.workshop().companion_panel.is_open():
-			_press("key_c")
+			press_key("key_c")
 	elif code == KEY_O and _state == "title" and not overlay_open() and not _settings.visible:
 		toggle_work_orders()
 	elif code == KEY_L and _state == "title" and not overlay_open() and not _settings.visible:
@@ -1409,7 +1409,7 @@ func _action(id: String, key: String, words: String) -> void:
 	if id == "quit":
 		button.pressed.connect(func(): if not game.test_mode: get_tree().quit())
 	else:
-		button.pressed.connect(_press.bind(key))
+		button.pressed.connect(press_key.bind(key))
 	if id == "start":
 		_make_primary(button)
 	else:
@@ -1446,7 +1446,7 @@ func _companion_action() -> void:
 	_actions.add_child(button)
 
 
-func _press(key: String) -> void:
+func press_key(key: String) -> void:
 	var code := OS.find_keycode_from_string(Keycap.label(key))
 	game._screen_key(KEY_SPACE if _state == "summary" and code == KEY_C else code)
 
@@ -1860,7 +1860,7 @@ func _deal_card() -> bool:
 		return false
 	var def = classes[_deck.size()]
 	var card := ClassCard.new(def, "key_%d" % (_deck.size() + 1), width)
-	card.pressed.connect(_press.bind(card.key))
+	card.pressed.connect(press_key.bind(card.key))
 	_deck.append(card)
 	_lock_card(card)
 	return true

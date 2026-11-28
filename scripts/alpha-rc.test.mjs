@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
+import test, { after, describe } from "node:test";
 import {
   MENU_READY,
   TITLE_INTERACTIVE,
@@ -36,7 +36,15 @@ import {
   verdict,
 } from "./alpha-rc.mjs";
 
-const tmp = () => mkdtempSync(path.join(os.tmpdir(), "alpha-rc-test-"));
+const createdTempDirs = [];
+const tmp = () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "alpha-rc-test-"));
+  createdTempDirs.push(dir);
+  return dir;
+};
+after(() => {
+  for (const dir of createdTempDirs) rmSync(dir, { recursive: true, force: true });
+});
 const head = "79161558ad10650a38fae04d95908db003d59097";
 const git = { head, clean: true, dirty: [], commitTime: 1_000 };
 const pass = (extra = {}) => ({
@@ -393,80 +401,106 @@ test("cold launch: menu-ready line passes on a fresh XDG profile, and the profil
   assert.equal(alive(Number(readFileSync(pidFile, "utf8"))), false);
 });
 
-test("cold launch fails on an early exit, on silence, and outlasts a game that ignores SIGTERM", async () => {
-  const dir = tmp();
-  assert.match(
-    (await launchAppImage(fake(dir, "crash.sh", "exit 3"), { seconds: 5 })).note,
-    /exited \(3\)/,
-  );
-  assert.match(
-    (await launchAppImage(fake(dir, "silent.sh", "exec sleep 30"), { seconds: 0.5 })).note,
-    /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.5 s/,
-  );
-  const noMenu = await launchAppImage(
-    fake(dir, "nomenu.sh", `echo "${TITLE_INTERACTIVE} ms=900"; exec sleep 30`),
-    { seconds: 5, menuWaitSeconds: 0.6 },
-  );
-  assert.equal(noMenu.status, "fail");
-  assert.match(noMenu.note, /no SCRAPKEEP_MENU_READY line within 0.6 s \(title card at \d\.\d s\)/);
-  const late = await launchAppImage(
-    fake(
-      dir,
-      "late.sh",
-      `sleep 0.8; echo "${TITLE_INTERACTIVE} ms=800"; echo "${MENU_READY} ms=900"; sleep 30`,
-    ),
-    { seconds: 0.4 },
-  );
-  assert.equal(late.status, "fail");
-  assert.match(late.note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.4 s/);
-  const stubborn = await launchAppImage(
-    fake(dir, "stubborn.sh", "trap '' TERM; while true; do sleep 0.1; done"),
-    { seconds: 0.3 },
-  );
-  assert.equal(stubborn.status, "fail");
-});
-
-test("cold launch: a build that says it did not load fails at once, with the boot's reason, and does not wait out the menu", async () => {
-  const dir = tmp();
-  const card = await launchAppImage(
-    fake(
-      dir,
-      "card.sh",
-      `echo "${TITLE_INTERACTIVE} ms=300"; echo "${BOOT_FAILED} the game scene's script did not load"; exec sleep 30`,
-    ),
-    { seconds: 5, menuWaitSeconds: 20 },
-  );
-  assert.equal(card.status, "fail");
-  assert.equal(
-    card.note,
-    "the build said it did not load (SCRAPKEEP_BOOT_FAILED): the game scene's script did not load",
-  );
-  assert.ok(card.ms < 5000, `failed in ${card.ms} ms, not at the 20 s menu wait`);
-  assert.equal(card.menuMs, null);
-  const headless = await launchAppImage(
-    fake(dir, "headless.sh", `echo "${BOOT_FAILED} res://scenes/main.tscn did not load"; exit 1`),
-    { seconds: 5 },
-  );
-  assert.equal(headless.status, "fail");
-  assert.match(
-    headless.note,
-    /the build said it did not load \(SCRAPKEEP_BOOT_FAILED\): res:\/\/scenes\/main\.tscn did not load$/,
-  );
-  const held = await launchAppImage(fake(dir, "held.sh", "sleep 30 & echo last words; exit 3"), {
-    seconds: 20,
+describe("cold launch and process timeouts", { concurrency: true }, () => {
+  test("cold launch fails on an early exit, on silence, and outlasts a game that ignores SIGTERM", async () => {
+    const dir = tmp();
+    const [crash, silent, noMenu, late, stubborn] = await Promise.all([
+      launchAppImage(fake(dir, "crash.sh", "exit 3"), { seconds: 5 }),
+      launchAppImage(fake(dir, "silent.sh", "exec sleep 30"), { seconds: 0.5 }),
+      launchAppImage(fake(dir, "nomenu.sh", `echo "${TITLE_INTERACTIVE} ms=900"; exec sleep 30`), {
+        seconds: 5,
+        menuWaitSeconds: 0.6,
+      }),
+      launchAppImage(
+        fake(
+          dir,
+          "late.sh",
+          `sleep 0.8; echo "${TITLE_INTERACTIVE} ms=800"; echo "${MENU_READY} ms=900"; sleep 30`,
+        ),
+        { seconds: 0.4 },
+      ),
+      launchAppImage(fake(dir, "stubborn.sh", "trap '' TERM; while true; do sleep 0.1; done"), {
+        seconds: 0.3,
+      }),
+    ]);
+    assert.match(crash.note, /exited \(3\)/);
+    assert.match(silent.note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.5 s/);
+    assert.equal(noMenu.status, "fail");
+    assert.match(
+      noMenu.note,
+      /no SCRAPKEEP_MENU_READY line within 0.6 s \(title card at \d\.\d s\)/,
+    );
+    assert.equal(late.status, "fail");
+    assert.match(late.note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.4 s/);
+    assert.equal(stubborn.status, "fail");
   });
-  assert.match(held.note, /^exited \(3\) before the main menu$/);
-  assert.match(held.output, /last words/);
-  assert.ok(held.ms < 10000, `judged in ${held.ms} ms`);
-  const quoted = await launchAppImage(
-    fake(
-      dir,
-      "quoted.sh",
-      `echo "note: ${BOOT_FAILED} is the failure marker"; echo "${TITLE_INTERACTIVE} ms=300"; echo "${MENU_READY} ms=400"; exec sleep 30`,
-    ),
-    { seconds: 5 },
-  );
-  assert.equal(quoted.status, "pass");
+
+  test("cold launch: a build that says it did not load fails at once, with the boot's reason, and does not wait out the menu", async () => {
+    const dir = tmp();
+    const [card, headless, held, quoted] = await Promise.all([
+      launchAppImage(
+        fake(
+          dir,
+          "card.sh",
+          `echo "${TITLE_INTERACTIVE} ms=300"; echo "${BOOT_FAILED} the game scene's script did not load"; exec sleep 30`,
+        ),
+        { seconds: 5, menuWaitSeconds: 20 },
+      ),
+      launchAppImage(
+        fake(
+          dir,
+          "headless.sh",
+          `echo "${BOOT_FAILED} res://scenes/main.tscn did not load"; exit 1`,
+        ),
+        { seconds: 5 },
+      ),
+      launchAppImage(fake(dir, "held.sh", "sleep 30 & echo last words; exit 3"), {
+        seconds: 20,
+      }),
+      launchAppImage(
+        fake(
+          dir,
+          "quoted.sh",
+          `echo "note: ${BOOT_FAILED} is the failure marker"; echo "${TITLE_INTERACTIVE} ms=300"; echo "${MENU_READY} ms=400"; exec sleep 30`,
+        ),
+        { seconds: 5 },
+      ),
+    ]);
+    assert.equal(card.status, "fail");
+    assert.equal(
+      card.note,
+      "the build said it did not load (SCRAPKEEP_BOOT_FAILED): the game scene's script did not load",
+    );
+    assert.ok(card.ms < 5000, `failed in ${card.ms} ms, not at the 20 s menu wait`);
+    assert.equal(card.menuMs, null);
+    assert.equal(headless.status, "fail");
+    assert.match(
+      headless.note,
+      /the build said it did not load \(SCRAPKEEP_BOOT_FAILED\): res:\/\/scenes\/main\.tscn did not load$/,
+    );
+    assert.match(held.note, /^exited \(3\) before the main menu$/);
+    assert.match(held.output, /last words/);
+    assert.ok(held.ms < 10000, `judged in ${held.ms} ms`);
+    assert.equal(quoted.status, "pass");
+  });
+
+  test("runProcess returns the exit, and a timeout kills the group and reads as killed", async () => {
+    const dir = tmp();
+    const pidFile = path.join(dir, "pid");
+    const started = Date.now();
+    const [ok, hung] = await Promise.all([
+      runProcess({ command: fake(dir, "ok.sh", "echo hi; exit 4"), args: [] }),
+      runProcess(
+        { command: fake(dir, "hang.sh", `sleep 30 & echo $! > ${pidFile}; wait`), args: [] },
+        300,
+      ),
+    ]);
+    assert.equal(ok.exit, 4);
+    assert.equal(hung.exit, null);
+    assert.ok(Date.now() - started < 5000);
+    assert.equal(judgeCommand({ id: "smoke" }, hung).note, "timed out or killed");
+    assert.equal(alive(Number(readFileSync(pidFile, "utf8"))), false);
+  });
 });
 
 test("bootFailure reads the reason from one whole line that starts with the marker", () => {
@@ -487,24 +521,6 @@ test("bootFailure reads the reason from one whole line that starts with the mark
   assert.equal(bootFailure(`${BOOT_FAILED}\n`), "no reason given");
   assert.equal(bootFailure(`ERROR: saw ${BOOT_FAILED} somewhere\n`), null);
   assert.equal(bootFailure(`${BOOT_FAILED}_TWICE x\n`), null);
-});
-
-test("runProcess returns the exit, and a timeout kills the group and reads as killed", async () => {
-  const dir = tmp();
-  assert.equal(
-    (await runProcess({ command: fake(dir, "ok.sh", "echo hi; exit 4"), args: [] })).exit,
-    4,
-  );
-  const pidFile = path.join(dir, "pid");
-  const started = Date.now();
-  const hung = await runProcess(
-    { command: fake(dir, "hang.sh", `sleep 30 & echo $! > ${pidFile}; wait`), args: [] },
-    300,
-  );
-  assert.equal(hung.exit, null);
-  assert.ok(Date.now() - started < 5000);
-  assert.equal(judgeCommand({ id: "smoke" }, hung).note, "timed out or killed");
-  assert.equal(alive(Number(readFileSync(pidFile, "utf8"))), false);
 });
 
 test("verdict order: any fail beats not run; a note with a newline stays one table row", async () => {

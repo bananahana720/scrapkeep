@@ -141,10 +141,11 @@ const ROWS := {
 	"maker_set_completed": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"overflow_cashed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"trade_taken": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"consumable_used": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 }
 
 const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window", "slot_selected", "slot_cast", "line_skill_expired",
-	"special_broken", "radio_take_found", "relay_stake_paid", "maker_set_completed", "overflow_cashed", "trade_taken"]
+	"special_broken", "radio_take_found", "relay_stake_paid", "maker_set_completed", "overflow_cashed", "trade_taken", "consumable_used"]
 
 const NEAR_MISS_GRACE_MS := 250
 

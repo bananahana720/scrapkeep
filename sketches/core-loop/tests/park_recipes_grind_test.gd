@@ -112,7 +112,7 @@ func _rail_points(id: String) -> PackedVector3Array:
 	var scene := _scene(_path(id, "base"))
 	var named := {}
 	for n: Node3D in scene.find_children(id + "-rail_*", "Node3D", true, false):
-		named[String(n.name)] = ParkRecipes._relative(n, scene).origin
+		named[String(n.name)] = ParkRecipes.relative_transform(n, scene).origin
 	scene.free()
 	var keys := named.keys()
 	keys.sort()

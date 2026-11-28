@@ -6,6 +6,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SETTLE := 45
 const WAIT_TICKS := 2400
@@ -25,7 +26,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			out = arg.trim_prefix("--out=")
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		quit(2)
 		return
 	if DirAccess.make_dir_recursive_absolute(out) != OK:

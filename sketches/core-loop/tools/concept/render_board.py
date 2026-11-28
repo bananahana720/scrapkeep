@@ -5,7 +5,7 @@ Run under the venv and a memory-capped scope, for example:
 
   PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True systemd-run --user --scope \
     -p MemoryMax=28G -p MemorySwapMax=2G \
-    /home/andrew/.local/share/genai-venv/bin/python render_board.py --out DIR [--only f03,s2] [--try 1]
+    $HOME/.local/share/genai-venv/bin/python render_board.py --out DIR [--only f03,s2] [--try 1]
 
 --prompts-md PATH writes the prompt record and exits without loading the model.
 """
@@ -15,7 +15,7 @@ import os
 import sys
 import time
 
-RENDER_PY_DIR = "/home/andrew/.config/omarchy/themes/neon-noir/generate"
+RENDER_PY_DIR = os.path.expanduser("~/.config/omarchy/themes/neon-noir/generate")
 
 WIDTH, HEIGHT, STEPS = 1344, 768, 30
 

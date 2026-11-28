@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 var _out := ""
@@ -16,7 +17,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--") and "=" in arg:
 			settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
-	if DisplayServer.get_name() == "headless" or not settings.has("out"):
+	if AppShell.headless() or not settings.has("out"):
 		printerr("ui_capture: needs a rendered display and -- --out=<absolute dir>")
 		quit(2)
 		return

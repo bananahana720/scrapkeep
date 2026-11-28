@@ -7,6 +7,7 @@ const Combat := preload("res://src/combat/combat.gd")
 const Effects := preload("res://src/combat/effects.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
@@ -147,7 +148,7 @@ func _build():
 # off the tree root so the disabled game does not take it out of the physics space.
 func _build_wall() -> void:
 	_wall = StaticBody3D.new()
-	_wall.collision_layer = Bolts.WORLD_MASK
+	_wall.collision_layer = PhysicsLayers.WORLD_MASK
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(60.0, 8.0, 0.4)

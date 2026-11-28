@@ -1,13 +1,13 @@
-import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import { pool, runProcess } from "./lib/proc.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
 export const DEFAULT_BUDGET = path.join(sketch, "design-v3/pacing/world1-pacing.json");
-const recordedBinary = "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64";
 const RUN_TIMEOUT_MS = 1_800_000;
 
 export class PacingError extends Error {}
@@ -338,44 +338,31 @@ export function buildJobs(budget, args, outDir) {
   return jobs;
 }
 
-function runJob(binary, job) {
+async function runJob(binary, job) {
   mkdirSync(job.out, { recursive: true });
-  const env = { ...process.env };
-  for (const kind of ["DATA", "CONFIG", "CACHE"])
-    env[`XDG_${kind}_HOME`] = path.join(job.out, "state", kind.toLowerCase());
-  return new Promise((resolve) => {
-    const started = Date.now();
-    const child = spawn(binary, job.args, { env, stdio: ["ignore", "ignore", "pipe"] });
-    let tail = "";
-    child.stderr.on("data", (chunk) => {
-      tail = (tail + chunk).slice(-4000);
-    });
-    const timer = setTimeout(() => child.kill("SIGKILL"), RUN_TIMEOUT_MS);
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({
-        label: job.label,
-        code,
-        wall_s: Math.round((Date.now() - started) / 1000),
-        tail: code ? tail : "",
-      });
-    });
+  const env = scratchGodotEnv(path.join(job.out, "state"), { baseEnv: process.env });
+  const res = await runProcess(binary, job.args, {
+    env,
+    timeoutMs: RUN_TIMEOUT_MS,
+    stdio: ["ignore", "ignore", "pipe"],
   });
+  return {
+    label: job.label,
+    code: res.exit,
+    wall_s: Math.round(res.ms / 1000),
+    tail: res.exit ? res.stderr.slice(-4000) : "",
+  };
 }
 
-async function runPool(binary, jobs, width) {
-  const results = [];
-  let next = 0;
-  const lane = async () => {
-    while (next < jobs.length) {
-      const job = jobs[next++];
+function runPool(binary, jobs, width) {
+  return pool(
+    jobs.map((job) => async () => {
       const result = await runJob(binary, job);
       console.log(`pacing: ${result.label} exit ${result.code} in ${result.wall_s} s`);
-      results.push(result);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(width, jobs.length) }, lane));
-  return results;
+      return result;
+    }),
+    width,
+  );
 }
 
 async function main() {
@@ -401,9 +388,11 @@ async function main() {
   const header = { budget: path.relative(root, args.budget) };
   let jobResults = [];
   if (args.run) {
-    const binary = process.env.GODOT_BIN || recordedBinary;
-    if (!existsSync(binary)) {
-      console.error(`pacing-check: Godot binary not found at ${binary}; set GODOT_BIN`);
+    const binary = resolveGodotBinary();
+    if (!binary || !existsSync(binary)) {
+      console.error(
+        `pacing-check: Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN`,
+      );
       process.exit(2);
     }
     const jobs = buildJobs(budget, args, outDir);

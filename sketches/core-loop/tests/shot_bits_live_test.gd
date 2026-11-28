@@ -9,8 +9,9 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const BuildReadout := preload("res://src/ui/build_readout.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
-const Grip := preload("res://src/movement/grip.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 
 # Shot bits in live combat (design-v3/ABILITY-MUTATIONS.md B1 to B4, units U1 and U2): the
 # build's held parts make the shot's bits, a player's own weapon press carries them, a proc
@@ -417,13 +418,13 @@ func _check_retry() -> void:
 # --- Unit U2: bounce, split, pull, tells and the pair rows -----------------------------
 
 # Two long walls facing each other across WALL_SITE, WALL_GAP ahead and behind, on the world
-# layer the bolts' ray reads (Bolts.WORLD_MASK). They hang off the tree root so the disabled
+# layer the bolts' ray reads (PhysicsLayers.WORLD_MASK). They hang off the tree root so the disabled
 # game does not take them out of the physics space.
 func _build_walls() -> void:
 	var at: Vector3 = Measurement.BALL + WALL_SITE
 	for side in [Vector3.FORWARD, Vector3.BACK]:
 		var wall := StaticBody3D.new()
-		wall.collision_layer = Bolts.WORLD_MASK
+		wall.collision_layer = PhysicsLayers.WORLD_MASK
 		var shape := CollisionShape3D.new()
 		var box := BoxShape3D.new()
 		box.size = Vector3(60.0, 8.0, 0.4)
@@ -687,7 +688,7 @@ func _check_pull() -> void:
 	var still: bool = _game.player.ball_position() == ball_before and _game.player.state.velocity == velocity_before
 	_report("pull: the lighter machine comes, the heavier holds, the ball stays", _pulled_toward_ball(light)
 		and _planar_knock(heavy).length() < 0.001 and still, "heft %.1f vs light %.2f knock %s, heavy %.2f knock %s; ball still %s" % [
-			PILOT_HEFT, Grip.heft_of(light), _planar_knock(light), Grip.heft_of(heavy), _planar_knock(heavy), still])
+			PILOT_HEFT, Roster.heft_of(light), _planar_knock(light), Roster.heft_of(heavy), _planar_knock(heavy), still])
 	_free([light, heavy])
 
 
@@ -740,7 +741,7 @@ func _check_pull_pairs() -> void:
 	naive.knock(Vector3.FORWARD, 8.0)
 	var toward_naive: Vector3 = _game.player.ball_position() - naive.global_position
 	toward_naive.y = 0.0
-	naive.knock(toward_naive.normalized(), Combat.pull_force(PILOT_HEFT, Grip.heft_of(naive), 1))
+	naive.knock(toward_naive.normalized(), Combat.pull_force(PILOT_HEFT, Roster.heft_of(naive), 1))
 	_report("planted control: applying weapon knock 8 before pull beats the second pull", not _pulled_toward_ball(naive),
 		"knock %s" % [_planar_knock(naive)])
 	_free([naive])

@@ -7,7 +7,7 @@ This is the style sheet for the v2 greybox as it grows into its real look (TRACK
 | Fact | Source row |
 | --- | --- |
 | A colour's value | `src/core/palette.gd` |
-| A colour's meaning, and the code that must never draw it | `src/core/colour_meanings.gd` (checked by `tests/colour_meanings_test.gd`) |
+| A colour's meaning, and the code that must never draw it | `tests/support/colour_meanings.gd` (checked by `tests/colour_meanings_test.gd`) |
 | A class's colour, shape and sound | the class row in `src/core/class_def.gd` |
 | An event's colour, shape, sound, wording and priority | `src/core/event_kinds.gd` |
 | A threat type's fill, motion and sound | `src/combat/threat_grammar.gd` (W2) |

@@ -1302,7 +1302,7 @@ func _run_live() -> void:
 
 	# 7d. Kest proc detonation stays plain (11.0 dmg, 3.0 m) and never touches weapon_driver.
 	var proc_before: Dictionary = combat.weapon_driver.state_snapshot()
-	var proc_dummy: Node3D = combat.spawn_enemy("chaser", combat._floor_at(_game.player.ball_position()) + Vector3(1.5, 0.0, 0.0))
+	var proc_dummy: Node3D = combat.spawn_enemy("chaser", combat.floor_at(_game.player.ball_position()) + Vector3(1.5, 0.0, 0.0))
 	proc_dummy.set_physics_process(false)
 	proc_dummy.hp = 200.0
 	proc_dummy.max_hp = 200.0

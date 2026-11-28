@@ -2600,7 +2600,7 @@ func _pass_bite_blocked(target: Node3D) -> bool:
 
 
 func _bite_passes(target: Node3D) -> bool:
-	if Augments.anchor_line(target) or Grip.of(target, game.player.heft(), game.player.tuning.pole_flail()) in ["pole", "flail"]:
+	if Augments.anchor_line(target) or Grip.of(target, game.player.heft(), game.player.enemy_heft(target), game.player.tuning.pole_flail()) in ["pole", "flail"]:
 		return false
 	var radius = target.get("radius")
 	var passing: float = Augments.MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0)

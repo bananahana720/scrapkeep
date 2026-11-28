@@ -726,10 +726,6 @@ static func settle_stingers() -> void:
 	_stinger_tasks.clear()
 
 
-static func stage_theme(stage = "default") -> int:
-	return int(MusicRows.resolve(stage)["synth_theme"])
-
-
 func schedule_restart(at: int, next_mode: int, next_theme := -1) -> void:
 	_add_action(at, {"type": "restart", "mode": next_mode, "theme": next_theme})
 
@@ -1019,8 +1015,12 @@ func drop_now(bars: int, weight: float, then := {}, next_theme := -1, change := 
 	var at := next_beat()
 	if at > clock:
 		_add_action(clock, {"type": "gap"})
-	_add_action(at, {"type": "drop", "bars": bars, "weight": weight, "then": then, "theme": next_theme, "set": change})
+	drop_at_sample(at, bars, weight, then, next_theme, change)
 	return at
+
+
+func drop_at_sample(at: int, bars: int, weight: float, then := {}, next_theme := -1, change := {}) -> void:
+	_add_action(at, {"type": "drop", "bars": bars, "weight": weight, "then": then, "theme": next_theme, "set": change})
 
 
 func unseal_drop() -> int:
@@ -1866,6 +1866,18 @@ func _on_bar() -> void:
 
 func _score_track() -> String:
 	return "brindle" if track in BOSS_TRACKS else track
+
+
+func parameter_timing() -> Dictionary:
+	return {"phrase_step": _bar_step, "phrase": _parameter_phrase_due}
+
+
+func fight_floor() -> float:
+	if mode != PLAY or track == "level":
+		return 0.0
+	if track == "warden" and section == "open" and _cadence_bar < 0:
+		return 0.0
+	return _floor()
 
 
 func _floor() -> float:

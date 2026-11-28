@@ -10,6 +10,7 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 const FALLOUT_EYE_FRACTION := 0.4
@@ -32,7 +33,7 @@ var _hits_enemies := false
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "IndustrialEvents"
-	add_to_group("world_telegraphs")
+	add_to_group(Groups.WORLD_TELEGRAPHS)
 	_hits_enemies = HazardHits.applies_to(world.ctx.get("run"))
 	for site in world.terrain.map().park.park_rows:
 		_sites[site.id] = site

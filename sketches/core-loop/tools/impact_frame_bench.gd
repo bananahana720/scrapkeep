@@ -1,6 +1,7 @@
 extends SceneTree
 
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const ImpactFrame := preload("res://src/presentation/impact_frame.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -73,7 +74,7 @@ func _hostile(count: int) -> Array[Rect2]:
 
 
 func _bench() -> void:
-	var frame := PlayerFx.ImpactFrame.new()
+	var frame := ImpactFrame.new()
 	frame._focus = Vector2(960.0, 540.0)
 	frame._strength = 1.0
 	frame._heat = 0.9
@@ -102,7 +103,7 @@ func _bench() -> void:
 			var sum := _summary("bench %d %s" % [count, row[0]], row[1])
 			means[row[0]] = sum[0]
 			line += " %s_mean_us=%.1f %s_p99_us=%.1f %s_max_us=%d" % [row[0], sum[0], row[0], sum[1], row[0], sum[2]]
-		print(line + " per_fire_mean_us=%.1f" % (means["shapes"] + PlayerFx.FRAME_FRAMES * means["refresh"]))
+		print(line + " per_fire_mean_us=%.1f" % (means["shapes"] + ImpactFrame.FRAMES * means["refresh"]))
 	frame.free()
 
 
@@ -150,7 +151,7 @@ func _rects_pass(pass_name: String, tree: SceneTree, cam: Camera3D, margin: floa
 
 
 func _fire_bench(count: int, tree: SceneTree, cam: Camera3D, use_bounds: bool) -> void:
-	var frame := PlayerFx.ImpactFrame.new()
+	var frame := ImpactFrame.new()
 	frame.rect_source = func() -> Array[Rect2]: return PlayerFx.warning_rects(tree, cam, 0.0, use_bounds)
 	root.add_child(frame)
 	await _frames(2)
@@ -161,13 +162,13 @@ func _fire_bench(count: int, tree: SceneTree, cam: Camera3D, use_bounds: bool) -
 		var rects_before := frame.rect_usec
 		var calls_before := frame.rect_calls
 		frame.fire(Vector2(960.0, 540.0), 1.0, 7 + i, 0.9)
-		await _frames(PlayerFx.FRAME_FRAMES + 1)
+		await _frames(ImpactFrame.FRAMES + 1)
 		if i >= WARM_UP:
 			usec.append((frame.shape_usec - shapes_before) + (frame.rect_usec - rects_before))
 			refreshes = frame.rect_calls - calls_before
 	var label := "box" if use_bounds else "walk"
 	_check("fire %d %s: samples taken" % [count, label], usec.size() == FIRES, str(usec.size()))
-	_check("fire %d %s: every fire refreshes FRAME_FRAMES times" % [count, label], refreshes == PlayerFx.FRAME_FRAMES, str(refreshes))
+	_check("fire %d %s: every fire refreshes FRAME_FRAMES times" % [count, label], refreshes == ImpactFrame.FRAMES, str(refreshes))
 	usec.sort()
 	var sum := 0
 	for u in usec:

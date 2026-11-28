@@ -2,7 +2,7 @@ extends RefCounted
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 # The fight the word-budget tests share (playtest entry 7: "so much words";
 # design-v3/LEGIBILITY.md section 4), on the slice table: a stage-1 fight with a posture Warden

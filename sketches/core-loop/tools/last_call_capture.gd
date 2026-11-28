@@ -3,6 +3,7 @@ extends SceneTree
 const Intent := preload("res://src/movement/intent.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 class TwoWorldGame extends "res://src/game.gd":
@@ -20,7 +21,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out = arg.substr(6)
-	if DisplayServer.get_name() == "headless" or _out == "":
+	if AppShell.headless() or _out == "":
 		printerr("last_call_capture: needs a rendered display and -- --out=<absolute dir>")
 		quit(2)
 		return

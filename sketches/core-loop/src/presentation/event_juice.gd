@@ -112,6 +112,7 @@ const WEIGHT_EXEMPT := {
 	"cause_armed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"cause_fired": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"cogs_collected": "Reward and economy ladders own the cue; rewards never stop time.",
+	"consumable_used": "Consumable slots own their cue; the bus signal carries item hooks only.",
 	"core_gained": "Reward and economy ladders own the cue; rewards never stop time.",
 	"dashed": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
 	"dismounted": "Ball motion preserves momentum; its existing camera and cue profile owns it.",

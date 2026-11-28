@@ -5,6 +5,8 @@ const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
+const TINT := &"tint"
+const INK := &"ink_colour"
 const SEED := 731
 const CEILING := 800
 const MACHINE_CEILING := 876
@@ -285,7 +287,7 @@ static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
 		shader.code = (_HEAD % modes) + vertex + body
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
-		mat.set_shader_parameter("ink_colour", Palette.CHARCOAL)
+		mat.set_shader_parameter(INK, Palette.CHARCOAL)
 		if kind == "puff":
 			mat.set_shader_parameter("lens_fade", LENS_FADE)
 		_shaders[key] = mat
@@ -452,7 +454,7 @@ static func fire(p: GPUParticles3D, id: String, kind: String, count: int, at: Ve
 		p.global_transform = Transform3D(Basis.looking_at(toward.normalized(), Vector3.UP), at)
 	else:
 		p.global_transform = Transform3D(Basis.IDENTITY, at)
-	p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else colour(id, kind))
+	p.set_instance_shader_parameter(TINT, tint if tint.a > 0.0 else colour(id, kind))
 	set_heat(p, look(id))
 	p.restart()
 	p.emitting = true

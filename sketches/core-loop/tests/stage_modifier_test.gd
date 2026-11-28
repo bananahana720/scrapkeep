@@ -18,7 +18,7 @@ const Park := preload("res://src/core/park_defs.gd")
 const Trade := preload("res://src/world/trade_pockets.gd")
 const ActivityView := preload("res://src/world/activity_view.gd")
 const LaunchCard := preload("res://src/ui/launch_card.gd")
-const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const BallState := preload("res://src/movement/ball_state.gd")
@@ -115,7 +115,7 @@ func _rows() -> void:
 		# The card draws its line unwrapped, so the longest it can carry (a cursed run's line beside
 		# the stage's) has to sit inside the 1600-wide view with a margin.
 		var pair: String = Modifier.caption(Modifier.CURSE) + "  /  " + Modifier.caption(row)
-		var pair_w: float = UiDraw.width(pair, LaunchCard.LINE_FONT)
+		var pair_w: float = UiFonts.width(pair, LaunchCard.LINE_FONT)
 		t.check("%s line fits the card beside the cursed line" % row.id, pair_w <= 1600.0 * 0.85, "%.0f px: %s" % [pair_w, pair])
 	t.check("the cursed line fits the card too", String(Modifier.CURSE.line).split(" ", false).size() <= 8)
 	# W1-75: a stage with no modifier carries a nominal Foreman memo, never a blank card. Each fits
@@ -125,7 +125,7 @@ func _rows() -> void:
 		t.check("nominal memo '%s' fits in 8 words" % line, String(line).split(" ", false).size() <= 8)
 		t.check("nominal memo '%s' names no condition" % line, not Modifier.ROWS.any(func(r): return String(line).begins_with(String(r.word))))
 		var with_curse: String = Modifier.caption(Modifier.CURSE) + "  /  " + String(line)
-		t.check("nominal memo '%s' fits beside the cursed line" % line, UiDraw.width(with_curse, LaunchCard.LINE_FONT) <= 1600.0 * 0.85)
+		t.check("nominal memo '%s' fits beside the cursed line" % line, UiFonts.width(with_curse, LaunchCard.LINE_FONT) <= 1600.0 * 0.85)
 	for seed_n in 64:
 		for stage in range(1, 7):
 			nominal[Modifier.memo(seed_n, stage, {})] = true
