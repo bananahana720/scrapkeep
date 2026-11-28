@@ -133,7 +133,7 @@ func _enemies() -> Array:
 
 func _mark(enemy: Node3D, seconds: float) -> void:
 	if _alive(enemy) and not _protected(enemy):
-		combat._clamped[enemy.get_instance_id()] = combat._clock + seconds
+		combat.clamp_for(enemy, seconds)
 
 
 func _pull(enemy: Node3D, toward: Vector3, speed: float) -> void:

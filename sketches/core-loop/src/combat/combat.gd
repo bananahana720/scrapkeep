@@ -1410,6 +1410,18 @@ func pattern(weapon_id: String) -> Resource:
 	return (_patterns[weapon_id] as Resource).copy()
 
 
+func clock_now() -> float:
+	return _clock
+
+
+func rocket_left() -> float:
+	return _rocket_left
+
+
+func clamp_for(enemy: Node3D, seconds: float) -> void:
+	_clamped[enemy.get_instance_id()] = _clock + seconds
+
+
 func live_pattern(weapon_id: String) -> Resource:
 	return _patterns.get(weapon_id)
 
@@ -2846,7 +2858,7 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not in_ring(centre, radius, enemy):
 			continue
-		_clamped[enemy.get_instance_id()] = _clock + seconds
+		clamp_for(enemy, seconds)
 		deal_hit(enemy, "claw", damage, ball - enemy.global_position, Weapons.CLAMP_KNOCK, "", "special", "clamp")
 		if is_instance_valid(enemy) and not enemy.is_dead():
 			pulled.append(enemy)

@@ -1024,7 +1024,7 @@ func _cannon_call(family: String, at: Vector3, target: Vector3, due: float, heft
 	var floor = combat._cannon_floor(at)
 	if floor == null:
 		return false
-	var overrides := {"warn": maxf(0.0, due - combat._clock), "live_at": due,
+	var overrides := {"warn": maxf(0.0, due - combat.clock_now()), "live_at": due,
 		"budget": _cannon_budget, "record": _cannon_record}
 	overrides.merge(options, true)
 	combat._commit_cannon(family, target, floor, Weapons.ZONE_REACH, Weapons.ZONE_DAMAGE * heft,
@@ -1041,7 +1041,7 @@ func _cannon_tech(beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
 	if beat >= _beats:
 		return 0
 	if _cannon_due < 0.0:
-		_cannon_due = combat._clock + maxf(0.0, float(_plan["legs"][_leg]["seconds"]) - _leg_time)
+		_cannon_due = combat.clock_now() + maxf(0.0, float(_plan["legs"][_leg]["seconds"]) - _leg_time)
 	var centre := _cannon_projection(ball)
 	var middle := ceili(_beats / 2.0)
 	if _cannon_id == "cannon_fire_mission":
@@ -1059,13 +1059,13 @@ func _cannon_tech(beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
 			side = Vector3.RIGHT
 		for i in 1 + int(knob("ult_volley", 0)):
 			var at := ahead + velocity.normalized() * 6.0 * i
-			_cannon_call("lane", at - side * 12.2, at + side * 12.2, combat._clock + _beat_len, heft)
+			_cannon_call("lane", at - side * 12.2, at + side * 12.2, combat.clock_now() + _beat_len, heft)
 	else:
 		for i in 1 + int(knob("ult_volley", 0)):
 			var target := _cannon_target(centre, aim, 16.0)
 			if i > 0:
 				target = centre * 2.0 - target
-			_cannon_call("plate", centre, target, combat._clock + _beat_len, heft)
+			_cannon_call("plate", centre, target, combat.clock_now() + _beat_len, heft)
 	return 0
 
 
@@ -1078,7 +1078,7 @@ func _cannon_peak(_at: Vector3) -> void:
 			_cannon_call(family, at, _cannon_target(at, ctx.aim_forward(), Weapons.ZONE_REACH), _cannon_due, heft)
 	elif _cannon_id == "cannon_creeping_barrage":
 		var ball := _cannon_projection(ctx.player.ball_position())
-		_cannon_call("split_lane", ball, ball + _ride.heading * 10.0, combat._clock + _beat_len, heft)
+		_cannon_call("split_lane", ball, ball + _ride.heading * 10.0, combat.clock_now() + _beat_len, heft)
 	else:
 		var target := _cannon_target(at, ctx.aim_forward(), 16.0)
 		var radius := Vector2(target.x - at.x, target.z - at.z).length()
@@ -1112,7 +1112,7 @@ func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
 		combat.discover("cannon_time_on_target", at)
 	if _cannon_id == "cannon_creeping_barrage":
 		var heading: Vector3 = _ride.heading if _ride != null else Vector3.FORWARD
-		_cannon_call("lane", at, at + heading * 24.4, combat._clock + _beat_len, heft)
+		_cannon_call("lane", at, at + heading * 24.4, combat.clock_now() + _beat_len, heft)
 	if _leg < _plan["legs"].size():
 		var leg: Dictionary = _plan["legs"][_leg]
 		leg["mode"] = "line" if _cannon_id == "cannon_creeping_barrage" else "arc"

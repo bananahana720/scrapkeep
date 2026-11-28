@@ -516,7 +516,7 @@ func _on_demo_slammed(at: Vector3) -> void:
 	for charge in combat.sticky.charges.duplicate():
 		if charge.get("_inert", false):
 			continue
-		if String(charge.get("_source", "")) == "drop_or_slam" and absf(combat._clock - float(charge.get("born", combat._clock))) < 0.001:
+		if String(charge.get("_source", "")) == "drop_or_slam" and absf(combat.clock_now() - float(charge.get("born", combat.clock_now()))) < 0.001:
 			continue
 		if (charge["pos"] as Vector3).distance_to(at) <= THERMITE_DETONATE_RADIUS:
 			candidates.append(["sticky", charge])
@@ -584,7 +584,7 @@ func _drop_wire_cluster(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 	for i in count:
 		var t: float = float(i + 1) / float(count + 1)
 		var spot: Vector3 = combat.floor_at(from_pt.lerp(to_pt, t) + Vector3.UP)
-		var charge: Dictionary = combat.sticky.drop(spot, dmg, Weapons.MINI_RADIUS, Weapons.MINI_FUSE, Weapons.MINI_ARM, 0.0, combat._clock)
+		var charge: Dictionary = combat.sticky.drop(spot, dmg, Weapons.MINI_RADIUS, Weapons.MINI_FUSE, Weapons.MINI_ARM, 0.0, combat.clock_now())
 		charge["_source"] = "item_proc"
 		charge["_cluster"] = true
 		combat.effects.ring(spot, Weapons.MINI_RADIUS, ClassDef.KEST_COLOR)
