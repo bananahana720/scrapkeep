@@ -2,7 +2,7 @@
 
 > **Live architecture map:** For the current `src/` directory map (all 11 subdirectories plus `src/game.gd`), runtime state owners, complete `Context` field inventory, `GameEvents` signal group index, and script dependency-cycle status (`L16`), read [ARCHITECTURE.md](ARCHITECTURE.md). This file keeps the behavioral seam contracts below; the Wave 2–4 five-module writer split (`Writer A`–`Writer E`) in the first section is historical context.
 
-[DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the behavioral seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other through that context and the `GameEvents` bus; new cross-module `preload`s and script cycles are checked by `npm run sketch:lint` (`L6`–`L10`, `L16`).
+[DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the behavioral seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other through that context and the `GameEvents` bus; script dependency cycles (`L16`), `src/` -> `res://tools/` imports (`L7`), and presentation/UI simulation-state boundaries (`L6`, `L8`–`L10`) are checked by `npm run sketch:lint`.
 
 ## Ownership
 

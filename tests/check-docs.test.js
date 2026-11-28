@@ -244,3 +244,18 @@ test("ARCHITECTURE.md sync guard fails on undocumented src subdir or context.gd 
     stdout,
   );
 });
+
+test("ARCHITECTURE.md sync guard fails when context.gd exists and ARCHITECTURE.md is missing", async () => {
+  const { status, stdout, report } = await runCustomRepo({
+    "sketches/core-loop/src/core/context.gd": "extends RefCounted\nvar events: Node\n",
+  });
+  assert.equal(status, 1, stdout);
+  assert.equal(report.checked.architectureFindings, 1, stdout);
+  const messages = report.findings
+    .filter((entry) => entry.level === "failure" && entry.check === "architecture")
+    .map((entry) => entry.message);
+  assert.ok(
+    messages.some((msg) => /missing sketches\/core-loop\/ARCHITECTURE\.md/.test(msg)),
+    stdout,
+  );
+});

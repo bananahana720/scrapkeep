@@ -363,7 +363,11 @@ const CORE_LOOP_SRC_DIR = "sketches/core-loop/src";
 const CONTEXT_FILE = "sketches/core-loop/src/core/context.gd";
 
 async function checkArchitectureSync(docs) {
-  if (!(await docs.hasFile(ARCHITECTURE_FILE)) || !(await docs.hasFile(CONTEXT_FILE))) return 0;
+  if (!(await docs.hasFile(CONTEXT_FILE))) return 0;
+  if (!(await docs.hasFile(ARCHITECTURE_FILE))) {
+    docs.fail("architecture", ARCHITECTURE_FILE, 1, `missing ${ARCHITECTURE_FILE}`);
+    return 1;
+  }
   const { content } = await docs.load(ARCHITECTURE_FILE);
   let failures = 0;
   const entries = await readdir(path.join(docs.root, CORE_LOOP_SRC_DIR), { withFileTypes: true });

@@ -36,7 +36,7 @@ Behavioral contracts for module seams (Warden handshake, `event_kinds`, Spawner/
 | Owner | Script | Persisted file | Owns |
 | --- | --- | --- | --- |
 | `RunState` | `src/core/run_state.gd` | none (snapshotted by `RunStore`) | Active run HP/max HP, `scrap` tally, `cogs` spend wallet, `mass`, heft/class, `parts`, `panels`, `consumables`, `bonus_cores`, kills, milestones, stage-start snapshots, and `death_save_hook`. |
-| `Flow` | `src/core/flow.gd` | via `RunStore` | Run/stage state machine (`title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `summary`, `dead`), Warden seal/unseal, arena transitions, and retry/replay checkpoints. |
+| `Flow` | `src/core/flow.gd` | via `RunStore` | Run/stage state machine (`title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `lap`, `summary`, `dead`), Warden seal/unseal, arena transitions, and retry/replay checkpoints. |
 | `BuffLedger` | `src/core/buff_ledger.gd` | none | Active timed and counted gameplay buffs; subscribes to `GameEvents` run/stage/death resets and binds to `PlayerBall.abilities`. |
 | `Profile` | `src/core/profile.gd` | `user://profile.json` (schema 4, `SafeStore`) | Durable unlocks and meta state: pilots, worlds, cosmetics, achievements, equipped loadouts, stats, settled runs, companion, seen flags, meta options, heard tunes, radio, and camp state. |
 | `Progress` | `src/core/progress.gd` | writes to `Profile` | Live achievement evaluation, shift-board unlocks, work orders, ledger-leaf returns, and pilot story chapters. |
@@ -101,8 +101,8 @@ Helper methods on `Context`: `build_module()`, `aim_origin()`, `aim_forward()`, 
 
 ## Script dependency-cycle status (`L16`)
 
-`npm run sketch:lint` enforces rule `L16` (see `adr/TADR-012-script-dependency-loops.md` and `scripts/sketch-lint.mjs`):
+`npm run sketch:lint` enforces rule `L16` (see `scripts/sketch-lint.mjs` and `scripts/sketch-lint.baseline.json`):
 
 - **Static graph**: `buildScriptGraph` scans every `.gd` file under `sketches/core-loop/src/` for `"res://src/...gd"` references and declared `class_name` uses, then computes strongly connected components (`stronglyConnectedComponents`).
 - **Ratchet baseline**: `scripts/sketch-lint.baseline.json` pins the existing files in cycles (`179` files at `d393d7af`). Any file newly joining a cycle fails `sketch:lint`, and any baselined file that leaves its cycle fails until its entry is removed so the list can only shrink.
-- **Boundary rules**: Directories are not yet strict acyclic layers because `src/core/` still references files in the other main directories; targeted cross-module isolation rules (`L6`–`L10`) remain active alongside `L16`.
+- **Targeted ownership and boundary rules**: Directories are not yet strict acyclic layers because `src/core/` still references files in other directories. Alongside `L16`, `sketch:lint` enforces `L6` (runtime `Light3D` ownership), `L7` (no `res://tools/` paths in `src/`), `L8` (no physics-tick `ball_position()` reads in `src/presentation/` or `src/ui/`), `L9` (no direct `player.global_position` / `position` reads), and `L10` (no hand-moving the ball's `RigidBody3D`).

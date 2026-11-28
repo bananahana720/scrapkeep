@@ -28,7 +28,7 @@ How this project actually runs, learned the hard way since 16 Oct 2026. Each les
 
 ## The cloud container
 
-15. **A cloud container is reclaimed after it sits idle, and `artifacts/local/` goes with it.** Copy evidence you want kept to `/mnt/project-files/` (red team runs live in `redteam/w<n>/`) and push branches before going quiet.
+15. **A cloud container is reclaimed after it sits idle, and `artifacts/local/` goes with it.** Commit durable evidence to repository doc folders (`docs/`, `project-guide/handoff/`) or push branches (`scratch/*` for gate receipts) before going quiet.
 16. **Retired.** The cloud box's size and caps are in [DEVICES.md](DEVICES.md). A full gate takes about 2 h in the cloud, so shard it.
 17. **Retired.** The cloud setup is in [DEVICES.md](DEVICES.md).
 18. **GPU work stays on the 4080:** frame times, ACE-Step music renders, Eevee/Vulkan captures, the real export proof. Cloud perf numbers never count (the bench swings 24-146 ms p99 between sandboxes).
