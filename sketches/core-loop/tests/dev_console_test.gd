@@ -124,7 +124,7 @@ func _run() -> void:
 	game.run.damage(25.0, "dev_console_test")
 	_t.near("god mode takes no hull", game.run.hp, hp)
 	console.run("god off")
-	_t.eq("god off keeps defend_hook unchanged", game.run.defend_hook, prior_hook)
+	_t.eq("god off hands back the defend hook it replaced", game.run.defend_hook, prior_hook)
 	game.run.damage(5.0, "dev_console_test")
 	_t.check("god off lets hits land again", game.run.hp < hp, "%s < %s" % [game.run.hp, hp])
 
