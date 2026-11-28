@@ -2,8 +2,8 @@ extends RefCounted
 
 const SourceScan := preload("res://tests/support/source_scan.gd")
 
-const NAME := "[A-Za-z0-9_]*(?:bevel|chamfer|torus|faceted_orb|append_box)[A-Za-z0-9_]*"
-const DECLARATION := "(?m)^\\s*(?:static\\s+|@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*(?:func\\s+(" + NAME + ")\\s*\\(|(?:const|var)\\s+(" + NAME + ")\\s*(?::\\s*Callable\\s*)?:?=\\s*func\\b)"
+const NAME := "[A-Za-z0-9_]*(?i:bevel|chamfer|torus|faceted_orb|append_box)[A-Za-z0-9_]*"
+const DECLARATION := "(?m)^\\s*(?:static\\s+|@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*(?:func\\s+(" + NAME + ")\\s*\\(|(?:const|var)\\s+(" + NAME + ")\\s*(?::\\s*(?:Callable|Variant)\\s*)?:?=[\\s(]*func\\b)"
 const DECLARED := {
 	"src/build/tier_mark.gd": ["_torus"],
 	"src/combat/dispatcher.gd": ["_append_box"],
