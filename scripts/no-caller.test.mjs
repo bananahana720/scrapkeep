@@ -114,6 +114,48 @@ test("a .gd file is mentioned by the uid in its .uid file", () => {
   }
 });
 
+test("a script that only an asset registry row names as its loader or generator has a caller", () => {
+  const dir = scratchRepo();
+  try {
+    const files = {
+      "sketches/core-loop/tools/blender/made.py": "import bpy\n",
+      "sketches/core-loop/src/combat/loads.gd": "static func _parts() -> Array:\n\treturn []\n",
+      "sketches/core-loop/assets/registry.d/made.json": `${JSON.stringify(
+        {
+          assets: [
+            {
+              id: "made_prop",
+              path: "res://assets/models/made_prop.glb",
+              loader: "src/combat/loads.gd:_parts",
+              provenance: { recipe: "tools/blender/made.py" },
+            },
+          ],
+        },
+        null,
+        1,
+      )}\n`,
+    };
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+      writeFileSync(path.join(dir, rel), text);
+    }
+    git(["add", "."], { cwd: dir });
+    const generator = "sketches/core-loop/tools/blender/made.py";
+    const loader = "sketches/core-loop/src/combat/loads.gd";
+    const hits = findMentions([generator, loader], dir);
+    assert.deepEqual(hits.get(generator), [
+      'sketches/core-loop/assets/registry.d/made.json:8: "recipe": "tools/blender/made.py"',
+    ]);
+    assert.deepEqual(hits.get(loader), [
+      'sketches/core-loop/assets/registry.d/made.json:6: "loader": "src/combat/loads.gd:_parts",',
+    ]);
+    assert.equal(run(dir, generator).status, 1);
+    assert.equal(run(dir, loader).status, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("a missing, wrong-prefix, untracked or directory path exits 2, names the path and searches nothing", () => {
   const dir = scratchRepo();
   try {
