@@ -27,11 +27,9 @@ func _check_spawner_double_owners() -> void:
 		var dupes: Array[String] = []
 		for token in [
 			"const STRIKE_DAMAGE",
-			"const CONTACT_KINDS",
 			"const CHIP",
 			"const CRUISE_TIER",
 			"func punch_of(",
-			"func punch_now(",
 			"func integrity_of(",
 			"func would_crush(",
 		]:
@@ -41,7 +39,6 @@ func _check_spawner_double_owners() -> void:
 	_t.eq("BossDouble.STRIKE_DAMAGE matches Combat.STRIKE_DAMAGE", BossDouble.STRIKE_DAMAGE, Combat.STRIKE_DAMAGE)
 	_t.eq("SpineDouble.STRIKE_DAMAGE matches Combat.STRIKE_DAMAGE", SpineDouble.STRIKE_DAMAGE, Combat.STRIKE_DAMAGE)
 	_t.eq("BossDouble.CONTACT_KINDS matches Combat.CONTACT_KINDS", BossDouble.CONTACT_KINDS, Combat.CONTACT_KINDS)
-	_t.eq("SpineDouble.CONTACT_KINDS matches Combat.CONTACT_KINDS", SpineDouble.CONTACT_KINDS, Combat.CONTACT_KINDS)
 	_t.near("BossDouble.CHIP matches Combat.CHIP", BossDouble.CHIP, Combat.CHIP)
 	_t.near("SpineDouble.CHIP matches Combat.CHIP", SpineDouble.CHIP, Combat.CHIP)
 	_t.eq("BossDouble.CRUISE_TIER matches SpeedTier.CRUISE", BossDouble.CRUISE_TIER, SpeedTier.CRUISE)

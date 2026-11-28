@@ -1,5 +1,8 @@
 extends "res://tests/doubles/spawner_double_base.gd"
 
+const CONTACT_KINDS := Combat.CONTACT_KINDS
+
+var punch_override := -1.0
 var spawned: Array[Node3D] = []
 
 
@@ -48,6 +51,26 @@ func spawn_enemy(kind: String, at: Vector3, _affix_id := "") -> Node3D:
 func force_for(kind: String, punch: float) -> float:
 	var row: Array = STRIKE_DAMAGE[kind]
 	return (punch / ctx.run.heft() - row[0]) / row[1]
+
+
+func _strike_part(enemy: Node3D, kind: String, part: String) -> String:
+	if part == "" and kind in CONTACT_KINDS and enemy.has_method("contact_part"):
+		return enemy.contact_part(ctx.player.ball_position(), kind)
+	return part
+
+
+func _strike_plating(enemy: Node3D, kind: String, part: String) -> float:
+	return enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
+
+
+func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionary:
+	return _strike_result(enemy, kind, force, part)
+
+
+func punch_now() -> float:
+	if punch_override >= 0.0:
+		return punch_override
+	return super()
 
 
 func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:

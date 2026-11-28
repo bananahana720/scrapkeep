@@ -61,7 +61,7 @@ func spawn_enemy(kind: String, at: Vector3, _affix_id := "") -> Node3D:
 func strike(enemy: Node3D, kind: String, force: float) -> void:
 	if not is_instance_valid(enemy) or enemy.dead:
 		return
-	var result := resolve(enemy, kind, force)
+	var result := _strike_result(enemy, kind, force)
 	strikes.append({"kind": kind, "force": force, "punch": result["punch"], "plating": result["plating"]})
 	_emit_strike(enemy, kind, force, result)
 	enemy.hp -= result["dealt"]
@@ -87,7 +87,3 @@ func _die(enemy: Node3D) -> void:
 
 func plating_of(enemy: Node3D) -> float:
 	return enemy.plating if is_instance_valid(enemy) else 0.0
-
-
-func _fallback_plating(enemy: Node3D) -> float:
-	return plating_of(enemy)
