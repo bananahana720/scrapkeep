@@ -67,13 +67,13 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 
 func _check_slice_hints() -> void:
-	Synergies.table = SliceDefs
+	Synergies.set_table(SliceDefs)
 	var leaks: Array = []
 	for part_id in Parts.ids():
 		var fed: Array = Ceremony._fed(part_id, [])
 		if not fed.is_empty() and not Synergies.in_play(fed[0]):
 			leaks.append("%s -> %s" % [part_id, fed[0]])
-	Synergies.table = null
+	Synergies.set_table(null)
 	_report("slice never hints a cut synergy", leaks.is_empty() and Synergies.in_play("storm_lattice"),
 		"on the slice table no part feeds a cut synergy; leaks %s" % [leaks])
 

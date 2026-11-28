@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 
@@ -41,8 +42,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	Synergies.table = AlphaDefs
-	_t.check("the alpha table lists its parts", Parts.listed_only(), "offer_pool must read the alpha table")
+	Synergies.set_table(AlphaDefs)
+	_t.check("the alpha table lists its parts", PartOffers.listed_only(), "offer_pool must read the alpha table")
 	_pool_is_clear()
 	_five_rows()
 	_shared_verbs_act()

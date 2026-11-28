@@ -250,8 +250,8 @@ func is_dropping() -> int:
 func _planar_speed() -> float:
 	if ctx == null or ctx.player == null:
 		return 0.0
-	if ctx.player.has_method("planar_velocity"):
-		return float(ctx.player.planar_velocity().length())
+	if ctx.player.has_method("body_planar_speed"):
+		return float(ctx.player.body_planar_speed())
 	var body = ctx.player.body() if ctx.player.has_method("body") else null
 	if body == null:
 		return 0.0

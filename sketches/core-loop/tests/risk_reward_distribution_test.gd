@@ -7,8 +7,10 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const Items := preload("res://src/build/items.gd")
+const MakerDefs := preload("res://src/build/maker_defs.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Relics := preload("res://src/build/relics.gd")
 const RelicSwaps := preload("res://src/combat/relic_swaps.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
@@ -64,16 +66,16 @@ func _check_risk_vs_kindness_tables() -> void:
 
 func _check_world_escalation_and_verb_parts() -> void:
 	var prev_table = Synergies.table
-	Synergies.table = AlphaDefs
-	_t.eq("W1 fabricator stays common", Parts.source_rarities("fabricator", 1), ["common"])
-	_t.eq("W2 fabricator mixes common and rare", Parts.source_rarities("fabricator", 3), ["common", "rare"])
-	_t.eq("W3 fabricator mixes common and rare", Parts.source_rarities("fabricator", 5), ["common", "rare"])
-	_t.eq("W1 vault stays rare", Parts.source_rarities("vault", 1), ["rare"])
-	_t.eq("W2 vault escalates to rare+relic", Parts.source_rarities("vault", 3), ["rare", "relic"])
-	_t.eq("W3 vault escalates to rare+relic", Parts.source_rarities("vault", 5), ["rare", "relic"])
+	Synergies.set_table(AlphaDefs)
+	_t.eq("W1 fabricator stays common", PartOffers.source_rarities("fabricator", 1), ["common"])
+	_t.eq("W2 fabricator mixes common and rare", PartOffers.source_rarities("fabricator", 3), ["common", "rare"])
+	_t.eq("W3 fabricator mixes common and rare", PartOffers.source_rarities("fabricator", 5), ["common", "rare"])
+	_t.eq("W1 vault stays rare", PartOffers.source_rarities("vault", 1), ["rare"])
+	_t.eq("W2 vault escalates to rare+relic", PartOffers.source_rarities("vault", 3), ["rare", "relic"])
+	_t.eq("W3 vault escalates to rare+relic", PartOffers.source_rarities("vault", 5), ["rare", "relic"])
 	_t.check("rare multiplier climbs W1 < W2 < W3",
-		Parts.stage_rare_mult(1) < Parts.stage_rare_mult(3) and Parts.stage_rare_mult(3) < Parts.stage_rare_mult(5),
-		"%.2f / %.2f / %.2f" % [Parts.stage_rare_mult(1), Parts.stage_rare_mult(3), Parts.stage_rare_mult(5)])
+		PartOffers.stage_rare_mult(1) < PartOffers.stage_rare_mult(3) and PartOffers.stage_rare_mult(3) < PartOffers.stage_rare_mult(5),
+		"%.2f / %.2f / %.2f" % [PartOffers.stage_rare_mult(1), PartOffers.stage_rare_mult(3), PartOffers.stage_rare_mult(5)])
 	_t.eq("gate_rarities W1 0 cores stays common", Parts.gate_rarities(0, 1), ["common"])
 	_t.eq("gate_rarities W2 0 cores mixes common+rare", Parts.gate_rarities(0, 3), ["common", "rare"])
 	_t.eq("gate_rarities W2 1 core lifts to rare", Parts.gate_rarities(1, 3), ["rare"])
@@ -89,7 +91,7 @@ func _check_world_escalation_and_verb_parts() -> void:
 		not Parts.changes_behaviour("gatling_heart") and not Parts.changes_behaviour("ram_plow"), "")
 
 	var prev_seams := Parts.seams.duplicate()
-	Parts.seams = {"spawner.fan_spread": true, "spawner.helix_drill": true}
+	Parts.set_seams({"spawner.fan_spread": true, "spawner.helix_drill": true})
 	var fab := Fabricators.new()
 	fab._class_id = "runner_gunner"
 	var rare_counts := {1: 0, 3: 0, 5: 0}
@@ -130,8 +132,8 @@ func _check_world_escalation_and_verb_parts() -> void:
 				hi_relics += 1
 	_t.eq("roll_high_impact delivers 100% high-impact picks", hi_impact, 80)
 	_t.check("roll_high_impact surfaces W2/W3 kit-swap relics when rare+relic allowed", hi_relics >= 15, "relics=%d/80" % hi_relics)
-	Parts.seams = prev_seams
-	Synergies.table = prev_table
+	Parts.set_seams(prev_seams)
+	Synergies.set_table(prev_table)
 
 
 func _check_world_relics_all_pilots() -> void:
@@ -188,10 +190,10 @@ func _check_archetype_synergies_and_grapple_maps() -> void:
 	_t.eq("prism_splitter maps to live_bus grapple mutation", Items.grapple_mutation_of("prism_splitter"), "live_bus")
 	_t.eq("orbital_flywheel maps to wrecking_flail grapple mutation", Items.grapple_mutation_of("orbital_flywheel"), "wrecking_flail")
 
-	Parts.archetype_nudge_on = false
+	PartOffers.archetype_nudge_on = false
 	_t.eq("archetype_nudge respects toggle", Parts.archetype_nudge(["ram_plow", "basalt_ram"], ["drop_weight"]), {})
 	Parts.reset_for_tests()
-	_t.check("reset_for_tests restores archetype_nudge_on", Parts.archetype_nudge_on, "")
+	_t.check("reset_for_tests restores archetype_nudge_on", PartOffers.archetype_nudge_on, "")
 
 
 func _run_live() -> void:
@@ -272,7 +274,7 @@ func _run_live() -> void:
 	run.add_part("quick_spool", "test")
 	run.add_part("cap_relay", "test")
 	shop.enter()
-	var set_shown: bool = shop.shelf.any(func(e): return MakerSets.maker_of(String(e["part_id"])) == MakerSets.SPILLWAY)
+	var set_shown: bool = shop.shelf.any(func(e): return MakerSets.maker_of(String(e["part_id"])) == MakerDefs.SPILLWAY)
 	_t.check("W2 shop surfaces completing 3rd Spillway piece when 2 held", set_shown, str(shop.shelf))
 	shop.leave()
 

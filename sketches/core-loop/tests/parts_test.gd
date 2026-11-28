@@ -13,6 +13,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartMutations := preload("res://src/build/part_mutations.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Projectile := preload("res://src/combat/projectile.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
@@ -105,10 +106,10 @@ func _run() -> void:
 
 
 func _check_table() -> void:
-	var problems := Parts.micro_mutation_problems()
+	var problems := PartMutations.micro_mutation_problems(Parts.CATALOGUE)
 	_t.check("micro_mutation_problems", problems.is_empty(), "problems=%s" % [problems])
-	_t.check("micro_mutation_count", Parts.MICRO_MUTATIONS.size() == 6,
-		"size=%d" % Parts.MICRO_MUTATIONS.size())
+	_t.check("micro_mutation_count", PartMutations.MICRO_MUTATIONS.size() == 6,
+		"size=%d" % PartMutations.MICRO_MUTATIONS.size())
 	for pid in SIX:
 		var cat: Dictionary = Parts.CATALOGUE.get(pid, {})
 		_t.check("tier1_common_%s" % pid,

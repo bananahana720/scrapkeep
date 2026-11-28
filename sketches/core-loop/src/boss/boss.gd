@@ -5,12 +5,9 @@ const Arena := preload("res://src/boss/arena.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
-const BossFurnace := preload("res://src/boss/boss_furnace.gd")
-const BossCharge := preload("res://src/boss/boss_charge.gd")
-const BossScooter := preload("res://src/boss/boss_scooter.gd")
-const CHARGE_REACH := BossCharge.CHARGE_REACH
-const CHARGE_RIM_CLEAR := BossCharge.CHARGE_RIM_CLEAR
-const CHARGE_MIN_LANE := BossCharge.CHARGE_MIN_LANE
+const CHARGE_REACH := 1.5
+const CHARGE_RIM_CLEAR := 1.0
+const CHARGE_MIN_LANE := 4.0
 const PICKUP_HULL_MARGIN := 0.25
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -21,6 +18,7 @@ const Field := preload("res://src/build/scrap_field.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
@@ -44,20 +42,11 @@ var phase_clock := 0.0
 var arena
 var ship
 var scooter
+var _scooter_anim: AnimationPlayer
 var hazards: Array = []
 var stuns := 0
 var clashes := 0
 var catches := 0
-
-var _furnace := BossFurnace.new()
-var _charge_ctrl := BossCharge.new()
-var _scooter_ctrl := BossScooter.new()
-
-var _scooter_anim: AnimationPlayer:
-	get:
-		return _scooter_ctrl.scooter_anim
-	set(v):
-		_scooter_ctrl.scooter_anim = v
 
 var _delta := 1.0 / 90.0
 var _next_attack := 0.0
@@ -65,42 +54,29 @@ var _crane_turn := 0
 var _combo_left := -1
 var _cranes: Array = [{}, {}]
 var _pickups: Array = []
-const CHARGE_REST := BossCharge.CHARGE_REST
-const CHARGE_BRACE := BossCharge.CHARGE_BRACE
-const CHARGE_RUN := BossCharge.CHARGE_RUN
-const CHARGE_RECOVER := BossCharge.CHARGE_RECOVER
-const CHARGE_STUN := BossCharge.CHARGE_STUN
-const CHARGE_HOOK := BossCharge.CHARGE_HOOK
-var _charge: Dictionary:
-	get:
-		return _charge_ctrl.charge
-	set(v):
-		_charge_ctrl.charge = v
+var _slag_turn := 0
+var _next_lobber := 0.0
+var _lobbers: Array = []
+const CHARGE_REST := "rest"
+const CHARGE_BRACE := "brace"
+const CHARGE_RUN := "run"
+const CHARGE_RECOVER := "recover"
+const CHARGE_STUN := "stun"
+const CHARGE_HOOK := "hook"
+var _charge := {}
+var _hook_token := 0
 var _grace := {}
-var _eject: Dictionary:
-	get:
-		return _scooter_ctrl.eject
-	set(v):
-		_scooter_ctrl.eject = v
+var _eject := {}
 var _ship_angle := 0.0
 var _crest: Node3D
-var _drones: Array:
-	get:
-		return _furnace.drones
-	set(v):
-		_furnace.drones = v
-var _lobbers: Array:
-	get:
-		return _furnace.lobbers
-	set(v):
-		_furnace.lobbers = v
-var _reprise: Dictionary:
-	get:
-		return _furnace.reprise
-	set(v):
-		_furnace.reprise = v
+var _drones: Array = []
+var _ghost_until := -1.0
 var _posture := BossPosture.new(Rules.POSTURE)
 var _phases: FightPhases
+var _reprise := {}
+var _short_tries := 0
+var _scuttle_punch := 0.0
+var _hint_next := 0.0
 var _reel_hits := 0
 var _reel_last := -INF
 var _preview: Node3D
@@ -190,9 +166,11 @@ func arrival_heading() -> Vector3:
 
 
 func exit_arena() -> void:
-	_furnace.reset()
-	_charge_ctrl.reset()
-	_scooter_ctrl.reset()
+	for lobber in _lobbers:
+		if is_instance_valid(lobber):
+			lobber.set_physics_process(false)
+			lobber.queue_free()
+	_lobbers.clear()
 	if is_instance_valid(arena):
 		arena.get_parent().remove_child(arena)
 		arena.queue_free()
@@ -201,14 +179,19 @@ func exit_arena() -> void:
 		ctx.camera.clear_contact_subject(ship)
 	ship = null
 	scooter = null
+	_scooter_anim = null
 	hazards.clear()
 	_pickups.clear()
 	_grace.clear()
 	_cranes = [{}, {}]
+	_charge = {}
+	_eject = {}
 	_preview = null
 	_reprise_preview = null
 	_last_commit_at = -INF
 	_was_reeling = false
+	_drones.clear()
+	_ghost_until = -1.0
 	_close_cobalt_gates()
 	brindle_cobalt_offers = []
 	if state != DEFEATED:
@@ -354,13 +337,17 @@ func _enter_phase(next: int) -> void:
 			_combo_left = -1
 		2:
 			_next_attack = clock + 2.0
-			_furnace.enter_phase(clock)
+			_next_lobber = clock + 3.0
+			_slag_turn = 0
 			_combo_left = -1
 		3:
 			ship.shed_armour()
 			ship.cockpit_open(true, "enter_scuttle")
 			_combo_left = -1
-			_charge_ctrl.enter_phase()
+			_short_tries = 0
+			_scuttle_punch = 0.0
+			_hint_next = 0.0
+			_charge = {"state": CHARGE_REST, "timer": ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)}
 	ship.cue_phase(next)
 	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])
 	if _phases != null:
@@ -612,9 +599,13 @@ func _tug(ball: Vector3, magnet_at: Vector3) -> void:
 	ctx.player.crowd_control("brindle_tug", (Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / step, false)
 
 
+# Keep Engine.time_scale transitions from skewing knockback (dividing by _delta during hit-stop scales by 1/HIT_STOP_SCALE).
 func _shove_ball(kind: String, dv: Vector3, interrupts := true) -> void:
-	if ctx.player.has_method("shove_planar"):
-		ctx.player.shove_planar(dv, interrupts, kind)
+	ctx.player.shove_planar(dv, interrupts, kind)
+
+
+func suppress_lobbers() -> void:
+	_next_lobber = INF
 
 
 func _drip(c: Dictionary) -> void:
@@ -839,23 +830,112 @@ func pickups_left() -> Array:
 
 
 func _step_furnace(delta: float) -> void:
-	_furnace.step(self, delta)
+	var here: Vector3 = ship.global_position
+	var to_centre := Vector3(arena.global_position.x - here.x, 0.0, arena.global_position.z - here.z)
+	var parked := to_centre.length() <= 0.2
+	if not parked:
+		var move := minf(to_centre.length(), Rules.CIRCLE_SPEED * delta)
+		var at := here + to_centre.normalized() * move
+		ship.move_to(Vector3(at.x, arena.ground(at), at.z), ship.heading)
+	if reeling() and not _was_reeling and _reel_plant != "stop":
+		if _reprise.is_empty() or not bool(_reprise.get("cued", false)):
+			_reprise = {}
+			_next_attack = minf(_next_attack, clock + Rules.REEL_SLAG_PERIOD)
+	_step_reprise()
+	if clock >= _next_attack and not _in_transition() and not (reeling() and _reel_plant == "stop"):
+		var ball: Vector3 = ctx.player.ball_position()
+		if reeling():
+			var slot := _pick_slag_slot(ball, _slag_turn)
+			_commit_slag(slot, false, Rules.REEL_SLAG_LIVE)
+			_slag_turn += 1
+			_combo_left = -1
+			_next_attack = clock + Rules.REEL_SLAG_PERIOD
+		else:
+			var slot := _slag_turn % 3
+			var lead_live := Rules.REEL_SLAG_LIVE if slot == 2 else Rules.SLAG_LIVE
+			var slag_warn := _commit_slag(slot, false, lead_live)
+			_slag_turn += 1
+			var gap := ChallengeDials.period("brindle", Rules.SLAG_GAP, 2)
+			if _follow_ups() > 0:
+				var at := clock + slag_warn + lead_live
+				var reprise_slot := _slag_turn % 3
+				var reprise_live := Rules.REEL_SLAG_LIVE if reprise_slot == 2 else Rules.SLAG_LIVE
+				_reprise = {"at": at, "cue_at": at - FightPhases.CUE_LEAD, "cued": false, "turn": reprise_slot}
+				_combo_left = -1
+				_next_attack = at + FightPhases.CUED_WARN + reprise_live + gap
+			else:
+				_next_attack = clock + _paced(slag_warn + lead_live + gap)
+	if parked and clock >= _next_lobber and not _in_transition() and not (reeling() and _reel_plant == "stop"):
+		_next_lobber = clock + (Rules.LOBBER_PERIOD * Rules.REEL_PERIOD_MULT if reeling() else Rules.LOBBER_PERIOD)
+		_launch_lobber()
+
+
+func _ball_slag_slot(ball: Vector3) -> int:
+	var r: float = arena.radius_of(ball)
+	if r < Arena.RING_A.x:
+		return 2
+	if r < (Arena.RING_A.y + Arena.RING_B.x) * 0.5:
+		return 0
+	return 1
+
+
+func _pick_slag_slot(ball: Vector3, turn: int) -> int:
+	if turn == 0:
+		return 0
+	var slot := _ball_slag_slot(ball)
+	for offset in 3:
+		var cand := (slot + offset) % 3
+		var id := _slag_id(cand)
+		var busy := false
+		for h in hazards:
+			if is_instance_valid(h) and not h.is_done() and h.attack_id == id:
+				busy = true
+				break
+		if not busy:
+			return cand
+	return slot
 
 
 func _slag_band(turn: int) -> Vector2:
-	return _furnace.slag_band(self, turn)
+	match turn % 3:
+		0:
+			return Arena.RING_A
+		1:
+			return Arena.RING_B
+		_:
+			return Rules.FURNACE_CLOSE_BAND
+
+
+func _slag_id(turn: int) -> String:
+	match turn % 3:
+		0:
+			return "slag_ring_a"
+		1:
+			return "slag_ring_b"
+		_:
+			return "slag_ring_inner"
 
 
 func _commit_slag(turn: int, cued: bool, live_override := -1.0) -> float:
-	return _furnace.commit_slag(self, turn, cued, live_override)
+	var band := _slag_band(turn)
+	var id := _slag_id(turn)
+	var h = _new_hazard()
+	var slag_warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.SLAG_WARN, Hazard.MIN_WARN)
+	var live := live_override if live_override > 0.0 else Rules.SLAG_LIVE
+	if cued:
+		h.warn_floor = FightPhases.CUED_WARN
+		h.cued = true
+	h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, Rules.SLAG_REACH, slag_warn, live)
+	h.excluded = func(point: Vector3) -> bool: return arena.is_quenched(point, clock)
+	_add_hazard(h)
+	_last_commit_at = clock
+	ship.cue("slag_warn", turn)
+	_publish("boss_attack_telegraphed", [id, h.warn_seconds])
+	return h.warn_seconds
 
 
 func _in_transition() -> bool:
 	return _phases != null and _phases.in_transition()
-
-
-func in_transition() -> bool:
-	return _in_transition()
 
 
 func trace_snapshot() -> Dictionary:
@@ -871,16 +951,74 @@ func _follow_ups() -> int:
 	return _phases.follow_ups() if _phases != null else 0
 
 
-func follow_ups() -> int:
-	return _follow_ups()
+func _step_reprise() -> void:
+	if _reprise.is_empty():
+		return
+	if reeling() and not _reprise["cued"]:
+		_reprise = {}
+		return
+	if not _reprise["cued"] and clock >= _reprise["cue_at"]:
+		_reprise["cued"] = true
+		var reprise_turn := int(_reprise["turn"])
+		_phases.cue("slag_ring_a" if reprise_turn % 3 == 0 else ("slag_ring_b" if reprise_turn % 3 == 1 else "slag_ring_inner"))
+		_show_reprise_preview(reprise_turn)
+	if clock >= _reprise["at"]:
+		var turn: int = _reprise["turn"]
+		_reprise = {}
+		_clear_reprise_preview()
+		_commit_slag(turn, true, Rules.REEL_SLAG_LIVE if reeling() or turn % 3 == 2 else -1.0)
+		if reeling() and _reel_plant != "stop":
+			_next_attack = minf(_next_attack, clock + Rules.REEL_SLAG_PERIOD)
+
+
+func _launch_lobber() -> void:
+	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+		return
+	_lobbers = _lobbers.filter(func(l): return is_instance_valid(l) and not (l.has_method("is_dead") and l.is_dead()))
+	if _lobbers.size() + _drones.size() >= Rules.LOBBER_CAP:
+		return
+	var ball_side: float = ship.to_local(ctx.player.ball_position()).x
+	var side := -1.0 if ball_side >= 0.0 else 1.0
+	var at: Vector3 = ship.to_global(Vector3(side * Rules.DRONE_SIDE, 0.0, 0.0))
+	at = Vector3(at.x, arena.ground(at), at.z)
+	var marker = Hazard.new()
+	marker.ground = arena.ground
+	marker.color = Palette.SAND
+	marker.commit_annulus("drone_pad", Hazard.Threat.Type.INSTANT, at, Vector2(0.0, 2.5), 0.0, Rules.DRONE_WARN, Rules.DRONE_WAIT)
+	arena.add_child(marker)
+	_drones.append({"at": at, "marker": marker})
+	ship.cue("drone_deploy", _drones.size() + Engine.get_physics_frames())
 
 
 func pending_drones() -> Array:
-	return _furnace.pending_drones()
+	return _drones.map(func(d): return d["at"])
 
 
 func _step_drones(delta: float) -> void:
-	_furnace.step_drones(self, delta)
+	var kept: Array = []
+	var ball: Vector3 = ctx.player.ball_position()
+	for d in _drones:
+		var marker = d["marker"]
+		marker.step(delta)
+		var at: Vector3 = d["at"]
+		var ready: bool = marker.age >= Rules.DRONE_WARN
+		var clear: bool = ball.distance_to(at + Vector3.UP) >= Rules.DRONE_CLEAR
+		if ready and clear and state == FIGHT and not _in_transition():
+			_drop_drone(at)
+		elif marker.age < Rules.DRONE_WARN + Rules.DRONE_WAIT and state == FIGHT:
+			kept.append(d)
+			continue
+		marker.queue_free()
+	_drones = kept
+
+
+func _drop_drone(at: Vector3) -> void:
+	var lobber = ctx.spawner.spawn_enemy("lobber", at + Vector3.UP)
+	if not lobber is Node3D:
+		return
+	if "terrain" in lobber:
+		lobber.terrain = arena.ground_query()
+	_lobbers.append(lobber)
 
 
 func _step_vents(ball: Vector3) -> void:
@@ -900,186 +1038,404 @@ func _reel_sear(ball: Vector3, cause: String) -> void:
 
 
 func _slag_hit(h, ball: Vector3, skim := false) -> void:
-	_furnace.slag_hit(self, h, ball, skim)
+	if not skim:
+		_reel_sear(ball, "brindle_slag")
+	var dmg := ChallengeDials.damage("brindle", Rules.SLAG_DAMAGE, phase) * (Rules.SKIM_SLAG_MULT if skim else 1.0)
+	ctx.run.damage(dmg, "brindle_slag")
+	if not ctx.flow.in_play():
+		return
+	_grace[h.get_instance_id()] = clock + Rules.SLAG_GRACE
+	if ctx.calm:
+		return
+	var r: float = arena.radius_of(ball)
+	var out := Vector3(ball.x - arena.global_position.x, 0.0, ball.z - arena.global_position.z).normalized()
+	var toward := out if h.attack_id == "slag_ring_inner" or r >= (h.r_in + h.r_out) * 0.5 else -out
+	var across: Vector3 = Vector3.UP.cross(out)
+	var way := toward
+	for candidate in [toward, -toward, across, -across]:
+		if _clear_arc(ball, candidate * Rules.SLAG_BOUNCE_OUT + Vector3.UP * Rules.SLAG_BOUNCE_UP):
+			way = candidate
+			break
+	var v: Vector3 = ctx.player.state.velocity
+	var up := maxf(0.0, Rules.SLAG_BOUNCE_UP - v.y)
+	_shove_ball("brindle_slag", Vector3.UP * up + way * Rules.SLAG_BOUNCE_OUT)
+
+
+func _clear_arc(from: Vector3, launch: Vector3) -> bool:
+	var space: PhysicsDirectSpaceState3D = arena.get_world_3d().direct_space_state
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS * 0.95
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = sphere
+	query.collision_mask = 1 | 4
+	query.exclude = [ctx.player.body().get_rid()]
+	var g: float = ctx.tuning.f("gravity")
+	var at := from
+	for k in range(1, 16):
+		var t := k * 0.08
+		var next := from + Vector3(launch.x, 0.0, launch.z) * t + Vector3.UP * (launch.y * t - 0.5 * g * t * t)
+		var lands: bool = t > 0.3 and next.y <= arena.ground(next) + Tuning.RADIUS
+		if lands:
+			next.y = arena.ground(next) + Tuning.RADIUS + 0.1
+		query.transform = Transform3D(Basis.IDENTITY, at)
+		query.motion = next - at
+		if space.cast_motion(query)[1] < 1.0:
+			return false
+		if lands:
+			return true
+		at = next
+	return true
 
 
 func _step_charges(delta: float, ball: Vector3) -> void:
-	_charge_ctrl.step(self, delta, ball)
+	_scuttle_punch = maxf(_scuttle_punch, ctx.flow.punch_now())
+	match _charge.get("state", CHARGE_REST):
+		CHARGE_REST, CHARGE_RECOVER, CHARGE_STUN, CHARGE_HOOK:
+			if _charge["state"] == CHARGE_HOOK:
+				if _reel_plant != "no_brace" and not ship.bracing():
+					ship.set_hook_brace(true, _hook_token)
+				_turn_ship(_aim_at(ball), Rules.CHARGE_TURN_RATE, delta)
+			if _charge["state"] == CHARGE_STUN:
+				_last_commit_at = clock
+			_charge["timer"] -= delta
+			if _charge["state"] == CHARGE_REST and reeling() and _reel_plant != "stop" and not _in_transition() \
+					and _last_commit_at >= 0.0 and clock + float(_charge["timer"]) - _last_commit_at > Rules.REEL_MAX_GAP:
+				_charge["timer"] = maxf(0.0, _last_commit_at + Rules.REEL_MAX_GAP - clock)
+			if _charge["timer"] <= 0.0:
+				if _charge["state"] == CHARGE_REST:
+					if _in_transition() or (reeling() and _reel_plant == "stop"):
+						return
+					_commit_charge()
+				elif _charge["state"] == CHARGE_HOOK:
+					_commit_charge(true)
+				else:
+					_charge = {"state": CHARGE_REST, "timer": _rest_time()}
+		CHARGE_BRACE:
+			var h = _charge.get("hazard")
+			if h == null or not is_instance_valid(h) or h.is_done():
+				_charge = {"state": CHARGE_REST, "timer": _rest_time()}
+				return
+			_brace_turn(delta)
+			if h.is_live():
+				_charge["state"] = CHARGE_RUN
+		CHARGE_RUN:
+			_run_charge(delta, ball)
+		_:
+			push_error("brindle charge in unknown state %s" % _charge.get("state"))
+			_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 
 
 func _aim_at(ball: Vector3) -> Vector3:
-	return _charge_ctrl.aim_at(self, ball)
+	var to_ball := Vector3(ball.x - ship.global_position.x, 0.0, ball.z - ship.global_position.z)
+	return to_ball.normalized() if to_ball.length() > 2.0 else ship.heading
+
+
+func _turn_ship(heading: Vector3, rate: float, delta: float) -> void:
+	var owed := Vector2(ship.heading.x, ship.heading.z).angle_to(Vector2(heading.x, heading.z))
+	var step := clampf(owed, -rate * delta, rate * delta)
+	var arrives := absf(owed - step) < Rules.CHARGE_TURN_SNAP
+	ship.move_to(ship.global_position, heading if arrives else (ship.heading as Vector3).rotated(Vector3.UP, -step))
+
+
+func _brace_turn(delta: float) -> void:
+	var h = _charge["hazard"]
+	var heading: Vector3 = _charge["heading"]
+	var owed := absf(Vector2(ship.heading.x, ship.heading.z).angle_to(Vector2(heading.x, heading.z)))
+	if owed <= 0.0:
+		return
+	var time_left := maxf(delta, h.warn_seconds - h.age - Rules.CHARGE_TURN_SETTLE)
+	_turn_ship(heading, maxf(Rules.CHARGE_TURN_RATE, owed / time_left), delta)
 
 
 func _commit_charge(cued := false) -> void:
-	_charge_ctrl.commit_charge(self, cued)
+	if not cued:
+		_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
+	var from: Vector3 = ship.global_position
+	var half := Requisition.HULL.z * 0.5
+	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
+	var ball: Vector3 = ctx.player.ball_position()
+	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
+	var ball_heading := _aim_at(ball)
+	var into_wall := to_ball.length() + Rules.CHARGE_OVERSHOOT >= _travel_to_rim(from, ball_heading)
+	var aim := ball
+	if not into_wall:
+		aim = PackPressure.lead_aim(ctx.player, from, warn, Rules.CHARGE_SPEED, half + CHARGE_REACH, half + Tuning.RADIUS)
+	var to_aim := Vector3(aim.x - from.x, 0.0, aim.z - from.z)
+	var heading := ball_heading if into_wall else _aim_at(aim)
+	var to_wall := _travel_to_rim(from, heading)
+	var wanted := to_aim.length() + Rules.CHARGE_OVERSHOOT
+	var length := to_wall if into_wall else maxf(0.0, minf(wanted, to_wall - CHARGE_RIM_CLEAR))
+	if not into_wall and length < CHARGE_MIN_LANE:
+		heading = ball_heading
+		length = to_ball.length() + Rules.CHARGE_OVERSHOOT
+	var h = _new_hazard()
+	if cued:
+		h.warn_floor = FightPhases.CUED_WARN
+		h.cued = true
+	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
+		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
+	h.lane_front = half + CHARGE_REACH
+	_add_hazard(h)
+	_last_commit_at = clock
+	ship.set_hook_brace(false)
+	ship.cue("charge_warn", h.get_instance_id())
+	_charge = {"state": CHARGE_BRACE, "hazard": h, "from": from, "heading": heading, "length": length,
+		"into_wall": into_wall, "travelled": 0.0, "cued": cued}
+	_publish("boss_attack_telegraphed", ["charge_wall" if into_wall else "charge", h.warn_seconds])
 
 
 func _travel_to_rim(from: Vector3, heading: Vector3) -> float:
-	return _charge_ctrl.travel_to_rim(self, from, heading)
+	var p := Vector2(from.x - arena.global_position.x, from.z - arena.global_position.z)
+	var d := Vector2(heading.x, heading.z)
+	var b := p.dot(d)
+	var c := p.length_squared() - Rules.CHARGE_STOP_R * Rules.CHARGE_STOP_R
+	return maxf(0.0, -b + sqrt(maxf(0.0, b * b - c)))
+
+
+func _run_charge(delta: float, ball: Vector3) -> void:
+	var h = _charge["hazard"]
+	var half := Requisition.HULL.z * 0.5
+	var front_before: float = _charge["travelled"] + half
+	_charge["travelled"] = minf(_charge["length"], _charge["travelled"] + Rules.CHARGE_SPEED * delta)
+	var at: Vector3 = _charge["from"] + _charge["heading"] * _charge["travelled"]
+	ship.move_to(Vector3(at.x, arena.ground(at), at.z), _charge["heading"])
+	var front: float = _charge["travelled"] + half
+	h.lane_front = front + CHARGE_REACH
+	if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0) \
+			and (not h.cued or h.age >= h.warn_seconds + 0.025):
+		var along: float = h.lane_along(ball)
+		if along >= front_before - 1.0 and along <= front + CHARGE_REACH:
+			_charge_hit(h, ball, _ball_cruising())
+			if not ctx.flow.in_play():
+				return
+	var will_hook: bool = not _charge["into_wall"] and not _charge.get("cued", false) \
+		and _follow_ups() > 0 and not (reeling() and _reel_plant == "stop")
+	var rem_s: float = maxf(0.0, (float(_charge["length"]) - float(_charge["travelled"])) / Rules.CHARGE_SPEED)
+	if will_hook and rem_s <= Rules.HOOK_BRACE_LEAD and _reel_plant != "no_brace":
+		ship.set_hook_brace(true, h.get_instance_id())
+	if _charge["travelled"] >= _charge["length"]:
+		h.finish()
+		if _charge["into_wall"]:
+			_stun(ChallengeDials.punish("brindle", Rules.WALL_STUN))
+			_discover(CodexEntries.WALL_BAIT, ship.global_position)
+		elif will_hook:
+			_note_missed_charge()
+			_phases.cue("charge")
+			if _reel_plant != "no_brace":
+				ship.set_hook_brace(true, h.get_instance_id())
+			_hook_token = h.get_instance_id()
+			_charge = {"state": CHARGE_HOOK, "timer": FightPhases.CUE_LEAD}
+		else:
+			ship.set_hook_brace(false)
+			_note_missed_charge()
+			_charge = {"state": CHARGE_RECOVER, "timer": Rules.CHARGE_RECOVER}
+
+
+func _charge_hit(h, ball: Vector3, skim := false) -> void:
+	if not skim:
+		_reel_sear(ball, "brindle_charge")
+	var dmg := Rules.CHARGE_DAMAGE if skim else ChallengeDials.damage("brindle", Rules.CHARGE_DAMAGE, phase)
+	ctx.run.damage(dmg, "brindle_charge")
+	if not ctx.flow.in_play():
+		return
+	_grace[h.get_instance_id()] = clock + Rules.CHARGE_GRACE
+	if ctx.calm:
+		return
+	var lateral: float = h.lane_lateral(ball)
+	var away: Vector3 = h.side() * (1.0 if lateral >= 0.0 else -1.0)
+	var v: Vector3 = ctx.player.state.velocity
+	var along: float = v.dot(h.heading)
+	var up := maxf(0.0, Rules.CHARGE_SHOVE_UP - v.y)
+	_shove_ball("brindle_charge", away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along))
+	ship.hull.add_collision_exception_with(ctx.player.body())
+	ship.follow_shoved_rider(ctx.player.body())
+	_ghost_until = clock + Rules.CHARGE_GRACE
 
 
 func _step_ghost() -> void:
-	_charge_ctrl.step_ghost(self)
+	if _ghost_until < 0.0 or clock < _ghost_until:
+		return
+	var local: Vector3 = ship.hull.to_local(ctx.player.ball_position())
+	var half := Requisition.HULL * 0.5 + Vector3.ONE * (Tuning.RADIUS + 0.3)
+	if absf(local.x) < half.x and absf(local.y) < half.y and absf(local.z) < half.z:
+		return
+	ship.hull.remove_collision_exception_with(ctx.player.body())
+	ship.follow_shoved_rider(null)
+	_ghost_until = -1.0
 
 
 func _stun(seconds: float) -> void:
-	_charge_ctrl.stun(self, seconds)
+	_combo_left = -1
+	if is_instance_valid(ship):
+		ship.set_hook_brace(false)
+	if _charge.has("hazard") and is_instance_valid(_charge["hazard"]):
+		_charge["hazard"].finish()
+	_charge = {"state": CHARGE_STUN, "timer": seconds}
+	_last_commit_at = clock
+	stuns += 1
+	ship.cue("wall_stun", stuns)
 
 
 func stunned() -> bool:
-	return _charge_ctrl.stunned(self)
+	return state == FIGHT and phase == 3 and _charge.get("state", "") == CHARGE_STUN
+
+
+func _note_missed_charge() -> void:
+	if _scuttle_punch < Rules.HULL_PLATING:
+		_short_tries += 1
 
 
 func _note_glance(target, part: String, result: Dictionary) -> void:
-	_charge_ctrl.note_glance(self, target, part, result)
+	if state != FIGHT or phase != 3 or target.role != "hull" or part.begins_with("cap_") or stunned() or _posture.staggered:
+		return
+	var punch := float(result.get("punch", 0.0))
+	_scuttle_punch = maxf(_scuttle_punch, punch)
+	if punch < float(result.get("plating", Rules.HULL_PLATING)) and _scuttle_punch < Rules.HULL_PLATING:
+		_short_tries += 1
 
 
 func take_hint() -> String:
-	return _charge_ctrl.take_hint(self)
+	if state != FIGHT or phase != 3 or stuns > 0 or _short_tries <= 0 or clock < _hint_next:
+		return ""
+	if _scuttle_punch >= Rules.HULL_PLATING:
+		return ""
+	if _in_transition() or _held() or _posture.staggered:
+		return ""
+	_hint_next = clock + Rules.SCUTTLE_HINT_GAP
+	return Rules.SCUTTLE_HINT
 
 
 func charging() -> bool:
-	return _charge_ctrl.charging(self)
+	return state == FIGHT and phase == 3 and _charge.get("state", "") == CHARGE_RUN
 
 
 func _begin_eject() -> void:
-	_scooter_ctrl.begin_eject(self)
+	_cancel_hazards()
+	_spill_break()
+	state = EJECT
+	phase = CHASE_PHASE
+	phase_clock = 0.0
+	ship.hull.set_solid(true, true)
+	ship.cockpit_open(true)
+	ship.show_cranes(false)
+	ship.open_caps(false)
+	ship.cue("eject")
+	scooter = Target.new()
+	scooter.setup(self, "scooter", "scooter", Vector3(2.0, 1.2, 2.8), Vector2(1.6, 1.0))
+	arena.add_child(scooter)
+	scooter.set_solid(false)
+	var body := MeshInstance3D.new()
+	var legacy_scooter_seam := Requisition.scooter_path != Requisition.SCOOTER_MODEL and not ResourceLoader.exists(Requisition.scooter_path)
+	if legacy_scooter_seam:
+		var box := BoxMesh.new()
+		box.size = Vector3(2.0, 1.0, 2.8)
+		body.mesh = box
+		body.material_override = Palette.solid(Palette.BRASS, 0.8)
+	else:
+		body.name = "ScooterHullCraft"
+		body.mesh = EnemyBossCraft.brindle_scooter_hull(Vector3(2.0, 1.0, 2.8))
+		body.material_override = EnemyBossCraft.craft_shader_material("brindle_scooter_brass", "oxidized_hull_plating", Palette.BRASS, Palette.AMBER, 0.44, 0.68, Palette.AMBER, 0.8)
+	scooter.add_child(body)
+	_scooter_anim = Requisition.dress_scooter(scooter)
+	if _scooter_anim != null:
+		BossModel.hide_primitive(body)
+		BossModel.play(_scooter_anim, "eject")
+	var ball: Vector3 = ctx.player.ball_position()
+	var land: float = arena.angle_of(ball) + PI
+	var from: Vector3 = ship.to_global(Vector3(0.0, Requisition.DECK + 1.5, 4.8))
+	scooter.global_position = from
+	_eject = {"t": 0.0, "from": from, "angle": land, "landed": false, "dir": 1.0, "slow_until": -1.0}
+	_commit_eject_mark(land)
+	_publish("boss_phase_changed", [CHASE_PHASE, CHASE_NAME])
+	_publish("boss_attack_telegraphed", ["eject", Rules.EJECT_FLIGHT])
 
 
-const EJECT_MARK_LIVE := BossScooter.EJECT_MARK_LIVE
+const EJECT_MARK_LIVE := 0.3
+
+
+func _commit_eject_mark(angle: float) -> void:
+	var to: Vector3 = arena.point_at(angle, Rules.SCOOTER_RING, 0.7)
+	var h = Hazard.new()
+	h.ground = arena.ground
+	h.color = Palette.SAND
+	h.commit_annulus("eject_landing", Hazard.Threat.Type.INSTANT, Vector3(to.x, arena.ground(to), to.z),
+		Vector2(0.0, Rules.SCOOTER_TOUCH), Rules.SCOOTER_TOUCH, Rules.EJECT_FLIGHT, EJECT_MARK_LIVE)
+	arena.add_child(h)
+	_eject["mark"] = h
 
 
 func eject_mark() -> Node3D:
-	return _scooter_ctrl.eject_mark()
+	var h = _eject.get("mark")
+	return h if is_instance_valid(h) else null
+
+
+func _step_eject_mark(delta: float) -> void:
+	var h = eject_mark()
+	if h == null:
+		return
+	h.step(delta)
+	if h.is_done():
+		h.queue_free()
+		_eject.erase("mark")
 
 
 func _step_scooter(delta: float) -> void:
-	_scooter_ctrl.step(self, delta)
+	_step_eject_mark(delta)
+	if not is_instance_valid(scooter):
+		return
+	if not _eject["landed"]:
+		_eject["t"] += delta
+		var f := clampf(_eject["t"] / Rules.EJECT_FLIGHT, 0.0, 1.0)
+		var to: Vector3 = arena.point_at(_eject["angle"], Rules.SCOOTER_RING, 0.7)
+		var at: Vector3 = (_eject["from"] as Vector3).lerp(to, f) + Vector3.UP * 14.0 * 4.0 * f * (1.0 - f)
+		scooter.global_position = at
+		if f >= 1.0:
+			_eject["landed"] = true
+			_eject["puff_t"] = 0.0
+			BossModel.play(_scooter_anim, "chase")
+			scooter.set_solid(true)
+			if is_instance_valid(arena):
+				FxLibrary.burst(arena, "slam_dust", to, 14)
+				FxLibrary.burst(arena, "brass_spark", to + Vector3.UP * 0.4, 10)
+			var ball_angle: float = arena.angle_of(ctx.player.ball_position())
+			_eject["dir"] = -signf(angle_difference(_eject["angle"], ball_angle))
+			if _eject["dir"] == 0.0:
+				_eject["dir"] = 1.0
+		return
+	var speed := scooter_speed()
+	_eject["angle"] += _eject["dir"] * speed / Rules.SCOOTER_RING * delta
+	var at: Vector3 = arena.point_at(_eject["angle"], Rules.SCOOTER_RING, 0.7)
+	var ahead: Vector3 = Arena.tangent(_eject["angle"]) * _eject["dir"]
+	var slowed: bool = clock < float(_eject.get("slow_until", -1.0))
+	var roll := sin(clock * 24.0) * 0.14 * EnemyMotion.motion_scale if slowed else 0.0
+	scooter.global_transform = Transform3D(Basis.looking_at(ahead, Vector3.UP) * Basis(Vector3.FORWARD, roll), at)
+	_eject["puff_t"] = float(_eject.get("puff_t", 0.0)) + delta
+	if float(_eject["puff_t"]) >= 0.22 and is_instance_valid(arena):
+		_eject["puff_t"] = 0.0
+		var tail := at - ahead.normalized() * 1.6 + Vector3.UP * 0.5
+		FxLibrary.burst(arena, "steam_puff", tail, 4)
 
 
 func scooter_speed() -> float:
-	return _scooter_ctrl.scooter_speed(clock)
+	var speed := Rules.SCOOTER_SPEED
+	if clock < _eject.get("slow_until", -1.0):
+		speed = maxf(Rules.SCOOTER_MIN_SPEED, speed * Rules.SCOOTER_SLOW)
+	return speed
 
 
 func scooter_landed() -> bool:
-	return _scooter_ctrl.scooter_landed(self)
+	return state == EJECT and _eject.get("landed", false)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
-	_scooter_ctrl.on_enemy_struck(self, enemy, kind)
-
-
-func new_hazard():
-	return _new_hazard()
-
-
-func add_hazard(h) -> void:
-	_add_hazard(h)
-
-
-func publish_event(signal_name: String, args: Array = []) -> void:
-	_publish(signal_name, args)
-
-
-func discover_entry(id: String, at: Vector3) -> void:
-	_discover(id, at)
-
-
-func paced_cadence(normal: float) -> float:
-	return _paced(normal)
-
-
-func rest_time_now() -> float:
-	return _rest_time()
-
-
-func shove_ball(kind: String, dv: Vector3, interrupts := true) -> void:
-	_shove_ball(kind, dv, interrupts)
-
-
-func reel_sear(ball: Vector3, cause: String) -> void:
-	_reel_sear(ball, cause)
-
-
-func ball_cruising() -> bool:
-	return _ball_cruising()
-
-
-func show_reprise_preview(turn: int) -> void:
-	_show_reprise_preview(turn)
-
-
-func clear_reprise_preview() -> void:
-	_clear_reprise_preview()
-
-
-func cancel_hazards() -> void:
-	_cancel_hazards()
-
-
-func spill_break() -> void:
-	_spill_break()
-
-
-func defeat_boss(kind: String, at: Vector3, source := "") -> void:
-	_defeat(kind, at, source)
-
-
-func from_above_target(target) -> bool:
-	return _from_above(target)
-
-
-func set_hazard_grace(id: int, until: float) -> void:
-	_grace[id] = until
-
-
-func hazard_grace(id: int) -> float:
-	return float(_grace.get(id, -1.0))
-
-
-func note_commit() -> void:
-	_last_commit_at = clock
-
-
-func last_commit_at() -> float:
-	return _last_commit_at
-
-
-func step_combo() -> void:
-	_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
-
-
-func clear_combo() -> void:
-	_combo_left = -1
-
-
-func set_next_attack(at: float) -> void:
-	_next_attack = at
-
-
-func next_attack_at() -> float:
-	return _next_attack
-
-
-func was_reeling_now() -> bool:
-	return _was_reeling
-
-
-func reel_plant_mode() -> String:
-	return _reel_plant
-
-
-func cue_phase_name(event_name: String) -> void:
-	_phases.cue(event_name)
-
-
-func posture_staggered() -> bool:
-	return _posture.staggered
-
-
-func is_held() -> bool:
-	return _held()
+	if enemy == null or enemy != scooter or not scooter_landed():
+		return
+	if kind in Rules.CONTACT_KINDS and ctx.player.ball_position().distance_to(scooter.global_position) <= Rules.SCOOTER_TOUCH:
+		_defeat("stomp" if kind == "stomp" or _from_above(scooter) else kind, scooter.global_position, scooter.last_damage_source)
+	else:
+		_eject["slow_until"] = clock + Rules.SCOOTER_SLOW_SECONDS
+		if is_instance_valid(arena):
+			FxLibrary.burst(arena, "brass_spark", scooter.global_position + Vector3.UP * 0.6, 12)
 
 
 func _defeat(kind: String, at: Vector3, source := "") -> void:
@@ -1199,12 +1555,19 @@ func _cancel_hazards() -> void:
 	_clear_reprise_preview()
 	if is_instance_valid(ship):
 		ship.set_hook_brace(false)
-	_scooter_ctrl.clear_mark()
+	var mark = eject_mark()
+	if mark != null:
+		mark.queue_free()
+		_eject.erase("mark")
 	for h in hazards:
 		if is_instance_valid(h):
 			h.queue_free()
 	hazards.clear()
-	_furnace.cancel_hazards()
+	_reprise = {}
+	for d in _drones:
+		if is_instance_valid(d["marker"]):
+			d["marker"].queue_free()
+	_drones.clear()
 	for c in _cranes:
 		if c.has("hazard"):
 			c.erase("hazard")
@@ -1242,7 +1605,8 @@ func _step_hazards(delta: float, ball: Vector3) -> void:
 
 
 func _on_crust(h, ball: Vector3) -> bool:
-	return _furnace.on_crust(self, h, ball)
+	var r: float = arena.radius_of(ball)
+	return r >= h.r_in and r <= h.r_out and ball.y - arena.ground(ball) <= h.reach and arena.is_quenched(ball, clock)
 
 
 func floor_y() -> float:
@@ -1506,7 +1870,7 @@ func plate_reading() -> Dictionary:
 
 
 func charge_coming() -> bool:
-	return _charge_ctrl.charge_coming(self)
+	return state == FIGHT and phase == 3 and _charge.get("state", "") in [CHARGE_BRACE, CHARGE_RUN]
 
 
 func plate_targets() -> Array[Dictionary]:
@@ -1578,10 +1942,6 @@ func tint_for(target, suggested: String) -> String:
 	if target.role == "hull" and charging():
 		return "amber" if ram_punch_now() >= hull_plating_now() else "slate"
 	return suggested
-
-
-func scooter_craft():
-	return EnemyBossCraft
 
 
 func _publish(signal_name: String, args: Array = []) -> void:

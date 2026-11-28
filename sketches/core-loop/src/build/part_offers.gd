@@ -121,6 +121,28 @@ const NEUTRAL_LEAN := 4.0
 const NEUTRAL_WEAPON_EASE := 0.1
 const NEUTRAL_REPEAT_CAP := 2
 
+static var maker_nudge_on := true
+static var archetype_nudge_on := true
+static var answer_nudge_on := true
+static var _answering_by_class := {}
+
+
+static func reset_for_tests() -> void:
+	maker_nudge_on = true
+	archetype_nudge_on = true
+	answer_nudge_on = true
+	_answering_by_class.clear()
+
+
+static func _answering(class_id: String) -> Dictionary:
+	if not _answering_by_class.has(class_id):
+		var ids := {}
+		for part_id in ANSWERS:
+			if Nemesis.answers(class_id, ANSWERS[part_id]):
+				ids[part_id] = true
+		_answering_by_class[class_id] = ids
+	return _answering_by_class[class_id]
+
 
 static func pick_rarity_scaled(rng: RandomNumberGenerator, allowed: Array, rare_mult: float, active_tier: int) -> String:
 	var tier_mult: float = float(RunTier.row(active_tier).rare_weight) if active_tier != 0 else 1.0
@@ -164,7 +186,7 @@ static func listed_only() -> bool:
 
 static func rung_of(part_id: String, def_fn: Callable) -> int:
 	var d: Resource = def_fn.call(part_id)
-	return maxi(0, ItemGen.RARITIES.find(ItemGen.resolve_rarity(String(d.rarity)))) if d != null else 0
+	return maxi(0, PartDef.RARITIES.find(ItemGen.resolve_rarity(String(d.rarity)))) if d != null else 0
 
 
 static func changes_behaviour(part_id: String, def_fn: Callable) -> bool:
@@ -583,7 +605,7 @@ static func _near(class_id: String, pool: Array, row_fn: Callable) -> Array:
 
 
 static func maker_nudge(held: Array, pool: Array, ops: Dictionary) -> Dictionary:
-	if not bool(ops["maker_nudge_on"]):
+	if not maker_nudge_on:
 		return {}
 	var pieces := {}
 	var table: Dictionary = ops["all_rows"].call()
@@ -605,10 +627,10 @@ static func answers_of(part_id: String) -> Array:
 	return ANSWERS.get(part_id, [])
 
 
-static func answer_nudge(class_id: String, pool: Array, nudge: Dictionary, ops: Dictionary) -> Dictionary:
-	if not bool(ops["answer_nudge_on"]) or Nemesis.of(class_id).is_empty():
+static func answer_nudge(class_id: String, pool: Array, nudge: Dictionary, _ops: Dictionary = {}) -> Dictionary:
+	if not answer_nudge_on or Nemesis.of(class_id).is_empty():
 		return nudge
-	var answering: Dictionary = ops["answering"].call(class_id)
+	var answering: Dictionary = _answering(class_id)
 	var out := nudge
 	var copied := false
 	for part_id in pool:
@@ -702,7 +724,7 @@ static func dominant_archetype(held: Array, maker_of_fn: Callable) -> String:
 
 
 static func archetype_nudge(held: Array, pool: Array, ops: Dictionary) -> Dictionary:
-	if not bool(ops["archetype_nudge_on"]):
+	if not archetype_nudge_on:
 		return {}
 	var arch := dominant_archetype(held, ops["maker_of"])
 	if arch == "":

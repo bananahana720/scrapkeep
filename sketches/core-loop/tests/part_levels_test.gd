@@ -4,6 +4,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
 const StatCache := preload("res://src/build/stat_cache.gd")
@@ -175,7 +176,7 @@ func _draws(level: int) -> Dictionary:
 		held.append_array(_copies(key, level))
 	var shown := {}
 	var total := 0
-	for pilot in Parts.KITS:
+	for pilot in PartOffers.KITS:
 		for shape in SHAPES:
 			for i in DRAWS:
 				var cores := rng.randi_range(0, 2)
@@ -190,13 +191,13 @@ func _draws(level: int) -> Dictionary:
 
 func _check_offers() -> void:
 	var before = Synergies.table
-	Synergies.table = AlphaDefs
+	Synergies.set_table(AlphaDefs)
 	var top := _draws(PartDef.MAX_LEVEL)
 	var mid := _draws(PartDef.MAX_LEVEL - 1)
-	Synergies.table = before
+	Synergies.set_table(before)
 	print("part_levels offers | %d draws a level (%d per pilot per shape, 6 pilots, %s) | at level 3 shown %s | at level 2 shown %s"
 		% [top["total"], DRAWS, SHAPES, top["shown"], mid["shown"]])
-	_report("no offer shows a part at level 3", top["total"] == DRAWS * Parts.KITS.size() * SHAPES.size() and top["shown"].is_empty(),
+	_report("no offer shows a part at level 3", top["total"] == DRAWS * PartOffers.KITS.size() * SHAPES.size() and top["shown"].is_empty(),
 		"%d draws holding every levelled part at level 3: shown %s" % [top["total"], top["shown"]])
 	_report("a part at level 2 is still offered", mid["shown"].size() == levelled().size(),
 		"%d draws holding every levelled part at level 2: shown %s of %s" % [mid["total"], mid["shown"].keys(), levelled()])

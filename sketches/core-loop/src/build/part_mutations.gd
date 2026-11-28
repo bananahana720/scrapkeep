@@ -407,7 +407,11 @@ static func active_grapple_mutations(held: Array, maker_muts: Array, maker_count
 	var by_slot := {}
 	var makers_to_check := maker_muts
 	if makers_to_check.is_empty() and not held.is_empty():
-		makers_to_check = MakerDefs.live_grapple_mutations_from(maker_counts_fn.call(held))
+		var live := MakerDefs.live_grapple_mutations_from(maker_counts_fn.call(held))
+		makers_to_check = []
+		for mid in GRAPPLE_MUTATIONS:
+			if mid in live:
+				makers_to_check.append(mid)
 	for mid in makers_to_check:
 		if GRAPPLE_MUTATIONS.has(mid):
 			var row: Dictionary = GRAPPLE_MUTATIONS[mid]

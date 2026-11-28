@@ -2,6 +2,7 @@ extends RefCounted
 
 const Triggers := preload("res://src/build/triggers.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartMutations := preload("res://src/build/part_mutations.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -58,7 +59,6 @@ var _held_parts: Array = []
 var procs := {}
 
 var _clock := 0.0
-var _dt := 1.0 / 90.0
 var _ready_at := {}
 var _timers := {}
 var _armed_hit := 0.0
@@ -128,7 +128,7 @@ func refresh(held: Array) -> void:
 	_held_parts = held.duplicate()
 	var index := 0
 	for part_id in order:
-		if Parts.MICRO_MUTATIONS.has(part_id) or Parts.FLAT_MICRO_MUTATIONS.has(part_id):
+		if PartMutations.MICRO_MUTATIONS.has(part_id) or PartMutations.FLAT_MICRO_MUTATIONS.has(part_id):
 			micro_mutations[part_id] = Parts.micro_mutation(part_id)
 		var d: Resource = Parts.def(part_id)
 		if d == null:
@@ -191,7 +191,7 @@ func micro_mutation(part_id: String) -> Dictionary:
 
 
 func active_micro_mutations() -> Array:
-	return Parts.active_micro_mutations(_held_parts)
+	return PartMutations.active_micro_mutations(_held_parts)
 
 
 func active_grapple_mutations() -> Dictionary:
@@ -401,8 +401,6 @@ func magnet_boost() -> float:
 
 
 func tick(delta: float, bus) -> void:
-	if delta > 0.0:
-		_dt = delta
 	_clock += delta
 	for entry in timed:
 		var every: float = entry["def"].effect.get("every", 10.0)
@@ -547,7 +545,7 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			if dir.length() < 0.5:
 				dir = ctx.aim_forward()
 			dir.y = 0.0
-			ctx.player.add_external_accel(dir.normalized() * power / _dt)
+			ctx.player.add_external_accel(dir.normalized() * power / _step())
 			return true
 		"air_jump":
 			ctx.player.refresh_air()
@@ -753,7 +751,7 @@ func _surge(gain: float, cap_speed: float, c) -> bool:
 	if speed < 1.0 or speed >= cap_speed:
 		return false
 	var target: float = minf(cap_speed, speed * (1.0 + gain))
-	ctx.player.add_external_accel(v.normalized() * (target - speed) / _dt)
+	ctx.player.add_external_accel(v.normalized() * (target - speed) / _step())
 	return true
 
 
@@ -875,3 +873,7 @@ func _clear_buff(id: String) -> void:
 	var ledger = _buffs()
 	if ledger != null:
 		ledger.clear_id(id)
+
+
+func _step() -> float:
+	return 1.0 / float(Engine.physics_ticks_per_second)

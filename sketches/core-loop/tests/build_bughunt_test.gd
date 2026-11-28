@@ -4,6 +4,7 @@ const Build := preload("res://src/build/build.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Triggers := preload("res://src/build/triggers.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 
@@ -117,7 +118,7 @@ func _check_f004_one_slot_bait() -> void:
 		for b in plain:
 			var hand: Array = [a, b]
 			var candidate: String = Parts.completing_part(hand, pool)
-			if candidate != "" and not candidate in Parts.PATTERN_PARTS and not Parts.holds_pattern(hand):
+			if candidate != "" and not candidate in PartOffers.PATTERN_PARTS and not Parts.holds_pattern(hand):
 				held = hand
 				bait = candidate
 				break
@@ -130,13 +131,13 @@ func _check_f004_one_slot_bait() -> void:
 	var seeded := -1
 	for s in 200:
 		rng.seed = s
-		if rng.randf() < Parts.SYNERGY_BAIT:
+		if rng.randf() < PartOffers.SYNERGY_BAIT:
 			seeded = s
 			break
 	rng.seed = seeded
 	var plain_one: Array = Parts.roll(rng, rarities, class_id, held, 1)
 	rng.seed = seeded
-	var gate: Array = Parts.roll_gate(rng, rarities, class_id, held, 1, Parts.PATTERN_GUARANTEE_STAGE)
+	var gate: Array = Parts.roll_gate(rng, rarities, class_id, held, 1, PartOffers.PATTERN_GUARANTEE_STAGE)
 	_report("F004 one-slot gate keeps the bait", plain_one == [bait] and gate == [bait],
 		"held %s, seed %d: roll() gave %s (bait %s); stage-%d roll_gate with one slot gave %s, expected the bait kept"
-			% [held, seeded, plain_one, bait, Parts.PATTERN_GUARANTEE_STAGE, gate])
+			% [held, seeded, plain_one, bait, PartOffers.PATTERN_GUARANTEE_STAGE, gate])

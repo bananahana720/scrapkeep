@@ -1,5 +1,6 @@
 extends RefCounted
 
+const MakerDefs := preload("res://src/build/maker_defs.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -88,7 +89,7 @@ func refresh() -> void:
 	_signature = signature
 	counted = MakerSets.counts(ctx.run.parts, [active] if active != "" else [])
 	var was := live
-	live = MakerSets.live_bonuses(counted)
+	live = MakerDefs.live_bonuses(counted)
 	for bonus_id in live:
 		if not bonus_id in was:
 			_on_completed(bonus_id)
@@ -125,7 +126,7 @@ func _on_completed(bonus_id: String) -> void:
 		return
 	_announced[bonus_id] = true
 	ctx.events.cause_armed.emit("set_" + bonus_id)
-	ctx.events.maker_set_completed.emit(MakerSets.maker_of_bonus(bonus_id), bonus_id)
+	ctx.events.maker_set_completed.emit(MakerDefs.maker_of_bonus(bonus_id), bonus_id)
 	var fx = _effects()
 	if fx != null:
 		var ball: Vector3 = ctx.player.ball_position()
@@ -284,7 +285,7 @@ func _on_landed(impact: float) -> void:
 
 
 func _on_part_gained(part_id: String, source: String) -> void:
-	var was_live := _live_without(part_id, MakerSets.MOSS)
+	var was_live := _live_without(part_id, MakerDefs.MOSS)
 	refresh()
 	if not was_live or not _spare_armed or source in MOSS_SOURCES_SKIPPED or MakerSets.maker_of(part_id) == "":
 		return

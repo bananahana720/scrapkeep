@@ -210,7 +210,7 @@ func _hold(parts: Array) -> void:
 
 func _equip(slot: String, id: String) -> void:
 	_player.abilities.swap(slot, id)
-	_player._refit()
+	_player.refit()
 
 
 func _clear_machines() -> void:

@@ -30,10 +30,7 @@ const AUDIT := {
 	"res://src/combat/warden.gd": ["INSTANT", "LANE", "INSTANT", "LANE", "INSTANT", "INSTANT", "INSTANT"],
 	"res://src/combat/projectile.gd": ["PROJECTILE", "PROJECTILE"],
 	# 2026-11-12 (FX-03): the phase beat's harmless previews come first in source order, a bone slag ring and a bone charge lane.
-	"res://src/boss/boss.gd": ["INSTANT", "LANE", "WAVE"],
-	"res://src/boss/boss_furnace.gd": ["INSTANT", "INSTANT"],
-	"res://src/boss/boss_charge.gd": ["LANE"],
-	"res://src/boss/boss_scooter.gd": ["INSTANT"],
+	"res://src/boss/boss.gd": ["INSTANT", "LANE", "WAVE", "INSTANT", "INSTANT", "LANE", "INSTANT"],
 	# v2 W7 counter units and ancients: one telegraph each, in its threat type.
 	# 2026-11-24 W47-E3: mag_trapper adds Polarity Repulse Ring (INSTANT) alongside its primary pit ring.
 	"res://src/combat/mag_trapper.gd": ["INSTANT", "INSTANT"],

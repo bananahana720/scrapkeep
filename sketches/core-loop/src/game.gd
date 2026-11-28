@@ -544,11 +544,11 @@ func sitting_save_guard() -> void:
 
 
 func open_board_items() -> void:
-	Parts.opened_items = {}
-	if bot_driven or ctx.profile == null:
-		return
-	for id in ShiftBoard.opened_items(ctx.profile):
-		Parts.opened_items[id] = true
+	var opened := {}
+	if not bot_driven and ctx.profile != null:
+		for id in ShiftBoard.opened_items(ctx.profile):
+			opened[id] = true
+	Parts.set_opened_items(opened)
 
 
 func _apply_player_run_options(class_id: String) -> void:

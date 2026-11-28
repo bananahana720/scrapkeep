@@ -2,22 +2,10 @@ extends RefCounted
 
 const MakerDefs := preload("res://src/build/maker_defs.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Relics := preload("res://src/build/relics.gd")
 
-const SPILLWAY := MakerDefs.SPILLWAY
-const FLEET := MakerDefs.FLEET
-const REDJAW := MakerDefs.REDJAW
-const ROOSTS := MakerDefs.ROOSTS
-const WAKING := MakerDefs.WAKING
-const MIND := MakerDefs.MIND
-const MOSS := MakerDefs.MOSS
-
 const SETS := MakerDefs.SETS
-const GRAPPLE_MUTATIONS := MakerDefs.GRAPPLE_MUTATIONS
-
-
-static func grapple_mutation_for_maker(maker: String) -> String:
-	return MakerDefs.grapple_mutation_for_maker(maker)
 
 
 static func live_grapple_mutations(parts: Array, extra: Array = []) -> Array:
@@ -51,14 +39,6 @@ static func _count(out: Dictionary, seen: Dictionary, key: String, maker: String
 	out[maker] = int(out.get(maker, 0)) + 1
 
 
-static func live_bonuses(counted: Dictionary) -> Array:
-	return MakerDefs.live_bonuses(counted)
-
-
-static func maker_of_bonus(bonus_id: String) -> String:
-	return MakerDefs.maker_of_bonus(bonus_id)
-
-
 static func validate() -> Array:
 	var bad := []
 	for part_id in Parts.rows():
@@ -86,4 +66,4 @@ static func validate() -> Array:
 
 
 static func _is_item(part_id: String) -> bool:
-	return Parts.Items.TABLE.has(part_id) or Parts.Items.CELLS.has(part_id) or part_id in Parts.PATTERN_PARTS
+	return Parts.Items.TABLE.has(part_id) or Parts.Items.CELLS.has(part_id) or part_id in PartOffers.PATTERN_PARTS

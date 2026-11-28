@@ -118,12 +118,12 @@ func _run() -> void:
 	var other_slot := Relics.slot_of(other)
 	var other_id_before: String = abilities.id_of(other_slot)
 	run.add_part(Relics.part_of(other), "cache")
-	_report("second slot filled", _held().size() == 2 and _game.ctx.build._relic_fx.has(other_slot), "relics %s" % [_held()])
+	_report("second slot filled", _held().size() == 2 and _game.ctx.build.relic_fx().has(other_slot), "relics %s" % [_held()])
 	_game.flow.retry_stage()
 	_report("retry restores the checkpoint set", _held() == {_slot: _relic}, "relics %s" % [_held()])
 	_report("retry kit matches the set", abilities.id_of(_slot) == (Relics.swap_of(_relic) if swapped else _id_before)
 		and (not cooled or is_equal_approx(abilities.cooldown_of(_slot), maxf(AbilityState.COOLDOWN_FLOOR, _cd_before * float(row["cooldown"]))))
-		and not _game.ctx.build._relic_fx.has(other_slot) and (other_slot == _slot or abilities.id_of(other_slot) == other_id_before), "slot %s id %s cooldown %.2f, other slot row undone" % [_slot, abilities.id_of(_slot), abilities.cooldown_of(_slot)])
+		and not _game.ctx.build.relic_fx().has(other_slot) and (other_slot == _slot or abilities.id_of(other_slot) == other_id_before), "slot %s id %s cooldown %.2f, other slot row undone" % [_slot, abilities.id_of(_slot), abilities.cooldown_of(_slot)])
 
 	# The entrance document carries it in the part list.
 	var doc: Dictionary = JSON.parse_string(JSON.stringify(run.to_entrance_doc()))
@@ -143,7 +143,7 @@ func _saved_relics_migrate(run, abilities) -> void:
 	var part_id := Relics.part_of(_relic)
 	run.parts.erase(part_id)
 	build.sync_relics()
-	_report("kit undone without the part", not build._relic_fx.has(_slot), "fx %s" % [build._relic_fx])
+	_report("kit undone without the part", not build.relic_fx().has(_slot), "fx %s" % [build.relic_fx()])
 	var doc: Dictionary = JSON.parse_string(JSON.stringify(run.to_entrance_doc()))
 	doc["relics"] = {_slot: _relic}
 	var loaded := RunState.new(null)
@@ -153,7 +153,7 @@ func _saved_relics_migrate(run, abilities) -> void:
 	run.relics = loaded.relics.duplicate()
 	build.sync_relics()
 	_report("old relics move into the part list", part_id in run.parts and run.relics.is_empty() and run.parts.count(part_id) == 1
-		and build._relic_fx.has(_slot) and _gained.size() == count, "parts %s, relics %s, gained %d" % [run.parts, run.relics, _gained.size() - count])
+		and build.relic_fx().has(_slot) and _gained.size() == count, "parts %s, relics %s, gained %d" % [run.parts, run.relics, _gained.size() - count])
 	build.sync_relics()
 	_report("adopting twice changes nothing", run.parts.count(part_id) == 1, "copies %d" % run.parts.count(part_id))
 
@@ -182,6 +182,6 @@ func _tree_pick_survives_undo(run, abilities) -> void:
 	_report("a relic the tree gave is not offered", not "crater_heart" in Relics.eligible(run.class_id(), {}, tree) and "crater_heart" in Relics.eligible(run.class_id(), {}),
 		"eligible with the tree %s" % [Relics.eligible(run.class_id(), {}, tree)])
 	_game.flow.retry_stage()
-	_report("retry took the relic back", _held().is_empty() and not build._relic_fx.has(AbilityState.SMASH), "relics %s" % [_held()])
+	_report("retry took the relic back", _held().is_empty() and not build.relic_fx().has(AbilityState.SMASH), "relics %s" % [_held()])
 	_report("retry keeps the tree pick's swap", abilities.id_of(AbilityState.SMASH) == "crater_slam" and smash_before != "crater_slam",
 		"smash %s (was %s), picks %s" % [abilities.id_of(AbilityState.SMASH), smash_before, tree.picks])

@@ -5,7 +5,6 @@ const RunTier := preload("res://src/core/run_tier.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
-const Nemesis := preload("res://src/combat/nemesis.gd")
 const Relics := preload("res://src/build/relics.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const PartMutations := preload("res://src/build/part_mutations.gd")
@@ -154,34 +153,7 @@ const CATALOGUE := {
 }
 
 const SOURCE_RARITIES := PartOffers.SOURCE_RARITIES
-const WORLD_ESCALATION_STAGE_W2 := PartOffers.WORLD_ESCALATION_STAGE_W2
-const WORLD_ESCALATION_STAGE_W3 := PartOffers.WORLD_ESCALATION_STAGE_W3
-const SOURCE_RARITIES_BY_WORLD := PartOffers.SOURCE_RARITIES_BY_WORLD
-const GATE_RARITIES_BY_WORLD := PartOffers.GATE_RARITIES_BY_WORLD
-const STAGE_RARE_MULT := PartOffers.STAGE_RARE_MULT
-const VERB_EFFECTS := PartOffers.VERB_EFFECTS
-const WORLD_VERB_PARTS := PartOffers.WORLD_VERB_PARTS
-const ARCHETYPES := PartOffers.ARCHETYPES
-const MILESTONE_FOR_EVENT := PartOffers.MILESTONE_FOR_EVENT
-const MILESTONE_ORDER := PartOffers.MILESTONE_ORDER
-const SYNERGY_BAIT := PartOffers.SYNERGY_BAIT
-const HIGH_IMPACT_SYNERGY_BAIT := PartOffers.HIGH_IMPACT_SYNERGY_BAIT
-const MAKER_NUDGE_AT := PartOffers.MAKER_NUDGE_AT
-const MAKER_NUDGE := PartOffers.MAKER_NUDGE
-const ARCHETYPE_NUDGE_AT := PartOffers.ARCHETYPE_NUDGE_AT
-const ARCHETYPE_NUDGE := PartOffers.ARCHETYPE_NUDGE
-const WORLD_VERB_NUDGE := PartOffers.WORLD_VERB_NUDGE
-const WORLD_SIGNATURE_NUDGE := PartOffers.WORLD_SIGNATURE_NUDGE
-static var maker_nudge_on := true
-static var archetype_nudge_on := true
-const ANSWERS := PartOffers.ANSWERS
-static var answer_nudge_on := true
-
-const MICRO_MUTATIONS := PartMutations.MICRO_MUTATIONS
-const FLAT_MICRO_MUTATIONS := PartMutations.FLAT_MICRO_MUTATIONS
-const GRAPPLE_MUTATION_PREFIX := PartMutations.GRAPPLE_MUTATION_PREFIX
 const GRAPPLE_SWAP_SLOTS := PartMutations.GRAPPLE_SWAP_SLOTS
-const GRAPPLE_MUT_MODEL_DIR := PartMutations.GRAPPLE_MUT_MODEL_DIR
 const GRAPPLE_MUTATIONS := PartMutations.GRAPPLE_MUTATIONS
 
 
@@ -189,36 +161,8 @@ static func micro_mutation(part_id: String) -> Dictionary:
 	return PartMutations.micro_mutation(part_id)
 
 
-static func micro_mutation_ids() -> Array:
-	return PartMutations.micro_mutation_ids()
-
-
-static func all_micro_mutation_ids() -> Array:
-	return PartMutations.all_micro_mutation_ids()
-
-
 static func has_micro_mutation(held: Array, part_id: String) -> bool:
 	return PartMutations.has_micro_mutation(held, part_id)
-
-
-static func active_micro_mutations(held: Array) -> Array:
-	return PartMutations.active_micro_mutations(held)
-
-
-static func micro_mutation_problems() -> Array:
-	return PartMutations.micro_mutation_problems(CATALOGUE)
-
-
-static func all_micro_mutation_problems() -> Array:
-	return PartMutations.all_micro_mutation_problems(CATALOGUE)
-
-
-static func grapple_mutation_ids() -> Array:
-	return PartMutations.grapple_mutation_ids()
-
-
-static func is_grapple_mutation_part(part_id: String) -> bool:
-	return PartMutations.is_grapple_mutation_part(part_id)
 
 
 static func grapple_mutation_id_of(part_id: String) -> String:
@@ -232,29 +176,6 @@ static func grapple_mutation(id_or_part: String) -> Dictionary:
 static func active_grapple_mutations(held: Array, maker_muts: Array = []) -> Dictionary:
 	return PartMutations.active_grapple_mutations(held, maker_muts, maker_counts)
 
-
-static func has_grapple_mutation(held: Array, mut_id: String, maker_muts: Array = []) -> bool:
-	return PartMutations.has_grapple_mutation(held, mut_id, maker_muts, maker_counts)
-
-
-static func grapple_mutation_problems() -> Array:
-	return PartMutations.grapple_mutation_problems()
-
-
-const PATTERN_PARTS := PartOffers.PATTERN_PARTS
-const PATTERN_GUARANTEE_STAGE := PartOffers.PATTERN_GUARANTEE_STAGE
-const RUNG_FLOOR := PartOffers.RUNG_FLOOR
-const GENERATED_SHARE := PartOffers.GENERATED_SHARE
-const KITS := PartOffers.KITS
-const KIT_SHARE := PartOffers.KIT_SHARE
-const REST_OF_NEUTRAL := PartOffers.REST_OF_NEUTRAL
-const KIT_PART_CAP := PartOffers.KIT_PART_CAP
-const MOVEMENT_SHARE := PartOffers.MOVEMENT_SHARE
-const CLASS_MOVEMENT_SHARE := PartOffers.CLASS_MOVEMENT_SHARE
-const NEUTRAL_SHELF := PartOffers.NEUTRAL_SHELF
-const NEUTRAL_LEAN := PartOffers.NEUTRAL_LEAN
-const NEUTRAL_WEAPON_EASE := PartOffers.NEUTRAL_WEAPON_EASE
-const NEUTRAL_REPEAT_CAP := PartOffers.NEUTRAL_REPEAT_CAP
 
 const BURDEN_HP := 4.0
 const BURDEN_SCRAP_LOSS := 0.05
@@ -418,9 +339,7 @@ static func set_opened_items(next: Dictionary) -> void:
 
 
 static func reset_for_tests() -> void:
-	maker_nudge_on = true
-	archetype_nudge_on = true
-	answer_nudge_on = true
+	PartOffers.reset_for_tests()
 	_run_ref = null
 	seams = {}
 	opened_items = {}
@@ -499,7 +418,7 @@ static func _base_row(part_id: String) -> Dictionary:
 		return Relics.part_row(part_id)
 	if HOTWIRED.has(part_id):
 		return _hotwired_spec(part_id)
-	if is_grapple_mutation_part(part_id):
+	if PartMutations.is_grapple_mutation_part(part_id):
 		return _grapple_mut_spec(part_id)
 	var generated := ItemGen.generated_row(part_id)
 	return _settled(generated) if not generated.is_empty() else generated
@@ -570,11 +489,6 @@ static func stacked_out(part_id: String, held: Array) -> bool:
 	return held.count(part_id) >= int(d.stack_cap)
 
 
-static func _swap_stacked_out(rng: RandomNumberGenerator, class_id: String, held: Array, picks: Array, pool: Array,
-		offered: Dictionary) -> Array:
-	return PartOffers.swap_stacked_out(rng, class_id, held, picks, pool, offered, _offer_ops())
-
-
 static func def_at(part_id: String, level: int) -> Resource:
 	var base: Resource = def(part_id)
 	if base == null or base.levels.is_empty():
@@ -603,7 +517,7 @@ static func def(part_id: String) -> Resource:
 
 static func has(part_id: String) -> bool:
 	return all_rows().has(part_id) or EVOLVED.has(part_id) or EVOLVED_W50.has(part_id) or HOTWIRED.has(part_id) or Relics.is_relic(part_id) \
-		or is_grapple_mutation_part(part_id) \
+		or PartMutations.is_grapple_mutation_part(part_id) \
 		or (ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty())
 
 
@@ -803,10 +717,6 @@ static func _offer_ops() -> Dictionary:
 		"active_tier": active_tier,
 		"maker_of": maker_of,
 		"maker_counts": maker_counts,
-		"maker_nudge_on": maker_nudge_on,
-		"archetype_nudge_on": archetype_nudge_on,
-		"answer_nudge_on": answer_nudge_on,
-		"answering": _answering,
 		"maxed": maxed,
 		"stacked_out": stacked_out,
 		"rarity_of": rarity_of,
@@ -830,28 +740,12 @@ static func is_high_impact(part_id: String) -> bool:
 	return PartOffers.is_high_impact(part_id, def)
 
 
-static func world_for_stage(stage: int) -> int:
-	return PartOffers.world_for_stage(stage)
-
-
-static func stage_rare_mult(stage: int) -> float:
-	return PartOffers.stage_rare_mult(stage)
-
-
-static func source_rarities(source: String, stage := 1) -> Array:
-	return PartOffers.source_rarities(source, stage)
-
-
 static func rung_of(part_id: String) -> int:
 	return PartOffers.rung_of(part_id, def)
 
 
 static func gate_rarities(bonus_cores: int, stage := 1) -> Array:
 	return PartOffers.gate_rarities(bonus_cores, stage)
-
-
-static func listed_only() -> bool:
-	return PartOffers.listed_only()
 
 
 static func offer_pool(class_id: String, rarities: Array) -> Array:
@@ -875,10 +769,6 @@ static func slot_weights(rarity: String, class_id: String, pool: Array, offered:
 	return PartOffers.slot_weights(rarity, class_id, pool, offered, nudge, _offer_ops())
 
 
-static func _pick_weight(rng: RandomNumberGenerator, keys: Array, weights: Dictionary) -> String:
-	return PartOffers.pick_weight(rng, keys, weights)
-
-
 static func milestone_for(event_id: String, held: Array) -> String:
 	return PartOffers.milestone_for(event_id, held)
 
@@ -888,33 +778,8 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	return PartOffers.roll(rng, rarities, class_id, held, count, exclude, offered, _offer_ops())
 
 
-static func _bait(class_id: String, held: Array, pool: Array, offered: Dictionary, count: int) -> String:
-	return PartOffers.bait(class_id, held, pool, offered, count, _offer_ops())
-
-
 static func maker_nudge(held: Array, pool: Array) -> Dictionary:
 	return PartOffers.maker_nudge(held, pool, _offer_ops())
-
-
-static func answers_of(part_id: String) -> Array:
-	return PartOffers.answers_of(part_id)
-
-
-static func answer_nudge(class_id: String, pool: Array, nudge: Dictionary) -> Dictionary:
-	return PartOffers.answer_nudge(class_id, pool, nudge, _offer_ops())
-
-
-static var _answering_by_class := {}
-
-
-static func _answering(class_id: String) -> Dictionary:
-	if not _answering_by_class.has(class_id):
-		var ids := {}
-		for part_id in ANSWERS:
-			if Nemesis.answers(class_id, ANSWERS[part_id]):
-				ids[part_id] = true
-		_answering_by_class[class_id] = ids
-	return _answering_by_class[class_id]
 
 
 static func _nudged(raw: Dictionary, nudge: Dictionary) -> Dictionary:
@@ -941,10 +806,6 @@ static func dominant_archetype(held: Array) -> String:
 
 static func archetype_nudge(held: Array, pool: Array) -> Dictionary:
 	return PartOffers.archetype_nudge(held, pool, _offer_ops())
-
-
-static func world_nudge(stage: int, pool: Array) -> Dictionary:
-	return PartOffers.world_nudge(stage, pool, _offer_ops())
 
 
 static func completing_archetype_part(held: Array, pool: Array) -> String:

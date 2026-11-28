@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -245,10 +246,10 @@ func _check_table_present() -> void:
 	for part_id in Items.TABLE:
 		if not Parts.has(part_id):
 			missing.append(part_id)
-	for part_id in Parts.PATTERN_PARTS:
+	for part_id in PartOffers.PATTERN_PARTS:
 		if not Parts.has(part_id):
 			missing.append(part_id)
-	var table := Items.TABLE.size() + Parts.PATTERN_PARTS.size()
+	var table := Items.TABLE.size() + PartOffers.PATTERN_PARTS.size()
 	var bowling: int = Items.TABLE.values().filter(func(r): return r.get("bwl", false)).size()
 	var happy: int = Items.TABLE.values().filter(func(r): return r.get("happy", false)).size()
 	var charge: int = Items.TABLE.values().filter(func(r): return r.get("base", "") == "charge" and not r.get("happy", false)).size()
@@ -275,7 +276,7 @@ func _check_class_gating() -> void:
 
 func _check_needs_gate() -> void:
 	var saved: Dictionary = Parts.seams.duplicate()
-	Parts.seams = {}
+	Parts.set_seams({})
 	var waiting: Array = Parts.ids().filter(func(id): return Parts.def(id).needs != "")
 	var leaked: Array = []
 	for part_id in waiting:
@@ -283,9 +284,9 @@ func _check_needs_gate() -> void:
 		var class_id: String = d.class_id if d.class_id != "" else Items.SABLE
 		if part_id in Parts.offer_pool(class_id, [d.rarity]):
 			leaked.append(part_id)
-	Parts.seams = {"spawner.extend_cloak": true}
+	Parts.set_seams({"spawner.extend_cloak": true})
 	var opened: bool = "feedback_loop" in Parts.offer_pool(Items.KEST, ["rare"])
-	Parts.seams = saved
+	Parts.set_seams(saved)
 	# 2026-10-12 (alpha wave 13 SR9): relay_convergence waits on relay.convergence; was 5 waiting.
 	_report("parts waiting on a seam are never offered", leaked.is_empty() and waiting.size() == 6 and opened,
 		"%d parts wait on a seam %s; offered without it %s; feedback_loop offered once spawner.extend_cloak exists: %s"
@@ -334,7 +335,7 @@ func _check_rarity_weights() -> void:
 
 
 func _is_pattern(key: String) -> bool:
-	return key in Parts.PATTERN_PARTS
+	return key in PartOffers.PATTERN_PARTS
 
 
 # A held build of 0 to 4 parts drawn from draw_from, the same for a given seed.

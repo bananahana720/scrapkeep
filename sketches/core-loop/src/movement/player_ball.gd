@@ -121,7 +121,6 @@ var _line_target = null
 var _line_anchor := Vector3.ZERO
 var _line_hold := 0.0
 var _line_standing := false
-const BankMove := SpeedBank.BankMove
 var _bow: Area3D
 var _speed_bank := SpeedBank.new()
 var _kest_air := KestAir.new()
@@ -130,11 +129,6 @@ var speed_bank: Dictionary:
 		return _speed_bank.state
 	set(v):
 		_speed_bank.state = v
-var _speed_bank_chosen: int:
-	get:
-		return _speed_bank.chosen
-	set(v):
-		_speed_bank.chosen = v
 var _bow_check_queued := false
 var _crushing := {}
 var exceptions
@@ -296,6 +290,17 @@ func speed_fraction() -> float:
 
 func planar_velocity() -> Vector3:
 	return Vector3(state.velocity.x, 0.0, state.velocity.z)
+
+
+func body_planar_speed() -> float:
+	if _rigid == null:
+		return 0.0
+	var v: Vector3 = _rigid.linear_velocity
+	return Vector2(v.x, v.z).length()
+
+
+func speed_bank_move() -> int:
+	return _speed_bank.chosen
 
 
 func add_external_accel(accel: Vector3) -> void:
@@ -478,10 +483,6 @@ func refit() -> void:
 	_paint_effects()
 
 
-func _refit() -> void:
-	refit()
-
-
 func _paint_effects() -> void:
 	var color := class_color()
 	_wings_material.albedo_color = Color(color, 0.75)
@@ -562,6 +563,7 @@ func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> b
 	return true
 
 
+# Keep Engine.time_scale transitions from skewing knockback (dividing by _delta during hit-stop scales by 1/HIT_STOP_SCALE).
 func shove_planar(dv: Vector3, interrupts := true, kind := "shove") -> bool:
 	if not dv.is_finite() or dv == Vector3.ZERO:
 		return false

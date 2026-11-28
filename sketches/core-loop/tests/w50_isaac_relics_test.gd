@@ -256,7 +256,7 @@ func _as_pilot(pilot_id: String) -> void:
 
 func _equip(slot: String, ability_id: String) -> void:
 	_player.abilities.swap(slot, ability_id)
-	_player._refit()
+	_player.refit()
 
 
 func _spawn(kind: String, flat: Vector3, hp := 100000.0) -> Node3D:

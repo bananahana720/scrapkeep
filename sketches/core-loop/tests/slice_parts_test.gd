@@ -108,13 +108,13 @@ func _sources() -> void:
 		"%d visits: %d repeats, %d empty ids" % [DRAWS, repeats, empty_ids])
 	# 2026-10-04: the default table takes the alpha ruleset, so it no longer reaches parts outside
 	# the twelve; the control is an unfiltered table (null), which still does.
-	Synergies.table = null
+	Synergies.set_table(null)
 	var base := _draw()
 	for source in SOURCES:
 		if source == "shelf" or source == "reroll" or source == "gate" or source == "cache":
 			_t.check("unfiltered %s reaches parts outside the twelve" % source, not _outside(base[source]).is_empty(),
 				"%d offers, %d outside" % [base[source].size(), _outside(base[source]).size()])
-	Synergies.table = SliceDefs
+	Synergies.set_table(SliceDefs)
 
 
 func _list() -> void:

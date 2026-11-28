@@ -59,7 +59,6 @@
     "sketches/core-loop/src/build/panel_shell.gd:_meshes",
     "sketches/core-loop/src/build/panel_shell.gd:_sockets",
     "sketches/core-loop/src/build/parts.gd:_all_rows",
-    "sketches/core-loop/src/build/parts.gd:_answering_by_class",
     "sketches/core-loop/src/build/parts.gd:_defs",
     "sketches/core-loop/src/build/parts.gd:_maker_of",
     "sketches/core-loop/src/build/parts.gd:_rows",

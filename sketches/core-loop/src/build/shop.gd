@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const LoopTally := preload("res://src/core/loop_tally.gd")
 const Relics := preload("res://src/build/relics.gd")
 const Items := preload("res://src/build/items.gd")
@@ -649,7 +650,7 @@ func _stock() -> Array:
 						focused_out.append({"part_id": fill_id, "sold": false, "odds": focused_odds})
 				return focused_out
 	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
-	var deep_world := stage >= Parts.WORLD_ESCALATION_STAGE_W2
+	var deep_world := stage >= PartOffers.WORLD_ESCALATION_STAGE_W2
 	var near_set := deep_world and _set_near_complete()
 	var set_pick: String = _set_pick() if (last_call() or near_set) else ""
 	var floor_pick: Array = [set_pick] if set_pick != "" else (
@@ -782,7 +783,7 @@ func _roll_one(rarities: Array, exclude: Array = []) -> String:
 	var picks: Array = Parts.roll(_rng, rarities, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 	if not picks.is_empty():
 		return picks[0]
-	if Parts.listed_only():
+	if PartOffers.listed_only():
 		var any: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 		return any[0] if not any.is_empty() else ""
 	return ItemGen.roll_id(_rng, rarities[0])
@@ -790,10 +791,10 @@ func _roll_one(rarities: Array, exclude: Array = []) -> String:
 
 func _roll_hook(exclude: Array = []) -> Dictionary:
 	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
-	if Parts.listed_only() and not Parts.offer_pool(ctx.run.class_id(), TOP_RARITIES).is_empty():
+	if PartOffers.listed_only() and not Parts.offer_pool(ctx.run.class_id(), TOP_RARITIES).is_empty():
 		for table in [TOP_RARITIES, TOP_FALLBACK]:
 			var picks: Array = Parts.roll_high_impact(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude, {}, stage, false) \
-				if table == TOP_FALLBACK and stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+				if table == TOP_FALLBACK and stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 				else Parts.roll(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 			if not picks.is_empty():
 				return {"part_id": picks[0], "table": table}
@@ -867,7 +868,7 @@ func press_duplicate(target_part_id: String) -> Dictionary:
 func _stock_tri_terminal() -> Array:
 	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
 	var picks: Array = Parts.roll_for_stage(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE, stage) \
-		if stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+		if stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 		else Parts.roll(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE)
 	var out: Array = []
 	for i in picks.size():

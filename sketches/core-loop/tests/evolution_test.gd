@@ -179,7 +179,7 @@ func _check_never_rolls() -> void:
 	var draws := 0
 	var saved = Synergies.table
 	for table in [saved, null]:
-		Synergies.table = table
+		Synergies.set_table(table)
 		for rarities in lists:
 			for cls in ["sable", "rivet", "kest"]:
 				for id in Parts.offer_pool(cls, rarities):
@@ -198,5 +198,5 @@ func _check_never_rolls() -> void:
 							draws += 1
 							if id in evolved_ids:
 								leaked.append("gate %s" % id)
-	Synergies.table = saved
+	Synergies.set_table(saved)
 	_report("evolved never rolls", leaked.is_empty() and draws > 1000, "%d draws over %d rarity lists, both tables, three classes; leaked %s" % [draws, lists.size(), leaked.slice(0, 5)])
