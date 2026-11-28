@@ -9,7 +9,7 @@ const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const Triggers := preload("res://src/build/triggers.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 
 # The catalogue change request (DEMO-SPEC, reconciled.json, owner B): every row has a
 # verb, a punch value and one or two known tags; only common rows may be

@@ -7,7 +7,7 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 

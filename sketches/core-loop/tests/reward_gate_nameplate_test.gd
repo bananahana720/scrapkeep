@@ -23,7 +23,7 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Parts := preload("res://src/build/parts.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Workshop := preload("res://src/ui/workshop.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 

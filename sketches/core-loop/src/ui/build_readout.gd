@@ -9,7 +9,7 @@ const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/core/ui_fonts.gd")
 const Attachments := preload("res://src/build/attachments.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 
 const PIP := 6.0

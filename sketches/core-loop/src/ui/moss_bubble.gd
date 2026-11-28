@@ -3,7 +3,7 @@ extends Control
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/core/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const UiFonts := preload("res://src/core/ui_fonts.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const PilotStory := preload("res://src/core/pilot_story.gd")

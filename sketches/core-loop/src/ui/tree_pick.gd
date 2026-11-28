@@ -9,7 +9,7 @@ const UiFonts := preload("res://src/core/ui_fonts.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const BuildReadout := preload("res://src/ui/build_readout.gd")
 const Parts := preload("res://src/build/parts.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
 

@@ -2,7 +2,7 @@ extends Control
 
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ThreatGrammar := preload("res://src/combat/threat_grammar.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")

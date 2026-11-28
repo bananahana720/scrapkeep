@@ -8,7 +8,7 @@ const Companion := preload("res://src/core/companion.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
 const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 
 # Ruling cx on the hot-wire offer and the companion panel: they say what they are by how they
 # look. The offer wears an amber stamp and no "HOT-WIRED" eyebrow, its Recycle choice is the

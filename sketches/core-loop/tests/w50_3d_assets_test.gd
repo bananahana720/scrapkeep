@@ -8,7 +8,7 @@ const W50AssetHooks := preload("res://src/presentation/w50_asset_hooks.gd")
 const AllyHuskLook := preload("res://src/presentation/ally_husk_look.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Consumables := preload("res://src/build/consumables.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 

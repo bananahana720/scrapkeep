@@ -10,7 +10,7 @@ extends SceneTree
 const Parts := preload("res://src/build/parts.gd")
 const Attachments := preload("res://src/build/attachments.gd")
 const BuildReadout := preload("res://src/ui/build_readout.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 const ROW_WORDS := 9

@@ -5,7 +5,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const Holds := preload("res://src/combat/holds.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 
 # No reskins (DESIGN-V2 section 10, Andrew's rule) and the roster's other promises:
 # - every enemy id owns a mechanic tag no other id has, and says in one line what the

@@ -2,7 +2,7 @@ extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const UiTokens := preload("res://src/core/ui_tokens.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")

@@ -2,7 +2,7 @@ extends RefCounted
 
 const Bindings := preload("res://src/core/bindings.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")

@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
 const Activities := preload("res://src/world/activities.gd")

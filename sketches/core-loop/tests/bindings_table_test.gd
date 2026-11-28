@@ -5,7 +5,7 @@ const Bindings := preload("res://src/core/bindings.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 

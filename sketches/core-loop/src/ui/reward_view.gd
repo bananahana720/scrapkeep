@@ -2,7 +2,7 @@ extends Control
 
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/core/ui_tokens.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")

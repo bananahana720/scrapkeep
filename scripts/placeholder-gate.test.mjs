@@ -355,7 +355,7 @@ test("scan passes a finished project and fails each kind of placeholder", () => 
       park_rows: [],
     }),
     "assets/models/park/land.glb": "",
-    "src/ui/icons.gd": 'const IDS := {"cls_a": "x"}\nconst EXTRA := {}\n',
+    "src/core/icons.gd": 'const IDS := {"cls_a": "x"}\nconst EXTRA := {}\n',
     "assets/icons/cls_a.svg": "<svg/>",
     "src/core/cosmetics.gd":
       'const PENDING_ART := []\n\t"paint_a": {"slot": "paint", "name": "A"},\n',
@@ -376,7 +376,7 @@ test("scan passes a finished project and fails each kind of placeholder", () => 
       landmark: { id: "l", recipe: "land" },
       park_rows: [{ id: "r", recipe: "greybox:bank" }],
     }),
-    "src/ui/icons.gd": 'const IDS := {"cls_a": "x", "cls_b": "y"}\nconst EXTRA := {}\n',
+    "src/core/icons.gd": 'const IDS := {"cls_a": "x", "cls_b": "y"}\nconst EXTRA := {}\n',
     "src/core/cosmetics.gd":
       'const PENDING_ART := ["trail_x"]\n\t"trail_y": {"slot": "trail", "name": "Y", "asset": "y"},\n',
     "assets/registry.json": JSON.stringify({

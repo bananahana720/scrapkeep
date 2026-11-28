@@ -16,7 +16,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
 const Hud := preload("res://src/ui/hud.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Parts := preload("res://src/build/parts.gd")
 const PartOffers := preload("res://src/build/part_offers.gd")
 const RunState := preload("res://src/core/run_state.gd")

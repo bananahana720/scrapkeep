@@ -3,7 +3,7 @@ extends SceneTree
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")

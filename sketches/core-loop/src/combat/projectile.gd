@@ -8,7 +8,7 @@ const Enemy := preload("res://src/combat/enemy.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const SpeedTier := preload("res://src/core/speed_tier.gd")
 
