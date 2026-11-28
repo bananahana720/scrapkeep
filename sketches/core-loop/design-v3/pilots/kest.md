@@ -101,7 +101,7 @@ Tally is the nearest: both set up and then cash in. The split is the target. Tal
 1. **Line on a body** (`on_body`). The charge runs down the line, sets on the enemy and rides it, through the rider path sticky charges already have (`sticky.gd:78-80`, `:88-90`). It goes off when the line ends for any reason (a let-go, a smash landing, a cut, a break) or when its 2.0 s fuse runs out, whichever comes first.
 2. **Line on the world** (`on_world`). It sets on the anchor. It goes off when the line ends or its 6.0 s fuse runs out. It does not trigger on a touch: a touch mine is slot 1's job.
 3. **No line.** The cast loads (SKILL-BAR section 3). The next bite carries the charge on the hook head, and it sets on arrival with no travel.
-4. **One blast path.** It goes off through `detonate` (`combat.gd:2073-2101`) with `_source: "line"` (the tag pattern at `combat.gd:2062`, `:1875`). The rocket jump, the cloak, Daisy Chain, Time Bomb, Demolition and Marked all read it with no new code path.
+4. **One blast path.** It goes off through `_detonate` (`combat.gd:2073-2101`) with `_source: "line"` (the tag pattern at `combat.gd:2062`, `:1875`). The rocket jump, the cloak, Daisy Chain, Time Bomb, Demolition and Marked all read it with no new code path.
 5. **Blast vault.** Latch a wall, cast, reel in, and let go within 4.5 m with Space held. The existing rocket jump throws Kest up and away at 22 to 30 m/s (`weapons.gd:203-206`). The let-go's own fling still applies (`src/movement/player_ball.gd:471-473`).
 6. **Haul smash.** Ctrl hauls a body-latched ball into a smash. The landing ends the line, so the charge goes off in the smash's tick. With Space held, the rocket jump throws her clear.
 7. **No reel burst (Call).** SKILL-BAR's default `on_world` is `reel_burst`. Kest skips it: the blast vault is her wall move, and a reel burst would make it Rivet's yank.
@@ -189,7 +189,7 @@ The arc is `RideRail.arc` (`src/world/ride_rail.gd:41-74`) ending at H, with `fl
 
 ### How it is built from what exists
 
-- **Volley charges** are ordinary sticky charges (`sticky.gd:6-10`) thrown from the mortar to points round B, armed for touch, on a 0.6 s fuse. Their damage is set at the throw: 12 x the heft multiplier, with no `damage_mod` and no cloak crit. Source tag `ultimate`. They go off through `detonate` (`combat.gd:2073-2101`), so Daisy Chain, Time Bomb, Demolition and Marked act on them.
+- **Volley charges** are ordinary sticky charges (`sticky.gd:6-10`) thrown from the mortar to points round B, armed for touch, on a 0.6 s fuse. Their damage is set at the throw: 12 x the heft multiplier, with no `_damage_mod` and no cloak crit. Source tag `ultimate`. They go off through `_detonate` (`combat.gd:2073-2101`), so Daisy Chain, Time Bomb, Demolition and Marked act on them.
 - **Cloak (Call).** The cloak is held through the wind-up, the flight and the hold, as Nightfall holds it (`combat.gd:2189-2192`), and runs 1.5 s past the landing. Set-piece damage never calls `_cloak_shot()` (`combat.gd:2201-2209`), so it neither crits nor breaks the cloak. Her first throw after the landing does crit: the set piece ends in smoke.
 - **The stoop as an exit.** Volley charges thrown on the last beats are still live round B when she lands. Holding Space after recovery ends, Kest rocket-jumps off the nearest (`combat.gd:2107-2124`). With Blast Jumper (`kest.gd:28-29`) it happens without Space.
 - **Before B3 ships legs**, Windhover falls back to a high arc onto B with the volleys on its beats and no hang.
@@ -215,7 +215,7 @@ The last two rows are one fact. One function, `volley_targets(heft_class)`, feed
 | Warden as anchor (wave K-F) | as above | with a line standing on the Warden at Q, B is the anchor and the stoop is the drop finisher; the vertical drop reaches a Warden's back or a hand under a sky island | as above |
 | Brindle, the Waking, the Mind | x0.5 | x0.5; phase windows untouched | brace pose and the "nope" glyph |
 
-Demolition (`kest.gd:43-44`) raises the volley charges on plated enemies through `detonate` (`combat.gd:2085-2086`). On a Warden that only raises posture gain. It still cannot crack or shatter.
+Demolition (`kest.gd:43-44`) raises the volley charges on plated enemies through `_detonate` (`combat.gd:2085-2086`). On a Warden that only raises posture gain. It still cannot crack or shatter.
 
 ### Depth 3: two variants
 

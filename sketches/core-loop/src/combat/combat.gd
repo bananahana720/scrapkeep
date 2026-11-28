@@ -5243,7 +5243,7 @@ func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: 
 	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber, cover)
 	shell.hit_player.connect(_on_player_hit.bind("lobber"))
 	shell.returned_landed.connect(on_shell_returned)
-	shell.exploded.connect(func(at: Vector3, blast: float, deal_hit: bool): effects.ring(at, blast, Palette.HAZARD))
+	shell.exploded.connect(func(at: Vector3, blast: float, _hit: bool): effects.ring(at, blast, Palette.HAZARD))
 
 
 func on_shell_returned(shell: Node3D) -> void:
