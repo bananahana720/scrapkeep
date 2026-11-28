@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
+import { pool, runProcess as runChild } from "../lib/proc.mjs";
 import {
   HITCH_MS,
   PILOTS,
@@ -93,37 +94,19 @@ const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], {
 const JOB_TIMEOUT = (opts.quick ? 10 : 40) * 60_000;
 const log = (line) => console.log(`[${((Date.now() - started) / 60000).toFixed(1)}m] ${line}`);
 
-function runProcess(args, { cwd = root, env = {}, timeout = JOB_TIMEOUT, logFile }) {
-  return new Promise((resolve) => {
-    const child = spawn(godot, args, { cwd, env: { ...process.env, ...env } });
-    let text = "";
-    let timedOut = false;
-    child.stdout.on("data", (d) => (text += d));
-    child.stderr.on("data", (d) => (text += d));
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
-    }, timeout);
-    child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      if (logFile) writeFileSync(logFile, text);
-      resolve({ exit: code ?? (signal ? 128 : 1), signal, timedOut, text });
-    });
+async function runProcess(args, { cwd = root, env = {}, timeout = JOB_TIMEOUT, logFile }) {
+  const res = await runChild(godot, args, {
+    cwd,
+    env: { ...process.env, ...env },
+    timeoutMs: timeout,
+    logFile,
   });
-}
-
-async function pool(tasks, slots) {
-  const results = new Array(tasks.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(slots, tasks.length) }, async () => {
-      while (next < tasks.length) {
-        const i = next++;
-        results[i] = await tasks[i]();
-      }
-    }),
-  );
-  return results;
+  return {
+    exit: res.exit ?? (res.signal ? 128 : 1),
+    signal: res.signal,
+    timedOut: res.timedOut,
+    text: res.output,
+  };
 }
 
 const read = (file) => (existsSync(file) ? readFileSync(file, "utf8") : "");

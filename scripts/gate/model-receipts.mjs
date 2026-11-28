@@ -1,18 +1,11 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { parseReceiptArgs, writeJsonReceipt } from "./receipt-cli.mjs";
 
 const SKILL = ".agents/skills/scrapkeep-verify-formal";
 const SRC = "sketches/core-loop/src";
@@ -546,12 +539,24 @@ export function produce(id, { root, head, java, jar, workers, minutes, log = () 
 }
 
 function main(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
+  const usage = `usage: model-receipts.mjs --out <dir> [--row ${Object.keys(ROWS).join("|")}] [--jar <tla2tools.jar>] [--workers <n>] [--timeout-min <n>]`;
+  let args;
+  try {
+    args = parseReceiptArgs(argv, {
+      valueFlags: {
+        "--row": { key: "row" },
+        "--jar": { key: "jar" },
+        "--workers": { key: "workers" },
+        "--timeout-min": { key: "timeout-min" },
+      },
+      usageError: usage,
+    });
+  } catch (error) {
+    console.error(String(error?.message ?? error));
+    return 2;
+  }
   if (!args.out || (args.row && !ROWS[args.row])) {
-    console.error(
-      `usage: model-receipts.mjs --out <dir> [--row ${Object.keys(ROWS).join("|")}] [--jar <tla2tools.jar>] [--workers <n>] [--timeout-min <n>]`,
-    );
+    console.error(usage);
     return 2;
   }
   const root = git(process.cwd(), ["rev-parse", "--show-toplevel"]);
@@ -577,7 +582,6 @@ function main(argv) {
       );
     return 2;
   }
-  mkdirSync(args.out, { recursive: true });
   let ok = true;
   for (const id of args.row ? [args.row] : Object.keys(ROWS)) {
     const receipt = produce(id, {
@@ -589,8 +593,7 @@ function main(argv) {
       minutes: Number(args["timeout-min"] ?? TIMEOUT_MIN),
       log: (m) => console.error(m),
     });
-    const file = resolve(args.out, `${id}.json`);
-    writeFileSync(file, JSON.stringify(receipt, null, 2) + "\n");
+    const file = writeJsonReceipt(resolve(args.out, `${id}.json`), receipt);
     console.log(`${id}: ${receipt.pass ? "PASS" : "FAIL"} ${receipt.measured} -> ${file}`);
     ok &&= receipt.pass;
   }

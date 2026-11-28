@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { watchDrawnRun } from "./window-watch.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
 import { resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
-import { acquireSlot } from "../sketch-smoke.mjs";
+import { acquireSlot } from "../lib/machine-lock.mjs";
+import { runProcess } from "../lib/proc.mjs";
 import { root } from "./clean-head.mjs";
 
 export const SKETCH = "sketches/core-loop";
@@ -42,65 +43,23 @@ export function scratchEnv(cwd) {
   };
 }
 
-const killGroup = (child) => {
-  try {
-    process.kill(-child.pid, "SIGKILL");
-  } catch {
-    try {
-      child.kill("SIGKILL");
-    } catch {}
-  }
-};
-
-export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation }) {
-  cancellation?.throwIfAborted();
-  return new Promise((resolve) => {
-    let output = "";
-    let timedOut = false;
-    let child;
-    try {
-      child = spawn(command, argv, { env, cwd, stdio: ["ignore", "pipe", "pipe"], detached: true });
-    } catch (error) {
-      resolve({ exit: null, signal: null, output: String(error.message ?? error), timedOut });
-      return;
-    }
-    const cancel = () => killGroup(child);
-    let interrupted;
-    const onSignal = (signal) => {
-      interrupted = signal === "SIGINT" ? 130 : 143;
-      process.exitCode = interrupted;
-      cancel();
-    };
-    cancellation?.addEventListener("abort", cancel, { once: true });
-    process.on("SIGINT", onSignal);
-    process.on("SIGTERM", onSignal);
-    child.stdout.on("data", (d) => {
-      output += d;
-    });
-    child.stderr.on("data", (d) => {
-      output += d;
-    });
-    const timer = setTimeout(() => {
-      timedOut = true;
-      killGroup(child);
-    }, timeoutMs);
-    let done = false;
-    const finish = (exit, signal) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      process.off("SIGINT", onSignal);
-      process.off("SIGTERM", onSignal);
-      cancellation?.removeEventListener("abort", cancel);
-      resolve({ pid: child.pid, exit: interrupted ?? exit, interrupted, signal, output, timedOut });
-    };
-    child.on("error", (error) => {
-      output += String(error.message ?? error);
-      finish(null, null);
-    });
-    child.on("close", (exit, signal) => finish(exit, signal));
-    child.on("exit", (exit, signal) => setTimeout(() => finish(exit, signal), 500));
+export async function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation }) {
+  const res = await runProcess(command, argv, {
+    env,
+    cwd,
+    timeoutMs,
+    signal: cancellation,
+    exitDrainMs: 500,
+    forwardSignals: true,
   });
+  return {
+    pid: res.pid,
+    exit: res.interrupted ?? res.exit,
+    interrupted: res.interrupted,
+    signal: res.signal,
+    output: res.error ? res.output + String(res.error.message ?? res.error) : res.output,
+    timedOut: res.timedOut,
+  };
 }
 
 export async function acquireDrawnSlot({

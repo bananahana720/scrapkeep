@@ -14,7 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv, userDataEnv } from "./godot-home.mjs";
-import { holdQuietSync } from "./sketch-smoke.mjs";
+import { holdQuietSync } from "./lib/machine-lock.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");

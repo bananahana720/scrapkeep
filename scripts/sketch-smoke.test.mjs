@@ -16,6 +16,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import "./lib/proc.test.mjs";
 import * as smoke from "./sketch-smoke.mjs";
 
 process.env.SCRAPKEEP_QUIET_DIR = mkdtempSync(path.join(os.tmpdir(), "smoke-no-quiet-"));
@@ -100,19 +101,24 @@ test("parseArgs selects the bot tier with its own receipt label", () => {
   );
 });
 
+function copySmokeRuntime(dir) {
+  mkdirSync(path.join(dir, "scripts/lib"), { recursive: true });
+  for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
+    writeFileSync(
+      path.join(dir, "scripts", module),
+      readFileSync(new URL(`./${module}`, import.meta.url)),
+    );
+  for (const module of ["godot-test-runner.mjs", "machine-lock.mjs", "proc.mjs", "receipt.mjs"])
+    writeFileSync(
+      path.join(dir, "scripts/lib", module),
+      readFileSync(new URL(`./lib/${module}`, import.meta.url)),
+    );
+}
+
 function botTierFixture(args, check) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-bot-tier-"));
   try {
-    mkdirSync(path.join(dir, "scripts"));
-    writeFileSync(
-      path.join(dir, "scripts/sketch-smoke.mjs"),
-      readFileSync(new URL("./sketch-smoke.mjs", import.meta.url)),
-    );
-    for (const module of ["import-stamp.mjs", "godot-home.mjs"])
-      writeFileSync(
-        path.join(dir, "scripts", module),
-        readFileSync(new URL(`./${module}`, import.meta.url)),
-      );
+    copySmokeRuntime(dir);
     const tests = path.join(dir, "sketches/core-loop/tests");
     mkdirSync(tests, { recursive: true });
     writeFileSync(path.join(dir, "sketches/core-loop/project.godot"), "config_version=5\n");
@@ -1788,12 +1794,7 @@ test("splitBatch captures outside lines and batchHasOutsideError catches exit le
 test("warm batching in sketch-smoke emits per-test logs and reruns failures or exit leaks solo", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-warm-batch-"));
   try {
-    mkdirSync(path.join(dir, "scripts"));
-    for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
-      writeFileSync(
-        path.join(dir, "scripts", module),
-        readFileSync(new URL(`./${module}`, import.meta.url)),
-      );
+    copySmokeRuntime(dir);
     writeFileSync(
       path.join(dir, "scripts/sketch-fast.timings.json"),
       JSON.stringify({
@@ -1916,12 +1917,7 @@ console.log(stem + ": PASS (1 checks)");
 test("sketch-smoke forwards --fixed-fps and honors SMOKE_BATCH_SIZE in warm batches", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-fps-batch-"));
   try {
-    mkdirSync(path.join(dir, "scripts"));
-    for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
-      writeFileSync(
-        path.join(dir, "scripts", module),
-        readFileSync(new URL(`./${module}`, import.meta.url)),
-      );
+    copySmokeRuntime(dir);
     writeFileSync(
       path.join(dir, "scripts/sketch-fast.timings.json"),
       JSON.stringify({

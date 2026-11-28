@@ -3,8 +3,10 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import "./lib/receipt.test.mjs";
 import { shuffleFiles } from "./ci/node-tests.mjs";
 import {
+  interpretBatchOutput,
   nodeTestsForPaths,
   defaultWidth,
   mergedBranch,
@@ -1144,4 +1146,48 @@ test("PATH_RULES park matches run at tier 0 and are never deferred under tight t
   );
   assert.ok(out.parallel.some((r) => r.test === "tests/park_props_test.gd"));
   assert.ok(out.parallel.some((r) => r.test === "tests/park_park_dam_test.gd"));
+});
+
+test("interpretBatchOutput falls back to solo reruns when outside-batch errors occur", () => {
+  const tests = ["tests/a_test.gd", "tests/b_test.gd"];
+  const cleanOutput = [
+    "BATCH START tests/a_test.gd",
+    "[ok] a -> PASS",
+    "a_test: PASS (1 checks)",
+    "BATCH END tests/a_test.gd exit=0 ms=15",
+    "BATCH START tests/b_test.gd",
+    "[ok] b -> PASS",
+    "b_test: PASS (1 checks)",
+    "BATCH END tests/b_test.gd exit=0 ms=18",
+    "BATCH DONE 2 tests",
+  ].join("\n");
+
+  const clean = interpretBatchOutput(cleanOutput, tests, { code: 0, platform: "linux" });
+  assert.equal(clean.outsideError, false);
+  assert.equal(clean.unexpectedExit, false);
+  assert.equal(clean.runs.length, 2);
+  assert.deepEqual(clean.unfinished, []);
+
+  const dirtyOutput = `${cleanOutput}\nSCRIPT ERROR: leaked timer on teardown\n`;
+  const dirty = interpretBatchOutput(dirtyOutput, tests, { code: 0, platform: "linux" });
+  assert.equal(dirty.outsideError, true);
+  assert.deepEqual(dirty.runs, []);
+  assert.deepEqual(dirty.unfinished, tests);
+
+  const macNoise = `${cleanOutput}\nERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n`;
+  const onMac = interpretBatchOutput(macNoise, tests, { code: 0, platform: "darwin" });
+  assert.equal(onMac.outsideError, false);
+  assert.equal(onMac.runs.length, 2);
+  const onLinux = interpretBatchOutput(macNoise, tests, { code: 0, platform: "linux" });
+  assert.equal(onLinux.outsideError, true);
+  assert.deepEqual(onLinux.runs, []);
+  assert.deepEqual(onLinux.unfinished, tests);
+
+  const unexpectedCrash = interpretBatchOutput(cleanOutput, tests, {
+    code: 1,
+    platform: "linux",
+  });
+  assert.equal(unexpectedCrash.unexpectedExit, true);
+  assert.deepEqual(unexpectedCrash.runs, []);
+  assert.deepEqual(unexpectedCrash.unfinished, tests);
 });
