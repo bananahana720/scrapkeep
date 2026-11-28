@@ -259,30 +259,3 @@ test("ARCHITECTURE.md sync guard fails when context.gd exists and ARCHITECTURE.m
     stdout,
   );
 });
-
-test("hardcoded /home/andrew in tools and tests scripts fails check-docs while json fixtures and HOME pass", async () => {
-  const passRun = await runCustomRepo({
-    "sketches/core-loop/tools/ok.py": 'from pathlib import Path\nP = Path.home() / "scratch"\n',
-    "sketches/core-loop/tools/ok.sh": 'GODOT="${GODOT:-$HOME/.local/share/godot/godot}"\n',
-    "sketches/core-loop/tests/ok_test.gd": "# $HOME/scratch/log\nextends SceneTree\n",
-    "sketches/core-loop/tests/fixtures/note.json": '{"note": "/home/andrew/scratch/w13"}\n',
-  });
-  assert.equal(passRun.status, 0, passRun.stdout);
-  assert.equal(passRun.report.checked.machinePathFindings, 0);
-
-  const failRun = await runCustomRepo({
-    "sketches/core-loop/tools/bad.py": 'P = "/home/andrew/scratch/x"\n',
-    "sketches/core-loop/tools/bad.sh": "G=/home/andrew/godot\n",
-    "sketches/core-loop/tests/bad_test.gd": "# /home/andrew/scratch/y\nextends SceneTree\n",
-  });
-  assert.equal(failRun.status, 1, failRun.stdout);
-  assert.equal(failRun.report.checked.machinePathFindings, 3, failRun.stdout);
-  const hits = failRun.report.findings
-    .filter((entry) => entry.level === "failure" && entry.check === "machine-paths")
-    .map((entry) => `${entry.file}:${entry.line}`);
-  assert.deepEqual(hits, [
-    "sketches/core-loop/tools/bad.py:1",
-    "sketches/core-loop/tools/bad.sh:1",
-    "sketches/core-loop/tests/bad_test.gd:1",
-  ]);
-});

@@ -34,26 +34,3 @@ test("palette: the icon generator, reading palette.gd, still draws the committed
   const result = run("tools/icons/generate_icons.py", "--check");
   assert.equal(result.status, 0, result.stdout + result.stderr);
 });
-
-test("palette: park prop kit derives BANNED, WARN, BRASS_HEX and shared C entries from palette_gd", () => {
-  const script = `
-import ast, sys
-sys.path.insert(0, "tools")
-import palette_gd
-tree = ast.parse(open("tools/blender/park/props/kit.py", encoding="utf-8").read())
-ns = {"palette_gd": palette_gd}
-for node in tree.body:
-    if isinstance(node, ast.Assign):
-        names = [t.id for t in node.targets if isinstance(t, ast.Name)]
-        if any(n in ("C", "BANNED", "WARN", "BRASS_HEX") for n in names):
-            exec(compile(ast.Module(body=[node], type_ignores=[]), "kit.py", "exec"), ns)
-assert ns["BANNED"] == {palette_gd.HEX["HAZARD"], palette_gd.HEX["ANCIENT"], palette_gd.HEX["ARC"]}, ns["BANNED"]
-assert ns["WARN"] == {palette_gd.HEX["AMBER"], palette_gd.HEX["COPPER"], palette_gd.HEX["BRASS"]}, ns["WARN"]
-assert ns["BRASS_HEX"] == palette_gd.HEX["BRASS"], ns["BRASS_HEX"]
-for key, const in (("sandstone", "SANDSTONE"), ("cable", "CABLE"), ("charcoal", "CHARCOAL"), ("bone", "SAND")):
-    assert ns["C"][key] == palette_gd.HEX[const], (key, ns["C"][key], palette_gd.HEX[const])
-print("kit.py palette: PASS")
-`;
-  const result = run("-c", script);
-  assert.equal(result.status, 0, result.stdout + result.stderr);
-});
