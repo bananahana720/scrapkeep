@@ -1316,6 +1316,8 @@ async function main() {
             path.join(root, "scripts", "sketch-lint.mjs"),
             "--sketch",
             "core-loop",
+            "--base",
+            mergeBase,
           ]),
       baseSketchForPlaceholders
         ? Promise.all([

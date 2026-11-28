@@ -13,6 +13,7 @@ import {
   L13_ALLOWED,
   applyBaseline,
   baselineFrom,
+  baselineGrowth,
   buildScriptGraph,
   formatFinding,
   lintL1,
@@ -37,6 +38,7 @@ import {
   parseBatchDriverRefs,
   parseBatchDriverVars,
   parseTuning,
+  readBaselineAt,
   stronglyConnectedComponents,
 } from "./sketch-lint.mjs";
 import {
@@ -1377,4 +1379,44 @@ test("L17 flags hardcoded /home/andrew paths in scripts and passes HOME-based pa
 
   const realL17 = lintSketch("core-loop").filter((item) => item.rule === "L17");
   assert.deepEqual(realL17, []);
+});
+
+test("baselineGrowth fails a rule whose list gained an entry and names the rule, both counts, the new entry and the fix", () => {
+  const base = { L1: ["a.gd", "b.gd"], L14: ["s.gd:_x"], L15: { "c.gd": 2 } };
+  const [grew, ...rest] = baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "d.gd"] });
+  assert.deepEqual(rest, []);
+  assert.equal(grew.rule, "BASELINE");
+  assert.equal(grew.path, "scripts/sketch-lint.baseline.json");
+  assert.equal(
+    grew.message,
+    "L1 list grew from 2 to 3 entries (new: d.gd): fix the offence instead of listing it",
+  );
+  assert.match(
+    formatFinding(baselineGrowth(base, { ...base, L14: ["s.gd:_x", "t.gd:_y"] })[0]),
+    /L14 list grew from 1 to 2 entries \(new: t\.gd:_y\): register a reset in sketches\/core-loop\/tools\/test_batch_driver\.gd/,
+  );
+  assert.equal(
+    baselineGrowth(base, { ...base, L15: { "c.gd": 3 } })[0].message,
+    "L15 list grew from 2 to 3 entries (new: c.gd (2 to 3)): fix the offence instead of listing it",
+  );
+});
+
+test("baselineGrowth passes a moved or removed entry, fails a rule with an empty list that gains one, and allows a new rule's first list", () => {
+  const base = { L1: ["a.gd", "b.gd"], L2: [], L15: { "c.gd": 2 }, W1: {} };
+  assert.deepEqual(baselineGrowth(base, { ...base, L1: ["a.gd", "moved/b.gd"] }), []);
+  assert.deepEqual(baselineGrowth(base, { ...base, L15: { "moved/c.gd": 2 } }), []);
+  assert.deepEqual(baselineGrowth(base, { ...base, L1: ["a.gd"], L15: {} }), []);
+  assert.deepEqual(baselineGrowth(base, { ...base, L99: ["new.gd"] }), []);
+  assert.deepEqual(
+    baselineGrowth(base, { ...base, L2: ["x.gd"], W1: { "y.gd": 1 } }).map((item) => item.message),
+    [
+      "L2 list grew from 0 to 1 entries (new: x.gd): fix the offence instead of listing it",
+      "W1 list grew from 0 to 1 entries (new: y.gd (0 to 1)): fix the offence instead of listing it",
+    ],
+  );
+});
+
+test("readBaselineAt reads the committed baseline at a commit and refuses a ref that is not one", () => {
+  assert.ok(Array.isArray(readBaselineAt("HEAD").L1));
+  assert.throws(() => readBaselineAt("no-such-ref-g1"), /rev-parse/);
 });
