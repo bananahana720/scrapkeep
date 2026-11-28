@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import {
   addedLines,
@@ -7,10 +10,12 @@ import {
   passThroughs,
   reachIns,
   report,
+  sourceFiles,
   stringKeys,
   sweep,
   wideSignatures,
 } from "./deep-sweep.mjs";
+import { git } from "./lib/git.mjs";
 
 const GD = `extends Node
 
@@ -228,4 +233,50 @@ test("defaultBase falls back to HEAD's parent when origin/main is absent and thr
     return "root000\n";
   };
   assert.throws(() => defaultBase("root000", rootCommit), /has no parent/);
+});
+
+test("sourceFiles lists a script whose name holds a newline, a leading space and a quote as itself, and fails on an empty or unread tree", () => {
+  const cwd = mkdtempSync(path.join(os.tmpdir(), "deep-sweep-src-"));
+  const run = (...args) =>
+    git(
+      [
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@example.invalid",
+        "-c",
+        "commit.gpgsign=false",
+        ...args,
+      ],
+      { cwd },
+    );
+  try {
+    run("init", "-q");
+    writeFileSync(path.join(cwd, "README"), "x\n");
+    run("add", "README");
+    run("commit", "-q", "-m", "no sources");
+    const empty = run("rev-parse", "HEAD");
+    const odd = 'sketches/core-loop/src/ odd "name"\nline.gd';
+    for (const file of [
+      odd,
+      "sketches/core-loop/src/core/plain.gd",
+      "sketches/core-loop/src/notes.md",
+    ]) {
+      mkdirSync(path.dirname(path.join(cwd, file)), { recursive: true });
+      writeFileSync(path.join(cwd, file), "extends Node\n");
+    }
+    run("add", "sketches");
+    run("commit", "-q", "-m", "sources");
+    assert.deepEqual(
+      sourceFiles("HEAD", { cwd }).sort(),
+      [odd, "sketches/core-loop/src/core/plain.gd"].sort(),
+    );
+    assert.throws(
+      () => sourceFiles(empty, { cwd }),
+      /lists no \.gd file under sketches\/core-loop\/src\//,
+    );
+    assert.throws(() => sourceFiles("no-such-ref", { cwd }), /git ls-tree .* failed/);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
 });

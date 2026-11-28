@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   BUDGETS,
   claudeJson,
+  failureText,
   liveBoard,
   openStage,
   parseCards,
@@ -14,6 +15,21 @@ import {
   reviewVerdict,
   takenIds,
 } from "./card-runner.mjs";
+
+test("a failed git step keeps the error's message when stderr is empty, blank or a buffer", () => {
+  assert.equal(
+    failureText({ stderr: Buffer.alloc(0), message: "git fetch failed" }),
+    "git fetch failed",
+  );
+  assert.equal(failureText({ stderr: "", message: "git fetch failed" }), "git fetch failed");
+  assert.equal(failureText({ stderr: "\n", message: "git fetch failed" }), "git fetch failed");
+  assert.equal(failureText({ message: "spawn git ENOENT" }), "spawn git ENOENT");
+  assert.equal(failureText({ stderr: "fatal: no remote\n", message: "m" }), "fatal: no remote");
+  assert.equal(
+    failureText({ stderr: Buffer.from("fatal: in a buffer\n"), message: "m" }),
+    "fatal: in a buffer",
+  );
+});
 
 const BACKLOG = `# Backlog
 
