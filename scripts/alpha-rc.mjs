@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { scratchGodotEnv } from "./godot-home.mjs";
 import { runProcess as runChild, stopGroup as stopChildGroup } from "./lib/proc.mjs";
 import { gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const node = process.execPath;
@@ -614,7 +615,7 @@ export function gitState(cwd = root) {
   };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   let args;
   try {
     args = parseArgs(process.argv.slice(2));

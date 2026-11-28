@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { watchDrawnRun } from "./window-watch.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -9,6 +8,7 @@ import { resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
 import { acquireSlot } from "../lib/machine-lock.mjs";
 import { runProcess } from "../lib/proc.mjs";
 import { REPO_ROOT as root } from "../lib/git.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const SKETCH = "sketches/core-loop";
 export const TIMEOUT_MS = 600_000;
@@ -328,7 +328,7 @@ async function macCapture(
   });
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+if (isMain(import.meta.url)) {
   try {
     const [mode, name, separator, ...args] = process.argv.slice(2);
     if (mode === "--measure") {

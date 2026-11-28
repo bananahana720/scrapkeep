@@ -1,56 +1,32 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { isMain, parseCliArgs } from "./cli.mjs";
 import { REPO_ROOT } from "./git.mjs";
 import { walkSync } from "./walk.mjs";
 
-const EXCLUDED_S6 = new Set([
-  "scripts/alpha-rc.mjs",
-  "scripts/challenge/proc.mjs",
-  "scripts/checkpoint.mjs",
-  "scripts/ci/shard-plan.mjs",
-  "scripts/dev-console.mjs",
-  "scripts/frametime-check.mjs",
-  "scripts/gate/band-receipts.mjs",
-  "scripts/gate/contact-orders-receipt.mjs",
-  "scripts/gate/core-feel-receipt.mjs",
-  "scripts/gate/display-run.mjs",
-  "scripts/gate/installed-build-receipt.mjs",
-  "scripts/gate/map-standard-receipt.mjs",
-  "scripts/gate/model-receipts.mjs",
-  "scripts/gate/model-render-receipt.mjs",
-  "scripts/gate/receipt-cli.mjs",
-  "scripts/gate/release-gate-receipt.mjs",
-  "scripts/gate/shard.mjs",
-  "scripts/gate/sitting-played-receipt.mjs",
-  "scripts/gate/six-pilots-receipt.mjs",
-  "scripts/gate/snag-sweep-receipt.mjs",
-  "scripts/gate/sound-levels-receipt.mjs",
-  "scripts/gate/sound-recipes-receipt.mjs",
-  "scripts/gate/stand-ins-receipt.mjs",
-  "scripts/gate/words-on-screen-receipt.mjs",
-  "scripts/known-failing.mjs",
-  "scripts/lib/fast-diff-checks.mjs",
-  "scripts/lib/godot-test-runner.mjs",
-  "scripts/lib/machine-lock.mjs",
-  "scripts/lib/proc.mjs",
-  "scripts/lib/proc.test.mjs",
-  "scripts/lib/receipt.mjs",
-  "scripts/lib/receipt.test.mjs",
-  "scripts/pacing-check.mjs",
-  "scripts/play.mjs",
-  "scripts/redteam/run.mjs",
-  "scripts/sketch-fast.mjs",
-  "scripts/sketch-fast.test.mjs",
-  "scripts/sketch-nightly.mjs",
-  "scripts/sketch-smoke.mjs",
-  "scripts/sketch-smoke.test.mjs",
-]);
+const READS_ARGV1 = [
+  "scripts/gate/display-run.test.mjs",
+  "scripts/lib/cli.mjs",
+  "scripts/lib/cli.test.mjs",
+];
+
+function scriptsReadingArgv1(root) {
+  const found = [];
+  let seen = 0;
+  for (const entry of walkSync(path.join(root, "scripts"), { sort: true })) {
+    if (!entry.name.endsWith(".mjs") && !entry.name.endsWith(".js")) continue;
+    seen += 1;
+    const text = readFileSync(entry.full, "utf8");
+    assert.notEqual(text, "", `${entry.rel} read as empty`);
+    if (/process\s*\.\s*argv\s*\[\s*1\s*\]/.test(text)) found.push(`scripts/${entry.rel}`);
+  }
+  return { found, seen };
+}
 
 test("isMain resolves direct paths, symlinks, missing argv1, and non-existent fallback", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-cli-"));
@@ -125,20 +101,39 @@ test("parseCliArgs parses flags, values, multi values, inline = syntax, position
   );
 });
 
-test("zero non-excluded scripts in scripts/ keep bare path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)", () => {
-  const barePattern =
-    /path\.resolve\(\s*process\.argv\[1\]\s*\)\s*===\s*fileURLToPath\(\s*import\.meta\.url\s*\)|fileURLToPath\(\s*import\.meta\.url\s*\)\s*===\s*path\.resolve\(\s*process\.argv\[1\]\s*\)/;
-  const offenders = [];
-  const selfRel = path
-    .relative(REPO_ROOT, fileURLToPath(import.meta.url))
-    .split(path.sep)
-    .join("/");
-  for (const entry of walkSync(path.join(REPO_ROOT, "scripts"), { sort: true })) {
-    if (!entry.name.endsWith(".mjs") && !entry.name.endsWith(".js")) continue;
-    const rel = `scripts/${entry.rel}`;
-    if (rel === selfRel || EXCLUDED_S6.has(rel)) continue;
-    const text = readFileSync(entry.full, "utf8");
-    if (barePattern.test(text)) offenders.push(rel);
+test("only the shared helper decides whether a script is the one being run", () => {
+  const { found, seen } = scriptsReadingArgv1(REPO_ROOT);
+  assert.ok(seen > 100, `walked only ${seen} script files under scripts/`);
+  assert.deepEqual(
+    found,
+    READS_ARGV1,
+    "a script reads process.argv[1] itself; use isMain(import.meta.url) from scripts/lib/cli.mjs",
+  );
+});
+
+test("the search for scripts that read process.argv[1] sees every spelling this repository has used", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-argv1-"));
+  try {
+    const scripts = path.join(dir, "scripts");
+    mkdirSync(path.join(scripts, "gate"), { recursive: true });
+    const spellings = {
+      "a.mjs":
+        "if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();\n",
+      "b.mjs": "if (realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();\n",
+      "gate/c.mjs": "if (import.meta.url === pathToFileURL(process.argv[ 1 ]).href) main();\n",
+      "d.js": "if (process.argv[1]?.endsWith('d.js')) main();\n",
+      "clean.mjs": "if (isMain(import.meta.url)) main();\n",
+      "notes.md": "process.argv[1]\n",
+    };
+    for (const [rel, text] of Object.entries(spellings))
+      writeFileSync(path.join(scripts, rel), text);
+    assert.deepEqual(scriptsReadingArgv1(dir), {
+      found: ["scripts/a.mjs", "scripts/b.mjs", "scripts/d.js", "scripts/gate/c.mjs"],
+      seen: 5,
+    });
+    writeFileSync(path.join(scripts, "empty.mjs"), "");
+    assert.throws(() => scriptsReadingArgv1(dir), /empty\.mjs read as empty/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
-  assert.deepEqual(offenders, []);
 });

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
 
 import { withoutTeardownNoise } from "../lib/godot-test-runner.mjs";
 import {
@@ -9,6 +8,7 @@ import {
   parseReceiptArgs,
   writeJsonReceipt,
 } from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const COMMIT = COMMIT_SHA_RE;
 export const MAX_SKIP = 0.2;
@@ -396,6 +396,6 @@ function main(argv) {
   return result.receipt.pass ? 0 : 1;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   process.exit(main(process.argv.slice(2)));
 }
