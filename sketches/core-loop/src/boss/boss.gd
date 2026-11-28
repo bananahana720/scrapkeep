@@ -17,7 +17,6 @@ const BossPosture := preload("res://src/core/boss_posture.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Field := preload("res://src/build/scrap_field.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const Comfort := preload("res://src/core/comfort.gd")
@@ -1394,8 +1393,8 @@ func _step_scooter(delta: float) -> void:
 			BossModel.play(_scooter_anim, "chase")
 			scooter.set_solid(true)
 			if is_instance_valid(arena):
-				FxLibrary.burst(arena, "slam_dust", to, 14)
-				FxLibrary.burst(arena, "brass_spark", to + Vector3.UP * 0.4, 10)
+				ctx.burst(arena, "slam_dust", to, 14)
+				ctx.burst(arena, "brass_spark", to + Vector3.UP * 0.4, 10)
 			var ball_angle: float = arena.angle_of(ctx.player.ball_position())
 			_eject["dir"] = -signf(angle_difference(_eject["angle"], ball_angle))
 			if _eject["dir"] == 0.0:
@@ -1412,7 +1411,7 @@ func _step_scooter(delta: float) -> void:
 	if float(_eject["puff_t"]) >= 0.22 and is_instance_valid(arena):
 		_eject["puff_t"] = 0.0
 		var tail := at - ahead.normalized() * 1.6 + Vector3.UP * 0.5
-		FxLibrary.burst(arena, "steam_puff", tail, 4)
+		ctx.burst(arena, "steam_puff", tail, 4)
 
 
 func scooter_speed() -> float:
@@ -1434,7 +1433,7 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	else:
 		_eject["slow_until"] = clock + Rules.SCOOTER_SLOW_SECONDS
 		if is_instance_valid(arena):
-			FxLibrary.burst(arena, "brass_spark", scooter.global_position + Vector3.UP * 0.6, 12)
+			ctx.burst(arena, "brass_spark", scooter.global_position + Vector3.UP * 0.6, 12)
 
 
 func _defeat(kind: String, at: Vector3, source := "") -> void:
