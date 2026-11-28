@@ -2979,13 +2979,6 @@ func _clear_cannon_paint() -> void:
 		ctx.player.indicator.clear("cannon_bracket_r")
 
 
-func _relic_overdrive(slot: String) -> float:
-	if ctx == null or ctx.run == null:
-		return 1.0
-	var relic_id := String(Relics.held(ctx.run.parts).get(slot, ""))
-	return Relics.overdrive_of(relic_id) if relic_id != "" else 1.0
-
-
 func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true) -> Dictionary:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
@@ -3003,7 +2996,7 @@ func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true)
 	var ahead: float = maxf(1.0, reach - half)
 	var walk_od := 1.0
 	if walked:
-		walk_od = _relic_overdrive(AbilityState.WEAPON)
+		walk_od = relic_swaps.overdrive_for(AbilityState.WEAPON) if relic_swaps != null else 1.0
 		var walk_reach := WALK_REACH * walk_od
 		var flat := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
 		var dir_w := flat.normalized() if flat.length_squared() > 0.0001 else _flat_aim()
@@ -5627,20 +5620,13 @@ func _has_cross_synergy(id: String, extra := {}) -> bool:
 		return true
 	if ctx.run == null:
 		return false
-	return Synergies.cross_system_awake(id, ctx.run.parts, Callable(self, "_part_synergy_info"), context)
-
-
-static func _part_synergy_info(part_id: String) -> Dictionary:
-	var d: Resource = Parts.def(part_id)
-	if d == null:
-		return {}
-	return {"tags": d.tags, "bits": d.bits}
+	return Synergies.cross_system_awake(id, ctx.run.parts, OrbitalSatellites.part_synergy_info, context)
 
 
 func active_cross_synergies(extra := {}) -> Array:
 	if ctx == null or ctx.run == null:
 		return []
-	return Synergies.cross_system_active(ctx.run.parts, Callable(self, "_part_synergy_info"), synergy_context(extra))
+	return Synergies.cross_system_active(ctx.run.parts, OrbitalSatellites.part_synergy_info, synergy_context(extra))
 
 
 func micro_mutation_count(part_id: String) -> int:

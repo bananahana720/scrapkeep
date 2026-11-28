@@ -209,7 +209,7 @@ func _record(id: String, detail: Dictionary) -> void:
 	last_swap["id"] = id
 
 
-func _overdrive_for(slot: String) -> float:
+func overdrive_for(slot: String) -> float:
 	if ctx == null or ctx.run == null:
 		return 1.0
 	var relic_id := String(Relics.held(ctx.run.parts).get(slot, ""))
@@ -279,7 +279,7 @@ func _spawn_arc_chord(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 		to_pt = from_pt + combat._flat_aim() * 6.0
 	if _arc_chords.size() >= ARC_CHORD_CAP:
 		_arc_chords.pop_front()
-	var od := _overdrive_for(AbilityState.LINE)
+	var od := overdrive_for(AbilityState.LINE)
 	var width := ARC_CHORD_WIDTH * (1.25 if od > 1.0 else 1.0)
 	var dmg: float = ARC_CHORD_DAMAGE * mult * od * combat._damage_mod(Weapons.ARC_CASTER)
 	var rec := {
@@ -383,7 +383,7 @@ func _queue_fan_burst(weapon: String, shot_desc: Dictionary, muzzle: Vector3, fo
 	var is_sixth: bool = bool(shot_desc.get("sixth_hot", false)) or _fan_shot_index == FAN_CYLINDER_ROUNDS
 	if is_sixth:
 		_fan_shot_index = 0
-	var od := _overdrive_for(AbilityState.WEAPON)
+	var od := overdrive_for(AbilityState.WEAPON)
 	var up_hint := Vector3.UP if absf(forward.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	var right := forward.cross(up_hint).normalized()
 	for i in 2:
@@ -578,7 +578,7 @@ func _cable_cluster_world(at: Vector3, fraction: float, mult: float) -> void:
 
 func _drop_wire_cluster(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 	var dropped := 0
-	var od := _overdrive_for(AbilityState.LINE)
+	var od := overdrive_for(AbilityState.LINE)
 	var count := CLUSTER_COUNT + (1 if od > 1.0 else 0)
 	var dmg: float = Weapons.MINI_DAMAGE * CLUSTER_DAMAGE_MULT * mult * od * combat._damage_mod(Weapons.STICKY_CHARGE)
 	for i in count:
@@ -628,7 +628,7 @@ func _claw_whirl_body(target: Node3D, _fraction: float, mult: float) -> void:
 	offset.y = 0.0
 	var radius: float = clampf(offset.length(), WHIRL_RADIUS_MIN, WHIRL_RADIUS_MAX)
 	var start_angle: float = atan2(offset.z, offset.x) if offset.length() > 0.01 else 0.0
-	var od := _overdrive_for(AbilityState.LINE)
+	var od := overdrive_for(AbilityState.LINE)
 	var whirl := {
 		"enemy": weakref(target),
 		"eid": target.get_instance_id(),
@@ -690,7 +690,7 @@ func on_ledger_cast(point: Vector3, damage: float, _shot_desc: Dictionary) -> vo
 	var mut: String = String(ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", ""))
 	if not tape_echo_follows("weapon", mut):
 		return
-	var od := _overdrive_for(AbilityState.WEAPON)
+	var od := overdrive_for(AbilityState.WEAPON)
 	_tape_echoes.append({
 		"point": point,
 		"damage": damage * TAPE_ECHO_MULT * od,
