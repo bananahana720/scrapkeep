@@ -14,6 +14,7 @@ const STATIC_VAR := "(?m)^\\s*(?:@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*static\\s+(?:@
 const SHARED_STATICS := {
 	"res://src/presentation/synth.gd": ["_notes", "_lock"],
 	"res://src/presentation/sfx_bank.gd": ["_samples", "_lock", "_streams", "_rendered", "_cache_lock", "bake_cancel", "_file_present"],
+	"res://src/presentation/world_fx/world_fx_sound.gd": ["_streams"],
 }
 const REL_TOL := 1e-4
 const ABS_TOL := 1e-3

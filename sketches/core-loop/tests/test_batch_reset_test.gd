@@ -8,7 +8,6 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const WorldFxWord := preload("res://src/presentation/world_fx/world_fx_word.gd")
 const WorldFxGrain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
-const WorldFxSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
@@ -135,7 +134,6 @@ func _run() -> void:
 	root.content_scale_size = Vector2i(1920, 1080)
 	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 	WorldFxGrain.run_seed = 4242
-	WorldFxSound.audio = root
 	Density.live().force(0.85)
 	UiFonts.face(UiTokens.Hand.ROGUE, true)
 	t.check("UiFonts holds a loaded face before reset", not UiFonts._faces.is_empty())
@@ -248,7 +246,6 @@ func _run() -> void:
 	t.eq("root.content_scale_size resets to startup size", root.content_scale_size, start_scale_size)
 	t.eq("root.content_scale_aspect resets to startup aspect", root.content_scale_aspect, start_aspect)
 	t.eq("WorldFxGrain.run_seed resets to 0", WorldFxGrain.run_seed, 0)
-	t.eq("WorldFxSound.audio resets to null", WorldFxSound.audio, null)
 	t.check("WorldFxAnchor.live clears on reset", WorldFxAnchor.live.is_empty())
 	t.check("Density governor resets value and hold", is_zero_approx(Density.live().value) and not Density.live().hold)
 	t.near("Density.last_published resets to 1.0", Density.last_published, 1.0)
