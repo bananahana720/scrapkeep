@@ -569,7 +569,7 @@ Order: B1 lands first and alone, because it owns every shared declaration (signa
 
 ### B2 HUD and card
 
-- SCOPE: `src/ui/ability_bar.gd`, `src/ui/ability_slots.gd` (`ROLES` gains `line` and `ult`), `src/ui/hud.gd` (layout at `:702-711`, the meter beside `:939-944`), `src/ui/aim_reticle.gd` (the meter arc), `src/ui/key_glyphs.gd` (the `ultimate` prompt), `src/ui/glyphs.gd`, `src/ui/class_kit.gd`, `src/ui/class_card.gd`, `src/ui/tree_card.gd`, `src/ui/field_notes.gd`, `src/ui/controls_diagram.gd`, `src/ui/pause_menu.gd` (quit on X held), `src/ui/settings_pages.gd` (rebind rows).
+- SCOPE: `src/ui/ability_bar.gd`, `src/ui/ability_slots.gd` (`ROLES` gains `line` and `ult`), `src/ui/hud.gd` (layout at `:702-711`, the meter beside `:939-944`), `src/ui/aim_reticle.gd` (the meter arc), `src/ui/key_glyphs.gd` (the `ultimate` prompt), `src/core/glyphs.gd`, `src/ui/class_kit.gd`, `src/ui/class_card.gd`, `src/ui/tree_card.gd`, `src/ui/field_notes.gd`, `src/ui/controls_diagram.gd`, `src/ui/pause_menu.gd` (quit on X held), `src/ui/settings_pages.gd` (rebind rows).
 - ACCEPTANCE:
   - The bar draws 3 numbered slots and 2 chips; the mouse glyph sits over the selected slot and slides on picks and snaps.
   - Selected and active are distinct in a pixel test.

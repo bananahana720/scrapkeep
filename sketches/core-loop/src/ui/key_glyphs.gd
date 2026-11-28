@@ -6,7 +6,7 @@ const Bindings := preload("res://src/core/bindings.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 
