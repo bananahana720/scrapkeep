@@ -7,7 +7,7 @@ import path from "node:path";
 import {
   KNOWN_FAILING_LEDGER,
   isGodotPath,
-  isHandoffDocPath,
+  isDocsPath,
   isPackagePath,
   isSkillPath,
 } from "../ci/affected.mjs";
@@ -81,7 +81,7 @@ export function planHookChecks(changedFiles, exists = (f) => existsSync(path.joi
   const jsFiles = filterFormatTargets(changedFiles, exists);
   const hasSketch = changedFiles.some(isGodotPath);
   const hasDocsOrPkg = changedFiles.some(
-    (f) => isHandoffDocPath(f) || isPackagePath(f) || isSkillPath(f),
+    (f) => isDocsPath(f) || isPackagePath(f) || isSkillPath(f),
   );
   const hasSkills = changedFiles.some((f) => isSkillPath(f) || f === "scripts/check-skills.mjs");
   const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
