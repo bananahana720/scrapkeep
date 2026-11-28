@@ -92,6 +92,9 @@ const SkillBand := preload("res://tools/skill_band.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const BotFairness := preload("res://tools/bot_fairness.gd")
 const RampFlipper := preload("res://src/combat/ramp_flipper.gd")
+const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
+const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
+const ContentRegistry := preload("res://tests/support/content_registry.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -264,6 +267,9 @@ func _reset() -> void:
 	BotFairness.reset_for_tests()
 	RampFlipper._shared.clear()
 	RampFlipper._warned_asset = false
+	CosmeticArt.reset_for_tests()
+	TeardownNoise.reset_for_tests()
+	ContentRegistry.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"

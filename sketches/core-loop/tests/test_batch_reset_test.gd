@@ -83,6 +83,9 @@ const SkillBand := preload("res://tools/skill_band.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const BotFairness := preload("res://tools/bot_fairness.gd")
 const RampFlipper := preload("res://src/combat/ramp_flipper.gd")
+const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
+const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
+const ContentRegistry := preload("res://tests/support/content_registry.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -531,6 +534,25 @@ func _run() -> void:
 	driver._reset()
 	t.check("RampFlipper cache and warning reset cleanly",
 		RampFlipper._shared.is_empty() and not RampFlipper._warned_asset)
+
+	var shipping_before := CosmeticArt.shipping_ids()
+	t.check("CosmeticArt.shipping_ids populates _shipping before reset", not shipping_before.is_empty())
+	TeardownNoise.is_noise("ERROR: 1 resources still in use at exit")
+	t.check("TeardownNoise compiles _line before reset", TeardownNoise._line != null)
+	ContentRegistry._pass_depth = 2
+	ContentRegistry._pass["__probe__"] = true
+	driver._reset()
+	t.check("CosmeticArt.reset_for_tests clears _shipping", CosmeticArt._shipping.is_empty())
+	var shipping_after := CosmeticArt.shipping_ids()
+	t.check("CosmeticArt.shipping_ids refills cleanly after reset",
+		shipping_after == shipping_before and not is_same(shipping_before, shipping_after))
+	t.check("TeardownNoise.reset_for_tests clears _line", TeardownNoise._line == null)
+	var noise_line := "ERROR: 1 resources still in use at exit"
+	t.eq("TeardownNoise.is_noise recompiles after reset",
+		TeardownNoise.is_noise(noise_line), OS.get_name() == "macOS")
+	t.check("TeardownNoise._line is compiled again after use", TeardownNoise._line != null)
+	t.check("ContentRegistry.reset_for_tests clears _pass_depth and _pass",
+		ContentRegistry._pass_depth == 0 and ContentRegistry._pass.is_empty())
 
 	quit(t.verdict())
 

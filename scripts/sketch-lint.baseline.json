@@ -345,11 +345,7 @@
     "sketches/core-loop/src/world/park/regions.gd:_maps",
     "sketches/core-loop/src/world/radio_cache.gd:_parts",
     "sketches/core-loop/src/world/rescue_site.gd:_shared",
-    "sketches/core-loop/src/world/rescue_site.gd:_warned",
-    "sketches/core-loop/tests/support/content_registry.gd:_pass",
-    "sketches/core-loop/tests/support/content_registry.gd:_pass_depth",
-    "sketches/core-loop/tests/support/cosmetic_art.gd:_shipping",
-    "sketches/core-loop/tests/support/teardown_noise.gd:_line"
+    "sketches/core-loop/src/world/rescue_site.gd:_warned"
   ],
   "L15": {
     "sketches/core-loop/tests/active_torch_test.gd": 2,

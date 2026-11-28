@@ -1225,6 +1225,9 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     "tools/skill_band.gd",
     "tools/traversal_line.gd",
     "tools/bot_fairness.gd",
+    "tests/support/content_registry.gd",
+    "tests/support/cosmetic_art.gd",
+    "tests/support/teardown_noise.gd",
   ]) {
     assert.ok(liveRefs.has(rel), `expected ${rel} in driver refs`);
   }
@@ -1237,12 +1240,7 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
         key.startsWith("sketches/core-loop/tests/support/"),
     )
     .sort();
-  assert.deepEqual(toolOrSupport, [
-    "sketches/core-loop/tests/support/content_registry.gd:_pass",
-    "sketches/core-loop/tests/support/content_registry.gd:_pass_depth",
-    "sketches/core-loop/tests/support/cosmetic_art.gd:_shipping",
-    "sketches/core-loop/tests/support/teardown_noise.gd:_line",
-  ]);
+  assert.deepEqual(toolOrSupport, []);
 });
 
 test("L15 passes the checked-out core-loop tests tree against baseline and blocks a second 60 Hz literal in find_in_fight_test.gd", () => {
