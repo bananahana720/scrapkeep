@@ -418,7 +418,7 @@ func _try_break_destructible() -> bool:
 func _try_crash_brute() -> bool:
 	if not is_inside_tree():
 		return false
-	for other in get_tree().get_nodes_in_group("enemy"):
+	for other in get_tree().get_nodes_in_group(GROUP):
 		if other == self or not is_instance_valid(other) or other.is_dead() or other.kind != "plated_brute":
 			continue
 		var to_other: Vector3 = other.global_position - global_position
@@ -482,7 +482,7 @@ func _on_charge_crash(cause: String) -> void:
 
 class FlungPlate extends Node3D:
 	const LIFE := 0.72
-	const GRAVITY := 24.0
+	const HURL_GRAVITY := 24.0
 	var vel := Vector3.ZERO
 	var spin := Vector3.ZERO
 	var floor_y := -INF
@@ -490,7 +490,7 @@ class FlungPlate extends Node3D:
 
 	func _physics_process(delta: float) -> void:
 		_t += delta
-		vel.y -= GRAVITY * delta
+		vel.y -= HURL_GRAVITY * delta
 		global_position += vel * delta
 		if global_position.y < floor_y:
 			global_position.y = floor_y

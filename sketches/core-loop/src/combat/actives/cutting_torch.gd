@@ -119,7 +119,7 @@ func _reach(from: Vector3, dir: Vector3) -> Vector3:
 
 
 func _cut(delta: float) -> void:
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not _in_lanes(enemy):
 			continue
 		var id: int = enemy.get_instance_id()

@@ -3,6 +3,7 @@ extends Node3D
 const LockRows := preload("res://src/world/lock_rows.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Overtime := preload("res://src/world/overtime.gd")
 const WaveCross := preload("res://src/world/wave_cross.gd")
 
@@ -141,7 +142,7 @@ func foe_for(ball: Vector3, reach := INF) -> Node3D:
 	var best := clamp_crew(ball, reach)
 	if best != null:
 		return best
-	return _nearest(get_tree().get_nodes_in_group("enemy").filter(func(enemy): return enemy != ctx.flow.warden and _alive(enemy) \
+	return _nearest(get_tree().get_nodes_in_group(Groups.ENEMY).filter(func(enemy): return enemy != ctx.flow.warden and _alive(enemy) \
 			and String(enemy.get("kind")) not in ["warden", "vault", ""]), ball, reach)
 
 

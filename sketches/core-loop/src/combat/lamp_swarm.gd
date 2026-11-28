@@ -187,7 +187,7 @@ func _pay_warden_posture() -> float:
 	if not is_inside_tree():
 		return 0.0
 	var paid := 0.0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(GROUP):
 		if not is_instance_valid(enemy) or String(enemy.get("kind")) != "warden":
 			continue
 		if enemy.has_method("is_dead") and enemy.is_dead():

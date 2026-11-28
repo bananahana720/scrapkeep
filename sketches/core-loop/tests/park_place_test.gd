@@ -19,6 +19,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
@@ -150,7 +151,7 @@ func _run() -> void:
 		holder.add_child(ball)
 		ball.set_active(true)
 		ball.gravity_scale = 0.0
-		t.eq("the ball is on the ball layer the sensor hears", ball.collision_layer, 1 << (ParkRecipes.BALL_LAYER - 1))
+		t.eq("the ball is on the ball layer the sensor hears", ball.collision_layer, PhysicsLayers.BALL_MASK)
 		ball.teleport(outside, Vector3.ZERO)
 		for n in 4:
 			await physics_frame
@@ -204,7 +205,7 @@ func _run() -> void:
 		var node: Node3D = nodes[row["id"]]
 		posts += int(node.get_meta("anchor_posts", 0))
 		var body := node.get_node_or_null("Collider") as StaticBody3D
-		if body == null or body.collision_layer != 1 << (ParkRecipes.WORLD_LAYER - 1):
+		if body == null or body.collision_layer != PhysicsLayers.WORLD_MASK:
 			non_world.append(row["id"])
 		var gaps := _field_gaps(space, row, floor_at, owned, lanes)
 		points += gaps["points"]
@@ -266,7 +267,7 @@ func _run() -> void:
 		var plant := Node3D.new()
 		plant.name = "Park_planted_hole_post"
 		var plant_body := StaticBody3D.new()
-		plant_body.collision_layer = 1 << (ParkRecipes.WORLD_LAYER - 1)
+		plant_body.collision_layer = PhysicsLayers.WORLD_MASK
 		var plant_shape := CollisionShape3D.new()
 		var plant_box := BoxShape3D.new()
 		plant_box.size = Vector3(ParkRecipes.ANCHOR_POST_M, 40.0, ParkRecipes.ANCHOR_POST_M)
@@ -434,7 +435,7 @@ func _hole_intruders(space: PhysicsDirectSpaceState3D, rows_node: Node, hole_ids
 	column.size = Vector3(1.8, 1000.0, 1.8)
 	var q := PhysicsShapeQueryParameters3D.new()
 	q.shape = column
-	q.collision_mask = 1 << (ParkRecipes.WORLD_LAYER - 1)
+	q.collision_mask = PhysicsLayers.WORLD_MASK
 	for c: Vector2 in cells:
 		q.transform = Transform3D(Basis.IDENTITY, Vector3(c.x, 0.0, c.y))
 		var hit := false

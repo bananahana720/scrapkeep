@@ -2,6 +2,7 @@ extends Node
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
@@ -127,7 +128,7 @@ func _release(enemy: Node3D) -> void:
 
 
 func _enemies() -> Array:
-	return get_tree().get_nodes_in_group("enemy").filter(func(enemy): return _alive(enemy))
+	return get_tree().get_nodes_in_group(Groups.ENEMY).filter(func(enemy): return _alive(enemy))
 
 
 func _mark(enemy: Node3D, seconds: float) -> void:

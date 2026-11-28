@@ -3,13 +3,13 @@ extends Node3D
 const Density := preload("res://src/presentation/density.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const CraftedGear := preload("res://src/presentation/crafted_ball_gear.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const BOLT_SHADER := preload("res://assets/shaders/bolt_projectile.gdshader")
 
 const MAX_LIVE := 64
 const PRIORITY := 0
-const WORLD_MASK := 1
 const WIDTH := 0.16
 const STREAK_SECONDS := 0.018
 const MIN_STREAK := 0.8
@@ -288,7 +288,7 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 		var blocked := false
 		var normal := Vector3.ZERO
 		if from.distance_squared_to(to) > 0.000001:
-			var wall := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, WORLD_MASK))
+			var wall := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, PhysicsLayers.WORLD_MASK))
 			if not wall.is_empty():
 				end = wall["position"]
 				normal = wall.get("normal", Vector3.ZERO)

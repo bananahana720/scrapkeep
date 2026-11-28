@@ -220,7 +220,7 @@ func pack_centre() -> Vector3:
 		return Vector3.INF
 	var sum := Vector3.ZERO
 	var count := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(GROUP):
 		if enemy == self or DamageDoor.dead(enemy):
 			continue
 		if String(enemy.get("kind")) == kind:

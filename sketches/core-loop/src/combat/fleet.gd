@@ -169,7 +169,7 @@ func spawn_guard(home: Vector3, at: Vector3, kind := "swarm_remnant") -> Object:
 func on_swarm_scattered(swarm, at: Vector3, drones: int) -> void:
 	scatters += 1
 	ctx.events.swarm_scattered.emit(at, drones)
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Enemy.GROUP):
 		if enemy.has_method("on_guard_scattered"):
 			enemy.on_guard_scattered(swarm, at)
 

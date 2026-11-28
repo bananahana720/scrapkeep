@@ -1,6 +1,8 @@
 extends Node
 
 const Grip := preload("res://src/movement/grip.gd")
+const Groups := preload("res://src/core/groups.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -90,7 +92,7 @@ func _take(node: Node3D) -> void:
 		node.remove_from_group(BUDGET_GROUP)
 	if node is CollisionObject3D:
 		_layer = node.collision_layer
-		node.collision_layer = 0
+		node.collision_layer = PhysicsLayers.NONE
 	if node is CharacterBody3D:
 		node.velocity = Vector3.ZERO
 
@@ -120,7 +122,7 @@ func _carry(delta: float, player) -> void:
 
 func _swing(player) -> void:
 	var scale := maxf(MIN_SPEED_SCALE, player.state.velocity.length() / player.tuning.tier_cruise())
-	for other in get_tree().get_nodes_in_group("enemy"):
+	for other in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if other == body or DamageDoor.dead(other):
 			continue
 		if not _touching(body, other):
@@ -191,7 +193,7 @@ func _fly(delta: float) -> void:
 		f["left"] -= delta
 		if f["left"] <= 0.0 or DamageDoor.dead(node):
 			continue
-		for other in get_tree().get_nodes_in_group("enemy"):
+		for other in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if other == node or other == body or not is_instance_valid(other) or f["hit"].has(other.get_instance_id()):
 				continue
 			if other.has_method("is_dead") and other.is_dead():
