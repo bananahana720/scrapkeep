@@ -2,7 +2,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Juice := preload("res://src/presentation/juice.gd")
 const Palette := preload("res://src/core/palette.gd")
 
@@ -62,7 +62,7 @@ func _process(_delta: float) -> bool:
 					["sunforged_core", Palette.COBALT], ["warden_ward", Palette.AMBER]]:
 				_check("fountain tint " + pair[0], Juice.part_tint(pair[0]) == pair[1], "%s -> %s" % [pair[0], Juice.part_tint(pair[0])])
 			# An element still wins over the rung, as before the ladder: the fountain says what it does.
-			var arc: Color = EventKinds.juice("part_gained")["element"].get("arc", Color.BLACK)
+			var arc: Color = EventJuice.juice("part_gained")["element"].get("arc", Color.BLACK)
 			_check("fountain tint arc_coil", Juice.part_tint("arc_coil") == arc, "common arc part -> %s" % Juice.part_tint("arc_coil"))
 			# Without combat's resolver a hit lands for its force.
 			_juice.plating_of = Callable()
@@ -153,7 +153,7 @@ func _process(_delta: float) -> bool:
 			var mixed := 0.0
 			for entry in _sent().slice(mixed_base):
 				mixed += entry[1] * 1000.0
-			_check("mixed burst keeps the budget", mixed <= EventKinds.STOP_BUDGET_MS + 0.5, "30 bomb and ram hits send %.0f ms of stop (budget %.0f)" % [mixed, EventKinds.STOP_BUDGET_MS])
+			_check("mixed burst keeps the budget", mixed <= EventJuice.STOP_BUDGET_MS + 0.5, "30 bomb and ram hits send %.0f ms of stop (budget %.0f)" % [mixed, EventJuice.STOP_BUDGET_MS])
 			_game.camera._shake = 0.0
 			_juice.hook_log.clear()
 			_juice.squash(0.0, Vector3.FORWARD)

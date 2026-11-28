@@ -6,7 +6,7 @@ extends SceneTree
 # `emitting` flag right after restart(), and recycling is round-robin, never on `finished`.
 const T := preload("res://tests/support/t.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
 
@@ -18,7 +18,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	for kind in EventKinds.JUICE:
+	for kind in EventJuice.JUICE:
 		for variant in ["", "crit", "low"]:
 			for id in FxLibrary.effects(kind, variant):
 				t.check("%s %s fx names a spec: %s" % [kind, variant, id], FxLibrary.SPECS.has(id))
@@ -41,7 +41,7 @@ func _run() -> void:
 	var crit := FxLibrary.effects("enemy_struck", "crit")
 	t.check("a crit differs in count and size, not only tint", crit["crit_core"] > struck["spark_core"]
 		and FxLibrary.SPECS["crit_core"]["size"].z > FxLibrary.SPECS["spark_core"]["size"].z)
-	var row := EventKinds.juice("enemy_struck")
+	var row := EventJuice.juice("enemy_struck")
 	t.check("one home for sparks: no CPU spark counts left", not row.has("sparks") and not row["crit"].has("sparks"))
 	# FX-FIX: the latch is a ring that closes on the bite, a halo, and a pulse down the cable.
 	var latch := FxLibrary.effects("harpoon_bit")

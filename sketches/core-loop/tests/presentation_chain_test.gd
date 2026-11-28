@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 
 # Kills pop and pickups feel greedy (v3 W11), through the real game. Kills inside the
@@ -25,7 +25,7 @@ class ClockedStreak extends "res://src/presentation/streak.gd":
 
 func _clocked_streak(kind: String) -> RefCounted:
 	var streak := ClockedStreak.new()
-	var row := EventKinds.juice(kind)
+	var row := EventJuice.juice(kind)
 	streak.window_ms = int(row.get("chain_ms", 700))
 	streak.cap = int(row.get("chain_cap", 9))
 	streak.now = func() -> int: return int(_clock_ms)
@@ -81,7 +81,7 @@ func _physics_process(_delta: float) -> bool:
 				_juice.flush()
 				_marks["rungs"].append(_audio.kill_streak.rung)])
 		_plan.append([850, func(): _marks["pips"] = _vfx.chain_pips()])
-		var window := int(EventKinds.juice("enemy_killed")["chain_ms"])
+		var window := int(EventJuice.juice("enemy_killed")["chain_ms"])
 		_plan.append([850 + window + 150, func():
 			events.enemy_killed.emit("chaser", at, 1)
 			_juice.flush()
@@ -124,7 +124,7 @@ func _physics_process(_delta: float) -> bool:
 	_check("chain climbs", rungs == [0, 1, 2, 3, 4] and _marks["pips"] == 5,
 		"five kills 150 ms apart climb rungs %s; %d pips over the ball" % [rungs, _marks["pips"]])
 	_check("chain resets", _marks["reset"] == [0, 1] and _marks["reset_pips"] == 0,
-		"a kill after a %d ms gap is rung %d of a run of %d; %d pips shown" % [EventKinds.juice("enemy_killed")["chain_ms"], _marks["reset"][0], _marks["reset"][1], _marks["reset_pips"]])
+		"a kill after a %d ms gap is rung %d of a run of %d; %d pips shown" % [EventJuice.juice("enemy_killed")["chain_ms"], _marks["reset"][0], _marks["reset"][1], _marks["reset_pips"]])
 	# The chain grows by its tier layer, not by the pop's pitch (SOUND-BIBLE rule 7, PR 947): every pop
 	# keeps its own pitch, and each link past the first adds the next, heavier tier.
 	var kill_pitches: Array = _audio.cue_log.filter(func(e: Array): return e[0] == "enemy_killed" and e[1] == "kill_pop").map(func(e: Array): return snappedf(e[4], 0.001))

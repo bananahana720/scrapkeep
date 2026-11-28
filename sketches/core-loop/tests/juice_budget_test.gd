@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Juice := preload("res://src/presentation/juice.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 
 # SR5 juice budget (W13-INTEGRATION-3). Stacked hits cannot shake the camera past
 # Juice.SHAKE_CAP on any frame, and hit-stop belongs to the attacker's own strike: the
@@ -150,8 +151,8 @@ func _finish(camera) -> void:
 	_game.events.enemy_struck.emit(_enemy, "ram", 40.0)
 	_juice.flush()
 	var melee_sent: Array = _juice.hit_stop_log.slice(logged).filter(func(e: Array): return e[1] > 0.0)
-	_check("strike still stops", melee_sent.size() == 1 and melee_sent[0][2] == "enemy_struck" and melee_sent[0][1] <= Juice.SPINE_CAP_MS / 1000.0 + 0.0001,
-		"a ram at speed sends %d stop of %.0f ms under the spine's %.0f ms" % [melee_sent.size(), melee_sent[0][1] * 1000.0 if not melee_sent.is_empty() else 0.0, Juice.SPINE_CAP_MS])
+	_check("strike still stops", melee_sent.size() == 1 and melee_sent[0][2] == "enemy_struck" and melee_sent[0][1] <= EventJuice.SPINE_CAP_MS / 1000.0 + 0.0001,
+		"a ram at speed sends %d stop of %.0f ms under the spine's %.0f ms" % [melee_sent.size(), melee_sent[0][1] * 1000.0 if not melee_sent.is_empty() else 0.0, EventJuice.SPINE_CAP_MS])
 
 	# The comfort rows scale both.
 	var shake_full := _shake_for(camera, 1.0)

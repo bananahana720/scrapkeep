@@ -3,6 +3,7 @@ extends Node3D
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
@@ -23,8 +24,8 @@ const CATCH_RADIUS := 6.0
 const CHUNK := 32.0
 const CLOUD_WRAP := 650.0
 const CLOUD_STEP := 0.1
-static var MOTE_COUNTS: Array = EventKinds.juice("thermal_ride")["motes"]
-static var STREAK_COUNTS: Array = EventKinds.juice("thermal_ride")["streaks"]
+static var MOTE_COUNTS: Array = EventJuice.juice("thermal_ride")["motes"]
+static var STREAK_COUNTS: Array = EventJuice.juice("thermal_ride")["streaks"]
 
 static var shader_dir := SHADER_DIR
 var thermals: Array[Dictionary] = []

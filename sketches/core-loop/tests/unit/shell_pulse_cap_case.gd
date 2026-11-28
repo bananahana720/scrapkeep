@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Juice := preload("res://src/presentation/juice.gd")
-const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 
 # The ball's swell on a pickup (presentation/juice.gd pulse): one pickup swells it as it always did,
 # and a pile landing together cannot swell it past a fifth. The kicks used to add with no ceiling:
@@ -29,8 +29,8 @@ func _swing(kicks: Dictionary) -> Vector2:
 
 
 func run(t) -> void:
-	var piece := float(EventKinds.juice("scrap_collected")["pulse_cap"])
-	var loss := float(EventKinds.juice("scrap_lost")["pulse"])
+	var piece := float(EventJuice.juice("scrap_collected")["pulse_cap"])
+	var loss := float(EventJuice.juice("scrap_lost")["pulse"])
 	var one := _swing({0: [piece]})
 	var part := _swing({0: [0.12]})
 	var lost := _swing({0: [loss]})
