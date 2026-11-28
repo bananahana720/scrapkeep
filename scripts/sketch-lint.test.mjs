@@ -38,6 +38,7 @@ import {
   lintL16,
   lintL17,
   lintL18,
+  lintL19,
   lintPreloadedTestSupport,
   lintSketch,
   lintTrackedUids,
@@ -729,6 +730,7 @@ test("the baseline silences listed offenders and shrinks only", () => {
     W7: {},
     S8: {},
     L18: [],
+    L19: [],
   });
 });
 
@@ -1696,5 +1698,152 @@ test("parseLintArgs refuses a --base with no ref and a flag it does not know", (
   assert.throws(
     () => parseLintArgs(["--base=origin/main"]),
     /unknown argument --base=origin\/main/,
+  );
+});
+
+const l19Root = "sketches/core-loop";
+const l19Reader = {
+  path: `${l19Root}/tests/support/source_scan.gd`,
+  text: "static func text(t, path) -> String:\n\treturn FileAccess.get_file_as_string(path)\n",
+};
+const l19 = (rel, text) =>
+  lintL19([l19Reader, { path: `${l19Root}/${rel}`, text }], l19Root).map((item) =>
+    formatFinding(item),
+  );
+const l19Message =
+  "reads script source by hand; read script source through tests/support/source_scan.gd";
+
+test("L19 flags a test that reads a script by hand and names the shared reader as the fix", () => {
+  assert.deepEqual(
+    l19(
+      "tests/unit/a_case.gd",
+      'func run(t) -> void:\n\tvar text := FileAccess.get_file_as_string("res://src/core/flow.gd")\n',
+    ),
+    [`L19 ${l19Root}/tests/unit/a_case.gd:2 ${l19Message}`],
+  );
+  assert.equal(
+    l19(
+      "tests/b_test.gd",
+      'func _initialize() -> void:\n\tvar f := FileAccess.open("res://tools/bot_run.gd", FileAccess.READ)\n',
+    ).length,
+    1,
+  );
+  assert.equal(
+    l19(
+      "tests/c_test.gd",
+      'const OWNER := "res://tests/support/t.gd"\n\nfunc _initialize() -> void:\n\tvar text := FileAccess.get_file_as_string(OWNER)\n',
+    ).length,
+    1,
+  );
+  assert.equal(
+    l19(
+      "tests/d_test.gd",
+      'const SOURCES := [\n\t"res://src/ui/a.gd",\n\t"res://src/ui/b.gd",\n]\n\nfunc _initialize() -> void:\n\tfor path in SOURCES:\n\t\tvar text := FileAccess.get_file_as_string(path)\n',
+    ).length,
+    1,
+  );
+  assert.equal(
+    l19(
+      "tests/e_test.gd",
+      'func _initialize() -> void:\n\tfor path in ["res://src/ui/a.gd", "res://src/ui/b.gd"]:\n\t\tvar src := FileAccess.get_file_as_string(path)\n',
+    ).length,
+    1,
+  );
+  assert.equal(
+    l19(
+      "tests/f_test.gd",
+      'func _initialize() -> void:\n\tvar path := "res://src/presentation/%s.gd" % node\n\tvar src := FileAccess.get_file_as_string(path)\n',
+    ).length,
+    1,
+  );
+  assert.deepEqual(
+    l19(
+      "tests/unit/g_case.gd",
+      'const UI_DIR := "res://src/ui/"\n\nfunc run(t) -> void:\n\tfor file in DirAccess.get_files_at(UI_DIR):\n\t\tif file.ends_with(".gd"):\n\t\t\tvar text := FileAccess.get_file_as_string(UI_DIR + file)\n',
+    ).map((line) => line.split(" ")[1]),
+    [`${l19Root}/tests/unit/g_case.gd:4`, `${l19Root}/tests/unit/g_case.gd:6`],
+  );
+  assert.deepEqual(
+    l19(
+      "tests/h_test.gd",
+      'func _initialize() -> void:\n\t_purity("res://src/core/cosmetics.gd")\n\n\nfunc _purity(path: String) -> void:\n\tvar source := FileAccess.get_file_as_string(path)\n',
+    ).map((line) => line.split(" ")[1]),
+    [`${l19Root}/tests/h_test.gd:6`],
+  );
+});
+
+test("L19 passes data reads, writes, other roots, comments, the reader itself and files outside tests/", () => {
+  for (const text of [
+    'func _initialize() -> void:\n\tvar park = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/park_flume.json"))\n',
+    'func _initialize() -> void:\n\tvar f := FileAccess.open("res://tests/fixtures/x.gd", FileAccess.WRITE)\n',
+    'func _initialize() -> void:\n\tvar text := FileAccess.get_file_as_string("res://assets/x.gd")\n',
+    'func _initialize() -> void:\n\t# var text := FileAccess.get_file_as_string("res://src/core/flow.gd")\n\tpass\n',
+    'const PARK_DIR := "res://src/world/park"\n\nfunc _initialize() -> void:\n\tfor name in DirAccess.get_files_at(PARK_DIR):\n\t\tif name.ends_with(".json"):\n\t\t\tvar text := FileAccess.get_file_as_string(PARK_DIR.path_join(name))\n',
+    'const CASE_DIR := "res://tests/unit/"\n\nfunc _initialize() -> void:\n\tfor file in DirAccess.get_files_at(CASE_DIR):\n\t\tvar script = load(CASE_DIR + file)\n',
+    'func _initialize() -> void:\n\tfor file in DirAccess.get_files_at("res://src/combat"):\n\t\tif file.ends_with(".gd"):\n\t\t\tvar table = load("res://src/combat/" + file)\n',
+    'const DOCS := ["res://README.md"]\n\nfunc _initialize() -> void:\n\tfor path in DOCS:\n\t\tvar text := FileAccess.get_file_as_string(path)\n',
+  ])
+    assert.deepEqual(l19("tests/ok_test.gd", text), [], text);
+  const direct =
+    'func _x() -> void:\n\tvar text := FileAccess.get_file_as_string("res://src/core/flow.gd")\n';
+  assert.deepEqual(lintL19([{ ...l19Reader, text: l19Reader.text + direct }], l19Root), []);
+  assert.deepEqual(
+    lintL19([l19Reader, { path: `${l19Root}/src/core/x.gd`, text: direct }], l19Root),
+    [],
+  );
+});
+
+test("L19 fails when the test scripts it reads do not include the shared reader", () => {
+  for (const files of [[], [{ path: `${l19Root}/tests/a_test.gd`, text: "extends SceneTree\n" }]])
+    assert.deepEqual(
+      lintL19(files, l19Root).map((item) => formatFinding(item)),
+      [
+        `L19 ${l19Root}/tests/support/source_scan.gd:1 the shared source reader is not among the test scripts read, so L19 checked nothing; restore tests/support/source_scan.gd`,
+      ],
+    );
+});
+
+test("L19 passes the checked-out core-loop tests against its list, and its list only shrinks", () => {
+  assert.equal(BASELINE_RULES.L19.shape, "keys");
+  const baseline = JSON.parse(
+    readFileSync(new URL("./sketch-lint.baseline.json", import.meta.url), "utf8"),
+  );
+  const raw = lintSketch("core-loop").filter((item) => item.rule === "L19");
+  assert.ok(raw.length > 0);
+  assert.deepEqual(
+    applyBaseline(raw, { L19: baseline.L19 }, () => true),
+    [],
+  );
+  const planted = {
+    rule: "L19",
+    path: `${l19Root}/tests/planted_test.gd`,
+    line: 3,
+    message: l19Message,
+  };
+  assert.deepEqual(
+    applyBaseline([...raw, planted], { L19: baseline.L19 }, () => true).map((item) =>
+      formatFinding(item),
+    ),
+    [`L19 ${l19Root}/tests/planted_test.gd:3 ${l19Message}`],
+  );
+  assert.deepEqual(
+    baselineGrowth({ L19: baseline.L19 }, { L19: [...baseline.L19, planted.path] }).map(
+      (item) => item.message,
+    ),
+    [
+      `L19 list grew from ${baseline.L19.length} to ${baseline.L19.length + 1} entries (new: ${planted.path}): fix the offence instead of listing it`,
+    ],
+  );
+  const [fixed, ...kept] = baseline.L19;
+  assert.deepEqual(baselineGrowth({ L19: baseline.L19 }, { L19: kept }), []);
+  assert.match(
+    formatFinding(
+      applyBaseline(
+        raw.filter((item) => item.path !== fixed),
+        { L19: baseline.L19 },
+        () => true,
+      )[0],
+    ),
+    /L19 no longer offends: remove from baseline/,
   );
 });
