@@ -231,10 +231,10 @@ func _check_source_zero_greybox_invariants() -> void:
 		for tok in prim_tokens:
 			if src.contains(tok):
 				hits.append(tok)
-		_t.check("%s has zero primitive Mesh.new() or PaletteMaterials.striped calls" % path.get_file(), hits.is_empty(), str(hits))
+		_t.check("%s has zero primitive Mesh.new() or Palette.striped calls" % path.get_file(), hits.is_empty(), str(hits))
 
 	var bay_src := FileAccess.get_file_as_string("res://src/world/bay.gd")
-	_t.check("bay.gd has zero flat PaletteMaterials.solid calls", not bay_src.contains("PaletteMaterials.solid("))
+	_t.check("bay.gd has zero flat Palette.solid calls", not bay_src.contains("PaletteMaterials.solid("))
 
 	var spill_src := FileAccess.get_file_as_string("res://src/presentation/spillway_scenery.gd")
 	_t.check("spillway_scenery.gd has zero BoxMesh.new() or SphereMesh.new()",
