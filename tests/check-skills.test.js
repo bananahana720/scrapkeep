@@ -439,6 +439,30 @@ describe("check-skills", { concurrency: CONCURRENCY }, () => {
     );
   });
 
+  test("N3: a gitignored folder cited as a folder is not reported when it is missing, a file under it still warns", async () => {
+    const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-skills-"));
+    try {
+      const repoRoot = await buildMinimalRepo(temporary, {
+        skillMd: goodSkillMd({
+          body: "2. Keep the proof under `artifacts/local/` and the log at `artifacts/local/run.log`.\n",
+        }),
+        lessonsMd: GOOD_LESSONS,
+      });
+      await writeFile(path.join(repoRoot, ".gitignore"), "artifacts/local/\n");
+      await linkSkills(repoRoot, {});
+      const { findings } = await runAgainst(repoRoot);
+      assert.deepEqual(failures(findings, "paths"), []);
+      assert.deepEqual(
+        warnings(findings, "paths").map((f) => f.message),
+        [
+          "path is under a gitignored directory, not checkable in a fresh clone: artifacts/local/run.log",
+        ],
+      );
+    } finally {
+      await rm(temporary, { recursive: true, force: true });
+    }
+  });
+
   // N1
   test("N1: single-quoted description and CRLF line endings parse cleanly", async () => {
     const { status, findings, stdout } = await runFixture("frontmatter-yaml-styles");
