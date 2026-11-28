@@ -7609,3 +7609,24 @@ func _detonate_cannon_piton() -> Dictionary:
 		"recoil_cancelled": bool(piton.get("recoil_cancelled", false)),
 	}
 	return last_cannon_piton
+
+
+static func spawnable_kinds(world := 0) -> Array[String]:
+	var found: Array[String] = []
+	for kind in KINDS + Rogue.ROWS.keys() + Fleet.SCRIPTS.keys() + Roster.ROWS.keys():
+		if kind in found:
+			continue
+		if Roster.has(kind) and not Fleet.SCRIPTS.has(kind) and not kind in KINDS and not Rogue.ROWS.has(kind):
+			if not Roster.row(kind).has("script") or not Roster.built(kind):
+				continue
+		var w := int(Rogue.ROWS[kind].get("world", 0)) if Rogue.ROWS.has(kind) else int(Roster.row(kind).get("world", 0))
+		if world == 0 or w in [0, world]:
+			found.append(kind)
+	return found
+
+
+static func kind_label(kind: String) -> String:
+	if Rogue.ROWS.has(kind):
+		return String(Rogue.ROWS[kind].name)
+	var named := Roster.name_of(kind) if Roster.has(kind) else ""
+	return named if named != "" else kind.replace("_", " ")

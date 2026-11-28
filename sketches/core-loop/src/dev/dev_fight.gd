@@ -1,9 +1,6 @@
 extends Node
 
 const Combat := preload("res://src/combat/combat.gd")
-const Rogue := preload("res://src/combat/rogue.gd")
-const Fleet := preload("res://src/combat/fleet.gd")
-const Roster := preload("res://src/combat/roster.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const DevCommands := preload("res://src/dev/dev_commands.gd")
 const Parts := preload("res://src/build/parts.gd")
@@ -56,29 +53,11 @@ func ctx():
 
 
 func kinds(world := 0) -> Array[String]:
-	var found: Array[String] = []
-	for kind in Combat.KINDS + Rogue.ROWS.keys() + Fleet.SCRIPTS.keys() + Roster.ROWS.keys():
-		if kind in found:
-			continue
-		if Roster.has(kind) and not Fleet.SCRIPTS.has(kind) and not kind in Combat.KINDS and not Rogue.ROWS.has(kind):
-			if not Roster.row(kind).has("script") or not Roster.built(kind):
-				continue
-		if world == 0 or world_of(kind) in [0, world]:
-			found.append(kind)
-	return found
-
-
-func world_of(kind: String) -> int:
-	if Rogue.ROWS.has(kind):
-		return int(Rogue.ROWS[kind].get("world", 0))
-	return int(Roster.row(kind).get("world", 0))
+	return Combat.spawnable_kinds(world)
 
 
 func label(kind: String) -> String:
-	if Rogue.ROWS.has(kind):
-		return String(Rogue.ROWS[kind].name)
-	var named := Roster.name_of(kind) if Roster.has(kind) else ""
-	return named if named != "" else kind.replace("_", " ")
+	return Combat.kind_label(kind)
 
 
 func spawn(kind: String, count := 1, affix := "") -> String:
@@ -87,8 +66,9 @@ func spawn(kind: String, count := 1, affix := "") -> String:
 		return "!no fight running yet: start a run first"
 	if not game.flow.in_play():
 		return "!spawn works during a run, not on the %s screen" % game.flow.state_name()
-	if not (kind in Combat.KINDS or Rogue.ROWS.has(kind) or c.spawner.fleet.makes(kind)):
-		var near := kinds().filter(func(k: String): return k.begins_with(kind))
+	var all_kinds := Combat.spawnable_kinds()
+	if not kind in all_kinds:
+		var near := all_kinds.filter(func(k: String): return k.begins_with(kind))
 		if near.size() != 1:
 			return "!no enemy '%s'%s" % [kind, (" (did you mean %s?)" % ", ".join(near.slice(0, 5))) if not near.is_empty() else ""]
 		kind = near[0]
@@ -96,8 +76,7 @@ func spawn(kind: String, count := 1, affix := "") -> String:
 		return "!no affix '%s' (%s, %s)" % [affix, ", ".join(EliteAffixes.IDS), EliteAffixes.PLATED]
 	count = clampi(count, 1, MAX_COUNT)
 	var ball: Vector3 = c.player.ball_position()
-	var forward: Vector3 = -game.camera.yaw_basis().z
-	var centre := ball + Vector3(forward.x, 0.0, forward.z).normalized() * AHEAD
+	var centre := ball + c.heading() * AHEAD
 	var clearance := BIG_CLEARANCE if kind in BIG_KINDS else MOB_CLEARANCE
 	for i in count:
 		var at := centre
@@ -433,10 +412,7 @@ func _cmd_warp(args: Array[String]):
 				pt = c.terrain.drop_point(wp.x + side.x, wp.z + side.z, 2.2)
 			"ahead":
 				var dist := DevCommands.number(args, 1, 20.0)
-				var fwd: Vector3 = -game.camera.yaw_basis().z if game.camera != null else Vector3.FORWARD
-				fwd.y = 0.0
-				fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
-				var dest: Vector3 = c.player.ball_position() + fwd * dist
+				var dest: Vector3 = c.player.ball_position() + c.heading() * dist
 				pt = c.terrain.drop_point(dest.x, dest.z, 2.2)
 			_:
 				return "!warp <x> <z> | spawn | beacon | landmark | moss | vault | warden | ahead [m]"
@@ -468,9 +444,8 @@ func _cmd_speed(args: Array[String]):
 	var s := args[0].to_float()
 	if not is_finite(s):
 		return "!speed must be finite"
-	var fwd: Vector3 = -game.camera.yaw_basis().z if game.camera != null else Vector3.FORWARD
-	fwd.y = 0.0
-	fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
+	var c = ctx()
+	var fwd: Vector3 = c.heading() if c != null else Vector3.FORWARD
 	var v := fwd * s
 	game.player.set_velocity_now(v, "dev")
 	return {"ok": true, "text": "speed %.1f m/s" % s,
@@ -501,7 +476,7 @@ func _cmd_parts(args: Array[String]):
 		return "!no run state yet"
 	var action := DevCommands.word(args, 0, "list").to_lower()
 	if action == "clear":
-		game.run.parts.clear()
+		game.run.clear_parts()
 		game.build.recompute()
 		game.build.sync_relics()
 		return {"ok": true, "text": "cleared parts", "data": {"parts": []}}
@@ -704,13 +679,9 @@ func _cmd_flood(args: Array[String]):
 		return "!this stage has no flood"
 	var action := DevCommands.word(args, 0, "status").to_lower()
 	if action == "on":
-		f.cycle.phase = FloodCycle.HIGH
-		f.cycle.elapsed = 0.0
-		f.render()
+		f.set_phase(FloodCycle.HIGH)
 	elif action == "off":
-		f.cycle.phase = FloodCycle.DRY
-		f.cycle.elapsed = 0.0
-		f.render()
+		f.set_phase(FloodCycle.DRY)
 	elif action != "status":
 		return "!flood [on|off]"
 	var phase_name: String = FloodCycle.PHASE_NAMES[clampi(int(f.cycle.phase), 0, FloodCycle.PHASE_NAMES.size() - 1)]

@@ -355,6 +355,10 @@ func remove_part(part_id: String) -> bool:
 	return true
 
 
+func clear_parts() -> void:
+	parts.clear()
+
+
 func _publish_heft_class() -> void:
 	var c := heft_class()
 	if c == _heft_class:
