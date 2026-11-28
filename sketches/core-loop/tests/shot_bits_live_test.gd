@@ -418,7 +418,7 @@ func _check_retry() -> void:
 # --- Unit U2: bounce, split, pull, tells and the pair rows -----------------------------
 
 # Two long walls facing each other across WALL_SITE, WALL_GAP ahead and behind, on the world
-# layer the bolts' ray reads (Bolts.WORLD_MASK). They hang off the tree root so the disabled
+# layer the bolts' ray reads (PhysicsLayers.WORLD_MASK). They hang off the tree root so the disabled
 # game does not take them out of the physics space.
 func _build_walls() -> void:
 	var at: Vector3 = Measurement.BALL + WALL_SITE
