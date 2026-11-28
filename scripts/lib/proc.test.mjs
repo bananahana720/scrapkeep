@@ -62,14 +62,13 @@ test("proc: runProcess reaps stubborn grandchild group with SIGTERM grace and re
   const dir = mkdtempSync(path.join(os.tmpdir(), "proc-test-grace-"));
   try {
     const pidFile = path.join(dir, "child.pid");
-    const started = Date.now();
     const res = await runProcess(
       "/bin/sh",
       ["-c", `trap '' TERM; sleep 30 & echo $! > "${pidFile}"; wait`],
       { timeoutMs: 200, killGraceMs: 200, reapOnClose: true, exitDrainMs: 300 },
     );
     assert.equal(res.timedOut, true);
-    assert.ok(Date.now() - started < 5000);
+    assert.equal(res.signal, "SIGKILL");
     const grandchild = Number(readFileSync(pidFile, "utf8").trim());
     assert.equal(pidAlive(grandchild), false);
   } finally {
