@@ -503,25 +503,38 @@ func _test_live_run_bridge_and_audio_bank() -> void:
 
 
 func _test_graph_and_code_hygiene() -> void:
-	var dir_paths := ["res://src/experimental", "res://src/experimental/resources/director"]
+	var scan_root := "res://src/experimental"
 	var gd_files: Array[String] = []
-	for dpath in dir_paths:
+	var unopened_dirs: Array[String] = []
+	var pending_dirs: Array[String] = [scan_root]
+	while not pending_dirs.is_empty():
+		var dpath: String = pending_dirs.pop_back()
 		var dir := DirAccess.open(dpath)
 		if dir == null:
+			unopened_dirs.append(dpath)
 			continue
+		for sub in dir.get_directories():
+			pending_dirs.append(dpath.path_join(sub))
 		for fname in dir.get_files():
 			if fname.ends_with(".gd"):
 				gd_files.append(dpath.path_join(fname))
 	gd_files.sort()
+	t.eq("every folder under %s opens" % scan_root, unopened_dirs, [])
+	t.check("script walk of %s finds scripts" % scan_root, not gd_files.is_empty(), "found %d" % gd_files.size())
+	t.check("script walk of %s finds env_tags.gd" % scan_root, gd_files.has("res://src/experimental/env_tags.gd"), "found %d" % gd_files.size())
 
+	var preload_pattern := 'preload\\("([^"]+)"\\)'
 	var preload_re := RegEx.new()
-	preload_re.compile('preload\\("([^"]+)"\\)')
+	t.eq("regex compiles: %s" % preload_pattern, preload_re.compile(preload_pattern), OK)
+	var static_var_pattern := "(?m)^\\s*static\\s+var\\b"
 	var static_var_re := RegEx.new()
-	static_var_re.compile("(?m)^\\s*static\\s+var\\b")
+	t.eq("regex compiles: %s" % static_var_pattern, static_var_re.compile(static_var_pattern), OK)
+	var tag_const_pattern := "(?m)^\\s*const\\s+(ENV_TAGS|CANONICAL_TAGS|TAG_(ELECTRIFIED|BURNING|SLAG_COATED|MAGNETIC|COOLANT_BRITTLE|SOAKED_CONDUCTIVE))\\b"
 	var tag_const_re := RegEx.new()
-	tag_const_re.compile("(?m)^\\s*const\\s+(ENV_TAGS|CANONICAL_TAGS|TAG_(ELECTRIFIED|BURNING|SLAG_COATED|MAGNETIC|COOLANT_BRITTLE|SOAKED_CONDUCTIVE))\\b")
+	t.eq("regex compiles: %s" % tag_const_pattern, tag_const_re.compile(tag_const_pattern), OK)
+	var never_brake_pattern := "(?m)^\\s*(static\\s+)?func\\s+_?never_brake\\w*\\b"
 	var never_brake_re := RegEx.new()
-	never_brake_re.compile("(?m)^\\s*(static\\s+)?func\\s+_?never_brake\\w*\\b")
+	t.eq("regex compiles: %s" % never_brake_pattern, never_brake_re.compile(never_brake_pattern), OK)
 
 	var graph := {}
 	var static_vars: Array[String] = []
@@ -529,9 +542,14 @@ func _test_graph_and_code_hygiene() -> void:
 	var tag_decl_dups: Array[String] = []
 	var tag_vocab_dups: Array[String] = []
 	var never_brake_dups: Array[String] = []
+	var unreadable: Array[String] = []
 
 	for path in gd_files:
 		var text := FileAccess.get_file_as_string(path)
+		var read_error := FileAccess.get_open_error()
+		if read_error != OK or text == "":
+			unreadable.append("%s (error %d, %d chars)" % [path, read_error, text.length()])
+			continue
 		var deps: Array[String] = []
 		for m in preload_re.search_all(text):
 			var dep := String(m.get_string(1))
@@ -558,6 +576,7 @@ func _test_graph_and_code_hygiene() -> void:
 			if stripped.begins_with("#"):
 				comment_hits.append("%s:%d" % [path, idx + 1])
 
+	t.eq("every script under %s reads as text" % scan_root, unreadable, [])
 	var has_cycle := _has_directed_cycle(graph)
 	t.eq("zero circular preload dependencies in src/experimental", has_cycle, false)
 	t.eq("zero mutable static var in src/experimental", static_vars, [])
