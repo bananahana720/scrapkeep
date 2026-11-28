@@ -4,11 +4,11 @@ SURVEY = "`git show " + BASE + ":project-guide/handoff/shared/structure-sweep/{f
 
 FLIGHT = (
     "Other units are in flight. One moves four small scripts into `src/core/` (`speed_tier.gd`, `director_cards.gd`, `boss_posture.gd`, `flash_guard.gd`) and rewrites their path wherever they are preloaded: do not touch a `preload(` line of one of those four. "
-    "One moves the pilot Tally's kit out of `src/combat/combat.gd` into `src/combat/tally_kit.gd` and edits `src/combat/ultimate.gd`, a few lines of `src/presentation/audio.gd` and `src/presentation/sound_twins.gd`, and a dozen Tally tests; one works in `src/presentation/craft_prop_meshes.gd` and `tests/mesh_census_test.gd`; "
-    "one changes `src/combat/warden_mind.gd`, `src/presentation/harpoon_physics_rig.gd`, `tests/support/content_registry.gd` and five guard cases under `tests/unit/`; one moves eleven whole-folder guard tests onto the shared source reader and changes `scripts/sketch-fast.mjs` and `scripts/sketch-lint.mjs`; "
+    "One works in `src/presentation/craft_prop_meshes.gd` and `tests/mesh_census_test.gd`; "
+    "one moves eleven whole-folder guard tests onto the shared source reader and changes `scripts/sketch-fast.mjs` and `scripts/sketch-lint.mjs`; "
     "one works in `assets/registry.d/`, `scripts/placeholder-gate.mjs`, `scripts/no-caller.mjs` and `tests/wav_io_test.gd`. "
     "The other units of this round: one works in `src/world/contraptions.gd`, `sluice_valves.gd`, `flood.gd` and the cracked-cache code of `activities.gd`; one in `src/ui/screens.gd`, `src/ui/hud.gd`, `src/ui/jukebox_page.gd`, `src/presentation/radio_deck.gd` and `src/core/objectives.gd`; "
-    "one in `src/presentation/synth.gd`, `sfx_bank.gd`, `audio.gd` and `world_fx/`; one in `src/presentation/juice.gd`, `reward_ceremony.gd`, `src/ui/workshop.gd`, `src/ui/pause_menu.gd` and the pause and hit-stop lines of `src/game.gd`; one splits `src/core/palette.gd` and edits the callers of its material functions; one works in `scripts/lib/`, `scripts/gate/`, `scripts/ci/` and `.github/workflows/ci.yml`. "
+    "one in `src/presentation/synth.gd`, `sfx_bank.gd`, `audio.gd` and `world_fx/`; one in `src/presentation/juice.gd`, `reward_ceremony.gd`, `src/ui/workshop.gd`, `src/ui/pause_menu.gd` and the pause and hit-stop lines of `src/game.gd`; one splits `src/core/palette.gd` and edits the callers of its material functions; one works in `scripts/lib/`, `scripts/gate/`, `scripts/ci/` and `.github/workflows/ci.yml`; two each move one block out of `src/combat/combat.gd` into a child script (the grapple mutations, and the micro-mutations with the cross-synergies). "
     "{own} The integration branch will move while you work. Before your last check, merge `origin/entropy/gate` into your branch (never rebase or force-push). "
     "If the only conflict is in `scripts/sketch-lint.baseline.json` and both sides only removed entries, keep an entry only where both sides kept it."
 )
@@ -18,6 +18,40 @@ COMMON = (
     "Add no code comment except a tool-read line or a note on an engine or operating-system quirk. No test may be weakened. "
     "When the new path is in place and every caller is on it, delete the old one in the same unit; leave no forwarding function whose body only calls the new home. "
 )
+
+import pathlib as _pl
+import runpy as _rp
+
+_R21 = _rp.run_path(str(_pl.Path(__file__).with_name("units-r21.py")), init_globals=dict(BASE=BASE, DELETE=DELETE, NODE_CHECKS=NODE_CHECKS, GODOT_CHECKS=GODOT_CHECKS))
+
+
+def _body(intro, block, example):
+    text = _R21["body"](intro, block, example)
+    old = "is about 6,800 lines."
+    assert text.count(old) == 1
+    return text.replace(old, "is about 5,500 lines after four blocks left it (units M4, M5 and M6).")
+
+
+_DONE = _R21["DONE"]
+_checks = _R21["checks"]
+
+M_FINDINGS = (
+    "Finding `COMBAT-04` in " + SURVEY.format(file="combat.md", row="COMBAT-04") + ", and the row `COMBAT-04` of " + POOL + "; this unit does the {which} half of it. "
+    "The survey is a week old and more than seventy units have moved code since, so its line ranges are wrong now and its counts may be: find the block by the function and variable names, and confirm every count in the code before you rely on it. "
+    "Where the code and the survey differ, the code is right and your report says what differed."
+)
+
+M_EXTRA = (
+    "\n\n**Newer examples than the ones above.** Since unit M4, two more blocks left `combat.gd` the same way: the pilot Tally's kit into `src/combat/tally_kit.gd` (pull request 1363, field `tally_kit`) and the Remembered Cannon's into `src/combat/cannon_kit.gd` (pull request 1362, field `cannon`). Read how `setup` creates them, in what order they are wired, stepped and reset, and keep that order around your new child. "
+    "`tests/weapon_driver_test.gd` and `tests/w47_h2_heroes_test.gd` each list the files split out of `combat.gd` and read them through `tests/support/source_scan.gd`; add your file to a list where the check must keep seeing the moved text, and remember `tests/w47_h2_heroes_test.gd` pins its number of checks in `EXPECTED_CHECKS`. "
+    "A test may read script source only through that shared reader (lint rule L19). The survey suggests `combat.gd` keep public functions that only pass a test's question on to the child (`grapple_mut_count`, `live_bus_charged`, `micro_mutation_count` and the like): do not keep them; the tests ask the child."
+)
+
+M_FLIGHT = FLIGHT.format(own=(
+    "The other unit working in `combat.gd` moves {other} into its own file at the same time as you move yours: leave every function and variable of that block alone. "
+    "You will both add a line where `setup` creates the children and lines where steps and resets run; when you merge the integration branch, keep both in the order the work ran before. "
+    "Run your rename script again after each merge so callers that arrived with it are rewritten too."
+))
 
 UNITS = {
     "W6": dict(
@@ -76,7 +110,7 @@ UNITS = {
             "One commit for the pinning test, one for each part. If part 2 turns out larger than one unit should carry (more than about 400 changed lines outside tests), do `score_step` and `score_transpose` fully, leave the `SfxBank` pair, and say exactly what is left and why."
         ),
         done="a test pins the rendered output of a spread of sounds and passes before and after; the render's inputs travel as arguments or on an owning instance and the statics that carried them are gone from the code, the L14 list and the test reset; a bake cannot read another caller's values; the audio node is no longer held in a static by the world effects; the experimental cooldown state is fixed or shown already fixed; the report says why L14 missed what it missed; and no lint list grew.",
-        flight=FLIGHT.format(own="The Tally unit changes about eight lines of `src/presentation/audio.gd` (calls into the kit): expect a small merge there. Do not edit `scripts/sketch-lint.mjs`."),
+        flight=FLIGHT.format(own="Do not edit `scripts/sketch-lint.mjs`."),
         checks=GODOT_CHECKS.format(base=BASE) + " The tests nearest this unit are `test_batch_reset_test`, `tally_kit_test`, `world_fx_sound_test`, `audio_bakes_ahead_test`, `audio_bake_cancel_test`, `experimental_audio_bank_test`, your new pinning test, the tests that name `synth.gd` or `sfx_bank.gd` (search `tests/`) and `unit_suite_test`; while you work, run those alone with one call that gives each as its own `--test <name>` argument. Run the whole fast check once with `--shuffle` added before you report, since this unit changes what leaks between tests.",
     ),
     "V4": dict(
@@ -142,5 +176,33 @@ UNITS = {
         done="a leaking test on the Mac is reported the way the chosen option says, with a test over both platforms; the CI job does not fail on a test the ledger lists as red on `main`, fails on any other red and reports a listed test that passes; the machine lock checks process ids through the one owner and is off the guard's exception list; the five tools list paths so an odd file name goes through whole; the two one-line faults are fixed with tests; and the report lists the lines of `scripts/sketch-fast.mjs` touched and the two scripts left for the unit that holds them.",
         flight=FLIGHT.format(own="The unit that holds `scripts/sketch-fast.mjs` and `scripts/sketch-lint.mjs` is still in flight: touch `sketch-fast.mjs` only as part 2 says and do not touch `sketch-lint.mjs`. The registry unit changes `scripts/no-caller.mjs`: do not edit it."),
         checks=NODE_CHECKS.format(node_exception="", base=BASE),
+    ),
+    "M7": dict(
+        branch="entropy/m7-grapple-mutations-out-of-combat",
+        findings=M_FINDINGS.format(which="grapple mutations"),
+        body=_body(
+            "The grapple mutations (what a grapple does on firing, holding and release once the player has mutation parts: the hot wire, the det cord, the tether, the live bus, the tether slam) sit inside it as one block of about 580 lines.",
+            "The survey lists 28 functions and these variables: `_active_grapple_slots`, `_hot_wire_cd`, `_det_cord_queue`, `_tether_live`, `_live_bus_charged_until`, `_live_bus_charges`, `_tether_slam_armed`, `_grapple_mut_counts`, `last_grapple_mut`. "
+            "It names eight entry points from the rest of `combat.gd` (`_reset_grapple_muts_state`, `_on_grapple_fired_muts`, `_on_grapple_released_muts`, `_consume_grapple_mut_strike`, `live_bus_charged`, `_tether_slam_matches`, `_step_grapple_mutations`, `_sync_grapple_mutations`) and says one variable (`_hot_wire_cd`) is cleared in `spawn_enemy`. "
+            "The det cord queue is deferred work: the formal model of combat's deferred effects promises it stays one step deep and never outlives its attempt, so when it is applied and when it is cleared must not move by a frame.",
+            "for example `src/combat/grapple_mutations.gd`",
+        ) + M_EXTRA + "\n\n**Also in this unit (LEAD-103, LEAD-11).** `combat.gd` preloads four scripts nothing in it uses (`Bindings`, `HeroFx`, `Relics`, `AttackBudget`) and keeps a variable `_cooldown` nothing reads; `tests/w50_isaac_relics_test.gd` keeps an unused `Grip` preload. Confirm each by search (by name and by string) and delete it, in a commit of its own.",
+        done=_DONE + " The four unused preloads, the unread variable and the test's unused preload are deleted.",
+        flight=M_FLIGHT.format(other="the micro-mutations and cross-synergies"),
+        checks=_checks("The survey names `grapple_muts_test`, `risk_reward_distribution_test`, `synergies_test`, `parts_test` and `w50_isaac_parts_test`; find the rest by searching `tests/` for each moved function name."),
+    ),
+    "M8": dict(
+        branch="entropy/m8-micro-mutations-out-of-combat",
+        findings=M_FINDINGS.format(which="micro-mutations and cross-synergies"),
+        body=_body(
+            "The micro-mutations and cross-synergies (small part effects that hook the air steer, the air dash, the boost, the cadence window, the pendulum, thermobaric pins and the gravity ledger, and the bonuses two parts give together) sit inside it as one block of about 470 lines.",
+            "The survey lists 29 functions and these variables: `_air_steer_surge_left`, `_air_dash_bat_left`, `_boost_active_left`, `_cadence_window_extended`, `_cadence_extended_weapon`, `_prev_window_state`, `_pendulum_zapped`, `_pendulum_swing_charged`, `_pendulum_swing_origin`, `_thermobaric_pins`, `_pulled_recent`, `_gravity_ledger_ready_at`, `last_micro_mutation`, `last_cross_synergy`, `_micro_counts`, `_cross_counts`. "
+            "It says the block meets the rest of `combat.gd` through 18 signal and tick hooks and that five of its variables are read from outside it (`_air_dash_bat_left`, `_cadence_window_extended`, `_cadence_extended_weapon`, `_pendulum_zapped`, `_pulled_recent`). "
+            "The cadence window is covered by the formal model of the weapon's firing cadence: the moment the window is extended and the moment the extension ends must not move by a frame.",
+            "for example `src/combat/micro_mutations.gd`",
+        ) + M_EXTRA,
+        done=_DONE,
+        flight=M_FLIGHT.format(other="the grapple mutations"),
+        checks=_checks("The survey names `synergies_test`, `risk_reward_distribution_test`, `parts_test` and `w50_isaac_parts_test`; find the rest by searching `tests/` for each moved function name and for `micro_mutation` and `cross_synergy`."),
     ),
 }
