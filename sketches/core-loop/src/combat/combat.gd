@@ -262,6 +262,7 @@ func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "Combat"
 	ctx.spawner = self
+	ctx.run.specials = Roster.SPECIALS
 	ground = Ground.new(ctx)
 	fleet = Fleet.new()
 	add_child(fleet)

@@ -29,7 +29,6 @@ const PROMPT_REACH := 45.0
 const INGOT_TIERS := [1, 2, 3]
 const INGOT_RARITY := {1: "common", 2: "rare", 3: "relic"}
 const INGOT_NAMES := {1: "Common Scrap Ingot", 2: "Rare Scrap Ingot", 3: "Relic Scrap Ingot"}
-const INGOT_META := "w50_scrap_ingots"
 
 var _rng: RandomNumberGenerator
 var _class_id := ""
@@ -116,55 +115,6 @@ static func can_scrap(part_id: String, run) -> bool:
 	return d != null and d.patterns.is_empty() and not Relics.is_relic(part_id) and String(d.rarity) != "relic"
 
 
-static func _ingot_store(run) -> Dictionary:
-	if run == null:
-		return {1: 0, 2: 0, 3: 0}
-	var raw = run.get_meta(INGOT_META) if run.has_meta(INGOT_META) else null
-	if not (raw is Dictionary):
-		raw = {1: 0, 2: 0, 3: 0}
-		run.set_meta(INGOT_META, raw)
-	for t in INGOT_TIERS:
-		if not raw.has(t):
-			raw[t] = 0
-	return raw
-
-
-static func scrap_ingots(run) -> Dictionary:
-	var store := _ingot_store(run)
-	return {1: int(store.get(1, 0)), 2: int(store.get(2, 0)), 3: int(store.get(3, 0))}
-
-
-static func ingot_count(run, tier: int) -> int:
-	if not tier in INGOT_TIERS:
-		return 0
-	return int(_ingot_store(run).get(tier, 0))
-
-
-static func reset_ingots(run) -> void:
-	if run == null:
-		return
-	run.set_meta(INGOT_META, {1: 0, 2: 0, 3: 0})
-
-
-static func ingots_to_doc(run) -> Dictionary:
-	var counts := scrap_ingots(run)
-	return {"1": int(counts[1]), "2": int(counts[2]), "3": int(counts[3])}
-
-
-static func ingots_from_doc(run, doc) -> bool:
-	if run == null or not (doc is Dictionary):
-		return false
-	var next := {}
-	for t in INGOT_TIERS:
-		var raw = doc.get(str(t), doc.get(t, 0))
-		if not (typeof(raw) == TYPE_INT or typeof(raw) == TYPE_FLOAT) or not is_finite(float(raw)) \
-				or float(raw) < 0.0 or float(raw) != floorf(float(raw)):
-			return false
-		next[t] = int(raw)
-	run.set_meta(INGOT_META, next)
-	return true
-
-
 static func scrap_part(run, part_id: String, build = null) -> Dictionary:
 	if run == null or part_id == "" or run.parts.is_empty():
 		return {"ok": false, "reason": "empty", "part_id": part_id}
@@ -175,8 +125,7 @@ static func scrap_part(run, part_id: String, build = null) -> Dictionary:
 	var tier := tier_of(part_id)
 	if not run.remove_part(part_id):
 		return {"ok": false, "reason": "not_held", "part_id": part_id}
-	var store := _ingot_store(run)
-	store[tier] = int(store.get(tier, 0)) + 1
+	run.add_ingots(tier, 1)
 	if build != null and build.has_method("recompute"):
 		build.recompute()
 	return {
@@ -186,7 +135,7 @@ static func scrap_part(run, part_id: String, build = null) -> Dictionary:
 		"tier": tier,
 		"rarity": String(INGOT_RARITY.get(tier, "common")),
 		"ingot_name": String(INGOT_NAMES.get(tier, "Scrap Ingot")),
-		"ingots": int(store[tier]),
+		"ingots": run.ingot_count(tier),
 	}
 
 
@@ -199,9 +148,8 @@ static func press_part(run, target_part_id: String, rng: RandomNumberGenerator =
 	if Parts.stacked_out(target_part_id, run.parts) or Parts.maxed(target_part_id, run.parts):
 		return {"ok": false, "reason": "capped", "part_id": target_part_id}
 	var tier := tier_of(target_part_id)
-	var store := _ingot_store(run)
-	if int(store.get(tier, 0)) > 0:
-		store[tier] = int(store[tier]) - 1
+	if run.ingot_count(tier) > 0:
+		run.add_ingots(tier, -1)
 		run.add_part(target_part_id, "part_press")
 		if build != null and build.has_method("recompute"):
 			build.recompute()
@@ -212,7 +160,7 @@ static func press_part(run, target_part_id: String, rng: RandomNumberGenerator =
 			"tier": tier,
 			"paid_kind": "ingot",
 			"sacrificed": "",
-			"ingots_left": int(store[tier]),
+			"ingots_left": run.ingot_count(tier),
 		}
 	var fuel: Array[String] = []
 	for held_id in run.parts:
@@ -235,7 +183,7 @@ static func press_part(run, target_part_id: String, rng: RandomNumberGenerator =
 		"tier": tier,
 		"paid_kind": "part",
 		"sacrificed": sacrificed,
-		"ingots_left": int(store.get(tier, 0)),
+		"ingots_left": run.ingot_count(tier),
 	}
 
 

@@ -6,6 +6,7 @@ const Natural := preload("res://src/world/events/natural.gd")
 const StormSeek := preload("res://src/world/events/storm_seek.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const RunState := preload("res://src/core/run_state.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W44, hazards hit everyone (ruling cu). The Spillway's storm (the dam's dome lightning row as authored: a 3 s tell,
@@ -400,6 +401,7 @@ func _kill() -> void:
 	var bus := Bus.new()
 	var run := RunState.new()
 	run.events = bus
+	run.specials = Roster.SPECIALS
 	var seen := {"flags": [], "kills": 0}
 	bus.enemy_killed.connect(func(_k, _a, _s) -> void: seen.flags.append(run.last_kill_triggerless))
 	run.record_kill("chaser", Vector3.ZERO, 3, "hazard")

@@ -546,8 +546,9 @@ func _cmd_relic(args: Array[String]):
 		id = _resolve_id(args[0], _relic_ids())
 	if id == "" or not Relics.has(id):
 		return "!unknown relic '%s'" % args[0]
-	if not game.run.add_relic(id, "dev"):
+	if not Relics.can_hold(id, game.run.class_id(), game.run.relics):
 		return "!relic '%s' cannot be held by pilot '%s' (slot '%s')" % [id, game.run.class_id(), Relics.slot_of(id)]
+	game.run.hold_relic(id, Relics.slot_of(id), Relics.part_of(id), "dev")
 	game.build.sync_relics()
 	return {"ok": true, "text": "added relic %s" % id,
 		"data": {"relic": id, "slot": Relics.slot_of(id)}}

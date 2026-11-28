@@ -74,7 +74,7 @@ func _run() -> void:
 func _check_scrapper_press_and_tri_terminal() -> void:
 	var run = _game.ctx.run
 	var shop: Shop = _build.shop
-	Fabricators.reset_ingots(run)
+	run.reset_ingots()
 	run.parts.clear()
 
 	# Planted negative control: empty inventory & welded/relic parts cannot be scrapped or pressed.
@@ -90,7 +90,7 @@ func _check_scrapper_press_and_tri_terminal() -> void:
 	_t.check("planted: welded pattern part and relic refuse scrapping",
 		not bool(welded_scrap["ok"]) and welded_scrap["reason"] == "welded"
 		and not bool(relic_scrap["ok"]) and relic_scrap["reason"] == "welded"
-		and Fabricators.ingot_count(run, 1) == 0 and Fabricators.ingot_count(run, 2) == 0 and Fabricators.ingot_count(run, 3) == 0)
+		and run.ingot_count(1) == 0 and run.ingot_count(2) == 0 and run.ingot_count(3) == 0)
 
 	# Scrap an ordinary tier-1 part into a Common Scrap Ingot, then press a guaranteed duplicate.
 	run.add_part("hot_rivets", "test")
@@ -99,14 +99,14 @@ func _check_scrapper_press_and_tri_terminal() -> void:
 	var scrapped := Fabricators.scrap_part(run, "light_frame", _build)
 	_t.check("scrapper removes ordinary part and mints rarity-matched ingot",
 		bool(scrapped["ok"]) and not run.parts.has("light_frame")
-		and int(scrapped["tier"]) == t1 and Fabricators.ingot_count(run, t1) == 1)
+		and int(scrapped["tier"]) == t1 and run.ingot_count(t1) == 1)
 
 	# Press using matching-tier ingot first.
 	var hr_before: int = run.parts.count("hot_rivets")
 	var pressed_ingot := Fabricators.press_part(run, "hot_rivets", null, _build)
 	_t.check("part press spends matching-tier ingot first for guaranteed duplicate stack",
 		bool(pressed_ingot["ok"]) and pressed_ingot["paid_kind"] == "ingot"
-		and Fabricators.ingot_count(run, t1) == 0 and run.parts.count("hot_rivets") == hr_before + 1)
+		and run.ingot_count(t1) == 0 and run.parts.count("hot_rivets") == hr_before + 1)
 
 	# Press fallback: sacrifices a random held same-tier ordinary part (never target itself).
 	run.add_part("light_frame", "test")
@@ -126,11 +126,11 @@ func _check_scrapper_press_and_tri_terminal() -> void:
 	# Save safety: ingots doc round-trip & malformed doc rejection.
 	run.add_part("light_frame", "test")
 	Fabricators.scrap_part(run, "light_frame", _build)
-	var doc := Fabricators.ingots_to_doc(run)
+	var doc: Dictionary = run.ingots_to_doc()
 	_t.check("planted: malformed ingot doc is rejected atomically",
-		not Fabricators.ingots_from_doc(run, {"1": -2, "2": 0, "3": 0}) and Fabricators.ingot_count(run, t1) == 1)
-	Fabricators.reset_ingots(run)
-	_t.check("ingot doc round-trip restores counts", Fabricators.ingots_from_doc(run, doc) and Fabricators.ingot_count(run, t1) == 1)
+		not run.ingots_from_doc({"1": -2, "2": 0, "3": 0}) and run.ingot_count(t1) == 1)
+	run.reset_ingots()
+	_t.check("ingot doc round-trip restores counts", run.ingots_from_doc(doc) and run.ingot_count(t1) == 1)
 
 	# World Part Press station node + Bay Tri-Terminal multi-choice shelf.
 	var press_station: Dictionary = _build.fabricators.add_press_at(_player.ball_position() + Vector3(6.0, 0.0, 0.0), Vector3.FORWARD, "light_frame")
