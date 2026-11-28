@@ -774,7 +774,7 @@
    "path": "res://assets/models/bosses/boss_pickup.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/boss/boss.gd:440",
+   "loader": "src/boss/boss.gd:_spawn_pickup",
    "provenance": {
     "recipe": "tools/blender/bosses/boss_pickup.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
@@ -3300,7 +3300,7 @@
    "path": "res://assets/models/item_panels/panel_bracket.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3312,7 +3312,7 @@
    "path": "res://assets/models/item_panels/panel_bumper.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3324,7 +3324,7 @@
    "path": "res://assets/models/item_panels/panel_collar.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3336,7 +3336,7 @@
    "path": "res://assets/models/item_panels/panel_drum.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3348,7 +3348,7 @@
    "path": "res://assets/models/item_panels/panel_fin.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3360,7 +3360,7 @@
    "path": "res://assets/models/item_panels/panel_louvre.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3372,7 +3372,7 @@
    "path": "res://assets/models/item_panels/panel_rivet.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3384,7 +3384,7 @@
    "path": "res://assets/models/item_panels/panel_sight.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/PROMPTS.md (Range Sight, written spec)",
@@ -3396,7 +3396,7 @@
    "path": "res://assets/models/item_panels/panel_skirt.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3408,7 +3408,7 @@
    "path": "res://assets/models/item_panels/panel_spool.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3420,7 +3420,7 @@
    "path": "res://assets/models/item_panels/panel_tank.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -3432,7 +3432,7 @@
    "path": "res://assets/models/item_panels/panel_tile.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/build/panel_shell.gd:226",
+   "loader": "src/build/panel_shell.gd:plate_mesh",
    "provenance": {
     "recipe": "tools/blender/item_panels.py",
     "concept_reference": "docs/art/reference/item_panels/ details sheet (#387)",
@@ -5197,7 +5197,7 @@
    "path": "res://assets/models/park/contraptions/barge.glb",
    "class": "landform",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/barge.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 e05494df10ab112c25fb3cfd99023c4a7798010513a249f3a8dddfe8729230fe"
@@ -5208,7 +5208,7 @@
    "path": "res://assets/models/park/contraptions/barge_detail1.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/barge.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 6f4be04f77e67f9476c49ed535193eb06168e585bee5b6cb18dc4c3c3e391bd2"
@@ -5219,7 +5219,7 @@
    "path": "res://assets/models/park/contraptions/barge_detail2.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/barge.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 7d1ae6385f97d984533a592d008f8d2dc7e1344d22b172d24afbf67e2193ccec"
@@ -5230,7 +5230,7 @@
    "path": "res://assets/models/park/contraptions/cannon.glb",
    "class": "landform",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/cannon.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 c4d60d68cd0084d6f085111434b18f6975bf10c208165df14fa68f0ec5a01254"
@@ -5241,7 +5241,7 @@
    "path": "res://assets/models/park/contraptions/cannon_detail1.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/cannon.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 f4e60c40d9b6dfd1a00cdec63f0eec2020f0be19bf13c916ed0c440026b42b09"
@@ -5252,7 +5252,7 @@
    "path": "res://assets/models/park/contraptions/cannon_detail2.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/cannon.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 e6f218857d3280b5a8401a105064c4bdec7875f3e4e7580b313633532c870a33"
@@ -5263,7 +5263,7 @@
    "path": "res://assets/models/park/contraptions/gauge.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/gauge.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 cbd061d32c36aaa6156eab9a7cc3e5568ea05e6648013e7db0017a343e8c28ac"
@@ -5274,7 +5274,7 @@
    "path": "res://assets/models/park/contraptions/gauge_detail1.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/gauge.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 295c6175c2488bab6ff96ec469a945b70eccf180acf6fa384b2c70be917e9f39"
@@ -5285,7 +5285,7 @@
    "path": "res://assets/models/park/contraptions/gauge_detail2.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/gauge.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 9b28f33c7f7c43418fe1f7db091edbebc647068bbc579e14ef438bf2471de284"
@@ -5296,7 +5296,7 @@
    "path": "res://assets/models/park/contraptions/geyser_vent.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/geyser_vent.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 0de12a446137bf6927fb2ad3a67307c39ba5a3d25f731973e48f9982abd06dad"
@@ -5307,7 +5307,7 @@
    "path": "res://assets/models/park/contraptions/geyser_vent_detail1.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/geyser_vent.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 62489cc9ffa5c40f4a4bad4c7ad66ae4b9e3b9786a6b5bd40869c02ab998e352"
@@ -5318,7 +5318,7 @@
    "path": "res://assets/models/park/contraptions/geyser_vent_detail2.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/geyser_vent.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 e3bb8a635f8b5c94cabe5c520189da74c375e3138b0007a17fb23e037d1ac129"
@@ -5329,7 +5329,7 @@
    "path": "res://assets/models/park/contraptions/lift_platform.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/lift_platform.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 3f447909376d3f2c090db80b69e9409049b3bc44f99c40a0f4bb3de985a62dd4"
@@ -5340,7 +5340,7 @@
    "path": "res://assets/models/park/contraptions/lift_platform_detail1.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/lift_platform.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 2eb780fc795a5457c495f87f42dad9e845db71cf10757f09ecff4a2025c605da"
@@ -5351,7 +5351,7 @@
    "path": "res://assets/models/park/contraptions/lift_platform_detail2.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/lift_platform.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 75e41f5ef02368cd4bf813f6d8b4f7791f8979fd0ffeb7b2330b553e6d0af405"
@@ -5362,7 +5362,7 @@
    "path": "res://assets/models/park/contraptions/trebuchet.glb",
    "class": "landform",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/trebuchet.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 3a460831e5728c44390989a6c90e2db5280f263c088d125902742c429fbe338e"
@@ -5373,7 +5373,7 @@
    "path": "res://assets/models/park/contraptions/trebuchet_arm.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/trebuchet.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 94eea342a645121f86896d4c58fcb4abf168a4bedeb555f8d25a19058d7aabc5"
@@ -5384,7 +5384,7 @@
    "path": "res://assets/models/park/contraptions/trebuchet_detail1.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/trebuchet.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 cee2e22cf0a92ec0384bc77e255fb063660667d85a6e652c8219fe834257c9f1"
@@ -5395,7 +5395,7 @@
    "path": "res://assets/models/park/contraptions/trebuchet_detail2.glb",
    "class": "detail",
    "ships": true,
-   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "loader": "src/world/contraptions.gd:_skin_views (a contraption row's recipe key; PARK.md section 4)",
    "provenance": {
     "recipe": "tools/blender/park/contraptions/trebuchet.py",
     "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 9fc070e1c8b1db38bcedfc7217ccf9ba5b439aee1bdacafcdf9d5564f370c967"
@@ -40430,7 +40430,7 @@
    "path": "res://assets/models/world_one/enemy_boom_tender.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/boom_tender.gd:123",
+   "loader": "src/combat/boom_tender.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_boom_tender.py",
     "build_spec": "sketches/core-loop/design-v3/SPILLWAY-ROSTER.md, the boom tender; sheets docs/art/reference/enemies/boom_tender/"
@@ -40453,7 +40453,7 @@
    "path": "res://assets/models/world_one/enemy_catch_trap.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/catch_trap.gd:65, src/combat/catch_trap.gd:67",
+   "loader": "src/combat/catch_trap.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_catch_trap.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
@@ -40519,7 +40519,7 @@
    "path": "res://assets/models/world_one/enemy_gyro_jammer.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/gyro_jammer.gd:57",
+   "loader": "src/combat/gyro_jammer.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_gyro_jammer.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
@@ -40549,7 +40549,7 @@
    "path": "res://assets/models/world_one/enemy_jolt_layer.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/jolt_layer.gd:66",
+   "loader": "src/combat/jolt_layer.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_jolt_layer.py",
     "note": "Procedural bmesh world-one recipe for the fields-and-casts first slice."
@@ -40607,7 +40607,7 @@
    "path": "res://assets/models/world_one/enemy_miniboss.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/miniboss.gd:66",
+   "loader": "src/combat/miniboss.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_miniboss.py",
     "design": "artifacts/local/dress-preview/PMB/DESIGN.md",
@@ -40644,7 +40644,7 @@
    "path": "res://assets/models/world_one/enemy_ramp_flipper.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/ramp_flipper.gd:63, src/combat/ramp_flipper.gd:65",
+   "loader": "src/combat/ramp_flipper.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_ramp_flipper.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
@@ -40656,7 +40656,7 @@
    "path": "res://assets/models/world_one/enemy_reactor.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/reactor_relic.gd:115",
+   "loader": "src/combat/reactor_relic.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_reactor.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
@@ -40690,7 +40690,7 @@
    "path": "res://assets/models/world_one/enemy_swarm_remnant.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/swarm_remnant.gd:205",
+   "loader": "src/combat/swarm_remnant.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_swarm_remnant.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
@@ -40702,7 +40702,7 @@
    "path": "res://assets/models/world_one/enemy_swatter.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/swatter.gd:66",
+   "loader": "src/combat/swatter.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_swatter.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
@@ -40726,7 +40726,7 @@
    "path": "res://assets/models/world_one/enemy_vault.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/vault.gd:87",
+   "loader": "src/combat/vault.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_vault.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
@@ -41258,7 +41258,7 @@
    "path": "res://assets/models/world_one/scrap_pickups.glb",
    "class": "chunk",
    "ships": true,
-   "loader": "src/build/scrap_field.gd:101",
+   "loader": "src/build/scrap_field.gd:_pickup_meshes",
    "provenance": {
     "recipe": "tools/blender/world_one/scrap_pickups.py",
     "note": "Four procedural salvage variants and the cog (the money, W1-21), one opaque vertex-colour surface each. Each part meets prop caps of 270 triangles, 610 imported vertices, one draw. Aggregate registered as a chunk kit. No external assets."
@@ -41864,7 +41864,7 @@
    "path": "res://assets/models/world_three/enemy_anchor_crew.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/anchor_crew.gd:67",
+   "loader": "src/combat/anchor_crew.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_three/enemy_anchor_crew.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
@@ -41908,7 +41908,7 @@
    "path": "res://assets/models/world_three/enemy_kite_drone.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/kite_drone.gd:80",
+   "loader": "src/combat/kite_drone.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_three/enemy_kite_drone.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
@@ -41919,7 +41919,7 @@
    "path": "res://assets/models/world_three/enemy_line_cutter.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/line_cutter.gd:69",
+   "loader": "src/combat/line_cutter.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_three/enemy_line_cutter.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
@@ -41930,7 +41930,7 @@
    "path": "res://assets/models/world_two/enemy_burrower.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/burrower.gd:90",
+   "loader": "src/combat/burrower.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_two/enemy_burrower.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
@@ -41941,7 +41941,7 @@
    "path": "res://assets/models/world_two/enemy_drill_crew.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/drill_crew.gd:75",
+   "loader": "src/combat/drill_crew.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_two/enemy_drill_crew.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
@@ -41952,7 +41952,7 @@
    "path": "res://assets/models/world_two/enemy_lamp_swarm.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/lamp_swarm.gd:92",
+   "loader": "src/combat/lamp_swarm.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_two/enemy_lamp_swarm.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
