@@ -48,7 +48,7 @@ func _test_resources_and_clarity() -> void:
 		var ok: bool = String(spec["silhouette_cue"]) != "" \
 			and String(spec["movement_cadence"]) != "" \
 			and String(spec["counterplay_cue"]) != "" \
-			and float(spec["tell_s"]) >= RefurbishedElites.MIN_TELL_S \
+			and float(spec["tell_s"]) >= EnvTags.MIN_TELL_S \
 			and EnvTags.CANONICAL_TAGS.has(StringName(spec["ability_tag"]))
 		all_elites_clear = all_elites_clear and ok
 	t.check("every Refurbished Elite .tres carries silhouette, cadence, counterplay, >=0.6s tell, and canonical env tag", all_elites_clear)
@@ -199,7 +199,7 @@ func _test_refurbished_elites_plates_and_bounty() -> void:
 		var tick := winch.step(0.15, Vector3(0.0, 0.0, 0.0), fast_vel, 14.0)
 		for f in tick["facts"]:
 			if f["kind"] == "elite_telegraph":
-				saw_tell = float(f["tell_s"]) >= RefurbishedElites.MIN_TELL_S
+				saw_tell = float(f["tell_s"]) >= EnvTags.MIN_TELL_S
 		for tp in tick["env_tags"]:
 			if EnvTags.is_valid_payload(tp, EnvTags.BOUNDS_ELITE) and tp["tag"] == &"magnetic":
 				saw_exec_tag = true

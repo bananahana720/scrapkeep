@@ -256,7 +256,7 @@ func _check_em_crane_sweep_magnetic_and_cover_relocation() -> void:
 					saw_relocated = true
 
 	var s1: Dictionary = setpieces.snapshot()["crane"]
-	t.check("crane_warn_ge_fairness_floor", warn_duration >= DynamicSetpieces.MIN_WARN_FLOOR_S, "warn=%.2f s" % warn_duration)
+	t.check("crane_warn_ge_fairness_floor", warn_duration >= EnvTags.MIN_TELL_S, "warn=%.2f s" % warn_duration)
 	t.check("crane_opened_harpoon_bridge", saw_bridge_open, "bridge opened")
 	t.check("crane_closed_harpoon_bridge_after_drop", not bool(s1["harpoon_bridge_open"]), "bridge closed cleanly")
 	t.check("crane_emitted_magnetic_tag", saw_magnetic_tag and emitted_tags.size() > 0, "tags=%d" % emitted_tags.size())

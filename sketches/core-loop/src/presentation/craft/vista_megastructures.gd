@@ -4,6 +4,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const COMBAT_EXCLUSION_RADIUS_M := 160.0
 const MIN_VISTA_DISTANCE_M := 180.0
@@ -45,8 +46,6 @@ const ORBITAL_RING_RADIUS_M := 304.0
 const ORBITAL_RING_TUBE_W := 28.0
 const ORBITAL_RING_TUBE_H := 22.0
 
-var reduced_motion := false
-
 var _built := false
 var _records: Array[Dictionary] = []
 var _rotors: Array[Dictionary] = []
@@ -78,16 +77,10 @@ func build_all() -> void:
 	_build_salvage_cranes(mats)
 	_build_smelter_smokestacks(mats)
 	_build_horizon_piers(mats)
-	apply_accessibility(reduced_motion)
+	apply_accessibility()
 
 
-func set_reduced_motion(enabled: bool) -> void:
-	reduced_motion = enabled
-	apply_accessibility(enabled)
-
-
-func apply_accessibility(reduced_motion_on: bool) -> void:
-	reduced_motion = reduced_motion_on
+func apply_accessibility() -> void:
 	for entry in _vent_materials:
 		var mat: StandardMaterial3D = entry["material"]
 		var rest: float = entry["base_energy"]
@@ -98,7 +91,7 @@ func apply_accessibility(reduced_motion_on: bool) -> void:
 func step_animation(delta: float) -> void:
 	if not _built or delta <= 0.0:
 		return
-	if not reduced_motion:
+	if not Comfort.reduced_motion:
 		_anim_time += delta
 		for entry in _rotors:
 			var rotor: Node3D = entry["node"]
@@ -111,7 +104,7 @@ func step_animation(delta: float) -> void:
 		if not is_instance_valid(mat):
 			continue
 		var base_e: float = entry["base_energy"]
-		if reduced_motion:
+		if Comfort.reduced_motion:
 			mat.emission_energy_multiplier = FlashGuard.spike(base_e * 0.7, base_e)
 		else:
 			var wave := 0.5 + 0.5 * sin(_anim_time * TAU * pulse_hz + float(i) * 1.17)
