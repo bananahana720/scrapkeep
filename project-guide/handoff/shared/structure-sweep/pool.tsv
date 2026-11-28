@@ -163,8 +163,8 @@ XD-17	experimental-dev.md	E	low	open		Cruise speed fallback (`14.0`) and telegra
 XD-18	experimental-dev.md	H	low	in flight	X3 has two of the three seams	Three oversized files (~1,420–1,530 lines) have clean, state-disjoint seams ready to split
 XD-19	experimental-dev.md	F	low	in flight	X3 has the cooldown state	`ExperimentalAudioBank` stores global mutable cooldown state shared across `LiveRunBridge` instances, and `LiveRunBridge` bypasses `src/presentation/audio.gd`
 XD-20	experimental-dev.md	G	low	in flight	X3	`src/dev/` mixes two command-return protocols (`!`-prefixed `String` vs `{ok, text, data}` `Dictionary`) and duplicates CLI flag parsing across `game.gd`, `live_run_bridge.gd`, and `dev_agent.gd`
-TT-01	tools-tests.md	B	low	in flight	Z1	72 strictly dead tool scripts (~15.5k lines) plus 5 comment-only w12 side scripts have zero live callers
-TT-02	tools-tests.md	A	low	in flight	Z1	13 copy-pasted `w12_side_*.gd` / `w12_recipe_cart_side.gd` scripts duplicate ~309 identical lines each (5,070 lines total)
+TT-01	tools-tests.md	B	low	landed	Z1	72 strictly dead tool scripts (~15.5k lines) plus 5 comment-only w12 side scripts have zero live callers
+TT-02	tools-tests.md	A	low	landed	Z1	13 copy-pasted `w12_side_*.gd` / `w12_recipe_cart_side.gd` scripts duplicate ~309 identical lines each (5,070 lines total)
 TT-03	tools-tests.md	F	medium	open		Static-var reset registration in `test_batch_driver.gd` has four split owners, 7+ reset conventions, 21 inline mutations, and live uncalled `reset_for_tests()` methods
 TT-04	tools-tests.md	F	low	in flight	T3	Mutable `static var`s in `tools/` libraries are invisible to `L14` and never reset between warm-batched tests
 TT-05	tools-tests.md	C	low	open		131 test/tool files hand-move `player.body().global_position =` and 27 reach into `player._rigid`, bypassing `PlayerBall.reset_to()` and `body()`
