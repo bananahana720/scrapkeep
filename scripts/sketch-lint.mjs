@@ -31,6 +31,11 @@ export const BASELINE_RULES = {
     keyOf: (item) => item.key,
     fileOf: (key) => key.split(" -> ")[0],
   },
+  L21: {
+    shape: "keys",
+    keyOf: (item) => item.key ?? item.path,
+    fileOf: (key) => key.split(":")[0],
+  },
 };
 const UID_FOLDERS = ["addons", "src", "tests", "tools"];
 const MAX_QUARANTINE = 0;
@@ -933,21 +938,24 @@ export function lintL13(file, rel, text, allowed = L13_ALLOWED) {
 }
 
 const staticVarDecl = /^static\s+var\s+([A-Za-z_]\w*)\b/;
+const declPrefix = "^\\s*((?:static\\s+|@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*)";
+const anyVarDecl = new RegExp(`${declPrefix}var\\s+([A-Za-z_]\\w*)\\b(.*)$`);
+const anyFuncDecl = new RegExp(`${declPrefix}func\\s+([A-Za-z_]\\w*)\\s*\\(`);
 const gdFuncDecl = /^(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(/;
 const resetFuncName = /^_?reset/i;
+const driverScript = "((?:src|tools|tests\\/support)\\/[^\"']+\\.gd)";
 
-export function parseBatchDriverRefs(text) {
-  return new Set(
-    [...text.matchAll(/res:\/\/((?:src|tools|tests\/support)\/[^"']+\.gd)/g)].map(
-      (match) => match[1],
-    ),
-  );
+function parseBatchDriverRefs(text) {
+  return new Set([...text.matchAll(new RegExp(`res:\\/\\/${driverScript}`, "g"))].map((m) => m[1]));
 }
 
-export function parseBatchDriverVars(text) {
+function parseBatchDriverVars(text) {
   const aliases = new Map();
   for (const match of text.matchAll(
-    /\bconst\s+([A-Za-z_]\w*)\s*:?=\s*preload\(\s*"res:\/\/((?:src|tools|tests\/support)\/[^"']+\.gd)"\s*\)/g,
+    new RegExp(
+      `\\bconst\\s+([A-Za-z_]\\w*)\\s*:?=\\s*preload\\(\\s*"res:\\/\\/${driverScript}"\\s*\\)`,
+      "g",
+    ),
   )) {
     aliases.set(match[1], match[2]);
   }
@@ -958,6 +966,139 @@ export function parseBatchDriverVars(text) {
     }
   }
   return direct;
+}
+
+function stripComment(raw) {
+  return raw.match(/^((?:[^"'#]|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')*)/)[1];
+}
+
+function logicalLines(text) {
+  const out = [];
+  let open = null;
+  let tripleQuote = null;
+  text.split("\n").forEach((raw, index) => {
+    const inString = tripleQuote !== null;
+    const scanned = scanGdLine(raw, tripleQuote);
+    tripleQuote = scanned.tripleQuote;
+    if (inString && !open) return;
+    const code = inString ? scanned.code : stripComment(raw);
+    const depth =
+      (scanned.code.match(/[[({]/g) ?? []).length - (scanned.code.match(/[\])}]/g) ?? []).length;
+    if (open) {
+      open.code += ` ${code.trim()}`;
+      open.depth += depth;
+    } else if (code.trim()) open = { number: index + 1, code: code.trimEnd(), depth };
+    else return;
+    if (open.depth <= 0) {
+      out.push(open);
+      open = null;
+    }
+  });
+  if (open) out.push(open);
+  return out;
+}
+
+function gdFunctions(text) {
+  const bodies = new Map();
+  let body = null;
+  for (const { code } of logicalLines(text)) {
+    const fn = /^\S/.test(code) ? code.match(anyFuncDecl) : null;
+    if (fn) {
+      body = [];
+      bodies.set(fn[2], body);
+      continue;
+    }
+    if (/^\S/.test(code)) body = null;
+    else if (body && code.trim()) body.push(code.trim());
+  }
+  return bodies;
+}
+
+function parseBatchDriverResets(text) {
+  const paths = new Map();
+  for (const match of text.matchAll(
+    new RegExp(
+      `\\bconst\\s+([A-Za-z_]\\w*)\\s*:?=\\s*(?:preload\\(\\s*)?"res:\\/\\/${driverScript}"`,
+      "g",
+    ),
+  ))
+    paths.set(match[1], match[2]);
+  const aliases = new Map(
+    [...text.matchAll(/\bconst\s+([A-Za-z_]\w*)\s*:?=\s*preload\(/g)]
+      .filter((match) => paths.has(match[1]))
+      .map((match) => [match[1], paths.get(match[1])]),
+  );
+  const resets = new Map();
+  const reset = gdFunctions(text).get("_reset");
+  if (!reset) return resets;
+  const entry = (rel) => {
+    if (!resets.has(rel)) resets.set(rel, { calls: new Set(), values: new Map() });
+    return resets.get(rel);
+  };
+  for (const code of reset) {
+    const loaded = code.match(/^var\s+([A-Za-z_]\w*)\s*:?=\s*load\(\s*([A-Za-z_]\w*)\s*\)/);
+    if (loaded && paths.has(loaded[2])) aliases.set(loaded[1], paths.get(loaded[2]));
+    for (const [alias, rel] of aliases) {
+      const named = new RegExp(
+        `(?<![\\w.])${alias}\\.([A-Za-z_]\\w*)\\s*(\\(|\\.clear\\(\\)|=(?!=))(.*)`,
+      );
+      const hit = code.match(named);
+      if (!hit) continue;
+      if (hit[2] === "(") entry(rel).calls.add(hit[1]);
+      else
+        resetValue(
+          entry(rel).values,
+          hit[1],
+          hit[2] === "=" ? hit[3].replaceAll(`${alias}.`, "") : ".clear()",
+        );
+    }
+  }
+  return resets;
+}
+
+function gdValue(value) {
+  return value.replace(/\s+/g, "").replace(/,([\])}])/g, "$1");
+}
+
+function resetValue(values, name, value) {
+  values.set(name, [...(values.get(name) ?? []), gdValue(value)]);
+}
+
+export function parseBatchDriver(text) {
+  return {
+    refs: parseBatchDriverRefs(text),
+    vars: parseBatchDriverVars(text),
+    resets: parseBatchDriverResets(text),
+  };
+}
+
+const zeroValues = new Set(["null", "0", "0.0", "false", '""', '&""', "[]", "{}", ".clear()"]);
+
+function resetMatchesDeclared(declared, values) {
+  if (declared === null)
+    return values.some((value) => zeroValues.has(value) || /^\w+(?:\.ZERO|\(\))$/.test(value));
+  return values.some(
+    (value) =>
+      value === declared ||
+      (value === ".clear()" && /^(?:\[\]|\{\}|[A-Za-z_]\w*\.new\(\))$/.test(declared)),
+  );
+}
+
+function strictResets(text, rel, driver) {
+  const fromDriver = driver.resets.get(rel);
+  const values = new Map(fromDriver?.values ?? []);
+  if (!fromDriver) return values;
+  const bodies = gdFunctions(text);
+  const reached = new Set([...fromDriver.calls].filter((name) => bodies.has(name)));
+  for (const name of reached)
+    for (const code of bodies.get(name))
+      for (const call of code.matchAll(/(?<![\w.])([A-Za-z_]\w*)\s*\(/g))
+        if (bodies.has(call[1])) reached.add(call[1]);
+  for (const name of reached)
+    for (const code of bodies.get(name))
+      for (const hit of code.matchAll(/(?<!\w)([A-Za-z_]\w*)\s*(?:(\.clear\(\))|=(?!=)\s*(.*))/g))
+        resetValue(values, hit[1], hit[2] ?? hit[3]);
+  return values;
 }
 
 const testSupportLoad =
@@ -998,15 +1139,18 @@ export function preloadedTestSupportFiles(testFiles, toolFiles, relative) {
   return [...seen].sort().map((rel) => byRel.get(rel));
 }
 
-export function lintPreloadedTestSupport(
-  testFiles,
-  toolFiles,
-  relative,
-  driverRefs,
-  driverVars = new Set(),
-) {
+export function lintPreloadedTestSupport(testFiles, toolFiles, relative, driver) {
   const reached = preloadedTestSupportFiles(testFiles, toolFiles, relative);
   const findings = [];
+  if (driver.resets.size === 0)
+    findings.push(
+      finding(
+        "L21",
+        `${relative}/tools/test_batch_driver.gd`,
+        1,
+        "read no script reset in the batch driver's _reset(), so L21 checked nothing; restore its _reset() and the preloads it calls",
+      ),
+    );
   for (const folder of ["tools", "tests/support"]) {
     const prefix = `${folder}/`;
     if (!reached.some((file) => file.rel.startsWith(prefix))) {
@@ -1021,7 +1165,7 @@ export function lintPreloadedTestSupport(
     }
   }
   for (const file of reached) {
-    findings.push(...lintL14(file.path, file.rel, file.text, driverRefs, null, driverVars));
+    findings.push(...lintL14(file.path, file.rel, file.text, driver));
   }
   return findings;
 }
@@ -1042,29 +1186,45 @@ function resetMethodText(text) {
   return kept.join("\n");
 }
 
-export function lintL14(file, rel, text, driverRefs, baseline = null, driverVars = new Set()) {
-  if (!text.includes("static") || !/\bstatic\s+var\b/.test(text)) return [];
-  const registered = driverRefs.has(rel);
+function declaredValue(code) {
+  const value = code.match(anyVarDecl)[3].match(/^\s*(?::(?!=)[^=]*)?:?=\s*(.*)$/)?.[1];
+  return value === undefined ? null : gdValue(value).replace(/:$/, "");
+}
+
+export function lintL14(file, rel, text, driver, baseline = null) {
+  if (!/\bstatic\b.*\bvar\b/.test(text)) return [];
+  const registered = driver.refs.has(rel);
   const resetBody = registered ? resetMethodText(text) : "";
+  const strict = strictResets(text, rel, driver);
   const out = [];
-  for (const line of codeLines(text)) {
-    const match = line.code.match(staticVarDecl);
-    if (!match) continue;
-    const varName = match[1];
+  const logical = new Map(logicalLines(text).map((line) => [line.number, line.code.trim()]));
+  for (const { number, code } of codeLines(text)) {
+    const match = code.match(anyVarDecl);
+    if (!match || !/\bstatic\b/.test(match[1])) continue;
+    const varName = match[2];
     const relKey = `${rel}:${varName}`;
     const key = `${file}:${varName}`;
     if (baseline && (baseline.has(key) || baseline.has(relKey))) continue;
-    const clearedInReset =
-      registered &&
-      (driverVars.has(relKey) ||
-        new RegExp(`\\b${varName}\\b\\s*(?:=|\\.clear\\(|\\.erase\\()`).test(resetBody));
-    if (clearedInReset) continue;
+    const declared = declaredValue(logical.get(number) ?? stripComment(code));
+    const values = strict.get(varName) ?? [];
+    if (values.length > 0 && resetMatchesDeclared(declared, values)) continue;
+    const lenient =
+      !staticVarDecl.test(code) ||
+      (registered &&
+        (driver.vars.has(relKey) ||
+          new RegExp(`\\b${varName}\\b\\s*(?:=|\\.clear\\(|\\.erase\\()`).test(resetBody)));
+    const why =
+      values.length === 0
+        ? `nothing sketches/core-loop/tools/test_batch_driver.gd _reset() runs resets ${varName}`
+        : `${varName} is reset to ${values.join(" or ")}, not to its declared ${declared ?? "default"}`;
     out.push({
       ...finding(
-        "L14",
+        lenient ? "L21" : "L14",
         file,
-        line.number,
-        `mutable static var ${varName} is not reset per-variable: register ${rel} in sketches/core-loop/tools/test_batch_driver.gd _reset() and clear ${varName} in the script's reset method`,
+        number,
+        lenient
+          ? `mutable static var ${varName} only looks reset: ${why}; call the reset from _reset() and give ${varName} its declared value there`
+          : `mutable static var ${varName} is not reset per-variable: register ${rel} in sketches/core-loop/tools/test_batch_driver.gd _reset() and clear ${varName} in the script's reset method`,
       ),
       key,
     });
@@ -1678,8 +1838,7 @@ export function lintSketch(sketch) {
     sketch === "core-loop" && existsSync(batchDriverPath)
       ? readFileSync(batchDriverPath, "utf8")
       : "";
-  const driverRefs = driverText ? parseBatchDriverRefs(driverText) : new Set();
-  const driverVars = driverText ? parseBatchDriverVars(driverText) : new Set();
+  const driver = parseBatchDriver(driverText);
   const srcFiles = sources(path.join(directory, "src"), new Set([".gd"]));
   for (const file of srcFiles) {
     if (file.path !== `${relative}/src/core/safe_store.gd`)
@@ -1695,7 +1854,7 @@ export function lintSketch(sketch) {
     findings.push(...lintL11(file.path, rel, file.text));
     findings.push(...lintL12(file.path, rel, file.text));
     findings.push(...lintL13(file.path, rel, file.text));
-    findings.push(...lintL14(file.path, rel, file.text, driverRefs, null, driverVars));
+    findings.push(...lintL14(file.path, rel, file.text, driver));
   }
   const graph = buildScriptGraph(srcFiles);
   findings.push(...lintL16(srcFiles, graph));
@@ -1722,9 +1881,7 @@ export function lintSketch(sketch) {
     }
   }
   if (sketch === "core-loop") {
-    findings.push(
-      ...lintPreloadedTestSupport(testFiles, toolFiles, relative, driverRefs, driverVars),
-    );
+    findings.push(...lintPreloadedTestSupport(testFiles, toolFiles, relative, driver));
   }
   const flagFiles = [
     ...testFiles,

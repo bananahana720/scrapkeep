@@ -46,8 +46,7 @@ import {
   lintPreloadedTestSupport,
   lintSketch,
   lintTrackedUids,
-  parseBatchDriverRefs,
-  parseBatchDriverVars,
+  parseBatchDriver,
   parseLayerOrder,
   parseLintArgs,
   parseTuning,
@@ -738,6 +737,7 @@ test("the baseline silences listed offenders and shrinks only", () => {
     L18: [],
     L19: [],
     L20: [],
+    L21: [],
   });
 });
 
@@ -1068,19 +1068,116 @@ test("words: the count baseline holds a file at its count, fails it above, and a
 
 test("L14 passes the checked-out core-loop src tree against baseline and parses test_batch_driver refs", () => {
   const driverText = readFileSync(path.join(sketchDir, "tools", "test_batch_driver.gd"), "utf8");
-  const refs = parseBatchDriverRefs(driverText);
+  const { refs, resets } = parseBatchDriver(driverText);
   assert.ok(refs.size >= 80, `expected >= 80 driver refs, got ${refs.size}`);
   assert.ok(refs.has("src/build/parts.gd"));
   assert.ok(refs.has("src/core/challenge_dials.gd"));
+  assert.ok(resets.size >= 80, `expected >= 80 scripts reset in _reset(), got ${resets.size}`);
+  assert.ok(resets.get("src/build/parts.gd").calls.has("reset_for_tests"));
+  assert.deepEqual(resets.get("src/core/sim_clock.gd").values.get("ticks"), ["false"]);
+  assert.ok(resets.get("src/presentation/w50_asset_hooks.gd").calls.has("reset_for_tests"));
+  assert.deepEqual(resets.get("src/world/rescue_site.gd").values.get("model_path"), ["MODEL"]);
   const baseline = JSON.parse(
     readFileSync(new URL("./sketch-lint.baseline.json", import.meta.url), "utf8"),
   );
   assert.ok(baseline.L14.length > 0);
-  const raw = lintSketch("core-loop").filter((item) => item.rule === "L14");
+  const raw = lintSketch("core-loop").filter((item) => item.rule === "L14" || item.rule === "L21");
   assert.deepEqual(
-    applyBaseline(raw, { L14: baseline.L14 }, () => true),
+    applyBaseline(raw, { L14: baseline.L14, L21: baseline.L21 }, () => true),
     [],
   );
+});
+
+test("L21 fails a static var that only looks reset, for each of the five forms L14 let pass", () => {
+  const file = "sketches/core-loop/src/core/planted.gd";
+  const rel = "src/core/planted.gd";
+  const preload = 'const Planted := preload("res://src/core/planted.gd")\n';
+  const driverOf = (body) => parseBatchDriver(`${preload}\nfunc _reset() -> void:\n${body}\n`);
+  const calls = driverOf("\tPlanted.reset_for_tests()");
+  const found = (text, driver = calls) =>
+    lintL14(file, rel, text, driver).map((item) => `${item.rule} ${item.key} ${item.line}`);
+  const key = (name) => `${file}:${name}`;
+
+  const annotated =
+    '@warning_ignore("unused") static var _hidden := {}\nstatic func reset_for_tests() -> void:\n\tpass\n';
+  assert.deepEqual(found(annotated), [`L21 ${key("_hidden")} 1`]);
+  assert.deepEqual(found(annotated.replace("\tpass", "\t_hidden = {}")), []);
+
+  const unCalled =
+    "static var _cache := {}\nstatic func reset_for_tests() -> void:\n\tpass\nstatic func reset_cache() -> void:\n\t_cache = {}\n";
+  assert.deepEqual(found(unCalled), [`L21 ${key("_cache")} 1`]);
+  assert.deepEqual(found(unCalled, driverOf("\tPlanted.reset_cache()")), []);
+  const throughHelper =
+    "static var _cache := {}\nstatic func reset_for_tests() -> void:\n\t_drop()\nstatic func _drop() -> void:\n\t_cache = {}\n";
+  assert.deepEqual(found(throughHelper), []);
+
+  const compared =
+    "static var _mode := 0\nstatic func reset_for_tests() -> void:\n\tif _mode == 2:\n\t\tprint(_mode)\n";
+  assert.deepEqual(found(compared), [`L21 ${key("_mode")} 1`]);
+
+  const wrongValue =
+    "static var on := true\nstatic func reset_for_tests() -> void:\n\ton = false\n";
+  const wrong = lintL14(file, rel, wrongValue, calls);
+  assert.deepEqual(
+    wrong.map((item) => `${item.rule} ${item.key}`),
+    [`L21 ${key("on")}`],
+  );
+  assert.match(wrong[0].message, /on is reset to false, not to its declared true/);
+  assert.deepEqual(found(wrongValue.replace("on = false", "on = true")), []);
+  const typed =
+    "static var _rows: Dictionary[String, int] = {}\nstatic var _node: Node3D\nstatic var _list := [\n\t1,\n\t2,\n]\nstatic func reset_for_tests() -> void:\n\t_rows.clear()\n\t_node = null\n\t_list = [1, 2]\n";
+  assert.deepEqual(found(typed), []);
+  assert.deepEqual(found(typed.replace("_list = [1, 2]", "_list = []")), [`L21 ${key("_list")} 3`]);
+
+  const strayMention = parseBatchDriver(
+    `# res://src/core/planted.gd is reset elsewhere\nconst NOTE := "res://src/core/planted.gd"\nfunc _reset() -> void:\n\tpass\n`,
+  );
+  const resetNamed =
+    "static var _cache := {}\nstatic func reset_for_tests() -> void:\n\t_cache.clear()\n";
+  assert.deepEqual(found(resetNamed, strayMention), [`L21 ${key("_cache")} 1`]);
+  assert.deepEqual(found(resetNamed), []);
+  const preloadedOnly = parseBatchDriver(`${preload}func _reset() -> void:\n\tpass\n`);
+  assert.deepEqual(found(resetNamed, preloadedOnly), [`L21 ${key("_cache")} 1`]);
+
+  const direct = parseBatchDriver(
+    `${preload}const OTHER_PATH := "res://src/core/other.gd"\nfunc _reset() -> void:\n\tPlanted.flag = Planted.DEFAULT\n\tvar hooks := load(OTHER_PATH)\n\thooks.reset_for_tests()\n`,
+  );
+  assert.deepEqual(direct.resets.get(rel).values.get("flag"), ["DEFAULT"]);
+  assert.ok(direct.resets.get("src/core/other.gd").calls.has("reset_for_tests"));
+  assert.deepEqual(found("static var flag := DEFAULT\n", direct), []);
+  assert.deepEqual(found("static var flag := 3\n", direct), [`L21 ${key("flag")} 1`]);
+});
+
+test("L21 fails when the batch driver holds no _reset() it can read", () => {
+  const support = [
+    {
+      path: "sketches/core-loop/tests/a_test.gd",
+      text: 'const H := preload("res://tests/support/h.gd")\nconst T := preload("res://tools/t.gd")\n',
+    },
+    { path: "sketches/core-loop/tests/support/h.gd", text: "extends RefCounted\n" },
+  ];
+  const tools = [{ path: "sketches/core-loop/tools/t.gd", text: "extends RefCounted\n" }];
+  for (const text of [
+    "",
+    'const A := preload("res://src/core/a.gd")\n',
+    "func _reset() -> void:\n\tpass\n",
+  ]) {
+    const out = lintPreloadedTestSupport(
+      support,
+      tools,
+      "sketches/core-loop",
+      parseBatchDriver(text),
+    );
+    assert.deepEqual(
+      out.map((item) => `${item.rule} ${item.path}`),
+      ["L21 sketches/core-loop/tools/test_batch_driver.gd"],
+    );
+    assert.match(out[0].message, /read no script reset in the batch driver's _reset\(\)/);
+  }
+  const live = parseBatchDriver(
+    'const A := preload("res://src/core/a.gd")\nfunc _reset() -> void:\n\tA.reset_for_tests()\n',
+  );
+  assert.deepEqual(lintPreloadedTestSupport(support, tools, "sketches/core-loop", live), []);
 });
 
 test("L14 blocks a new unwired static var and fails when a registered file adds a second unreset static var", () => {
@@ -1096,8 +1193,8 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
     "\t_leaked_cache.clear()",
     "",
   ].join("\n");
-  const emptyRefs = parseBatchDriverRefs("extends RefCounted\n");
-  const bad = lintL14(file, rel, srcWithReset, emptyRefs, new Set());
+  const empty = parseBatchDriver("extends RefCounted\n");
+  const bad = lintL14(file, rel, srcWithReset, empty, new Set());
   assert.equal(bad.length, 1);
   assert.equal(bad[0].rule, "L14");
   assert.equal(bad[0].line, 3);
@@ -1106,10 +1203,9 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
   assert.match(bad[0].message, /clear _leaked_cache in the script's reset method/);
 
   const driverWithPath =
-    'const Planted := preload("res://src/presentation/planted_craft_cache.gd")\n';
-  const wiredRefs = parseBatchDriverRefs(driverWithPath);
-  const wiredVars = parseBatchDriverVars(driverWithPath);
-  assert.deepEqual(lintL14(file, rel, srcWithReset, wiredRefs, new Set(), wiredVars), []);
+    'const Planted := preload("res://src/presentation/planted_craft_cache.gd")\nfunc _reset() -> void:\n\tPlanted.reset_for_tests()\n';
+  const wired = parseBatchDriver(driverWithPath);
+  assert.deepEqual(lintL14(file, rel, srcWithReset, wired, new Set()), []);
 
   const srcSecondLeak = [
     "extends RefCounted",
@@ -1120,7 +1216,7 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
     "\t_leaked_cache.clear()",
     "",
   ].join("\n");
-  const secondBad = lintL14(file, rel, srcSecondLeak, wiredRefs, new Set(), wiredVars);
+  const secondBad = lintL14(file, rel, srcSecondLeak, wired, new Set());
   assert.equal(secondBad.length, 1);
   assert.equal(secondBad[0].rule, "L14");
   assert.equal(secondBad[0].line, 4);
@@ -1131,23 +1227,16 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
   );
   assert.match(secondBad[0].message, /clear _second_leak in the script's reset method/);
 
-  const driverDirect = `${driverWithPath}func _reset() -> void:\n\tPlanted._second_leak = {}\n`;
+  const driverDirect = `${driverWithPath}\tPlanted._second_leak = {}\n`;
   assert.deepEqual(
-    lintL14(
-      file,
-      rel,
-      srcSecondLeak,
-      parseBatchDriverRefs(driverDirect),
-      new Set(),
-      parseBatchDriverVars(driverDirect),
-    ),
+    lintL14(file, rel, srcSecondLeak, parseBatchDriver(driverDirect), new Set()),
     [],
   );
 
   const baselined = new Set([`${rel}:_leaked_cache`]);
-  assert.deepEqual(lintL14(file, rel, srcWithReset, emptyRefs, baselined), []);
+  assert.deepEqual(lintL14(file, rel, srcWithReset, empty, baselined), []);
   assert.deepEqual(
-    lintL14(file, rel, "# static var _commented := {}\nvar ok := 1\n", emptyRefs, new Set()),
+    lintL14(file, rel, "# static var _commented := {}\nvar ok := 1\n", empty, new Set()),
     [],
   );
 });
@@ -1204,14 +1293,10 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     ["tests/support/helper.gd", "tools/runner.gd", "tools/shared_state.gd"],
   );
 
-  const emptyRefs = parseBatchDriverRefs("extends RefCounted\n");
-  const failing = lintPreloadedTestSupport(
-    testFiles,
-    toolFiles,
-    "sketches/core-loop",
-    emptyRefs,
-    new Set(),
+  const unwired = parseBatchDriver(
+    'const Other := preload("res://src/core/other.gd")\nfunc _reset() -> void:\n\tOther.reset_for_tests()\n',
   );
+  const failing = lintPreloadedTestSupport(testFiles, toolFiles, "sketches/core-loop", unwired);
   assert.deepEqual(
     failing.map((item) => item.key),
     [
@@ -1220,25 +1305,19 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     ],
   );
 
-  const driver = [
-    'const Helper := preload("res://tests/support/helper.gd")',
-    'const Shared := preload("res://tools/shared_state.gd")',
-    "",
-  ].join("\n");
-  const wiredRefs = parseBatchDriverRefs(driver);
-  const wiredVars = parseBatchDriverVars(driver);
-  assert.deepEqual(
-    lintPreloadedTestSupport(testFiles, toolFiles, "sketches/core-loop", wiredRefs, wiredVars),
-    [],
+  const wired = parseBatchDriver(
+    [
+      'const Helper := preload("res://tests/support/helper.gd")',
+      'const Shared := preload("res://tools/shared_state.gd")',
+      "func _reset() -> void:",
+      "\tHelper.reset_for_tests()",
+      "\tShared.reset_for_tests()",
+      "",
+    ].join("\n"),
   );
+  assert.deepEqual(lintPreloadedTestSupport(testFiles, toolFiles, "sketches/core-loop", wired), []);
 
-  const noTools = lintPreloadedTestSupport(
-    testFiles,
-    [],
-    "sketches/core-loop",
-    wiredRefs,
-    wiredVars,
-  );
+  const noTools = lintPreloadedTestSupport(testFiles, [], "sketches/core-loop", wired);
   assert.deepEqual(
     noTools.map((item) => `${item.rule} ${item.path}`),
     ["L14 sketches/core-loop/tools"],
@@ -1249,8 +1328,7 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     [testFiles[0]],
     toolFiles,
     "sketches/core-loop",
-    wiredRefs,
-    wiredVars,
+    wired,
   );
   assert.deepEqual(
     noSupport.map((item) => `${item.rule} ${item.path}`),
@@ -1262,8 +1340,7 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     [{ path: "sketches/core-loop/tests/plain_test.gd", text: "extends SceneTree\n" }],
     toolFiles,
     "sketches/core-loop",
-    wiredRefs,
-    wiredVars,
+    wired,
   );
   assert.deepEqual(
     neither.map((item) => `${item.rule} ${item.path}`),
@@ -1271,7 +1348,7 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
   );
 
   const liveDriver = readFileSync(path.join(sketchDir, "tools", "test_batch_driver.gd"), "utf8");
-  const liveRefs = parseBatchDriverRefs(liveDriver);
+  const live = parseBatchDriver(liveDriver);
   for (const rel of [
     "tools/bot_profile.gd",
     "tools/skill_band.gd",
@@ -1281,7 +1358,11 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     "tests/support/cosmetic_art.gd",
     "tests/support/teardown_noise.gd",
   ]) {
-    assert.ok(liveRefs.has(rel), `expected ${rel} in driver refs`);
+    assert.ok(live.refs.has(rel), `expected ${rel} in driver refs`);
+    assert.ok(
+      live.resets.get(rel).calls.has("reset_for_tests"),
+      `expected _reset() to reset ${rel}`,
+    );
   }
   const raw = lintSketch("core-loop").filter((item) => item.rule === "L14");
   const toolOrSupport = raw
