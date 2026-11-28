@@ -185,7 +185,7 @@ func mind_adapt(habit: String, icon: String, at: Vector3) -> void:
 
 
 func discover(id: String, at: Vector3) -> void:
-	combat._discover(id, at)
+	combat.discover(id, at)
 
 
 func build_read() -> Dictionary:

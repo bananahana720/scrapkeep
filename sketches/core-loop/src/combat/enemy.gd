@@ -973,6 +973,14 @@ func attack_facts() -> Dictionary:
 	return _facts_dict(String(_atk["phase"]))
 
 
+func attack_state() -> Dictionary:
+	if _atk.is_empty():
+		return {}
+	var tele = _atk.get("tele")
+	var progress := float(tele.progress) if tele != null and is_instance_valid(tele) else float(_atk.get("progress", 0.0))
+	return {"phase": String(_atk.get("phase", "")), "progress": progress}
+
+
 func _facts_row(is_lane: bool) -> String:
 	if FACTS_UNMAPPED.has(kind):
 		return ""
