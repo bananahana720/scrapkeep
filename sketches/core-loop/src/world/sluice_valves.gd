@@ -69,32 +69,6 @@ func _exit_tree() -> void:
 	clear_valves()
 
 
-func sync_stage(ctx_ref) -> void:
-	clear_valves()
-	ctx = ctx_ref
-	if ctx == null:
-		return
-	_connect_events()
-	if ctx.get("tuning") != null:
-		cruise = float(ctx.tuning.f("cruise"))
-	var terrain = ctx.get("terrain")
-	if terrain == null or not terrain.has_method("map"):
-		return
-	var m = terrain.map()
-	if m == null or not ("contraptions" in m):
-		return
-	var specs: Array = []
-	for spec in m.contraptions:
-		if String(spec.get("kind", "")) == "sluice_valve":
-			specs.append(spec)
-	if specs.is_empty():
-		return
-	var stage: int = int(ctx.flow.stage()) if ctx.get("flow") != null else 1
-	var g_call: Callable = terrain.ground_callable(stage) if terrain.has_method("ground_callable") else Callable()
-	build_from_specs(specs, g_call, cruise, ctx)
-	_hide_legacy_wheels(stage)
-
-
 func build_from_specs(specs: Array, ground_fn: Callable, cruise_speed := 14.0, ctx_ref = null) -> void:
 	clear_valves()
 	ctx = ctx_ref
@@ -179,23 +153,6 @@ func _on_harpoon_bit(body: Node3D, _at: Vector3) -> void:
 	if v.is_empty():
 		return
 	v["hooked"] = true
-
-
-func _hide_legacy_wheels(stage: int) -> void:
-	if ctx == null or ctx.get("world") == null:
-		return
-	var contraptions_map = ctx.world.get("contraptions")
-	if not (contraptions_map is Dictionary) or not contraptions_map.has(stage):
-		return
-	var c = contraptions_map[stage]
-	if c == null or not is_instance_valid(c):
-		return
-	for v in valves:
-		var legacy := (c as Node).get_node_or_null(String(v["id"])) as Node3D
-		if legacy == null:
-			continue
-		for child in legacy.find_children("valve_wheel*", "MeshInstance3D", true, false):
-			(child as MeshInstance3D).visible = false
 
 
 func _build_valve(spec: Dictionary) -> Dictionary:
