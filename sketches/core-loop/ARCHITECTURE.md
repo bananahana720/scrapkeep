@@ -81,8 +81,9 @@ Every `var` declared on `src/core/context.gd` (checked by `npm run check:docs`):
 | `screen_busy` | `Node` (`ScreenBusy`) | `game.gd` | Combat quiet-window arbiter for HUD callouts. |
 | `dev` | `bool` (`false`) | `game.gd` | True when launched with `--dev` or set in dev/test harnesses. |
 | `_hit_stop` | `Callable` | `Context._init()` | Private callback from `game.gd` backing `hit_stop(seconds)`. |
+| `_burst` | `Callable` | `Context._init()` | Private callback from `game.gd` (`FxLibrary.burst`) backing `burst(...)`. |
 
-Helper methods on `Context`: `build_module()`, `aim_origin()`, `aim_forward()`, `heading()`, `can_spawn()`, `break_props(at, radius, source)`, and `hit_stop(seconds)`.
+Helper methods on `Context`: `build_module()`, `aim_origin()`, `aim_forward()`, `heading()`, `can_spawn()`, `break_props(at, radius, source)`, `hit_stop(seconds)`, and `burst(parent, id, at, count, tint, toward, isolate)`.
 
 ## `GameEvents` signal groups
 
