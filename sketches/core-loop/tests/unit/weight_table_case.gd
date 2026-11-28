@@ -3,6 +3,7 @@ extends RefCounted
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Juice := preload("res://src/presentation/juice.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
+const HitStopBudget := preload("res://src/core/hit_stop_budget.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const Fx := preload("res://src/presentation/fx_library.gd")
@@ -229,7 +230,7 @@ func _stop_order(weights: Dictionary) -> bool:
 		var previous := -1.0
 		for key in CLASSES:
 			var stop := _stop(weights.get(key, {}), damage)
-			if stop <= previous or stop > EventJuice.SPINE_CAP_MS or (key == "none" and stop != 0.0):
+			if stop <= previous or stop > HitStopBudget.SPINE_CAP_MS or (key == "none" and stop != 0.0):
 				return false
 			previous = stop
 	return true

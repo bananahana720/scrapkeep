@@ -234,7 +234,7 @@ func _clear() -> void:
 		enemy.queue_free()
 	_game.combat.enemies.clear() if _game.combat.get("enemies") is Array else null
 	_stops.clear()
-	_game.presentation.juice.reset_stops()
+	_game.presentation.juice.hit_stops.reset()
 
 
 func _drop(x: float, z: float) -> Vector3:

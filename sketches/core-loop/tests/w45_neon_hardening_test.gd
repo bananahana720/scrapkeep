@@ -35,6 +35,7 @@ const TarnClaw := preload("res://src/combat/tarn_claw.gd")
 const KestKit := preload("res://src/combat/kest_kit.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const Juice := preload("res://src/presentation/juice.gd")
+const HitStopBudget := preload("res://src/core/hit_stop_budget.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -489,9 +490,9 @@ func _check_audio_and_juice() -> void:
 		juice._camera("kick", "test_cap", Vector3.DOWN, 0.01)
 		Juice._log_push(juice.multi_log, [2, i])
 	_t.check("Juice caps hit_stop_log, hook_log, and multi_log at LOG_CAP",
-		juice.hit_stop_log.size() == Juice.LOG_CAP and juice.hook_log.size() == Juice.LOG_CAP
+		juice.hit_stops.entries.size() == HitStopBudget.LOG_CAP and juice.hook_log.size() == Juice.LOG_CAP
 		and juice.multi_log.size() == Juice.LOG_CAP,
-		"hit_stop=%d hook=%d multi=%d cap=%d" % [juice.hit_stop_log.size(), juice.hook_log.size(), juice.multi_log.size(), Juice.LOG_CAP])
+		"hit_stop=%d hook=%d multi=%d cap=%d" % [juice.hit_stops.entries.size(), juice.hook_log.size(), juice.multi_log.size(), Juice.LOG_CAP])
 
 	audio.reset_cue_log()
 	for i in 2500:

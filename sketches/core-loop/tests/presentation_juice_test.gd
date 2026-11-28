@@ -3,6 +3,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
+const HitStopBudget := preload("res://src/core/hit_stop_budget.gd")
 const Juice := preload("res://src/presentation/juice.gd")
 const Palette := preload("res://src/core/palette.gd")
 
@@ -93,16 +94,16 @@ func _process(_delta: float) -> bool:
 			_game.events.enemy_struck.emit(_enemy, "ram", 10.0)
 			_game.events.enemy_struck.emit(_enemy, "arc", 99.0)
 			_game.events.enemy_struck.emit(_enemy, "stomp", 5.0)
-			var logged_before: int = _juice.hit_stop_log.size()
+			var logged_before: int = _juice.hit_stops.entries.size()
 			_juice.flush()
 			var sent := _sent().size() - _sent_before
-			_check("no stack", sent == 1 and _juice.hit_stop_log.size() - logged_before == 1,
+			_check("no stack", sent == 1 and _juice.hit_stops.entries.size() - logged_before == 1,
 				"eight hits in one frame ask once and send %d stop" % sent)
 			_next(200)
 		3:
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_game.camera._shake = 0.0
-			var gun_base: int = _juice.hit_stop_log.size()
+			var gun_base: int = _juice.hit_stops.entries.size()
 			var cues_before: int = _juice.audio.cue_log_total if _juice.audio != null else 0
 			_juice.resolve_of = func(_e, _k, force): return {"dealt": force * 2.0, "punch": force, "full": true, "part": "", "plating": 0.0}
 			for gun in ["runner", "arc", "turret"]:
@@ -111,10 +112,10 @@ func _process(_delta: float) -> bool:
 			_juice.flush()
 			_juice.resolve_of = Callable()
 			var pinged: bool = _juice.audio != null and _juice.audio.cues_since(cues_before).any(func(c: Array): return c[1] == "crit_ping")
-			_check("guns do not stop", _juice.hit_stop_log.size() == gun_base and _game.camera._shake == 0.0,
-				"laser, arc and turret hits, crits among them, ask for %d stops and the camera shake is %.2f" % [_juice.hit_stop_log.size() - gun_base, _game.camera._shake])
+			_check("guns do not stop", _juice.hit_stops.entries.size() == gun_base and _game.camera._shake == 0.0,
+				"laser, arc and turret hits, crits among them, ask for %d stops and the camera shake is %.2f" % [_juice.hit_stops.entries.size() - gun_base, _game.camera._shake])
 			_check("gun crit pings", pinged, "a crit on a gun kind still plays crit_ping")
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_game.events.enemy_struck.emit(_enemy, "sticky", 16.0)
 			_juice.flush()
 			var bomb_shake: float = _game.camera._shake
@@ -122,7 +123,7 @@ func _process(_delta: float) -> bool:
 				"a sticky hit sends a stop and shakes the camera %.2f" % bomb_shake)
 			_game.camera._shake = 0.0
 			for blast in ["overdrive", "burst", "spill"]:
-				_juice.reset_stops()
+				_juice.hit_stops.reset()
 				_game.camera._shake = 0.0
 				var blast_base := _sent().size()
 				_game.ctx.spawner.last_impact = {"key": blast, "enemy": _enemy.get_instance_id()}
@@ -130,7 +131,7 @@ func _process(_delta: float) -> bool:
 				_juice.flush()
 				_check("%s blast stops and shakes" % blast, _sent().size() > blast_base and _game.camera._shake > 0.0,
 					"a %s hit published under a gun kind sends %d stops and shakes the camera %.2f" % [blast, _sent().size() - blast_base, _game.camera._shake])
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_game.camera._shake = 0.0
 			var other_base := _sent().size()
 			_game.ctx.spawner.last_impact = {"key": "overdrive", "enemy": _enemy.get_instance_id() + 1}
@@ -139,13 +140,13 @@ func _process(_delta: float) -> bool:
 			_check("another enemy's record is ignored", _sent().size() == other_base and _game.camera._shake == 0.0, "an impact record for a different enemy leaves a runner bolt with no stop and no shake")
 			_game.ctx.spawner.last_impact = {}
 			_game.camera._shake = 0.0
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			var rams_before := _sent().size()
 			_game.events.enemy_struck.emit(_enemy, "ram", 20.0)
 			_juice.flush()
 			_check("rams stop and shake", _sent().size() > rams_before and _game.camera._shake > 0.0,
 				"a ram sends a stop and shakes the camera %.2f" % _game.camera._shake)
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			var mixed_base := _sent().size()
 			for i in 30:
 				_game.events.enemy_struck.emit(_enemy, "sticky" if i % 2 == 0 else "ram", 40.0)
@@ -153,7 +154,7 @@ func _process(_delta: float) -> bool:
 			var mixed := 0.0
 			for entry in _sent().slice(mixed_base):
 				mixed += entry[1] * 1000.0
-			_check("mixed burst keeps the budget", mixed <= EventJuice.STOP_BUDGET_MS + 0.5, "30 bomb and ram hits send %.0f ms of stop (budget %.0f)" % [mixed, EventJuice.STOP_BUDGET_MS])
+			_check("mixed burst keeps the budget", mixed <= HitStopBudget.STOP_BUDGET_MS + 0.5, "30 bomb and ram hits send %.0f ms of stop (budget %.0f)" % [mixed, HitStopBudget.STOP_BUDGET_MS])
 			_game.camera._shake = 0.0
 			_juice.hook_log.clear()
 			_juice.squash(0.0, Vector3.FORWARD)
@@ -190,7 +191,7 @@ func _logged(hook: String, fact: String) -> bool:
 
 
 func _sent() -> Array:
-	return _juice.hit_stop_log.filter(func(entry: Array): return entry[1] > 0.0)
+	return _juice.hit_stops.entries.filter(func(entry: Array): return entry[1] > 0.0)
 
 
 func _sent_for(fact: String) -> Array:

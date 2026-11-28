@@ -62,9 +62,9 @@ func _measure(juice) -> Dictionary:
 	camera.shake(0.6, 0.3)
 	camera.kick(Vector3.RIGHT, 0.4)
 	camera.punch_fov(6.0, 0.3)
-	juice.reset_stops()
+	juice.hit_stops.reset()
 	juice.request_hit_stop(0.04, "comfort")
-	var out := {"shake": camera._shake, "kick": camera._kick.length(), "punch": camera._punch, "stop": juice.hit_stop_log.back()[1]}
+	var out := {"shake": camera._shake, "kick": camera._kick.length(), "punch": camera._punch, "stop": juice.hit_stops.entries.back()[1]}
 	camera._shake = 0.0
 	camera._kick = Vector3.ZERO
 	camera._punch = 0.0
