@@ -253,6 +253,9 @@ func _ready() -> void:
 
 	_boot("modules")
 	world = _module(World)
+	world.activities.room_sites = func(map_id: String, sitting: bool) -> Array: return Secrets.stage_room_sites(map_id, ctx.profile, sitting)
+	world.activities.door_sites = func(map_id: String) -> Array: return Secrets.door_sites(map_id, ctx.profile)
+	world.activities.settle = progress.settle
 	_boot("world")
 	for row in ctx.stages.DEFS:
 		if row["map"] == "spillway":
