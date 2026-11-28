@@ -75,6 +75,20 @@ export function parseLedger(text) {
       });
     if (onMain && kind !== "red")
       problems.push({ line: number, message: `only a red row can be red on main, not a ${kind}` });
+    for (const part of onMain && kind === "red" ? (named ?? []) : []) {
+      const why = part.includes("*")
+        ? "a star matches other checks of the test that nobody saw fail"
+        : part === ERROR_LINE
+          ? `${ERROR_LINE} lets any error line of the test through`
+          : part === TIME_OUT
+            ? `${TIME_OUT} can never apply, since a run killed at its limit is never marked`
+            : null;
+      if (why)
+        problems.push({
+          line: number,
+          message: `a row red on main may not name "${part}": ${why}; write the exact check as the test prints it between the square brackets of its -> FAIL line`,
+        });
+    }
     if (onMain && ISO_DATE.test(added) && onMain[2] > added)
       problems.push({
         line: number,

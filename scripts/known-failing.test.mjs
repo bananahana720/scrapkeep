@@ -342,12 +342,40 @@ const checkedHeader = [...LEDGER_HEADER, "check"].join("\t");
 const mainRow = (
   test,
   cause,
-  check = "a check ;; ERROR-LINE",
+  check = "a check ;; another check",
   kind = "red",
   added = "2026-11-28",
 ) => [test, kind, cause, "coordinator", added, "2026-12-05", check].join("\t");
 const mainLedger = (...rows) => [checkedHeader, ...rows].join("\n") + "\n";
 const ON_MAIN = "red on main at 0d422144b on 2026-11-28: why it fails";
+
+test("a row red on main may name no star, ERROR-LINE or TIME-OUT, and is told to write the exact check", () => {
+  const plain = parseLedger(
+    mainLedger(
+      mainRow("a_test", "plain red", "class * builds ;; ERROR-LINE ;; TIME-OUT"),
+      mainRow("b_test", ON_MAIN, "stage 1: draw matches ;; class 2 builds"),
+    ),
+  );
+  assert.deepEqual(plain.problems, [], "a row not red on main keeps all three");
+  for (const [check, said] of [
+    ["class * builds", /may not name "class \* builds": a star matches other checks/],
+    ["a check ;; *x", /may not name "\*x": a star matches other checks/],
+    ["a check ;; ERROR-LINE", /may not name "ERROR-LINE": ERROR-LINE lets any error line/],
+    ["TIME-OUT ;; a check", /may not name "TIME-OUT": TIME-OUT can never apply/],
+  ]) {
+    const { problems } = parseLedger(mainLedger(mainRow("a_test", ON_MAIN, check)));
+    assert.equal(problems.length, 1, check);
+    assert.equal(problems[0].line, 2, check);
+    assert.match(problems[0].message, said, check);
+    assert.match(
+      problems[0].message,
+      /; write the exact check as the test prints it between the square brackets of its -> FAIL line$/,
+      check,
+    );
+  }
+  const all = parseLedger(mainLedger(mainRow("a_test", ON_MAIN, "c* ;; ERROR-LINE ;; TIME-OUT")));
+  assert.equal(all.problems.length, 3);
+});
 
 test("a red row whose cause starts with the commit and date it was seen red on main is a main red, and a near miss is refused", () => {
   const good = parseLedger(
@@ -574,6 +602,7 @@ test("the summary line says whether a failing run's only reds are known reds on 
     "`npm run sketch:fast -- --test <name>` without `--base-check`",
     "when every run of the test in the invocation (its first run, in a warm batch or alone, the run alone after a batch, and the rerun) qualifies on its own",
     "an error line anywhere in the batch counts against every red test of it",
+    "the ledger check refuses a star, `ERROR-LINE` or `TIME-OUT` in it",
   ])
     assert.ok(gate.includes(stated), `GATE.md states ${stated}`);
   assert.doesNotMatch(gate, /does not fail the job/);
@@ -673,6 +702,9 @@ test("readMainReds reads the ledger at the base commit, and every red counts whe
       mainLedger(mainRow("a_test", ON_MAIN), mainRow("b_test", "plain red")),
     );
     const broken = commitLedger("test\towner\n");
+    const wide = commitLedger(
+      mainLedger(mainRow("a_test", ON_MAIN, "a check ;; ERROR-LINE"), mainRow("b_test", ON_MAIN)),
+    );
     const empty = commitLedger("");
     const lines = [];
     const log = (line) => lines.push(line);
@@ -685,6 +717,7 @@ test("readMainReds reads the ledger at the base commit, and every red counts whe
       [bare, /could not be read at /],
       ["no-such-ref", /could not be read at no-such-ref/],
       [broken, /does not parse \(line 1: the header must be/],
+      [wide, /does not parse \(line 2: a row red on main may not name "ERROR-LINE"/],
       [empty, /is empty at /],
     ]) {
       lines.length = 0;
