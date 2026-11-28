@@ -82,6 +82,10 @@ func set_active(active: bool) -> void:
 	sleeping = false
 
 
+func probe() -> ShapeCast3D:
+	return _probe
+
+
 static func _finite(v: Vector3) -> Vector3:
 	return v if v.is_finite() else Vector3.ZERO
 

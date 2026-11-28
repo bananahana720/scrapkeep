@@ -20,7 +20,7 @@ var _t := preload("res://tests/support/t.gd").new("overpowered_pays_test")
 
 
 func _initialize() -> void:
-	Synergies.table = null
+	Synergies.set_table(null)
 	_maxed_parts()
 	_numbers()
 	_ceiling()

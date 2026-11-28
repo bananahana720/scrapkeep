@@ -197,7 +197,7 @@ func _blast_sources() -> void:
 	_player.redline.set_mode(Redline.OFF)
 
 	_source_case("Kest sticky", "sticky", at, 4.0, func(p: Vector3):
-		_combat._detonate({"pos": p, "radius": 4.0, "damage": 10.0, "crit": false}))
+		_combat.detonate({"pos": p, "radius": 4.0, "damage": 10.0, "crit": false}))
 
 	_source_case("Q landing (arc)", "ultimate", at, ult.landing_radius(), func(p: Vector3): ult._sable_landing(p, 1.0, 1.0))
 	_source_case("Q landing (line, +3)", "ultimate", at, ult.landing_radius() + 3.0, func(p: Vector3): ult._lightning_landing(p, 1.0, 1.0))

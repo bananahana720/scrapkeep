@@ -23,7 +23,9 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const GrappleRig := preload("res://src/presentation/grapple_rig.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartMutations := preload("res://src/build/part_mutations.gd")
 const Items := preload("res://src/build/items.gd")
+const MakerDefs := preload("res://src/build/maker_defs.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
@@ -94,9 +96,9 @@ func _sim(ticks: int) -> void:
 
 
 func _check_tables_and_palette_contracts() -> void:
-	var ids := Parts.grapple_mutation_ids()
+	var ids := PartMutations.grapple_mutation_ids()
 	_t.eq("all 7 grapple mutations registered", ids.size(), 7)
-	_t.eq("grapple_mutation_problems() is clean", Parts.grapple_mutation_problems(), [])
+	_t.eq("grapple_mutation_problems() is clean", PartMutations.grapple_mutation_problems(), [])
 	_t.eq("G0 single ChainState preserved", ChainState.MAX_CHAINS_PER_PILOT, 1)
 
 	var expected_swaps := {
@@ -111,7 +113,7 @@ func _check_tables_and_palette_contracts() -> void:
 	var all_glbs := true
 	var swap_ok := true
 	for mid in expected_swaps:
-		var row := Parts.grapple_mutation(mid)
+		var row := PartMutations.grapple_mutation(mid)
 		if String(row.get("swaps", "")) != String(expected_swaps[mid]):
 			swap_ok = false
 		if not ResourceLoader.exists(String(row.get("glb_path", ""))):
@@ -134,7 +136,7 @@ func _check_tables_and_palette_contracts() -> void:
 	# All 7 Maker Sets map 1-to-1 to the 7 mutations.
 	var maker_muts := {}
 	for mk in MakerSets.SETS:
-		var m := MakerSets.grapple_mutation_for_maker(mk)
+		var m := MakerDefs.grapple_mutation_for_maker(mk)
 		if m != "":
 			maker_muts[m] = mk
 	_t.eq("all 7 Maker Sets map 1-to-1 to the 7 grapple mutations", maker_muts.size(), 7)
@@ -365,7 +367,7 @@ func _run_live() -> void:
 func _equip_only(part_ids: Array) -> void:
 	_game.ctx.run.parts.assign(part_ids)
 	_build.effects.refresh(_game.ctx.run.parts)
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 
 
 func _check_hot_wire_gameplay() -> void:

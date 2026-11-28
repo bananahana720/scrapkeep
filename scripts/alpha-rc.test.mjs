@@ -442,7 +442,7 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
         fake(
           dir,
           "card.sh",
-          `echo "${TITLE_INTERACTIVE} ms=300"; echo "${BOOT_FAILED} the game scene's script did not load"; exec sleep 30`,
+          `echo "${TITLE_INTERACTIVE} ms=300"; echo "${BOOT_FAILED} the game scene's script did not load"; sleep 10; echo "${MENU_READY} ms=10300"; exec sleep 30`,
         ),
         { seconds: 5, menuWaitSeconds: 20 },
       ),
@@ -454,9 +454,12 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
         ),
         { seconds: 5 },
       ),
-      launchAppImage(fake(dir, "held.sh", "sleep 30 & echo last words; exit 3"), {
-        seconds: 20,
-      }),
+      launchAppImage(
+        fake(dir, "held.sh", "(sleep 10; echo pipes closed) & echo last words; exit 3"),
+        {
+          seconds: 20,
+        },
+      ),
       launchAppImage(
         fake(
           dir,
@@ -471,8 +474,8 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
       card.note,
       "the build said it did not load (SCRAPKEEP_BOOT_FAILED): the game scene's script did not load",
     );
-    assert.ok(card.ms < 5000, `failed in ${card.ms} ms, not at the 20 s menu wait`);
     assert.equal(card.menuMs, null);
+    assert.doesNotMatch(card.output, /SCRAPKEEP_MENU_READY/);
     assert.equal(headless.status, "fail");
     assert.match(
       headless.note,
@@ -480,14 +483,13 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
     );
     assert.match(held.note, /^exited \(3\) before the main menu$/);
     assert.match(held.output, /last words/);
-    assert.ok(held.ms < 10000, `judged in ${held.ms} ms`);
+    assert.doesNotMatch(held.output, /pipes closed/);
     assert.equal(quoted.status, "pass");
   });
 
   test("runProcess returns the exit, and a timeout kills the group and reads as killed", async () => {
     const dir = tmp();
     const pidFile = path.join(dir, "pid");
-    const started = Date.now();
     const [ok, hung] = await Promise.all([
       runProcess({ command: fake(dir, "ok.sh", "echo hi; exit 4"), args: [] }),
       runProcess(
@@ -497,7 +499,6 @@ describe("cold launch and process timeouts", { concurrency: true }, () => {
     ]);
     assert.equal(ok.exit, 4);
     assert.equal(hung.exit, null);
-    assert.ok(Date.now() - started < 5000);
     assert.equal(judgeCommand({ id: "smoke" }, hung).note, "timed out or killed");
     assert.equal(alive(Number(readFileSync(pidFile, "utf8"))), false);
   });

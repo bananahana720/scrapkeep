@@ -7,6 +7,7 @@ extends SceneTree
 # moments and sound ids, a boss phase, the fall's timing and its wink, and the governor.
 const T := preload("res://tests/support/t.gd")
 const MachineFx := preload("res://src/presentation/machine_fx.gd")
+const SpecialCues := preload("res://src/combat/special_cues.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Density := preload("res://src/presentation/density.gd")
 
@@ -95,7 +96,7 @@ func _run() -> void:
 	t.check("the Foreman's spawn moment fires", _moments(fx, "foreman_spawn").size() == 1)
 	t.check("its presence follows the body", fx._follows.any(func(f: Dictionary): return f["node"] == foreman))
 	t.eq("its tell plays foreman_tell", fx.special_moment("foreman", "tell", foreman), "foreman_tell")
-	t.eq("audio and picture read one row", MachineFx.special_sound("foreman", "tell"), "foreman_tell")
+	t.eq("audio and picture read one row", SpecialCues.sound("foreman", "tell"), "foreman_tell")
 	t.check("the tell is worded", _moments(fx, "word").back()[2] == "HOOONK")
 	foreman.special_tell.emit("tell")
 	t.eq("the body's own tell signal fires the moment", _moments(fx, "foreman_tell").size(), 2)
@@ -109,7 +110,7 @@ func _run() -> void:
 		var row: Dictionary = MachineFx.SPECIALS[name]
 		t.check("%s has a spawn, a tell, a break and their sounds" % name, row.has("spawn") and row.has("tell")
 			and (row.has("break") or (row.has("break_split") and row.has("break_clean")))
-			and ["tell", "presence", "spawn"].all(func(m: String): return MachineFx.special_sound(name, m) != ""))
+			and ["tell", "presence", "spawn"].all(func(m: String): return SpecialCues.sound(name, m) != ""))
 
 	var splitter := FakeSpecial.new()
 	splitter.kind = "splitter"

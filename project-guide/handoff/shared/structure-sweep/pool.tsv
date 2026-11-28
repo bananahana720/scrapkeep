@@ -2,7 +2,7 @@ id	survey file	kind	risk	status	unit	finding
 CORE-01	core.md	C	low	landed	C1	Move four test-only audit modules out of `src/core/` to remove 15 upward preloads immediately
 CORE-02	core.md	C	low	open		Move four verified zero-dependency leaf scripts down into `src/core/`
 CORE-03	core.md	C	medium	open		Split `core/palette.gd` into pure color constants (`core/`) and 3D material/sky factory (`presentation/`)
-CORE-04	core.md	C	low	in flight	C4	Move `weigh()` and presentation juice/impact tables out of `core/event_kinds.gd`
+CORE-04	core.md	C	low	landed	C4	Move `weigh()` and presentation juice/impact tables out of `core/event_kinds.gd`
 CORE-05	core.md	C	medium	open		Remove combat cache-drain loop and 3D presentation dressing from `core/beacon.gd`
 CORE-06	core.md	C	high	open		Invert `core/run_state.gd`'s 23 upward preloads/loads into `build/`, `world/`, and `combat/`
 CORE-07	core.md	C	high	open		Invert `core/flow.gd`'s 7 upward preloads into `ui/`, `world/`, `boss/`, and `movement/`
@@ -28,15 +28,15 @@ WORLD-06	world.md	C	low	open	W2 did the `screens._press` line	`world -> ui` wron
 WORLD-07	world.md	C	low	open		71 `world -> presentation` preloads/loads and `activities._exit_tree()` clearing presentation caches
 WORLD-08	world.md	C	low	landed	W2	25+ private reach-ins into `Terrain` and `EventDirector` from `events/` and `activities.gd`
 WORLD-09	world.md	C	low	in flight	W2 did parts 1 and 3; M3 has part 2	Private reach-ins from `camp_hub.gd`, `camp_sandbox.gd`, and `world.gd`
-WORLD-10	world.md	H	low	in flight	W3 has seam 1	`activities.gd` (2,636 lines) has 5 clean, already-isolated state seams ready to split
-WORLD-11	world.md	H	low	in flight	W3	`park/park_recipes.gd` (1,989 lines) has a self-contained 625-line Anchor Field / LOD / Hull seam
+WORLD-10	world.md	H	low	open		`activities.gd` (2,636 lines) has 5 clean, already-isolated state seams ready to split Unit W3 weighed the first seam (mend wards and lore plates) and left it: the move is clean in itself, but the new file would join the dependency loop through `park_recipes.gd` and `activities.gd`. Cut that loop first.
+WORLD-11	world.md	H	low	open		`park/park_recipes.gd` (1,989 lines) has a self-contained 625-line Anchor Field / LOD / Hull seam Unit W3 weighed it and left it: a file holding the anchor field would join the dependency loop through `park_recipes.gd` and `activities.gd`. Cut that loop first.
 WORLD-12	world.md	G	low	open		Four parallel map/stage/park builders — legacy `StageMap` & `EventDirector` paths are test-only, and `event_ground.gd` still depends on orphan `map_gorge.gd`
 WORLD-13	world.md	E	low	landed	K1	Physics layer numbers and masks repeated across 8+ world files with no single owner
 WORLD-14	world.md	E	low	landed	K1	Raw group names and park map IDs scattered across 9+ world files
 WORLD-15	world.md	G	medium	open		Four mixed ways `src/world/` plays sound effects
 WORLD-16	world.md	A	low	landed	W1	`director.gd` duplicates `Roster.COUNTERS` and `Roster.ANCIENTS` despite preloading `Roster`
 WORLD-17	world.md	D	low	landed	K1	Shallow 10-line wrapper `find_kit.gd` with one caller
-WORLD-18	world.md	F	low	in flight	W3	Cross-module static-cache teardown and shared mutable static flags
+WORLD-18	world.md	F	low	landed	W3	Cross-module static-cache teardown and shared mutable static flags
 COMBAT-01	combat.md	C	low	open		Move zero-dependency comfort flags (`FlashGuard`, `reduced_motion`) into `src/core/` to remove 14 presentation/UI preloads
 COMBAT-02	combat.md	C	low	open		Invert 75 `FxLibrary.burst(...)` calls across 13 combat files through an injected FX callback
 COMBAT-03	combat.md	H	low	open		Split `combat.gd`'s cleanest bolt-on seams: W47-H1 hero hooks (342 lines) and Consumables runtime (435 lines)
@@ -88,13 +88,13 @@ UI-08	ui.md	E+F	medium	open		reduced motion is copied into thirteen static vars,
 UI-09	ui.md	G	low	landed	U2	three panel systems and 24 hand-built StyleBoxFlat
 UI-10	ui.md	G	low	landed	U2	41 hand-built labels against an 11-site label helper
 UI-11	ui.md	C	high	open		core/flow.gd builds a UI node
-UI-12	ui.md	C	low	in flight	U3	ui leaf files that lower layers preload, sorted by where they belong
+UI-12	ui.md	C	low	landed	U3	ui leaf files that lower layers preload, sorted by where they belong
 UI-13	ui.md	C	medium	open		hud.gd chooses the detour site
-UI-14	ui.md	C	low	in flight	U3	screens.gd opens the scrapbook store itself
+UI-14	ui.md	C	low	landed	U3	screens.gd opens the scrapbook store itself
 UI-15	ui.md	D	low	landed	U2	thin modules
 UI-16	ui.md	E	low	landed	U2	raw colours outside the token file
 VF-01	visuals-fx.md	A+G	medium	open		Seven separate ways to spawn, pool, time and free a particle effect, with no single owner
-VF-02	visuals-fx.md	A	low	in flight	F1	vfx.gd and machine_fx.gd each carry a copy of the owner-pool code
+VF-02	visuals-fx.md	A	low	landed	F1	vfx.gd and machine_fx.gd each carry a copy of the owner-pool code
 VF-03	visuals-fx.md	C	low	open		flash_guard.gd is a game-wide comfort fact that sits in presentation; 22 lower-layer files preload it
 VF-04	visuals-fx.md	F+E	low	open		The reduced-motion setting is copied into 14 static variables
 VF-05	visuals-fx.md	A+G	medium	open		Three Label3D "word" systems, each with its own recipe, lifetime and budget
@@ -105,7 +105,7 @@ VF-09	visuals-fx.md	C	medium	open		flourish_cues injects a callable that stretch
 VF-10	visuals-fx.md	E	low	landed	V2	Two ink colours are written as literals in shaders and code instead of coming from Palette
 VF-11	visuals-fx.md	E+A	low	landed	V2	fx_budget.gd copies owner facts instead of reading them
 VF-12	visuals-fx.md	B	low	open		Ten public functions in the slice have no caller anywhere in the repo
-VF-13	visuals-fx.md	D	low	in flight	F1	machine_fx's special-cue functions are forwarders to SpecialCues
+VF-13	visuals-fx.md	D	low	landed	F1	machine_fx's special-cue functions are forwarders to SpecialCues
 VF-14	visuals-fx.md	H	medium	landed	V2	player_fx.gd (2116 lines) holds five separate jobs
 VF-15	visuals-fx.md	H	low	landed	V2	vfx.gd (1160 lines) mixes four pools, a governor and rule tables
 VF-16	visuals-fx.md	E	low	landed	V2	Shader parameter names are bare strings in 10 files, across two separate particle shaders
@@ -144,8 +144,8 @@ SOUND-15	sound.md	B	low	open		Dead functions and dead constants with zero caller
 SOUND-16	sound.md	D	low	landed	N2	Shallow forwarding wrappers that fail the deletion test
 SOUND-17	sound.md	H	low	open	N3 landed seams 1 and 3; the rest is open	`music_engine.gd` (2,989 lines) mixes four separable seams: static pre-baker, park-cue async renderer, phrase generator, and real-time sequencer
 XD-01	experimental-dev.md	C	low	closed		Shipped release exports bundle all of `src/dev/` and `src/experimental/`, and `game.gd` loads them with no existence or release guard
-XD-02	experimental-dev.md	A	low	in flight	X1	Env-tag vocabulary, payload builder, and validator are duplicated 4 times across 3 experimental files with drifted clamps
-XD-03	experimental-dev.md	A	low	in flight	X1	`never_brake()` is copy-pasted twice in `refurbished_elites.gd`, duplicating `EventDirector.never_brake()`
+XD-02	experimental-dev.md	A	low	landed	X1	Env-tag vocabulary, payload builder, and validator are duplicated 4 times across 3 experimental files with drifted clamps
+XD-03	experimental-dev.md	A	low	landed	X1	`never_brake()` is copy-pasted twice in `refurbished_elites.gd`, duplicating `EventDirector.never_brake()`
 XD-04	experimental-dev.md	C	low	landed	X2	`DevFight` and `DevAgent` reach into private underscore methods on `Flow`, `DevConsole`, and `DevInspect`
 XD-05	experimental-dev.md	C	low	landed	X2	`DevFight` and `DevLens` mutate internal sub-objects of `Flood`, `RunState`, `Build`, `Combat`, and `ChaseCamera` instead of calling small owner APIs
 XD-06	experimental-dev.md	F	low	landed	X2	`DevFight.set_god()` overwrites `RunState.defend_hook`, colliding with `src/combat/ultimate.gd`
@@ -272,6 +272,17 @@ LEAD-52	leads	E	low	open		From the review of Z2: `sketches/core-loop/assets/regi
 LEAD-53	leads	B	low	open		From the review of Z2: `sketches/core-loop/tools/cliff_gate_export.gd` has no caller left now that the `cliff_gate` Python scripts are deleted. A delete candidate, with its `.uid` file
 LEAD-54	leads	G	low	open		From Z2: three Python tool tests (`tools/ace/package_render_music_test.py`, `tools/mix/cue_reel_test.py`, `tools/mix/mixsim_test.py`) are run by no command because they need numpy, which the Mac Studio does not have. Decide where they run (the Linux PC has it or needs Andrew's go-ahead for an install) and wire them in
 LEAD-55	leads	B	low	open		From the review of Z2: `sketches/core-loop/tools/blender/pilot_patch.py` keeps an unused `bpy` import, five material slots and two colour constants its one remaining model never uses, and a docstring line about colours it no longer paints
-LEAD-56	leads	G	med	open		From the writers of C4 and W3: `npm run sketch:fast -- --test` given several test names in one argument runs the automatic selection instead, with no error, and each writer lost about 45 minutes before noticing. Make the command refuse a `--test` value it cannot match to a test file
+LEAD-56	leads	G	med	landed	G4	From the writers of C4 and W3: `npm run sketch:fast -- --test` given several test names in one argument runs the automatic selection instead, with no error, and each writer lost about 45 minutes before noticing. Make the command refuse a `--test` value it cannot match to a test file
 LEAD-57	leads	G	med	open		From the writers of F1, X3, W3, M3 and U3: an extra `sketch:fast --test` call waited one to two hours for a machine slot on the Mac Studio and several never ran, and the test search words in two briefs matched hundreds of files (`ward` matches `toward`). Briefs should list tests by the module names a unit changes, and wide extra runs belong on the Linux PC
 LEAD-58	leads	G	med	open		From the writers of C4 and W3: bot tests that are red on the base on the Mac Studio, each with the same numbers at the unit head: `prim_census_test` (67 surfaces against 68 pinned), `arrival_census_test`, `bot_chain_hand_test`, `bot_completionist_repeat_test`, `posture_bands_flume_test`, `skill_band_test`, and `park_reactor_fight_test` over its time allowance. Read them against the Linux full gate before calling any of them a real red
+LEAD-59	leads	C	low	open		From the review of F1: `src/dev/fx_capture.gd` reads the effect owner's private pool table (`vfx._fx`, through `Pools.values()`), and no test calls `FxLibrary.Pools` directly; its behaviour is covered only through the two files that use it.
+LEAD-60	leads	A	low	open		From the review of X1: no guard stops a second maker or validator of the environment tag payload from appearing under `src/experimental`; the unit removed the copies but only the tag list has an owner check.
+LEAD-61	leads	B	low	open		From the reviews of X3: `src/dev/dev_agent.gd` uses `console.capture` without checking it exists and keeps branches for `contact_sheet_mode` and `contact_sheet` that nothing reaches. Goes with XD-07.
+LEAD-62	leads	C	med	open		From the second review of M3: private reaches outside combat that no unit owns yet. `graphics_preset.gd` calls `host._sync_dressing()`, `hero_assets.gd` calls `cue_owner._add_crack(...)`, and `title_intro_player.gd` reads `host._environment`, `host._warn`, `host._freeze_visual` and `host._frame`.
+LEAD-63	leads	B	low	open		From the review of U3: `tests/find_in_fight_test.gd` still preloads `WhyCallout` and no longer uses it.
+LEAD-64	leads	G	low	open		From the review of G4, true before it: `npm run sketch:fast` with `--pre` and a `--test` name that matches nothing leaves the worktree it made for `--pre` behind.
+LEAD-65	leads	G	low	open		From the writers of W3 and C4: on a branch that has merged its base, `npm run sketch:fast -- --base origin/entropy/gate` reports the head as its own merge base, so the base-red comparison proves nothing there. The tool should say so or take the first parent.
+LEAD-66	leads	G	med	open		From the writer of T3: one `npm run sketch:fast` call with 21 named tests, `--base-check` and `--shuffle` took 4,233 seconds on the Mac Studio. Find which stage took the time (the suspect is the base-red proof of a bot test that runs alone) before any writer is asked to run that form again.
+LEAD-67	leads	A	low	open		From the writer of T3, the cause of one red in LEAD-58: `tools/bot_run.gd` writes a `comic_page` path into each run record, the path holds that run's own id, and `tests/skill_band_test.gd` strips only `wall_seconds`, `run_id` and `band` before it compares two runs. Strip `comic_page` too, or write it relative to the run.
+LEAD-68	leads	S	low	open		From the reviews of C4 and M3: dated design specs that writers edited or nearly edited and that the dated-records check (unit G2) does not yet list: `design-v3/FEEL-READABILITY.md`, `design-v3/pilots/cannon.md`, `design-v3/pilots/kest.md`, `design-v3/pilots/tally.md` and `research/comps/W13-INTEGRATION-3.md`. Add them to its list once G2 lands.
+LEAD-69	leads	G	low	open		From the reviews of C4 and B4: a unit that moves a function tends to leave a one-line copy that only calls the new home (C4 left one, B4 seventeen). Reviews catch it by hand; weigh a lint rule for a function whose whole body is one call to the same name on another script, with a shrink-only list.

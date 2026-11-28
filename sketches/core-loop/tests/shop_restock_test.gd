@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Shop := preload("res://src/build/shop.gd")
 
 # Moss stocks the shelf once per stage (speedrunner red team on stage/alpha-w21 bf3d2722: every
@@ -50,7 +51,7 @@ func _check() -> void:
 	shop.enter()
 	var first := _ids(shop)
 	var hook: Dictionary = shop.top_shelf()
-	_t.check("slot 0 is cobalt or better", Parts.rung_of(first[0]) >= Parts.RUNG_FLOOR, str(first))
+	_t.check("slot 0 is cobalt or better", PartOffers.rung_of(first[0], Parts.def) >= PartOffers.RUNG_FLOOR, str(first))
 	var bought: Dictionary = shop.buy(0)
 	_t.check("a shelf part buys", bought["ok"], var_to_str(bought))
 	shop.leave()
@@ -76,7 +77,7 @@ func _check() -> void:
 	shop.enter()
 	var next := _ids(shop)
 	_t.check("a new stage stocks afresh", next != rerolled and next.size() == Shop.SHELF_SIZE, "%s -> %s" % [rerolled, next])
-	_t.check("the new stage's slot 0 is cobalt or better", Parts.rung_of(next[0]) >= Parts.RUNG_FLOOR, str(next))
+	_t.check("the new stage's slot 0 is cobalt or better", PartOffers.rung_of(next[0], Parts.def) >= PartOffers.RUNG_FLOOR, str(next))
 	_t.eq("a new stage hands the reroll back", shop.rerolls_left, Shop.REROLLS_PER_VISIT)
 	shop.leave()
 

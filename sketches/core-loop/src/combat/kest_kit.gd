@@ -183,7 +183,7 @@ func _set_cable() -> void:
 	cable["pos"] = cable["_anchor"]
 	cable["rider"] = cable["_body"]
 	cable["damage"] = CABLE_DAMAGE * ctx.player.chain.multiplier()
-	cable["born"] = combat._clock
+	cable["born"] = combat.clock_now()
 	cable["fuse"] = cable["_fuse"]
 	cable["_set"] = true
 	_sound("cable_kest_set")
@@ -202,7 +202,7 @@ func _end_cable() -> void:
 	var anchor_pt: Vector3 = c.get("_anchor", Vector3.ZERO)
 	cable = {}
 	ctx.player.indicator.clear("kest_cable")
-	var rocket_before: float = combat._rocket_left
+	var rocket_before: float = combat.rocket_left()
 	if payloads.charges.has(c):
 		if not c.get("_set", false):
 			c["pos"] = c["_anchor"]
@@ -210,7 +210,7 @@ func _end_cable() -> void:
 		_detonate_payload(_take_payload(c))
 	if was_world and ctx != null and ctx.player != null:
 		ctx.player.refresh_air_draw()
-		if combat._rocket_left <= rocket_before and not ctx.player.state.grounded:
+		if combat.rocket_left() <= rocket_before and not ctx.player.state.grounded:
 			ctx.player.apply_spire_vault(anchor_pt)
 
 
@@ -402,7 +402,7 @@ func tech(_beat_number: int, ball: Vector3, aim: Vector3, heft_mult: float) -> i
 
 
 func _shell(ball: Vector3, at: Vector3, mult: float) -> void:
-	var charge: Dictionary = payloads.throw(ball, at, 12.0 * mult, 3.0, 0.6, false, Sticky.CONTACT_REACH, combat._clock)
+	var charge: Dictionary = payloads.throw(ball, at, 12.0 * mult, 3.0, 0.6, false, Sticky.CONTACT_REACH, combat.clock_now())
 	_tag(charge)
 	combat.effects.ring(at, 3.0, ClassDef.KEST_COLOR)
 
@@ -436,7 +436,7 @@ func _drop(at: Vector3, damage: float, radius: float) -> Dictionary:
 				_take_payload(old)
 	if int(placed["id"]) == 0:
 		return {}
-	var c: Dictionary = payloads.drop(at, damage, radius, INF, INF, MINE_REACH, combat._clock)
+	var c: Dictionary = payloads.drop(at, damage, radius, INF, INF, MINE_REACH, combat.clock_now())
 	c["device_id"] = int(placed["id"])
 	var node: Node3D = c["node"]
 	node.tree_exiting.connect(func():
@@ -486,7 +486,7 @@ func landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 		if not is_instance_valid(enemy) or enemy.is_dead() or enemy.global_position.distance_to(at) > radius:
 			continue
 		_note_target(enemy, _cast)
-		dealt += combat._ult_hit(enemy, "ultimate", damage, at, true)
+		dealt += combat.ult_hit(enemy, "ultimate", damage, at, true)
 		hits += 1
 	if _id == "minelayer":
 		for c in _mines:
@@ -524,7 +524,7 @@ func blast_hit(charge: Dictionary, enemy: Node3D, damage: float, at: Vector3) ->
 	_note_target(enemy, cast)
 	var held := _posture_spent
 	_posture_spent = cast["posture"]
-	var dealt: float = combat._ult_hit(enemy, "sticky", damage, at, false)
+	var dealt: float = combat.ult_hit(enemy, "sticky", damage, at, false)
 	_posture_spent = held
 	if cast == _cast:
 		_record["volley_hits"] = int(_record.get("volley_hits", 0)) + 1
@@ -534,7 +534,7 @@ func blast_hit(charge: Dictionary, enemy: Node3D, damage: float, at: Vector3) ->
 
 func _detonate_payload(charge: Dictionary) -> void:
 	_cable_burst = charge.get("_cable", false) and charge.get("_body") == null
-	combat._detonate(charge)
+	combat.detonate(charge)
 	_cable_burst = false
 	if charge.get("_cable", false):
 		cable = {}
@@ -543,7 +543,7 @@ func _detonate_payload(charge: Dictionary) -> void:
 
 
 func _hold_cloak() -> void:
-	combat._start_cloak()
+	combat.start_cloak()
 	combat.cloak_left = INF
 	ctx.player.kit.cloaked = true
 

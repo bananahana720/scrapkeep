@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
+import { git } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -26,33 +26,38 @@ export const EXCLUDED_TESTS = Object.freeze({
     "scans the park prop models under sketches/core-loop/assets/models/park/props/, which the node-tests partial checkout leaves out; scripts/sketch-fast.mjs runs it on a full checkout through NODE_PATH_RULES",
 });
 
-function walkScope(baseDir, relDir, suffix, recursive, out) {
-  const absDir = path.join(baseDir, relDir);
-  if (!existsSync(absDir)) return;
-  const entries = readdirSync(absDir, { withFileTypes: true }).sort((a, b) =>
-    a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+function scopeFiles(scope, files) {
+  const prefix = `${scope.dir}/`;
+  return files.filter(
+    (file) =>
+      file.startsWith(prefix) &&
+      file.endsWith(scope.suffix) &&
+      (scope.recursive || !file.slice(prefix.length).includes("/")),
   );
-  for (const entry of entries) {
-    if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
-    const relPath = path.posix.join(relDir, entry.name);
-    if (entry.isDirectory()) {
-      if (recursive) walkScope(baseDir, relPath, suffix, true, out);
-    } else if (entry.isFile() && entry.name.endsWith(suffix)) {
-      out.push(relPath);
-    }
-  }
 }
 
 export function discoverTestFiles(
   baseDir = root,
-  { scopes = TEST_SCOPES, excluded = EXCLUDED_TESTS } = {},
+  { scopes = TEST_SCOPES, excluded = EXCLUDED_TESTS, log = console.error } = {},
 ) {
-  const found = [];
-  for (const scope of scopes) {
-    walkScope(baseDir, scope.dir, scope.suffix, scope.recursive, found);
-  }
+  const list = (...args) =>
+    git(["ls-files", "-z", ...args, "--", ...scopes.map((scope) => scope.dir)], {
+      cwd: baseDir,
+      trim: false,
+    })
+      .split("\0")
+      .filter(Boolean);
+  const tracked = list();
+  if (tracked.length === 0) throw new Error(`git ls-files lists no tracked files in ${baseDir}`);
+  const untracked = new Set(list("--others", "--exclude-standard"));
   const excludedSet = new Set(Object.keys(excluded));
-  return [...new Set(found)].filter((file) => !excludedSet.has(file)).sort();
+  const found = [
+    ...new Set(scopes.flatMap((scope) => scopeFiles(scope, [...tracked, ...untracked]))),
+  ]
+    .filter((file) => !excludedSet.has(file))
+    .sort();
+  for (const file of found) if (untracked.has(file)) log(`node-tests: running untracked ${file}`);
+  return found;
 }
 
 export function shuffleFiles(files, seed) {
@@ -182,6 +187,10 @@ function parseArgs(argv) {
       opts.seed = Math.trunc(Number(raw)) >>> 0;
     } else if (arg === "--dry-run") {
       opts.dryRun = true;
+    } else if (arg.startsWith("--test-name-pattern")) {
+      throw new Error(
+        `${arg} is not passed on; run the files it names with node --test --test-name-pattern=<pattern> <file>...`,
+      );
     } else {
       throw new Error(`unknown argument: ${arg}`);
     }

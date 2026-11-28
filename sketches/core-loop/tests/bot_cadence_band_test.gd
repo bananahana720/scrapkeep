@@ -607,7 +607,7 @@ func _apply_keystone_pattern(pilot: String, keystone_id: String, wid: String) ->
 	tree.open_checkpoint()
 	var ok: bool = tree.pick(keystone_id)
 	_t.check("keystone %s applies cleanly for %s" % [keystone_id, pilot], ok)
-	_game.combat._rebuild_patterns()
+	_game.combat.rebuild_patterns()
 	return _game.combat.pattern(wid)
 
 
@@ -700,7 +700,7 @@ func _check_depth1_keystones_cadence() -> void:
 				"nov kinds %s" % [nov_k])
 	# Restore clean tree & patterns.
 	_game.player.tree.reset("pylon_engineer")
-	_game.combat._rebuild_patterns()
+	_game.combat.rebuild_patterns()
 
 
 func _check_world_one_tree_pair_picks() -> void:
@@ -754,7 +754,7 @@ func _check_world_one_tree_pair_picks() -> void:
 	_t.check("unrecognized tree_policy leaves pending offer untouched",
 		tree.pending() and bad_drv.tree_picks.is_empty(), "pending=%s picks=%s" % [tree.pending(), bad_drv.tree_picks])
 	tree.reset("pylon_engineer")
-	_game.combat._rebuild_patterns()
+	_game.combat.rebuild_patterns()
 
 
 func _check_mixed_roster_depth1_coverage() -> void:
@@ -788,7 +788,7 @@ func _check_mixed_roster_depth1_coverage() -> void:
 	_t.check("default mixed-roster seeds 0..11 exercise all 12 World-1 Depth-1 keystones once each",
 		all_once, "counts=%s" % [counts])
 	tree.reset("pylon_engineer")
-	_game.combat._rebuild_patterns()
+	_game.combat.rebuild_patterns()
 
 
 func _check_world_one_resume_preserves_saved_tree() -> void:

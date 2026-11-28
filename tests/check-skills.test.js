@@ -11,7 +11,7 @@ const execFileAsync = promisify(execFile);
 const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixtures = path.join(root, "tests/fixtures/check-skills");
-const skillNames = ["reactive-model-loop", "scrapkeep-lab"];
+const skillNames = ["reactive-model-loop", "project-skill"];
 
 // `.claude/skills/<name>` symlinks are never committed to the fixture tree
 // (fs.cp can rewrite a relative symlink's target when it copies one), so the
@@ -203,9 +203,9 @@ describe("check-skills", { concurrency: CONCURRENCY }, () => {
   });
 
   test("a broken .claude/skills link fails with a named finding", async () => {
-    const { status, findings, stdout } = await runFixture("base", { broken: "scrapkeep-lab" });
+    const { status, findings, stdout } = await runFixture("base", { broken: "project-skill" });
     assert.equal(status, 1, stdout);
-    assert.ok(failures(findings, "link").some((f) => f.file.includes("scrapkeep-lab")));
+    assert.ok(failures(findings, "link").some((f) => f.file.includes("project-skill")));
   });
 
   test("a forbidden token in the portable skill fails with a named finding", async () => {
@@ -232,16 +232,6 @@ describe("check-skills", { concurrency: CONCURRENCY }, () => {
     assert.ok(
       failures(findings, "lessons").some(
         (f) => f.message.includes("Overturned by") && f.message.includes("RML-01"),
-      ),
-    );
-  });
-
-  test("an RML id missing from the origin map fails with a named finding", async () => {
-    const { status, findings, stdout } = await runFixture("rml-missing-from-map");
-    assert.equal(status, 1, stdout);
-    assert.ok(
-      failures(findings, "lessons").some(
-        (f) => f.message.includes("RML-02") && f.message.includes("origin map"),
       ),
     );
   });
@@ -379,22 +369,25 @@ describe("check-skills", { concurrency: CONCURRENCY }, () => {
     }
   });
 
-  test("B3: an RML- id inside the lab skill's ledger fails (prefix scope)", async () => {
+  test("B3: an RML- id inside a project skill's ledger fails (prefix scope)", async () => {
     const { status, findings, stdout } = await runFixture("wrong-prefix-scope");
     assert.equal(status, 1, stdout);
     assert.ok(
       failures(findings, "lessons").some(
-        (f) => f.message.includes("SKL-99") && f.message.includes("belong only in"),
+        (f) =>
+          f.file.includes("project-skill") &&
+          f.message.includes("RML-99") &&
+          f.message.includes("RML- ids belong only in"),
       ),
     );
   });
 
-  test("B3: a multi-id citation (SKL-01, SKL-99) is recognised and the missing id fails alone", async () => {
+  test("B3: a multi-id citation (DEV-01, DEV-99) is recognised and the missing id fails alone", async () => {
     const { status, findings, stdout } = await runFixture("multi-id-citation");
     assert.equal(status, 1, stdout);
     const hits = failures(findings, "lessons");
-    assert.ok(hits.some((f) => f.message.includes("SKL-99")));
-    assert.ok(!hits.some((f) => f.message.includes("cited lesson SKL-01")));
+    assert.ok(hits.some((f) => f.message.includes("DEV-99")));
+    assert.ok(!hits.some((f) => f.message.includes("cited lesson DEV-01")));
   });
 
   // B4
@@ -437,6 +430,30 @@ describe("check-skills", { concurrency: CONCURRENCY }, () => {
       ),
       JSON.stringify(findings, null, 2),
     );
+  });
+
+  test("N3: a gitignored folder cited as a folder is not reported when it is missing, a file under it still warns", async () => {
+    const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-skills-"));
+    try {
+      const repoRoot = await buildMinimalRepo(temporary, {
+        skillMd: goodSkillMd({
+          body: "2. Keep the proof under `artifacts/local/` and the log at `artifacts/local/run.log`.\n",
+        }),
+        lessonsMd: GOOD_LESSONS,
+      });
+      await writeFile(path.join(repoRoot, ".gitignore"), "artifacts/local/\n");
+      await linkSkills(repoRoot, {});
+      const { findings } = await runAgainst(repoRoot);
+      assert.deepEqual(failures(findings, "paths"), []);
+      assert.deepEqual(
+        warnings(findings, "paths").map((f) => f.message),
+        [
+          "path is under a gitignored directory, not checkable in a fresh clone: artifacts/local/run.log",
+        ],
+      );
+    } finally {
+      await rm(temporary, { recursive: true, force: true });
+    }
   });
 
   // N1
@@ -538,21 +555,21 @@ Resolve this skill directory through symlinks.
 
   // N10: link failure modes
   test("N10: a .claude/skills entry that is a regular file, not a symlink, fails", async () => {
-    const { status, findings, stdout } = await runFixture("base", { notSymlink: "scrapkeep-lab" });
+    const { status, findings, stdout } = await runFixture("base", { notSymlink: "project-skill" });
     assert.equal(status, 1, stdout);
     assert.ok(
       failures(findings, "link").some(
-        (f) => f.file.includes("scrapkeep-lab") && f.message.includes("not a symlink"),
+        (f) => f.file.includes("project-skill") && f.message.includes("not a symlink"),
       ),
     );
   });
 
   test("N10: a .claude/skills symlink pointing at the wrong skill directory fails", async () => {
-    const { status, findings, stdout } = await runFixture("base", { wrongTarget: "scrapkeep-lab" });
+    const { status, findings, stdout } = await runFixture("base", { wrongTarget: "project-skill" });
     assert.equal(status, 1, stdout);
     assert.ok(
       failures(findings, "link").some(
-        (f) => f.file.includes("scrapkeep-lab") && f.message.includes("expected"),
+        (f) => f.file.includes("project-skill") && f.message.includes("expected"),
       ),
     );
   });

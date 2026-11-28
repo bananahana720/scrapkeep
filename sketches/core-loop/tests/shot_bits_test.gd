@@ -2,6 +2,7 @@
 extends SceneTree
 
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Items := preload("res://src/build/items.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -240,7 +241,7 @@ func _compose(run_seed: int, builds: int) -> Dictionary:
 		var held: Array = []
 		var offered := {}
 		for pick in BUILD_SIZE:
-			var offer: Array = Parts.roll(rng, Parts.gate_rarities(rng.randi_range(0, 2)), class_id, held, OFFER_SIZE, [], offered)
+			var offer: Array = Parts.roll(rng, PartOffers.gate_rarities(rng.randi_range(0, 2)), class_id, held, OFFER_SIZE, [], offered)
 			if offer.is_empty():
 				continue
 			for key in offer:

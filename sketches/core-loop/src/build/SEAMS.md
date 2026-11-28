@@ -144,5 +144,5 @@ Every item, Moss cell, relic and active row names its `maker` (`maker_sets.gd` l
 - `build.maker_bonuses() -> Array`: the live bonus ids, in `MakerSets.SETS` order.
 - `build.maker_fires_twice() -> bool`: the active rack asks this at release (Open Frame: fired in the air, fire twice).
 - A set completing is announced once a run as `cause_armed("set_" + bonus)`, and each firing as `cause_fired("set_" + bonus, target, at)`. No `CAUSE_ROWS` row exists for them yet, so presentation draws nothing of its own; the bonuses draw with combat's effect rings and sparks.
-- Offers lean 1.5x toward a maker's unheld pieces once two of its parts are held (`Parts.maker_nudge`). The nudge reads held parts only, since an offer draw sees the part list and not the relics or the rack; the set counts read all three.
-- Rounded Up deals its extra through combat's wear-trail bypass (`combat._trail_deal`), the same route the primer mesh uses: a door pass would round its own extra again.
+- Offers lean 1.5x toward a maker's unheld pieces once two of its parts are held (`PartOffers.maker_nudge`). The nudge reads held parts only, since an offer draw sees the part list and not the relics or the rack; the set counts read all three.
+- Rounded Up deals its extra through combat's wear-trail bypass (`combat.trail_deal`), the same route the primer mesh uses: a door pass would round its own extra again.

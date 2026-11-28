@@ -64,14 +64,13 @@ test("proc: runProcess reaps stubborn grandchild group with SIGTERM grace and re
   const dir = mkdtempSync(path.join(os.tmpdir(), "proc-test-grace-"));
   try {
     const pidFile = path.join(dir, "child.pid");
-    const started = Date.now();
     const res = await runProcess(
       "/bin/sh",
       ["-c", `trap '' TERM; sleep 30 & echo $! > "${pidFile}"; wait`],
       { timeoutMs: 200, killGraceMs: 200, reapOnClose: true, exitDrainMs: 300 },
     );
     assert.equal(res.timedOut, true);
-    assert.ok(Date.now() - started < 5000);
+    assert.equal(res.signal, "SIGKILL");
     const grandchild = Number(readFileSync(pidFile, "utf8").trim());
     assert.equal(pidAlive(grandchild), false);
   } finally {
@@ -141,6 +140,37 @@ process.exit(res.interrupted ?? 1);
       } catch {}
     }
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("proc: an onChild that throws stops the child and leaves no signal listener", async () => {
+  const before = { int: process.listenerCount("SIGINT"), term: process.listenerCount("SIGTERM") };
+  let pgid = 0;
+  try {
+    await assert.rejects(
+      runProcess("/bin/sh", ["-c", "sleep 30 & wait"], {
+        timeoutMs: 20000,
+        forwardSignals: true,
+        onChild: (child) => {
+          pgid = child.pid;
+          throw new Error("onChild failed");
+        },
+      }),
+      /onChild failed/,
+    );
+    assert.deepEqual(
+      { int: process.listenerCount("SIGINT"), term: process.listenerCount("SIGTERM") },
+      before,
+    );
+    assert.ok(pgid > 0);
+    await waitGroupDead(pgid, 1500);
+    assert.equal(groupLive(pgid), false);
+  } finally {
+    if (pgid > 0) {
+      try {
+        process.kill(-pgid, "SIGKILL");
+      } catch {}
+    }
   }
 });
 

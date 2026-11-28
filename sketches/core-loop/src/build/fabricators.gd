@@ -1,6 +1,7 @@
 extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Relics := preload("res://src/build/relics.gd")
 const Palette := preload("res://src/core/palette.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
@@ -301,9 +302,9 @@ func _add(at: Vector3, facing: Vector3, held: Array, part_id := "") -> Dictionar
 func _roll(held: Array) -> String:
 	if _rng == null:
 		_rng = RandomNumberGenerator.new()
-	var rarities := Parts.source_rarities("fabricator", _stage)
-	var picks: Array = Parts.roll_for_stage(_rng, rarities, _class_id, held, 1, _stage, [], {}, _stage >= Parts.WORLD_ESCALATION_STAGE_W3) \
-		if _stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+	var rarities := PartOffers.source_rarities("fabricator", _stage)
+	var picks: Array = PartOffers.roll_for_stage(_rng, rarities, _class_id, held, 1, _stage, [], {}, _stage >= PartOffers.WORLD_ESCALATION_STAGE_W3, Parts.offer_ops()) \
+		if _stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 		else Parts.roll(_rng, rarities, _class_id, held, 1)
 	return picks[0] if not picks.is_empty() else "hot_rivets"
 
@@ -312,7 +313,7 @@ func roll_press_target(held: Array, stage := -1) -> String:
 	if _rng == null:
 		_rng = RandomNumberGenerator.new()
 	var at_stage := _stage if stage < 0 else stage
-	var rarities: Array = ["rare"] if at_stage >= Parts.WORLD_ESCALATION_STAGE_W2 else ["common", "rare"]
+	var rarities: Array = ["rare"] if at_stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 else ["common", "rare"]
 	var picks: Array = Parts.roll_high_impact(_rng, rarities, _class_id, held, 1, [], {}, at_stage, false)
 	return String(picks[0]) if not picks.is_empty() else "hot_rivets"
 

@@ -7,6 +7,7 @@ const Activities := preload("res://src/world/activities.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Shop := preload("res://src/build/shop.gd")
 
 # SG13 visible offer odds. Every part source draws from one pool, and every offer shows the
@@ -67,9 +68,9 @@ func _run() -> void:
 func _tables() -> Dictionary:
 	return {
 		"shelf": Shop.SHELF_RARITIES, "shelf floor": Shop.FLOOR_RARITIES, "top shelf": Shop.TOP_RARITIES, "pocket pay": Activities.PAY_RARITIES,
-		"cache pick": CrackedCache.PICK_RARITIES, "fabricator": Parts.SOURCE_RARITIES["fabricator"],
-		"vault": Parts.SOURCE_RARITIES["vault"], "milestone": Parts.SOURCE_RARITIES["milestone"],
-		"gate 0 cores": Parts.gate_rarities(0), "gate 1 core": Parts.gate_rarities(1), "gate 2 cores": Parts.gate_rarities(2),
+		"cache pick": CrackedCache.PICK_RARITIES, "fabricator": PartOffers.SOURCE_RARITIES["fabricator"],
+		"vault": PartOffers.SOURCE_RARITIES["vault"], "milestone": PartOffers.SOURCE_RARITIES["milestone"],
+		"gate 0 cores": PartOffers.gate_rarities(0), "gate 1 core": PartOffers.gate_rarities(1), "gate 2 cores": PartOffers.gate_rarities(2),
 	}
 
 
@@ -217,7 +218,7 @@ func _shelf() -> void:
 	for i in shop.shelf.size():
 		var entry: Dictionary = shop.shelf[i]
 		_t.check("shelf record %s carries its odds" % entry["part_id"], entry.has("odds") and _matches_row(entry["odds"], tables.call(i)), var_to_str(entry.get("odds", "none")))
-	_t.check("shelf slot 0 is cobalt or better", Parts.rung_of(shop.shelf[0]["part_id"]) >= Parts.RUNG_FLOOR, shop.shelf[0]["part_id"])
+	_t.check("shelf slot 0 is cobalt or better", PartOffers.rung_of(shop.shelf[0]["part_id"], Parts.def) >= PartOffers.RUNG_FLOOR, shop.shelf[0]["part_id"])
 	for offer in shop.shelf_offers():
 		var want := ItemGen.odds(tables.call(int(offer["index"])))
 		_t.eq("offer %d odds equal its table's" % offer["index"], offer.get("odds", []), want)
@@ -229,7 +230,7 @@ func _shelf() -> void:
 		_t.check("the top shelf carries the odds of the table it drew from", _matches_row(top.get("odds", []), _avail(table)), var_to_str(top.get("odds", "none")))
 	shop.reroll()
 	var rerolled := range(shop.shelf.size()).all(func(i): return shop.shelf[i].has("odds") and _matches_row(shop.shelf[i]["odds"], tables.call(i)))
-	_t.check("a rerolled shelf carries odds too", rerolled and Parts.rung_of(shop.shelf[0]["part_id"]) >= Parts.RUNG_FLOOR, "reroll")
+	_t.check("a rerolled shelf carries odds too", rerolled and PartOffers.rung_of(shop.shelf[0]["part_id"], Parts.def) >= PartOffers.RUNG_FLOOR, "reroll")
 
 
 func _paid(kind: String, pay: Dictionary, seed_value: int) -> Dictionary:

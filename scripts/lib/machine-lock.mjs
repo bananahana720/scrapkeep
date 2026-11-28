@@ -24,7 +24,6 @@ export function machineSlotCount(env = process.env) {
   return slots;
 }
 
-export const FOREIGN_CLAIM_MAX_MS = 3 * 60 * 60 * 1000;
 export const HEARTBEAT_MS = 15_000;
 export const STALE_CLAIM_MS = 90_000;
 
@@ -280,18 +279,6 @@ export async function acquireSlot({
 
 export async function acquireMachine(pollMs = 2000) {
   const lease = await acquireSlot({ pollMs });
-  process.once("exit", lease.release);
-  return lease.waitMs;
-}
-
-export function namedRunMustWait({ directory = slotRoot(), slots = machineSlotCount() } = {}) {
-  return Array.from({ length: slots }, (_, index) =>
-    slotOwner(path.join(directory, `slot-${index}`)),
-  ).every((holder) => holder?.alive);
-}
-
-export async function waitForMachine(options = {}) {
-  const lease = await acquireSlot(options);
   process.once("exit", lease.release);
   return lease.waitMs;
 }

@@ -7,7 +7,6 @@ const Swarm := preload("res://src/combat/swarm.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
-const Terrain := preload("res://src/world/terrain.gd")
 
 const SCRIPTS := {
 	"mag_trapper": preload("res://src/combat/mag_trapper.gd"),
@@ -108,7 +107,7 @@ func make(kind: String) -> Node3D:
 
 # Godot main-thread load() stalls ~420 ms on first spawn; skip threaded warm-up in deterministic bot runs.
 func _warm_scripts() -> void:
-	if SimClock.ticks and not Terrain.threaded_in_bot_runs:
+	if SimClock.ticks and not SimClock.threaded_in_bot_runs:
 		return
 	for kind in Roster.ROWS.keys():
 		if _loaded.has(kind) or SCRIPTS.has(kind) or not Roster.row(kind).has("script") or not Roster.built(kind):

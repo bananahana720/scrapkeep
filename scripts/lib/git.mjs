@@ -74,6 +74,7 @@ export function gitState(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
 export function cleanHead(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
   const tracked = spawn("git", ["status", "--porcelain", "--untracked-files=no"], {
     cwd,
+    env: cwdDecidesRepository(),
     encoding: "utf8",
     maxBuffer: DEFAULT_MAX_BUFFER,
   });
@@ -93,7 +94,7 @@ export function cleanHead(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
       "sketches/core-loop/src",
       "sketches/core-loop/assets",
     ],
-    { cwd, encoding: "utf8", maxBuffer: DEFAULT_MAX_BUFFER },
+    { cwd, env: cwdDecidesRepository(), encoding: "utf8", maxBuffer: DEFAULT_MAX_BUFFER },
   );
   if (loose.error) throw loose.error;
   if (loose.status !== 0) throw new Error(`git status failed: ${loose.stderr}`);

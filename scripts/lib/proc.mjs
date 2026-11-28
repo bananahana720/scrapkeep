@@ -93,6 +93,34 @@ export function runProcess(
     const detached = Boolean(reapGroup && process.platform !== "win32");
     let child;
     let interrupted;
+    let stopping = null;
+    let killTimer = null;
+
+    const sendSig = (sig) => {
+      if (detached) killGroup(child, sig);
+      else {
+        try {
+          child.kill(sig);
+        } catch {}
+      }
+    };
+
+    const terminate = (forceImmediate) => {
+      if (reapOnClose) {
+        stopping ??= stopGroup(child, { graceMs: forceImmediate ? 0 : killGraceMs });
+        return;
+      }
+      if (forceImmediate || killGraceMs <= 0) {
+        sendSig("SIGKILL");
+        return;
+      }
+      sendSig("SIGTERM");
+      if (!killTimer) {
+        killTimer = setTimeout(() => sendSig("SIGKILL"), killGraceMs);
+        killTimer.unref?.();
+      }
+    };
+
     const onSignal = (sig) => {
       interrupted = sig === "SIGINT" ? 130 : 143;
       process.exitCode = interrupted;
@@ -127,7 +155,13 @@ export function runProcess(
       return;
     }
 
-    onChild?.(child);
+    try {
+      onChild?.(child);
+    } catch (error) {
+      forward(false);
+      terminate(true);
+      throw error;
+    }
 
     let stdout = "";
     let stderr = "";
@@ -135,35 +169,8 @@ export function runProcess(
     const chunksOut = [];
     let timedOut = false;
     let aborted = false;
-    let stopping = null;
-    let killTimer = null;
     let drainTimer = null;
     let done = false;
-
-    const sendSig = (sig) => {
-      if (detached) killGroup(child, sig);
-      else {
-        try {
-          child.kill(sig);
-        } catch {}
-      }
-    };
-
-    const terminate = (forceImmediate) => {
-      if (reapOnClose) {
-        stopping ??= stopGroup(child, { graceMs: forceImmediate ? 0 : killGraceMs });
-        return;
-      }
-      if (forceImmediate || killGraceMs <= 0) {
-        sendSig("SIGKILL");
-        return;
-      }
-      sendSig("SIGTERM");
-      if (!killTimer) {
-        killTimer = setTimeout(() => sendSig("SIGKILL"), killGraceMs);
-        killTimer.unref?.();
-      }
-    };
 
     const onAbort = () => {
       aborted = true;

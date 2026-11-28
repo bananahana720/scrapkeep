@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -31,12 +32,12 @@ import {
   parseArgs,
   batchable,
   resolveNamedTests,
+  unmatchedTestPatterns,
   runBootTask,
   seedBaseGodot,
   shardLanePlan,
   shouldRunBoot,
   splitBatch,
-  takeBatch,
   takeBatchPacked,
   placeholderIncrease,
   plan,
@@ -56,13 +57,7 @@ import {
   removedChecks,
   checksRemoved,
 } from "./sketch-fast.mjs";
-import {
-  IMPORT_TRIES,
-  importTry,
-  importWithRetry,
-  quarantineRecord,
-  scriptErrorCount,
-} from "./sketch-smoke.mjs";
+import { IMPORT_TRIES, importTry, importWithRetry, scriptErrorCount } from "./sketch-smoke.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
 
@@ -765,29 +760,6 @@ test("planted head red: a cached base red never hides a head-only red", () => {
   );
 });
 
-test("a fast-lane quarantine receipt entry carries owner, reason, deadline and the run's result", () => {
-  const entry = {
-    test: "a_test",
-    owner: "Systems",
-    reason: "why",
-    added: "2026-10-22",
-    deadline: "2026-10-29",
-  };
-  assert.deepEqual(
-    quarantineRecord(entry, { ok: false, exit: null, signal: "SIGABRT", failing: 0 }),
-    {
-      test: "a_test",
-      owner: "Systems",
-      reason: "why",
-      deadline: "2026-10-29",
-      result: "red",
-      exit: null,
-      signal: "SIGABRT",
-      failing_checks: 0,
-    },
-  );
-});
-
 test("a changed test also picks the tests that extend it", () => {
   const index = files({
     "tests/kest_kit_test.gd": "extends SceneTree\n",
@@ -1068,7 +1040,7 @@ test("a plain SceneTree test batches; a timed, solo or extended one does not", (
   assert.equal(batchable("extends SceneTree\nfunc f():\n\tOS.execute('x', [])\n"), false);
 });
 
-test("takeBatch takes consecutive batchable rows within the test and time caps", () => {
+test("takeBatchPacked packs batchable rows past a solo row within the test and time caps", () => {
   const rows = (list) => list.map(([test, ms, ok = true]) => ({ test, ms, ok }));
   const can = (row) => row.ok;
   const q1 = rows([
@@ -1078,25 +1050,29 @@ test("takeBatch takes consecutive batchable rows within the test and time caps",
     ["d", 1],
   ]);
   assert.deepEqual(
-    takeBatch(q1, can).map((row) => row.test),
-    ["a", "b"],
+    takeBatchPacked(q1, can).map((row) => row.test),
+    ["a", "b", "d"],
   );
   assert.deepEqual(
     q1.map((row) => row.test),
-    ["c", "d"],
+    ["c"],
   );
-  assert.deepEqual(takeBatch(q1, can), []);
+  assert.deepEqual(takeBatchPacked(q1, can), []);
   const q2 = rows([
     ["a", 100_000],
     ["b", 30_000],
     ["c", 1],
   ]);
   assert.deepEqual(
-    takeBatch(q2, can).map((row) => row.test),
+    takeBatchPacked(q2, can).map((row) => row.test),
     ["a"],
   );
+  assert.deepEqual(
+    q2.map((row) => row.test),
+    ["b", "c"],
+  );
   const q3 = rows(Array.from({ length: 10 }, (_, i) => [`t${i}`, 1]));
-  assert.equal(takeBatch(q3, can).length, 8);
+  assert.equal(takeBatchPacked(q3, can).length, 8);
 });
 
 test("splitBatch gives each test its own output and names a cut-off test", () => {
@@ -1248,6 +1224,47 @@ test("seedBaseGodot copies head .godot into base without scrapkeep-import.json",
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("parseArgs refuses an argument it does not know, and a flag with no value", () => {
+  assert.throws(
+    () => parseArgs(["--test fx_library_test --test machine_fx_test"]),
+    /unknown argument "--test fx_library_test --test machine_fx_test".*one --test <name> per test/,
+  );
+  assert.throws(() => parseArgs(["fx_library_test"]), /unknown argument "fx_library_test"/);
+  assert.throws(() => parseArgs(["--tests", "fx_library_test"]), /unknown argument "--tests"/);
+  assert.throws(() => parseArgs(["--shuffle", "--base=origin/main"]), /unknown argument/);
+  for (const flag of ["--base", "--budget", "--receipt", "--width", "--pre"]) {
+    assert.throws(() => parseArgs([flag]), new RegExp(`${flag} requires a value`));
+  }
+  for (const flag of ["--base", "--receipt"]) {
+    assert.throws(() => parseArgs([flag, "--shuffle"]), new RegExp(`${flag} requires a value`));
+  }
+  assert.deepEqual(parseArgs(["--test", "fx_library_test", "--test", "machine_fx_*"]).tests, [
+    "fx_library_test",
+    "machine_fx_*",
+  ]);
+});
+
+test("sketch:fast prints one line and exits 2 on an argument it does not know", () => {
+  const ran = spawnSync(
+    process.execPath,
+    [path.join(import.meta.dirname, "sketch-fast.mjs"), "--tests", "fx_library_test"],
+    { encoding: "utf8" },
+  );
+  assert.equal(ran.status, 2);
+  assert.equal(ran.stdout, "");
+  assert.match(ran.stderr, /^sketch:fast: unknown argument "--tests"[^\n]*\n$/);
+});
+
+test("unmatchedTestPatterns names each pattern that matches no test, even beside one that does", () => {
+  const allTests = ["tests/fx_library_test.gd", "tests/machine_fx_test.gd"];
+  assert.deepEqual(unmatchedTestPatterns(allTests, ["fx_library_test", "machine_fx_*"]), []);
+  assert.deepEqual(
+    unmatchedTestPatterns(allTests, ["fx_library_test", "fx_libary_test", "tests/kill_*"]),
+    ["fx_libary_test", "tests/kill_*"],
+  );
+  assert.deepEqual(unmatchedTestPatterns(allTests, []), []);
 });
 
 test("resolveNamedTests strips prefixes/suffixes, matches globs, and plan allowBots keeps bot/solo tests direct", () => {

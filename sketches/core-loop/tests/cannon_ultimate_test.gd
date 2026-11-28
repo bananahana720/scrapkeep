@@ -122,7 +122,7 @@ func _tick() -> void:
 		for h in entry["hazards"]:
 			if not _live.has(h.get_instance_id()) and _combat._clock >= float(entry["options"].get("live_at", INF)):
 				_live[h.get_instance_id()] = _combat._clock
-	_combat._step_cannon(DT)
+	_combat.step_cannon(DT)
 
 
 func _finish_ride() -> void:
@@ -227,25 +227,25 @@ func _cases() -> void:
 	var w := _enemy(target + Vector3.UP, "warden")
 	var budget := {}
 	for i in 20:
-		_combat._cannon_set_piece_hit(w, 100.0, HOME, i == 19, false, budget)
+		_combat.cannon_set_piece_hit(w, 100.0, HOME, i == 19, false, budget)
 	_t.check("one set piece adds at most the Warden posture cap", float(budget.get(w.get_instance_id(), 0.0)) <= preload("res://src/combat/ultimate.gd").warden_cap(w.monster_build()) and w.posture() > 0.0, str(budget))
 	_t.eq("closed guard loses no chunk", w.chunks_left(), 4)
 	w._apply_posture({"gain": 100.0, "contact": false})
 	_t.check("core fixture is open", w.staggered())
 	await physics_frame
-	_combat._cannon_set_piece_hit(w, 60.0, HOME, true, false, budget)
+	_combat.cannon_set_piece_hit(w, 60.0, HOME, true, false, budget)
 	_t.eq("landing shatters the open core", w.chunks_left(), 3)
 
 	await _reset()
 	foe = _enemy(target + Vector3.UP)
 	var hp: float = foe.hp
-	_combat._cannon_set_piece_hit(foe, 60.0, HOME, true, false, {})
+	_combat.cannon_set_piece_hit(foe, 60.0, HOME, true, false, {})
 	var class_one: float = hp - foe.hp
 	hp = foe.hp
-	_combat._cannon_set_piece_hit(foe, 60.0 * 1.6, HOME, true, false, {})
+	_combat.cannon_set_piece_hit(foe, 60.0 * 1.6, HOME, true, false, {})
 	_t.near("class V damage follows the heft table", (hp - foe.hp) / class_one, 1.6, 0.001)
 	foe.kind = "mind_fixture"
-	_t.near("boss takes half set-piece damage", _combat._cannon_set_piece_hit(foe, 60.0, HOME, true, false, {}), 30.0)
+	_t.near("boss takes half set-piece damage", _combat.cannon_set_piece_hit(foe, 60.0, HOME, true, false, {}), 30.0)
 	_combat._cannon_expose(foe, 2.5, "ram")
 	_t.check("exposure has a visible mark", foe.has_node("CannonExposure"))
 	_combat._clock += 2.499

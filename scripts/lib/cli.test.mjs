@@ -44,7 +44,6 @@ const EXCLUDED_S6 = new Set([
   "scripts/lib/receipt.test.mjs",
   "scripts/pacing-check.mjs",
   "scripts/play.mjs",
-  "scripts/power-read.mjs",
   "scripts/redteam/run.mjs",
   "scripts/sketch-fast.mjs",
   "scripts/sketch-fast.test.mjs",

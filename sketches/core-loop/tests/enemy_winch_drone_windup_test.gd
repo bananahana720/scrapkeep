@@ -252,7 +252,7 @@ func _interruptions() -> void:
 	while drone.phase != drone.Phase.WARN or drone._t < 0.5:
 		game.player.reset_to(ball)
 		await physics_frame
-	game.combat._hit(drone, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
+	game.combat.deal_hit(drone, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
 	var tipped := false
 	for frame in 27:
 		await physics_frame

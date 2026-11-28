@@ -3,9 +3,19 @@ extends RefCounted
 
 static func matching(t, roots: Array, pattern: String) -> Array[String]:
 	var out: Array[String] = []
+	out.assign(captures(t, roots, pattern).keys())
+	out.sort()
+	return out
+
+
+static func captures(t, roots: Array, pattern: String) -> Dictionary:
+	var out := {}
 	var re := RegEx.new()
 	if re.compile(pattern, false) != OK or not re.is_valid():
 		t.check("source scan pattern compiles", false, pattern)
+		return out
+	if roots.is_empty():
+		t.check("source scan has roots", false, "no root folder")
 		return out
 	for root in roots:
 		var files: Array[String] = []
@@ -20,9 +30,13 @@ static func matching(t, roots: Array, pattern: String) -> Array[String]:
 			if err != OK or text.is_empty():
 				t.check("source scan reads " + path, false, "error %d, %d characters" % [err, text.length()])
 				continue
-			if re.search(text) != null:
-				out.append(path)
-	out.sort()
+			var found := re.search_all(text)
+			if found.is_empty():
+				continue
+			var rows: Array[PackedStringArray] = []
+			for hit in found:
+				rows.append(hit.strings)
+			out[path] = rows
 	return out
 
 

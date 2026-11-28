@@ -2,20 +2,21 @@
 extends SceneTree
 
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 # SQ19 (wave 14, comps/roboquest/classes-and-perks.md:82, comps/gunfire/heroes-and-ascensions.md:87):
-# each pilot's offers lean to its own kit by Parts.KIT_SHARE, with a neutral shelf that never
+# each pilot's offers lean to its own kit by PartOffers.KIT_SHARE, with a neutral shelf that never
 # stalls a build. For every pilot, a greedy and a random bot each see 200 gate draws (10 runs of
-# 4 stages, 5 gates a stage, through Parts.roll_gate with the stage's offered counts) and pick
+# 4 stages, 5 gates a stage, through PartOffers.roll_gate with the stage's offered counts) and pick
 # one part a draw. Checks, on the full authored catalogue:
 #   - the weighted share (parts in Parts.in_kit) is inside 60 to 80% for every pilot and bot;
 #   - the top-10 most-offered parts of any two pilots overlap under 50% (of the smaller top list);
 #   - movement is at most 15% of each pilot's offers;
-#   - no neutral shelf part is offered more than Parts.NEUTRAL_REPEAT_CAP times in one stage;
-#   - each pilot's two dominant buckets (Parts.bucket_of) are its declared kit pair; the six
+#   - no neutral shelf part is offered more than PartOffers.NEUTRAL_REPEAT_CAP times in one stage;
+#   - each pilot's two dominant buckets (PartOffers.bucket_of) are its declared kit pair; the six
 #     measured pairs hold at least MIN_DISTINCT_PAIRS different pairs and no pair is held by more
 #     than MAX_PILOTS_PER_PAIR pilots (the six kits declare the same, and none declares
 #     UNREACHABLE_PAIR); every pilot's kit holds a common part that hits harder;
@@ -29,11 +30,11 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # and the alpha checks are asserted: the weighted share inside 60 to 80% for every pilot and bot,
 # movement at most 15%, the repeat cap, the neutral fallback, no other class's part, and top-10
 # overlap at most ALPHA_OVERLAP_MAX for any two pilots. Tally's movement share is printed against
-# Parts.MOVEMENT_SHARE (12%), and Tally's Winch Pawl must show in Tally's offers and no one else's.
+# PartOffers.MOVEMENT_SHARE (12%), and Tally's Winch Pawl must show in Tally's offers and no one else's.
 # At 19 parts the share ran 0.12 to 0.69 and any two top-10s overlapped 0.70 to 1.00.
 # The alpha pairs are asserted at ALPHA_MIN_PAIRS distinct, not MIN_DISTINCT_PAIRS: the fifth
 # pair is Rivet's movement + skill, and on this list Rivet's weapon share stays above its movement
-# share. Movement is held to Parts.MOVEMENT_SHARE of a slot, about 0.10 to 0.11 of Rivet's offers,
+# share. Movement is held to PartOffers.MOVEMENT_SHARE of a slot, about 0.10 to 0.11 of Rivet's offers,
 # and the stage-2 pattern guarantee alone puts about 0.09 in weapon (the greedy bot never picks an
 # off-kit pattern, so every stage-2 gate gets one). Measured at SQ19b: weapon 0.113, movement
 # 0.106. The full catalogue reaches it because its skill shelf parts lean Rivet's spare slots
@@ -48,7 +49,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # A kit with no common hitter puts the hitter of every gate pair off-kit (Tally's old kit measured
 # a 0.37 share), so each kit must hold one.
 # 2026-10-17 (maker sets): the bars above measure the kit lean alone, so these draws run with the
-# maker nudge off (Parts.maker_nudge_on). The nudge keeps every group's and bucket's weight in each
+# maker nudge off (PartOffers.maker_nudge_on). The nudge keeps every group's and bucket's weight in each
 # slot (maker_sets_case proves that per slot); it moves which piece of a bucket shows, and so the
 # bots' picks and the seeded path. One more pass with it on checks every pilot's bucket shares
 # stay within NUDGE_DRIFT of the pass without it (about two standard errors of a 10-run share).
@@ -66,13 +67,13 @@ const STAGES := 4
 const GATES_PER_STAGE := 5
 const CHOICES := 2
 const SHARE_BAND := [0.60, 0.80]
-# 2026-10-17 (Overpowered pays, Parts._swap_stacked_out): a part held at its stack cap is swapped
+# 2026-10-17 (Overpowered pays, PartOffers.swap_stacked_out): a part held at its stack cap is swapped
 # out of the draw, so a greedy bot that has stacked out its kit sees off-kit parts and its share
 # may sit under the band (Tarn measured 0.573 full, 0.568 alpha) (coordinator ruling (a), 22:54Z).
 # The random bot keeps the band.
 const GREEDY_SHARE_FLOOR := 0.55
 # 2026-10-21 (ruling 11, #149 6274605849): the full list's bar is at most 0.50, as the alpha list's;
-# a stacked-out swap (Parts._swap_stacked_out) lands Tarn on exactly 0.50 with Tally and the Cannon.
+# a stacked-out swap (PartOffers.swap_stacked_out) lands Tarn on exactly 0.50 with Tally and the Cannon.
 const OVERLAP_MAX := 0.5
 const MOVEMENT_MAX := 0.15
 const TOP := 10
@@ -93,11 +94,11 @@ var _t := preload("res://tests/support/t.gd").new("offer_weights_test")
 
 
 func _initialize() -> void:
-	Synergies.table = null
-	_t.check("the full catalogue is unlisted", not Parts.listed_only(), "")
+	Synergies.set_table(null)
+	_t.check("the full catalogue is unlisted", not PartOffers.listed_only(), "")
 	_t.check("the kit share is a declared constant inside the band",
-		Parts.KIT_SHARE >= SHARE_BAND[0] and Parts.KIT_SHARE <= SHARE_BAND[1], str(Parts.KIT_SHARE))
-	_t.check("every pilot declares a kit of two buckets", PILOTS.all(func(p): return Parts.KITS.has(p) and Parts.KITS[p].size() == 2), "")
+		PartOffers.KIT_SHARE >= SHARE_BAND[0] and PartOffers.KIT_SHARE <= SHARE_BAND[1], str(PartOffers.KIT_SHARE))
+	_t.check("every pilot declares a kit of two buckets", PILOTS.all(func(p): return PartOffers.KITS.has(p) and PartOffers.KITS[p].size() == 2), "")
 	var declared := {}
 	for pilot in PILOTS:
 		declared[pilot] = _declared(pilot)
@@ -108,26 +109,26 @@ func _initialize() -> void:
 	var defence_hitters := {}
 	for pilot in PILOTS:
 		for id in Parts.offer_pool(pilot, ["common"]):
-			if Parts.def(id).hits_harder() and Parts.bucket_of(id) == "defence":
+			if Parts.def(id).hits_harder() and PartOffers.bucket_of(id, Parts.row) == "defence":
 				defence_hitters[id] = true
 	# The premise of the PAIRS note: if this goes red, re-measure the pair line before trusting it.
 	_t.eq("no common part that hits harder is in the defence bucket (PAIRS premise)", defence_hitters.keys(), [])
-	Parts.maker_nudge_on = false
+	PartOffers.maker_nudge_on = false
 	var full := _measure("full")
 	_judge("full", full, true)
-	Parts.maker_nudge_on = true
+	PartOffers.maker_nudge_on = true
 	_nudge_drift(full, _measure("full nudged"))
-	Parts.maker_nudge_on = false
+	PartOffers.maker_nudge_on = false
 	_fallback("full")
 	_keep_neutral()
-	Synergies.table = AlphaDefs
-	_t.check("the alpha table lists its parts", Parts.listed_only(), "")
+	Synergies.set_table(AlphaDefs)
+	_t.check("the alpha table lists its parts", PartOffers.listed_only(), "")
 	var alpha := _measure("alpha")
 	_judge("alpha", alpha, false)
 	_tally_part(alpha)
 	_fallback("alpha")
-	Synergies.table = null
-	Parts.maker_nudge_on = true
+	Synergies.set_table(null)
+	PartOffers.maker_nudge_on = true
 	_trees()
 	quit(_t.verdict())
 
@@ -151,19 +152,19 @@ func _measure(label: String) -> Dictionary:
 				for stage in range(1, STAGES + 1):
 					var offered := {}
 					for _gate in GATES_PER_STAGE:
-						var picks: Array = Parts.roll_gate(rng, ["common"], pilot, held, CHOICES, stage, offered)
+						var picks: Array = PartOffers.roll_gate(rng, ["common"], pilot, held, CHOICES, stage, offered, Parts.offer_ops())
 						s["draws"] += 1
 						for id in picks:
 							offered[id] = offered.get(id, 0) + 1
 							s["slots"] += 1
 							s["counts"][id] = s["counts"].get(id, 0) + 1
-							s["buckets"][Parts.bucket_of(id)] += 1
+							s["buckets"][PartOffers.bucket_of(id, Parts.row)] += 1
 							if Parts.in_kit(pilot, id):
 								s["kit"] += 1
 							var only := String(Parts.row(id).get("class_id", ""))
 							if only != "" and only != pilot:
 								s["foreign"].append(id)
-							if id in Parts.NEUTRAL_SHELF and not Parts.in_kit(pilot, id):
+							if id in PartOffers.NEUTRAL_SHELF and not Parts.in_kit(pilot, id):
 								s["neutral_max"] = maxi(s["neutral_max"], offered[id])
 						if not picks.is_empty():
 							held.append(_pick(bot, pilot, picks, pick_rng))
@@ -201,7 +202,7 @@ func _seed_shares(pilot: String, bot: String) -> Array:
 			for stage in range(1, STAGES + 1):
 				var offered := {}
 				for _gate in GATES_PER_STAGE:
-					var picks: Array = Parts.roll_gate(rng, ["common"], pilot, held, CHOICES, stage, offered)
+					var picks: Array = PartOffers.roll_gate(rng, ["common"], pilot, held, CHOICES, stage, offered, Parts.offer_ops())
 					for id in picks:
 						offered[id] = offered.get(id, 0) + 1
 						slots += 1
@@ -292,8 +293,8 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 			var in_band: bool = share >= floor_share and share <= SHARE_BAND[1]
 			_t.check("%s %s %s weighted share inside %d to 80%%" % [label, pilot, bot, roundi(floor_share * 100.0)], in_band, detail)
 			_t.check("%s %s %s movement at most 15%%" % [label, pilot, bot], _bucket_share(s, "movement") <= MOVEMENT_MAX, "%.3f" % _bucket_share(s, "movement"))
-			_t.check("%s %s %s no neutral part over its repeat cap" % [label, pilot, bot], s["neutral_max"] <= Parts.NEUTRAL_REPEAT_CAP,
-				"max %d a stage, cap %d" % [s["neutral_max"], Parts.NEUTRAL_REPEAT_CAP])
+			_t.check("%s %s %s no neutral part over its repeat cap" % [label, pilot, bot], s["neutral_max"] <= PartOffers.NEUTRAL_REPEAT_CAP,
+				"max %d a stage, cap %d" % [s["neutral_max"], PartOffers.NEUTRAL_REPEAT_CAP])
 			_t.eq("%s %s %s offers no other class's part" % [label, pilot, bot], s["foreign"], [])
 		var m := _merged(stats, pilot)
 		tops[pilot] = _top(m["counts"])
@@ -344,7 +345,7 @@ func _pair_spread(label: String, pairs: Dictionary, strict: bool) -> void:
 # alpha offers and in no other pilot's. Tally's movement share is printed against the 12% target.
 func _tally_part(stats: Dictionary) -> void:
 	_t.eq("%s is a Tally class part on the alpha list" % TALLY_PART,
-		[TALLY_PART in AlphaDefs.PARTS, String(Parts.row(TALLY_PART).get("class_id", "")), Parts.bucket_of(TALLY_PART)], [true, "tally", "movement"])
+		[TALLY_PART in AlphaDefs.PARTS, String(Parts.row(TALLY_PART).get("class_id", "")), PartOffers.bucket_of(TALLY_PART, Parts.row)], [true, "tally", "movement"])
 	for pilot in PILOTS:
 		var seen := 0
 		for bot in stats[pilot]:
@@ -358,17 +359,17 @@ func _tally_part(stats: Dictionary) -> void:
 	# most MOVEMENT_SHARE in all). Tally holds two on this list, so its movement share sits at or
 	# above 1.5 of one row's share; a flat CLASS_MOVEMENT_SHARE measured 0.072 here.
 	var rows: Array = Parts.offer_pool("tally", ["common"]).filter(func(id): return String(Parts.row(id).get("class_id", "")) == "tally" \
-		and Parts.bucket_of(id) == "movement")
+		and PartOffers.bucket_of(id, Parts.row) == "movement")
 	_t.eq("alpha tally holds two class movement rows", rows.size(), 2)
 	var moved := _bucket_share(m, "movement")
 	_t.check("alpha tally movement share is at least 1.5 x CLASS_MOVEMENT_SHARE and at most MOVEMENT_SHARE",
-		moved >= 1.5 * Parts.CLASS_MOVEMENT_SHARE and moved <= Parts.MOVEMENT_SHARE,
-		"%.3f, bounds %.3f to %.3f, rows %s" % [moved, 1.5 * Parts.CLASS_MOVEMENT_SHARE, Parts.MOVEMENT_SHARE, rows])
-	print("[alpha tally movement share] %.3f against the %.2f target (cap %.2f)" % [_bucket_share(m, "movement"), Parts.MOVEMENT_SHARE, MOVEMENT_MAX])
+		moved >= 1.5 * PartOffers.CLASS_MOVEMENT_SHARE and moved <= PartOffers.MOVEMENT_SHARE,
+		"%.3f, bounds %.3f to %.3f, rows %s" % [moved, 1.5 * PartOffers.CLASS_MOVEMENT_SHARE, PartOffers.MOVEMENT_SHARE, rows])
+	print("[alpha tally movement share] %.3f against the %.2f target (cap %.2f)" % [_bucket_share(m, "movement"), PartOffers.MOVEMENT_SHARE, MOVEMENT_MAX])
 
 
 func _declared(pilot: String) -> Array:
-	var pair: Array = Parts.KITS[pilot].keys()
+	var pair: Array = PartOffers.KITS[pilot].keys()
 	pair.sort()
 	return pair
 
@@ -383,7 +384,7 @@ func _fallback(label: String) -> void:
 			var rng := RandomNumberGenerator.new()
 			rng.seed = 7700 + seed_value
 			var picks: Array = Parts.roll(rng, ["common"], pilot, [], CHOICES, kit)
-			if picks.any(func(id): return id in Parts.NEUTRAL_SHELF):
+			if picks.any(func(id): return id in PartOffers.NEUTRAL_SHELF):
 				shown += 1
 		_t.check("%s %s a draw with no kit part still shows a neutral choice" % [label, pilot], shown == 50,
 			"%d of 50 draws (kit of %d excluded)" % [shown, kit.size()])
@@ -396,10 +397,10 @@ func _fallback(label: String) -> void:
 func _keep_neutral() -> void:
 	for pilot in PILOTS:
 		var pool: Array = Parts.offer_pool(pilot, ["common"])
-		var off: Array = pool.filter(func(id): return not Parts.in_kit(pilot, id) and not id in Parts.NEUTRAL_SHELF)
+		var off: Array = pool.filter(func(id): return not Parts.in_kit(pilot, id) and not id in PartOffers.NEUTRAL_SHELF)
 		var hitter: Array = off.filter(func(id): return Parts.def(id).hits_harder())
 		var plain: Array = off.filter(func(id): return not Parts.def(id).hits_harder())
-		var shelf: Array = pool.filter(func(id): return id in Parts.NEUTRAL_SHELF and not Parts.in_kit(pilot, id))
+		var shelf: Array = pool.filter(func(id): return id in PartOffers.NEUTRAL_SHELF and not Parts.in_kit(pilot, id))
 		if hitter.is_empty() or plain.is_empty() or shelf.is_empty():
 			_t.check("%s has an off-kit hitter, an off-kit plain part and a shelf part to test _keep_a_neutral" % pilot, false,
 				"%d hitters, %d plain, %d shelf" % [hitter.size(), plain.size(), shelf.size()])
@@ -408,14 +409,14 @@ func _keep_neutral() -> void:
 		var rest: Array = shelf.duplicate()
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 7900
-		Parts._keep_a_neutral(rng, pilot, picks, rest, {}, 0)
+		PartOffers.keep_a_neutral(rng, pilot, picks, rest, {}, 0, Parts.offer_ops())
 		_t.check("%s _keep_a_neutral turns the plain slot of an off-kit draw into a shelf part" % pilot,
-			picks[0] == hitter[0] and picks[1] in Parts.NEUTRAL_SHELF, "%s from %s" % [picks, [hitter[0], plain[0]]])
+			picks[0] == hitter[0] and picks[1] in PartOffers.NEUTRAL_SHELF, "%s from %s" % [picks, [hitter[0], plain[0]]])
 		var capped := {}
 		for id in shelf:
-			capped[id] = Parts.NEUTRAL_REPEAT_CAP
+			capped[id] = PartOffers.NEUTRAL_REPEAT_CAP
 		var held: Array = [hitter[0], plain[0]]
-		Parts._keep_a_neutral(rng, pilot, held, rest, capped, 0)
+		PartOffers.keep_a_neutral(rng, pilot, held, rest, capped, 0, Parts.offer_ops())
 		_t.eq("%s _keep_a_neutral leaves the draw alone when every shelf part is at its cap" % pilot, held, [hitter[0], plain[0]])
 
 

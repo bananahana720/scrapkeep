@@ -33,7 +33,6 @@ const FORBIDDEN_PORTABLE_TOKENS = [
   "npm run",
   "Andrew",
 ];
-const LAB_SKILL_DIR = "scrapkeep-lab";
 
 const FRONTMATTER_VERB_ALLOWLIST = new Set([
   "Use",
@@ -401,6 +400,7 @@ async function checkPaths(findings, root, file, gitignorePatterns) {
         if (await exists(path.join(root, stripped))) continue;
         if (skillDir !== null && (await exists(path.join(root, skillDir, stripped)))) continue;
         if (isGitignored(gitignorePatterns, stripped)) {
+          if (stripped.endsWith("/")) continue;
           findings.warn(
             "paths",
             file.relative,
@@ -553,9 +553,7 @@ function parseLessons(content) {
     const loose = /^- \*\*([^*]+)\*\*/.exec(line);
     if (loose) {
       const header =
-        /^- \*\*((?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)\*\*\s*·\s*status:\s*(\S+)/.exec(
-          line,
-        );
+        /^- \*\*((?:RML|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)\*\*\s*·\s*status:\s*(\S+)/.exec(line);
       if (header) {
         current = {
           id: header[1],
@@ -578,20 +576,6 @@ function parseLessons(content) {
     if (overturned) current.overturned = overturned[1].trim();
   }
   return { lessons, sectionFound: true, malformed };
-}
-
-function parseOriginMapIds(content) {
-  const lines = content.split("\n");
-  const start = lines.findIndex((line) => line.trim() === "## RML origin map");
-  if (start === -1) return null;
-  let end = start + 1;
-  while (end < lines.length && !/^##\s/.test(lines[end])) end++;
-  const ids = new Set();
-  for (let index = start + 1; index < end; index++) {
-    const match = /^\|\s*(RML-\d+)\s*\|/.exec(lines[index]);
-    if (match) ids.add(match[1]);
-  }
-  return ids;
 }
 
 function parseChangelogDates(content) {
@@ -637,9 +621,8 @@ function checkChangelog(findings, file, lessons) {
   }
 }
 
-function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
+function checkLessonLedgers(findings, ledgerFiles) {
   const global = new Map();
-  const allLessons = [];
   for (const file of ledgerFiles) {
     const { lessons, sectionFound, malformed } = parseLessons(file.content);
     if (!sectionFound) findings.fail("lessons", file.relative, 0, 'no "## Lessons" section');
@@ -652,7 +635,6 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
       );
     checkChangelog(findings, file, lessons);
     for (const lesson of lessons) {
-      allLessons.push({ ...lesson, file: file.relative });
       const previous = global.get(lesson.id);
       if (previous)
         findings.fail(
@@ -679,16 +661,6 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
           lesson.line,
           lesson.id + ": RML- ids belong only in " + PORTABLE_SKILL_DIR,
         );
-      if (
-        lesson.id.startsWith("SKL-") &&
-        !file.relative.startsWith(".agents/skills/" + LAB_SKILL_DIR + "/")
-      )
-        findings.fail(
-          "lessons",
-          file.relative,
-          lesson.line,
-          lesson.id + ": SKL- ids belong only in " + LAB_SKILL_DIR,
-        );
 
       if (!LESSON_STATUSES.has(lesson.status))
         findings.fail(
@@ -712,37 +684,12 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
     }
   }
 
-  if (skillDirs.includes(LAB_SKILL_DIR)) {
-    const originMapFile = ".agents/skills/" + LAB_SKILL_DIR + "/references/lessons.md";
-    const originMapFull = ledgerFiles.find((file) => file.relative === originMapFile);
-    const originIds = originMapFull ? parseOriginMapIds(originMapFull.content) : null;
-    for (const lesson of allLessons) {
-      if (!lesson.id.startsWith("RML-")) continue;
-      if (originIds === null) {
-        findings.fail(
-          "lessons",
-          originMapFile,
-          0,
-          'no "## RML origin map" table in ' + originMapFile,
-        );
-        break;
-      }
-      if (!originIds.has(lesson.id))
-        findings.fail(
-          "lessons",
-          lesson.file,
-          lesson.line,
-          lesson.id + " is missing from the scrapkeep-lab origin map",
-        );
-    }
-  }
-
   return global;
 }
 
 function checkLessonCitations(findings, file, lessonIds) {
   for (const match of file.content.matchAll(
-    /\(((?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+(?:,\s*(?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)*)\)/g,
+    /\(((?:RML|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+(?:,\s*(?:RML|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)*)\)/g,
   )) {
     const line = lineAt(file.content, match.index);
     for (const id of match[1].split(",").map((entry) => entry.trim()))
@@ -903,7 +850,7 @@ async function main() {
   }
   await checkPortabilityFull(findings, options.root, skillDirs);
 
-  const lessonIds = checkLessonLedgers(findings, ledgerFiles, skillDirs);
+  const lessonIds = checkLessonLedgers(findings, ledgerFiles);
   for (const file of allFiles) checkLessonCitations(findings, file, lessonIds);
 
   await checkVerbsStatic(findings, options.root, allFiles);

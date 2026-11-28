@@ -94,7 +94,7 @@ func _switch_pilot(class_id: String, at: Vector3) -> void:
 	_game.run.mass = 0.0
 	_game.run._heft_class = 1
 	_player.fit_class(def)
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 	_combat.weapon_driver.reset(_combat.pattern(def.weapon_id))
 	_player.kit.drop_line("reset")
 	_player.abilities.refill()
@@ -354,7 +354,7 @@ func _test_cannon() -> void:
 	# Step hazard to live so every enemy in the 1.8x corridor is pierced.
 	for i in 120:
 		_combat._clock += DT
-		_combat._step_cannon(DT)
+		_combat.step_cannon(DT)
 	_t.check("Air-Lock rail pierces every enemy across its 1.8x widened corridor",
 		e1.hp < hp1 and e2.hp < hp2 and e3.hp < hp3,
 		"e1 %.1f->%.1f e2 %.1f->%.1f e3 %.1f->%.1f" % [hp1, e1.hp, hp2, e2.hp, hp3, e3.hp])

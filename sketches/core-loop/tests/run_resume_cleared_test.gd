@@ -217,7 +217,7 @@ func _run() -> void:
 		and _game.flow.state_name() == "boss" and run.cogs == cogs_three and _cleared_count == 0,
 		"arena before the quit %s; resumed %s at stage %d, arena %s, flow %s, cogs %d (earned %d), stage_cleared %d" % [in_arena,
 			resumed, run.stage, _game.flow.in_arena, _game.flow.state_name(), run.cogs, cogs_three, _cleared_count])
-	var relic_on: bool = not _game.build._relic_fx.is_empty()
+	var relic_on: bool = not _game.build.relic_fx().is_empty()
 	run.death_saved.emit(run.hp)
 	_game.free()
 	resumed = await _resume()

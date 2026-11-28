@@ -88,9 +88,7 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     hasBaseline: false,
   });
 
-  const knownFailing = planHookChecks(["project-guide/handoff/KNOWN-FAILING.tsv"], (f) =>
-    existing.has(f),
-  );
+  const knownFailing = planHookChecks(["project-guide/handoff/KNOWN-FAILING.tsv"], () => true);
   assert.deepEqual(knownFailing, {
     jsFiles: [],
     hasSketch: false,
@@ -101,12 +99,9 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     hasBaseline: false,
   });
 
-  assert.equal(
-    planHookChecks(["scripts/structure-sweep.mjs"], (f) => existing.has(f)).hasDocsOrPkg,
-    true,
-  );
+  assert.equal(planHookChecks(["scripts/structure-sweep.mjs"], () => true).hasDocsOrPkg, true);
 
-  const nearMissLedger = planHookChecks(["docs/KNOWN-FAILING.tsv"], (f) => existing.has(f));
+  const nearMissLedger = planHookChecks(["docs/KNOWN-FAILING.tsv"], () => true);
   assert.deepEqual(nearMissLedger, {
     jsFiles: [],
     hasSketch: false,
@@ -124,7 +119,7 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
       ".agents/skills/scrapkeep-verify/SKILL.md",
       "sketches/core-loop/design-v3/sound/briefs/w1.json",
     ],
-    (f) => existing.has(f),
+    () => true,
   );
   assert.deepEqual(skillsAndBriefs, {
     jsFiles: [],

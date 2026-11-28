@@ -65,7 +65,7 @@ func _to_live(unit) -> void:
 
 
 func _ram(unit) -> void:
-	game.combat._hit(unit, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
+	game.combat.deal_hit(unit, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
 
 
 func _run() -> void:

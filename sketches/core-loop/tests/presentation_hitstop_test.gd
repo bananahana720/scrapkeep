@@ -2,8 +2,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const EventKinds := preload("res://src/core/event_kinds.gd")
-const Juice := preload("res://src/presentation/juice.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 
 # The v3 W11 hit-stop policy, through the real game. Every landed hit stops for its
 # damage band (base + per damage point, clamped), a crit or weak point stops longer and
@@ -159,16 +158,16 @@ func _process(_delta: float) -> bool:
 		"a 10-damage hit stops %.0f ms, an 80-damage hit %.0f ms, an 80-damage ram %.0f ms" % [_marks["low"] * 1000.0, _marks["high"] * 1000.0, _marks["ram"] * 1000.0])
 	_check("deflects free", _marks["deflect"] == 0, "a deflected ram sends %d stops" % _marks["deflect"])
 	var one: Array = _marks["frame"]
-	var expected := (Juice.stop_ms_for(20.0) + 4.0 * EventKinds.STOP_PER_EXTRA_HIT_MS) / 1000.0
+	var expected := (EventJuice.stop_ms_for(20.0) + 4.0 * EventJuice.STOP_PER_EXTRA_HIT_MS) / 1000.0
 	_check("one frame, one stop", one[0] == 1 and absf(one[1] - expected) < 0.0005,
-		"five hits in one frame send %d stop of %.0f ms (the band plus %.0f ms per extra hit)" % [one[0], one[1] * 1000.0, EventKinds.STOP_PER_EXTRA_HIT_MS])
+		"five hits in one frame send %d stop of %.0f ms (the band plus %.0f ms per extra hit)" % [one[0], one[1] * 1000.0, EventJuice.STOP_PER_EXTRA_HIT_MS])
 	var stack: Array = _marks["stack"]
 	var stacked := 0.0
 	for entry in stack:
 		stacked += entry[1] * 1000.0
-	_check("stops never stack", stack.size() == 1 and stacked <= EventKinds.STOP_WINDOW_BUDGET_MS + 0.5,
+	_check("stops never stack", stack.size() == 1 and stacked <= EventJuice.STOP_WINDOW_BUDGET_MS + 0.5,
 		"a 60 ms stop, a dodge tick 50 ms later and a multi-kill beat 100 ms later send %d stop totalling %.0f ms (at most %.0f in any %d ms)"
-			% [stack.size(), stacked, EventKinds.STOP_WINDOW_BUDGET_MS, EventKinds.STOP_WINDOW_MS])
+			% [stack.size(), stacked, EventJuice.STOP_WINDOW_BUDGET_MS, EventJuice.STOP_WINDOW_MS])
 	var rapid: Array = _marks["rapid"]
 	var total := 0.0
 	var gaps_ok := true
@@ -176,18 +175,18 @@ func _process(_delta: float) -> bool:
 	for i in rapid.size():
 		total += rapid[i][1] * 1000.0
 		if i > 0:
-			gaps_ok = gaps_ok and rapid[i][3] - rapid[i - 1][3] - rapid[i - 1][1] * 1000.0 >= EventKinds.STOP_GAP_MS
+			gaps_ok = gaps_ok and rapid[i][3] - rapid[i - 1][3] - rapid[i - 1][1] * 1000.0 >= EventJuice.STOP_GAP_MS
 		var span := 0.0
 		for other in rapid:
-			if other[3] <= rapid[i][3] and rapid[i][3] - other[3] < EventKinds.STOP_WINDOW_MS:
+			if other[3] <= rapid[i][3] and rapid[i][3] - other[3] < EventJuice.STOP_WINDOW_MS:
 				span += other[1] * 1000.0
-		window_ok = window_ok and span <= EventKinds.STOP_WINDOW_BUDGET_MS + 0.5
-	_check("rapid fire capped", rapid.size() >= 2 and total <= EventKinds.STOP_BUDGET_MS + 0.5 and gaps_ok and window_ok,
+		window_ok = window_ok and span <= EventJuice.STOP_WINDOW_BUDGET_MS + 0.5
+	_check("rapid fire capped", rapid.size() >= 2 and total <= EventJuice.STOP_BUDGET_MS + 0.5 and gaps_ok and window_ok,
 		"30 hits in a second send %d stops totalling %.0f ms (budget %.0f), %d ms clear after each %s, %.0f ms per %d ms window %s"
-			% [rapid.size(), total, EventKinds.STOP_BUDGET_MS, EventKinds.STOP_GAP_MS, gaps_ok, EventKinds.STOP_WINDOW_BUDGET_MS, EventKinds.STOP_WINDOW_MS, window_ok])
+			% [rapid.size(), total, EventJuice.STOP_BUDGET_MS, EventJuice.STOP_GAP_MS, gaps_ok, EventJuice.STOP_WINDOW_BUDGET_MS, EventJuice.STOP_WINDOW_MS, window_ok])
 	var bite: Array = _marks["bite"]
-	_check("bite stops 40 ms", bite.size() == 1 and absf(bite[0][1] - 0.04) < 0.0005 and bite[0][1] * 1000.0 <= EventKinds.STOP_WINDOW_BUDGET_MS and _marks["world_latch"] == 0,
-		"a bite to a body sends %d stop of %.0f ms (window budget %.0f); a world latch sends %d" % [bite.size(), bite[0][1] * 1000.0 if not bite.is_empty() else 0.0, EventKinds.STOP_WINDOW_BUDGET_MS, _marks["world_latch"]])
+	_check("bite stops 40 ms", bite.size() == 1 and absf(bite[0][1] - 0.04) < 0.0005 and bite[0][1] * 1000.0 <= EventJuice.STOP_WINDOW_BUDGET_MS and _marks["world_latch"] == 0,
+		"a bite to a body sends %d stop of %.0f ms (window budget %.0f); a world latch sends %d" % [bite.size(), bite[0][1] * 1000.0 if not bite.is_empty() else 0.0, EventJuice.STOP_WINDOW_BUDGET_MS, _marks["world_latch"]])
 	_check("guns never stop", _marks["guns"] == 0, "twelve laser, arc and turret hits send %d stops" % _marks["guns"])
 	var flat_before := Vector2(_velocity_before.x, _velocity_before.z)
 	var drift := (Vector2(_velocity_after.x, _velocity_after.z) - flat_before).length()
@@ -209,14 +208,14 @@ func _check_bands() -> void:
 	var ok := true
 	var previous := 0.0
 	for damage in [0.0, 5.0, 10.0, 20.0, 40.0, 60.0, 80.0, 150.0]:
-		var ms := Juice.stop_ms_for(damage)
+		var ms := EventJuice.stop_ms_for(damage)
 		ok = ok and ms >= previous and ms <= 60.0
 		previous = ms
 		bands.append("%d:%.0f" % [damage, ms])
-	var crit := Juice.stop_ms_for(20.0, true)
-	var heavy := Juice.stop_ms_for(20.0, false, true)
-	var both := Juice.stop_ms_for(150.0, true, true)
-	_check("bands", ok and crit > Juice.stop_ms_for(20.0) and heavy > Juice.stop_ms_for(20.0) and both <= 60.0,
+	var crit := EventJuice.stop_ms_for(20.0, true)
+	var heavy := EventJuice.stop_ms_for(20.0, false, true)
+	var both := EventJuice.stop_ms_for(150.0, true, true)
+	_check("bands", ok and crit > EventJuice.stop_ms_for(20.0) and heavy > EventJuice.stop_ms_for(20.0) and both <= 60.0,
 		"damage:ms %s; at 20 damage a crit %.0f ms, a ram %.0f ms; a 150-damage crit ram %.0f ms" % [" ".join(bands), crit, heavy, both])
 
 

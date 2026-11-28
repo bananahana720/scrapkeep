@@ -5,7 +5,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 
 var events
 var ball: Callable
-var grace := float(EventKinds.juice("near_miss").get("grace_ms", 250)) / 1000.0
+var grace := float(EventKinds.NEAR_MISS_GRACE_MS) / 1000.0
 var fired := 0
 
 var _watch := {}

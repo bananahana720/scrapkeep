@@ -188,14 +188,7 @@ func prepare(index: int) -> void:
 
 
 static func worker_builds() -> bool:
-	return threaded_in_bot_runs or not SimClock.ticks
-
-
-static var threaded_in_bot_runs := false
-
-
-static func reset_for_tests() -> void:
-	threaded_in_bot_runs = false
+	return SimClock.threaded_in_bot_runs or not SimClock.ticks
 
 
 func _build_stage(i: int) -> void:

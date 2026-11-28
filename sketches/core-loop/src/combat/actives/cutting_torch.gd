@@ -128,7 +128,7 @@ func _cut(delta: float) -> void:
 		if heat >= bite:
 			cuts += 1
 			combat.effects.spark(enemy.global_position + Vector3.UP, ActiveFx.peak(COLOR))
-			combat._hit(enemy, KIND, heat, enemy.global_position - ctx.player.ball_position(), KNOCK, "", SOURCE, IMPACT)
+			combat.deal_hit(enemy, KIND, heat, enemy.global_position - ctx.player.ball_position(), KNOCK, "", SOURCE, IMPACT)
 			heat = 0.0
 			_glow.erase(id)
 		elif bite > CUT_DAMAGE * _burn / BURN:
