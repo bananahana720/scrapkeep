@@ -150,21 +150,6 @@ export function batchable(source) {
   return /^extends SceneTree$/.test(firstCode) && !isSolo(source) && !BATCH_SOLO.test(source);
 }
 
-export function takeBatch(queue, canBatch, maxTests = BATCH_MAX_TESTS, maxMs = BATCH_MAX_MS) {
-  const batch = [];
-  let ms = 0;
-  while (
-    queue.length > 0 &&
-    batch.length < maxTests &&
-    canBatch(queue[0]) &&
-    (batch.length === 0 || ms + (queue[0].ms ?? 0) <= maxMs)
-  ) {
-    ms += queue[0].ms ?? 0;
-    batch.push(queue.shift());
-  }
-  return batch;
-}
-
 export function takeBatchPacked(queue, canBatch, maxTests = BATCH_MAX_TESTS, maxMs = BATCH_MAX_MS) {
   if (queue.length === 0 || !canBatch(queue[0])) return [];
   const batch = [queue.shift()];

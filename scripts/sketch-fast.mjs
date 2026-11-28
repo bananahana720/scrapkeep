@@ -14,14 +14,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  expiredLine,
-  expiredQuarantine,
-  quarantineNote,
-  quarantineRecord,
-  readQuarantineEntries,
-  spawnCollect,
-} from "./sketch-smoke.mjs";
+import { spawnCollect } from "./sketch-smoke.mjs";
 import {
   ROOT_FILES_ALLOWED,
   SKILL_LINK,
@@ -51,7 +44,6 @@ import {
   runGodotBatch,
   scriptErrorCount,
   splitBatch,
-  takeBatch,
   takeBatchPacked,
   testFixedFps,
   testTimeoutMs,
@@ -83,7 +75,6 @@ export {
   placeholderIncrease,
   removedChecks,
   splitBatch,
-  takeBatch,
   takeBatchPacked,
 };
 
@@ -1401,18 +1392,6 @@ async function main() {
     finish();
   }
 
-  const quarantineEntries = readQuarantineEntries(sketchDir);
-  const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
-  const expired = expiredQuarantine(quarantineEntries);
-  for (const entry of expired) log(expiredLine(entry));
-  if (
-    !stage("quarantine", expired.length === 0, {
-      note: expired.length
-        ? `${expired.length} expired: ${expired.map((entry) => entry.test).join(", ")}`
-        : `${quarantineEntries.length} rows, none expired`,
-    })
-  )
-    finish();
   const runBootHere = shouldRunBoot(options);
   if (!runBootHere && lanePlan.parallel.length + lanePlan.solo.length === 0) {
     stage("tests", true, {
@@ -1659,7 +1638,6 @@ async function main() {
   }
 
   async function handle(result) {
-    const quarantined = quarantine.has(path.posix.basename(result.test, ".gd"));
     results.push({
       test: result.test,
       ok: result.ok,
@@ -1668,18 +1646,11 @@ async function main() {
       failing: (result.checks ?? []).length,
       ms: result.ms,
       reason: result.reason,
-      quarantined,
     });
     log(
-      `${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s${quarantined ? " (quarantined)" : ""}`,
+      `${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s`,
     );
-    if (!result.ok && quarantined) {
-      const entry = quarantineEntries.find(
-        (row) => row.test === path.posix.basename(result.test, ".gd"),
-      );
-      log(`  ${quarantineNote(entry)}`);
-    }
-    if (result.ok || quarantined || result.killed) return;
+    if (result.ok || result.killed) return;
     const { kind, newChecks, ledger, ledgerRuns } = await confirm(result);
     log(
       `  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`,
@@ -1795,14 +1766,6 @@ async function main() {
     );
   }
   receipt.results = results;
-  receipt.quarantined = results
-    .filter((row) => row.quarantined)
-    .map((row) =>
-      quarantineRecord(
-        quarantineEntries.find((entry) => entry.test === path.posix.basename(row.test, ".gd")),
-        { ok: row.ok, exit: row.exit, signal: row.signal, failing: row.failing },
-      ),
-    );
   receipt.flaky = flaky;
   receipt.ledger_flaky = ledgerFlaky;
   receipt.base_red = baseRed;

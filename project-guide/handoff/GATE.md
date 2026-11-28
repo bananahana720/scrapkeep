@@ -112,7 +112,7 @@ node scripts/known-failing.mjs --promotion          # fails if any row is past i
 - The cost of a row: while a test is listed, a second fault in the same test is easy to miss. That is why the cause names the failing check and the receipt asks the thread to read the failing lines. It has happened: `stage_modifier_test` gained a second failing check in wave 41 (the stage 1 draw pin) under its row for a stage 5 check, and nothing flagged it until the receipt lines were read on 15 Nov. Ruling dx (a row covers only the check it names) is the rule, and the shard enforces it for `red` rows from the `check` column: replayed on the wave 41 and wave 42 gate logs, that test reads new red, and on the wave 40 log it reads carried. A check is named by its label, so a row covers that check at any value it prints; the cause carries the value. Not yet enforced: a `flake` row still covers its whole test, and the fast lane still reads "red on the base too" by test and not by check.
 - A test that has passed in two full gates in a row comes off the ledger. If it fails again it is judged fresh.
 - A row past its review date holds the next promotion. Either the owner fixed it (remove the row) or the coordinator gives it a new date and says why in the pull request.
-- `sketches/core-loop/tests/QUARANTINE.tsv` is a different tool with a different job: at most three rows, a listed test stops failing runs, and a release candidate carries none. Nothing is in it today.
+- `sketches/core-loop/tests/QUARANTINE.tsv` is retired: the lint (rule L5) refuses any row in it, and no test runner reads it. A red test is carried only by a row in the known-failing ledger above.
 
 ## The play findings list
 
