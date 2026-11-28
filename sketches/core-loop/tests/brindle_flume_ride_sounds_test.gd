@@ -143,16 +143,23 @@ func _releases(t) -> void:
 # must have a row in ATTACKS, and the four publish sites are all that exist (the slag id is computed
 # and its three values are the three slag entries).
 func _attack_sites(t) -> void:
-	var text := FileAccess.get_file_as_string("res://src/boss/boss.gd")
 	var sites := 0
-	var at := text.find("_publish(\"boss_attack_telegraphed\"")
-	while at >= 0:
-		sites += 1
-		var line := text.substr(at, text.find("\n", at) - at)
-		for lit in ["crane_sweep", "charge_wall", "eject"]:
-			if line.contains("\"%s\"" % lit):
-				t.check("%s has a telegraph sound" % lit, ATTACKS.has(lit))
-		at = text.find("_publish(\"boss_attack_telegraphed\"", at + 1)
+	for path in [
+		"res://src/boss/boss.gd",
+		"res://src/boss/boss_furnace.gd",
+		"res://src/boss/boss_charge.gd",
+		"res://src/boss/boss_scooter.gd",
+	]:
+		var text := FileAccess.get_file_as_string(path)
+		for needle in ["_publish(\"boss_attack_telegraphed\"", "publish_event(\"boss_attack_telegraphed\""]:
+			var at := text.find(needle)
+			while at >= 0:
+				sites += 1
+				var line := text.substr(at, text.find("\n", at) - at)
+				for lit in ["crane_sweep", "charge_wall", "eject"]:
+					if line.contains("\"%s\"" % lit):
+						t.check("%s has a telegraph sound" % lit, ATTACKS.has(lit))
+				at = text.find(needle, at + 1)
 	t.eq("boss.gd publishes its telegraph at four sites", sites, 4)
 
 

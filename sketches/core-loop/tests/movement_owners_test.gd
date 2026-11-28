@@ -130,8 +130,10 @@ func _check_basis_up_owner() -> void:
 
 func _check_steep_face_owner() -> void:
 	var ball_src := FileAccess.get_file_as_string("res://src/movement/player_ball.gd")
+	var kest_src := FileAccess.get_file_as_string("res://src/movement/kest_air.gd")
 	_t.check("player_ball.gd uses Augments.steepest_face_at",
-		not ball_src.contains("func _kest_steep_face") and ball_src.contains("Augments.steepest_face_at("))
+		not ball_src.contains("func _kest_steep_face") and not kest_src.contains("func _kest_steep_face")
+		and kest_src.contains("Augments.steepest_face_at("))
 
 
 func _check_burst_owner() -> void:
