@@ -1,6 +1,8 @@
 class_name ChallengeDials
 extends RefCounted
 
+const CliFlags := preload("res://src/core/cli_flags.gd")
+
 const TELL_FLOOR := 0.6
 const WARN_GAP := 0.2
 
@@ -16,7 +18,16 @@ const LEAD_CRUISE_W1 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 const MOBS_DAMAGE_W1 := [2.6, 2.5, 1.0, 1.0, 1.0, 1.0]
 const CHASER_SPEED_W1 := [9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
 const INTERVAL_W1 := [1.0, 0.7, 1.0, 1.0, 1.0, 1.0]
-const PackPressure := preload("res://src/combat/pack_pressure.gd")
+const PACK_W1 := [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+const PACK_HALF_W1 := [0.5, 0.5, 1.0, 1.0, 1.0, 1.0]
+
+const PACK_PRESSURE_PRESETS := {
+	"A": {"pack.lead_by_stage": PACK_W1},
+	"B": {"pack.crew_extra_by_stage": PACK_W1, "pack.rest_by_stage": PACK_HALF_W1},
+	"C": {"pack.flank_by_stage": PACK_W1},
+	"D": {"ground.churn_by_stage": PACK_W1},
+	"E": {"hazard.boil_by_stage": SILT_W1},
+}
 
 const DEFAULTS := {
 	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [2.5, 3.2, 2.5, 1.0],
@@ -149,25 +160,35 @@ static func parse(spec: String) -> Dictionary:
 	return out
 
 
+static func pack_pressure_spec(value: String, unknown: Array = []) -> String:
+	var merged := {}
+	for letter in value.to_upper().split("+", false):
+		var key := letter.strip_edges()
+		if not PACK_PRESSURE_PRESETS.has(key):
+			unknown.append(key)
+			continue
+		merged.merge(PACK_PRESSURE_PRESETS[key], true)
+	var pairs: Array[String] = []
+	for k in merged:
+		pairs.append("%s=%s" % [k, "/".join((merged[k] as Array).map(func(x): return str(x)))])
+	return ",".join(pairs)
+
+
 static func _load_cli() -> void:
 	if _cli_loaded:
 		return
 	_cli_loaded = true
-	for args in [OS.get_cmdline_args(), OS.get_cmdline_user_args()]:
-		for arg in args:
-			if String(arg).begins_with("--pack-pressure="):
-				var unknown := []
-				_cli.merge(parse(PackPressure.tune_spec(String(arg).trim_prefix("--pack-pressure="), unknown)), true)
-				for letter in unknown:
-					_refuse("pack-pressure " + letter, "challenge_dials: --pack-pressure variant '%s' ignored (A, B, C, D or E)" % letter)
-	for args in [OS.get_cmdline_args(), OS.get_cmdline_user_args()]:
-		for arg in args:
-			if String(arg).begins_with("--tune="):
-				_cli.merge(parse(String(arg).trim_prefix("--tune=")), true)
+	for raw in CliFlags.values_of("--pack-pressure=", true):
+		var unknown := []
+		_cli.merge(parse(pack_pressure_spec(raw, unknown)), true)
+		for letter in unknown:
+			_refuse("pack-pressure " + letter, "challenge_dials: --pack-pressure variant '%s' ignored (A, B, C, D or E)" % letter)
+	for raw in CliFlags.values_of("--tune=", true):
+		_cli.merge(parse(raw), true)
 
 
 static func _unruled() -> bool:
-	return "--tune-unruled" in OS.get_cmdline_args() or "--tune-unruled" in OS.get_cmdline_user_args()
+	return CliFlags.has_flag("--tune-unruled", true)
 
 
 static func _is_list(key: String) -> bool:

@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 # S5: a gamepad gets through every menu. Pad events are pushed into the viewport as the other

@@ -79,3 +79,20 @@ test("ci-gate accepts a skipped godot-affected and the merge queue still runs go
   assert.match(gate, /\$res" != "success" && "\$res" != "skipped"/);
   assert.match(jobBlock("godot-full"), /github\.event_name == 'merge_group'/);
 });
+
+test("workflow concurrency isolates pushes by run_id and godot-affected wires CI speed flags", () => {
+  assert.match(
+    workflow,
+    /group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.event_name == 'pull_request' && format\('pr-\{0\}', github\.event\.pull_request\.number\) \|\| github\.run_id \}\}/,
+  );
+  const job = jobBlock("godot-affected");
+  assert.match(
+    job,
+    /fromJson\(github\.event_name == 'push' && '\[1\]' \|\| needs\.changes\.outputs\.godot_matrix\)/,
+  );
+  assert.match(job, /--width "\$\(nproc\)"/);
+  assert.match(job, /--ci-godot-only/);
+  assert.match(job, /--shard "\$\{MATRIX_SHARD\}\/\$\{GODOT_SHARDS\}"/);
+  assert.match(job, /uses: actions\/cache\/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9/);
+  assert.match(job, /uses: actions\/cache\/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9/);
+});

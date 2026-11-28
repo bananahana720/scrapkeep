@@ -17,6 +17,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
 const Shop := preload("res://src/build/shop.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const T := preload("res://tests/support/t.gd")
@@ -116,9 +117,8 @@ func _run() -> void:
 	await _check_catalyst_cartridge_hook()
 	await _check_cleanup_and_reset()
 
-	Consumables._reset()
-	CrackedCache._shared.clear()
-	CrackedCache._loaded = false
+	Consumables.reset_for_tests()
+	ModelKit.reset_for_tests()
 	_game.free()
 	quit(_t.verdict())
 

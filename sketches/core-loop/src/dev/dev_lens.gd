@@ -24,6 +24,17 @@ const WHEEL_STEP := 1.12
 const FOLLOW_RATE := 10.0
 const CUTAWAY := 14.0
 const LENS_KNOBS := ["fov", "distance", "pitch", "yaw", "size", "lift", "spin", "tilt", "cut"]
+const LENS_RANGES := {
+	"fov": [10.0, 120.0, 0.5],
+	"distance": [MIN_DISTANCE, MAX_DISTANCE, 0.5],
+	"pitch": [-89.5, 60.0, 0.5],
+	"yaw": [-180.0, 180.0, 1.0],
+	"size": [2.0, 300.0, 0.5],
+	"lift": [-5.0, 30.0, 0.1],
+	"spin": [-90.0, 90.0, 1.0],
+	"tilt": [0.0, 1.0, 0.01],
+	"cut": [0.0, 200.0, 0.5],
+}
 
 var game
 var mode := "game"
@@ -125,26 +136,29 @@ func set_knob(key: String, amount: float) -> String:
 		return "!no camera knob '%s' (%s)" % [key, " ".join(LENS_KNOBS)]
 	if not live() and key != "cut":
 		use("orbit")
+	var span: Array = LENS_RANGES[key]
+	var lo := float(span[0])
+	var hi := float(span[1])
 	match key:
 		"fov":
-			fov = clampf(amount, 10.0, 120.0)
+			fov = clampf(amount, lo, hi)
 		"distance":
-			distance = clampf(amount, MIN_DISTANCE, MAX_DISTANCE)
+			distance = clampf(amount, lo, hi)
 		"pitch":
-			pitch = clampf(amount, -89.5, 60.0)
+			pitch = clampf(amount, lo, hi)
 		"yaw":
-			yaw = wrapf(amount, -180.0, 180.0)
+			yaw = wrapf(amount, lo, hi)
 		"size":
-			ortho_size = clampf(amount, 2.0, 300.0)
+			ortho_size = clampf(amount, lo, hi)
 		"lift":
-			lift = clampf(amount, -5.0, 30.0)
+			lift = clampf(amount, lo, hi)
 		"spin":
-			spin = clampf(amount, -90.0, 90.0)
+			spin = clampf(amount, lo, hi)
 		"tilt":
-			tilt_shift = clampf(amount, 0.0, 1.0)
+			tilt_shift = clampf(amount, lo, hi)
 			_apply_attributes()
 		"cut":
-			cutaway = clampf(amount, 0.0, 200.0)
+			cutaway = clampf(amount, lo, hi)
 	return "camera %s %.2f" % [key, knob(key)]
 
 
@@ -182,17 +196,21 @@ func set_ortho(on: bool) -> String:
 func drag(relative: Vector2) -> void:
 	if not live():
 		return
-	yaw = wrapf(yaw - relative.x * DRAG_SCALE, -180.0, 180.0)
-	pitch = clampf(pitch - relative.y * DRAG_SCALE, -89.5, 60.0)
+	var yaw_span: Array = LENS_RANGES["yaw"]
+	var pitch_span: Array = LENS_RANGES["pitch"]
+	yaw = wrapf(yaw - relative.x * DRAG_SCALE, float(yaw_span[0]), float(yaw_span[1]))
+	pitch = clampf(pitch - relative.y * DRAG_SCALE, float(pitch_span[0]), float(pitch_span[1]))
 
 
 func zoom(steps: float) -> void:
 	if not live():
 		return
 	if ortho:
-		ortho_size = clampf(ortho_size * pow(WHEEL_STEP, steps), 2.0, 300.0)
+		var size_span: Array = LENS_RANGES["size"]
+		ortho_size = clampf(ortho_size * pow(WHEEL_STEP, steps), float(size_span[0]), float(size_span[1]))
 	else:
-		distance = clampf(distance * pow(WHEEL_STEP, steps), MIN_DISTANCE, MAX_DISTANCE)
+		var dist_span: Array = LENS_RANGES["distance"]
+		distance = clampf(distance * pow(WHEEL_STEP, steps), float(dist_span[0]), float(dist_span[1]))
 
 
 func handle(event: InputEvent) -> bool:

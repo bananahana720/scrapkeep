@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://src/combat/actives/active_base.gd"
 
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -11,6 +11,7 @@ const WIDTH := 0.9
 const SWEEP := 3.5
 const BURN := 60.0
 const CUT_DAMAGE := 7.5
+const DEFAULT_GIRTH := 1.0
 const FAN_DEG := 12.0
 const HEAT_STEPS := 8
 const GLOW_REACH := 1.6
@@ -24,8 +25,6 @@ const SOURCE := "special"
 const LAYER := "active_cutting_torch_%d"
 const ID := "cutting_torch"
 
-var ctx
-var combat
 var guiding := false
 var beam_left := 0.0
 var heading := Vector3.FORWARD
@@ -35,11 +34,6 @@ var _beams := 1
 var _burn := BURN
 var _heat := {}
 var _glow := {}
-
-
-func setup(context, owner_combat) -> void:
-	ctx = context
-	combat = owner_combat
 
 
 func clear() -> void:
@@ -59,19 +53,16 @@ func _end() -> void:
 
 
 func beams_for() -> int:
-	return 1 + _pattern("spiral_wave")
+	return 1 + pattern_level("spiral_wave")
 
 
 func burn() -> float:
-	var punch := 0.0
-	if ctx.build != null and ctx.build.has_method("punch_bonus"):
-		punch = float(ctx.build.punch_bonus())
-	return BURN * (CUT_DAMAGE + punch) / CUT_DAMAGE * ctx.tuning.mod("weapon_damage")
+	return BURN * (CUT_DAMAGE + punch_bonus()) / CUT_DAMAGE * weapon_damage_mult()
 
 
 func begin(_rack, _row: Dictionary) -> void:
 	_beams = beams_for()
-	heading = _aim()
+	heading = flat_aim()
 	guiding = true
 	_commit()
 
@@ -79,7 +70,7 @@ func begin(_rack, _row: Dictionary) -> void:
 func fire(_rack, _row: Dictionary, bonus: int) -> int:
 	if not guiding:
 		_beams = beams_for()
-		heading = _aim()
+		heading = flat_aim()
 	guiding = false
 	_burn = burn()
 	beam_left = BEAM_SECONDS + BONUS_SECONDS * bonus
@@ -101,7 +92,7 @@ func step(delta: float) -> void:
 
 
 func _turn(delta: float) -> void:
-	var want := _aim()
+	var want := flat_aim()
 	var angle := heading.angle_to(want)
 	var turn := SWEEP * delta
 	heading = want if angle <= turn else heading.slerp(want, turn / angle).normalized()
@@ -128,7 +119,7 @@ func _reach(from: Vector3, dir: Vector3) -> Vector3:
 
 
 func _cut(delta: float) -> void:
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not _in_lanes(enemy):
 			continue
 		var id: int = enemy.get_instance_id()
@@ -152,13 +143,13 @@ func _show_heat(enemy: Node3D, id: int, fraction: float) -> void:
 	_glow[id] = shown
 	var hot := float(shown) / HEAT_STEPS
 	var at := enemy.global_position
-	combat.effects.ring(at + Vector3.UP * 0.3, combat._hull(enemy) + GLOW_REACH * (1.0 - hot), ActiveFx.peak(GLOW_COLD.lerp(COLOR, hot)))
+	combat.effects.ring(at + Vector3.UP * 0.3, enemy_girth(enemy, DEFAULT_GIRTH) + GLOW_REACH * (1.0 - hot), ActiveFx.peak(GLOW_COLD.lerp(COLOR, hot)))
 	combat.effects.spark(at + Vector3.UP, ActiveFx.peak(GLOW_COLD.lerp(COLOR, hot)))
 	ctx.events.active_heat.emit(ID, at, hot)
 
 
 func _in_lanes(enemy: Node3D) -> bool:
-	var hull: float = combat._hull(enemy)
+	var hull := enemy_girth(enemy, DEFAULT_GIRTH)
 	for lane in lanes:
 		if combat.in_line(lane["from"], lane["to"], lane["width"], enemy.global_position, hull):
 			return true
@@ -173,21 +164,9 @@ func _plate(enemy: Node3D) -> float:
 	return 0.0
 
 
-func _aim() -> Vector3:
-	var forward: Vector3 = ctx.aim_forward()
-	forward.y = 0.0
-	return forward.normalized() if forward.length() > 0.01 else Vector3.FORWARD
-
-
 func _erase() -> void:
 	lanes.clear()
 	if ctx == null or ctx.player == null or ctx.player.indicator == null:
 		return
 	for i in _beams:
 		ctx.player.indicator.clear(LAYER % i)
-
-
-func _pattern(id: String) -> int:
-	if ctx.build != null and ctx.build.has_method("pattern_level"):
-		return int(ctx.build.pattern_level(id))
-	return ctx.run.parts.count(id) if ctx.run != null else 0

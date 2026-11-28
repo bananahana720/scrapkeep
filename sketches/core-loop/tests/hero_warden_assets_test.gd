@@ -4,6 +4,7 @@ const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const WardenDress := preload("res://src/presentation/warden_dress.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Clearance := preload("res://tests/lantern_beacon_clearance_test.gd")
 
@@ -125,7 +126,7 @@ func check_family() -> void:
 	check_geometry(rec.base, rec.base)
 	check_stroke_surfaces(rec)
 	check_ink(rec, "clamp " + warden.family)
-	var authored: Node3D = hook._warden_scene(hook.WARDEN_BASE)
+	var authored: Node3D = hook._warden_scene(WardenDress.BASE)
 	# The dressed jaw draws the ink line's welded copy of the authored mesh, one copy every Warden shares.
 	check("jaw meshes and hinges unchanged", InkOutline.hull(authored.get_node("JawL").mesh) == rec.base.get_node("JawL").mesh
 		and authored.get_node("JawR").transform == rec.base.get_node("JawR").transform)
@@ -330,7 +331,7 @@ func frame_snapshot() -> Array:
 
 
 func check_chunk_asset(hook) -> void:
-	var base: Node3D = hook._warden_scene(hook.WARDEN_BASE)
+	var base: Node3D = hook._warden_scene(WardenDress.BASE)
 	root.add_child(base)
 	var minimum := Vector3(INF, INF, INF)
 	var maximum := Vector3(-INF, -INF, -INF)

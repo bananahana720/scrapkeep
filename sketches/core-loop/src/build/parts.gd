@@ -1422,6 +1422,14 @@ static func offer_pool(class_id: String, rarities: Array) -> Array:
 	return pool
 
 
+static func odds_for(rarities: Array, class_id: String) -> Array:
+	var live: Array = []
+	for r in ItemGen.resolve_rarities(rarities):
+		if not offer_pool(class_id, [r]).is_empty():
+			live.append(r)
+	return ItemGen.odds(live)
+
+
 static func bucket_of(part_id: String) -> String:
 	var r := row(part_id)
 	var family := String(r.get("family", ""))

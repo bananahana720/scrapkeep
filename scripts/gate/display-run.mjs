@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { watchDrawnRun } from "./window-watch.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
-import { acquireSlot } from "../sketch-smoke.mjs";
-import { root } from "./clean-head.mjs";
+import { resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
+import { acquireSlot } from "../lib/machine-lock.mjs";
+import { runProcess } from "../lib/proc.mjs";
+import { REPO_ROOT as root } from "../lib/git.mjs";
 
 export const SKETCH = "sketches/core-loop";
 export const TIMEOUT_MS = 600_000;
@@ -37,74 +39,27 @@ export function scratchEnv(cwd) {
   }
   return {
     home,
-    env: {
-      HOME: home,
-      XDG_DATA_HOME: path.join(home, "data"),
-      XDG_CONFIG_HOME: path.join(home, "config"),
-      XDG_CACHE_HOME: path.join(home, "cache"),
-    },
+    env: scratchGodotEnv(home, { forceHome: true }),
   };
 }
 
-const killGroup = (child) => {
-  try {
-    process.kill(-child.pid, "SIGKILL");
-  } catch {
-    try {
-      child.kill("SIGKILL");
-    } catch {}
-  }
-};
-
-export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation }) {
-  cancellation?.throwIfAborted();
-  return new Promise((resolve) => {
-    let output = "";
-    let timedOut = false;
-    let child;
-    try {
-      child = spawn(command, argv, { env, cwd, stdio: ["ignore", "pipe", "pipe"], detached: true });
-    } catch (error) {
-      resolve({ exit: null, signal: null, output: String(error.message ?? error), timedOut });
-      return;
-    }
-    const cancel = () => killGroup(child);
-    let interrupted;
-    const onSignal = (signal) => {
-      interrupted = signal === "SIGINT" ? 130 : 143;
-      process.exitCode = interrupted;
-      cancel();
-    };
-    cancellation?.addEventListener("abort", cancel, { once: true });
-    process.on("SIGINT", onSignal);
-    process.on("SIGTERM", onSignal);
-    child.stdout.on("data", (d) => {
-      output += d;
-    });
-    child.stderr.on("data", (d) => {
-      output += d;
-    });
-    const timer = setTimeout(() => {
-      timedOut = true;
-      killGroup(child);
-    }, timeoutMs);
-    let done = false;
-    const finish = (exit, signal) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      process.off("SIGINT", onSignal);
-      process.off("SIGTERM", onSignal);
-      cancellation?.removeEventListener("abort", cancel);
-      resolve({ pid: child.pid, exit: interrupted ?? exit, interrupted, signal, output, timedOut });
-    };
-    child.on("error", (error) => {
-      output += String(error.message ?? error);
-      finish(null, null);
-    });
-    child.on("close", (exit, signal) => finish(exit, signal));
-    child.on("exit", (exit, signal) => setTimeout(() => finish(exit, signal), 500));
+export async function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation }) {
+  const res = await runProcess(command, argv, {
+    env,
+    cwd,
+    timeoutMs,
+    signal: cancellation,
+    exitDrainMs: 500,
+    forwardSignals: true,
   });
+  return {
+    pid: res.pid,
+    exit: res.interrupted ?? res.exit,
+    interrupted: res.interrupted,
+    signal: res.signal,
+    output: res.error ? res.output + String(res.error.message ?? res.error) : res.output,
+    timedOut: res.timedOut,
+  };
 }
 
 export async function acquireDrawnSlot({
@@ -150,7 +105,7 @@ async function runScript({
   extraEnv = {},
   cwd = root,
   env = process.env,
-  binary = env.GODOT_BIN,
+  binary = resolveGodotBinary({ env, requireExplicit: true }),
   timeoutMs = TIMEOUT_MS,
   platform = process.platform,
   acquire = acquireDrawnSlot,
@@ -211,7 +166,7 @@ const watchedTools = new Map([
     "res://tools/water_flow_stills.gd",
     {
       "tools/water_flow_stills.gd":
-        "ff44fb28395b723f5b76599d55326bba172b55a52c9498ab316bf33d06ce121c",
+        "3a606ba0778a513dcf081cd947d0a09099eed2306731a97241b03169f08f8f9f",
       "tools/offscreen_window.gd":
         "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
     },
@@ -220,9 +175,9 @@ const watchedTools = new Map([
     PROBE,
     {
       "tools/offscreen_probe.gd":
-        "156464df4c44b25ba4f903f6786557bdff94a71b89f033744c0021f5d734819b",
+        "e033ff58cb10c3e4f1ce622b4913e6f0beb4df9b69b84ff34df0940e0a688282",
       "tools/dam_look_capture.gd":
-        "7573ff8e14d4d770c580c2c023bacf348968b2756a287001b082552cc6640f13",
+        "e05fe9d30f1cdfcdbc3c008adb766e48a09ac9db44897d1b94306fe6f7d28940",
       "tools/offscreen_window.gd":
         "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
     },
@@ -255,7 +210,7 @@ export async function measureFrame(
   {
     cwd = root,
     env = process.env,
-    binary = env.GODOT_BIN,
+    binary = resolveGodotBinary({ env, requireExplicit: true }),
     acquire = acquireSlot,
     start = launch,
   } = {},
@@ -291,7 +246,7 @@ async function macCapture(
     engineArgs = [],
     extraEnv = {},
     platform = process.platform,
-    binary = env.GODOT_BIN,
+    binary = resolveGodotBinary({ env, requireExplicit: true }),
     acquire,
     start = launch,
     observe = watchDrawnRun,

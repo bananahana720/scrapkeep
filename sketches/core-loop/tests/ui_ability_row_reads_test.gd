@@ -4,7 +4,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
-const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -94,7 +94,7 @@ func _chain() -> void:
 	var counter := ChainCounter.new()
 	counter.step(0.016, 2)
 	_t.eq("d: the counter's text is still the count", counter.text(), "2")
-	var drawn := ChainCounter.LINK * 3.4 + UiDraw.width(ChainCounter.TIMES, UiTokens.LABEL) + 1.0 + UiDraw.width("88", ChainCounter.FONT, true)
+	var drawn := ChainCounter.LINK * 3.4 + UiFonts.width(ChainCounter.TIMES, UiTokens.LABEL) + 1.0 + UiFonts.width("88", ChainCounter.FONT, true)
 	_t.check("d: links, times sign and two digits fit the box", drawn <= ChainCounter.BOX.x, "%.1f of %.1f px" % [drawn, ChainCounter.BOX.x])
 	counter.free()
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/cli.mjs";
+import { DEFAULT_SKETCH_DIR, WORLD1_MAPS } from "./lib/game-defs.mjs";
 
 export const REACH_M = 60;
 export const SPEED_MPS = 20;
@@ -97,14 +98,9 @@ export function census(park, lines) {
 export const passes = (row) => row.sites >= PASS.sites && row.gap_s <= PASS.gap_s;
 
 export function main(argv) {
-  const root = path.join(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "..",
-    "sketches",
-    "core-loop",
-  );
+  const root = DEFAULT_SKETCH_DIR;
   const maps = argv.filter((a) => !a.startsWith("--"));
-  const rows = (maps.length ? maps : ["park_dam", "park_flume"]).map((map) =>
+  const rows = (maps.length ? maps : WORLD1_MAPS).map((map) =>
     census(
       JSON.parse(readFileSync(path.join(root, "src/world/park", `${map}.json`), "utf8")),
       JSON.parse(readFileSync(path.join(root, "assets/park", map, "lines.json"), "utf8")),
@@ -121,5 +117,4 @@ export function main(argv) {
   if (argv.includes("--check") && !rows.every(passes)) process.exitCode = 1;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

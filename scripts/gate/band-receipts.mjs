@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,6 +15,7 @@ import {
   parseNdjson,
 } from "../challenge/lib.mjs";
 import { fightMaxHp, fightNotes, med } from "../challenge/worst-window.mjs";
+import { COMMIT_SHA_RE, parseReceiptArgs, writeJsonReceipt } from "./receipt-cli.mjs";
 
 export const W1_FIGHTS = ["w1", "w2", "brindle"];
 export const NOVICE_DEATH_SHARE = 0.6;
@@ -30,7 +31,7 @@ export const NOVICE_CELLS = ["w1", "w2", "w1clear"];
 const gradeOf = (run) => run.grade ?? gradeRun(run.kind, run.row, run);
 const counted = (run) =>
   run.row != null && run.row.resumed !== false && !EXCLUDED.includes(gradeOf(run).result);
-export const COMMIT = /^[0-9a-f]{7,40}$/;
+export const COMMIT = COMMIT_SHA_RE;
 const sameHead = (commit, head) =>
   typeof commit === "string" &&
   commit.length >= 7 &&
@@ -474,26 +475,29 @@ export function loadRead(dirs) {
 }
 
 function main(argv) {
-  const args = { band: [] };
-  for (let i = 0; i < argv.length; i += 2) {
-    const k = argv[i].replace(/^--/, "");
-    if (k === "band") args.band.push(argv[i + 1]);
-    else args[k] = argv[i + 1];
-  }
-  if (!args.band.length || !args.head || !args.out) {
-    console.error(
-      "usage: band-receipts.mjs --band <band read folder> [--band <folder> ...] --head <commit> --out <receipts folder>",
-    );
+  const usage =
+    "usage: band-receipts.mjs --band <band read folder> [--band <folder> ...] --head <commit> --out <receipts folder>";
+  let args;
+  try {
+    args = parseReceiptArgs(argv, {
+      valueFlags: { "--band": { key: "band", multi: true } },
+      defaults: { band: [], head: null, out: null },
+      head: "optional",
+      headError: (value) => `--head must be a commit of 7 to 40 hex characters, not ${value}`,
+      usageError: usage,
+      ignoreUnknown: true,
+    });
+  } catch (error) {
+    console.error(String(error?.message ?? error));
     return 2;
   }
-  if (!COMMIT.test(args.head)) {
-    console.error(`--head must be a commit of 7 to 40 hex characters, not ${args.head}`);
+  if (!args.band.length || !args.head || !args.out) {
+    console.error(usage);
     return 2;
   }
   const receipts = buildReceipts(loadRead(args.band), args.head);
-  mkdirSync(args.out, { recursive: true });
   for (const [id, receipt] of Object.entries(receipts)) {
-    writeFileSync(path.join(args.out, `${id}.json`), JSON.stringify(receipt, null, 2) + "\n");
+    writeJsonReceipt(path.join(args.out, `${id}.json`), receipt);
     console.log(
       `${id}: ${receipt.pass ? "pass" : "miss"}${receipt.plant_caught ? "" : " (plant not caught)"}: ${receipt.measured}`,
     );

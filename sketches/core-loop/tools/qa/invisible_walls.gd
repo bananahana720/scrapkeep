@@ -6,6 +6,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const WORLD_MASK := 1
 const DIRS := 16
@@ -56,7 +57,7 @@ func _initialize() -> void:
 		printerr("invisible_walls: pass --map=<park map> or --arena, and --out=<file.json>")
 		quit(2)
 		return
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		printerr("invisible_walls: needs a display (xvfb-run, opengl3): headless keeps no MultiMesh instance transforms")
 		quit(2)
 		return

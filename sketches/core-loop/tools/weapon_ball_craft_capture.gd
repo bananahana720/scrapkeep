@@ -8,6 +8,7 @@ const Palette := preload("res://src/core/palette.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SIZE := Vector2i(1440, 900)
 const SAMPLE_PARTS := ["hot_rivets", "cross_split", "spiral_wave", "chain_arc", "dash_vane", "rivet_plating"]
@@ -22,7 +23,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			out = arg.trim_prefix("--out=")
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		quit(2)
 		return
 	DirAccess.make_dir_recursive_absolute(out)

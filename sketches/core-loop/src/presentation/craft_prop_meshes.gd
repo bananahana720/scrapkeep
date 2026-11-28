@@ -77,7 +77,7 @@ static func _add_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Ve
 	_add_tri(st, a, c, d, n, uv_scale)
 
 
-static func _bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel := 0.04, uv_scale := 0.5, xf := Transform3D.IDENTITY) -> void:
+static func bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel := 0.04, uv_scale := 0.5, xf := Transform3D.IDENTITY) -> void:
 	var h := size * 0.5
 	var b := minf(bevel, minf(h.x, minf(h.y, h.z)) * 0.42)
 	var xi := h.x - b
@@ -136,7 +136,7 @@ static func _bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel :=
 					n, uv_scale)
 
 
-static func _bevel_cyl(st: SurfaceTool, center: Vector3, r_bot: float, r_top: float, height: float, segs := 12, bevel := 0.03, uv_scale := 0.5, xf := Transform3D.IDENTITY) -> void:
+static func bevel_cyl(st: SurfaceTool, center: Vector3, r_bot: float, r_top: float, height: float, segs := 12, bevel := 0.03, uv_scale := 0.5, xf := Transform3D.IDENTITY) -> void:
 	var hh := height * 0.5
 	var b := minf(bevel, minf(hh * 0.4, minf(r_bot, r_top) * 0.35))
 	var rings := [
@@ -229,129 +229,122 @@ static func _bevel_ring(st: SurfaceTool, center: Vector3, r_in: float, r_out: fl
 			_add_quad(st, q0, q1, q2, q3, fn, uv_scale)
 
 
-static func _bolt_ring(st: SurfaceTool, center: Vector3, ring_r: float, count: int, bolt_r: float, bolt_h: float, xf := Transform3D.IDENTITY) -> void:
-	for i in count:
-		var a := TAU * float(i) / float(count)
-		var pos := center + Vector3(cos(a) * ring_r, 0.0, sin(a) * ring_r)
-		_bevel_cyl(st, pos, bolt_r, bolt_r * 0.88, bolt_h, 6, bolt_r * 0.2, 1.0, xf)
-
-
 
 static func stake_chest_body() -> ArrayMesh:
 	return _cached("stake_chest_body", func(st: SurfaceTool):
-		_bevel_box(st, Vector3(0.0, 0.07, 0.0), Vector3(2.36, 0.14, 1.66), 0.035, 0.5)
-		_bevel_box(st, Vector3(0.0, 0.72, 0.0), Vector3(2.20, 1.16, 1.50), 0.055, 0.5)
+		bevel_box(st, Vector3(0.0, 0.07, 0.0), Vector3(2.36, 0.14, 1.66), 0.035, 0.5)
+		bevel_box(st, Vector3(0.0, 0.72, 0.0), Vector3(2.20, 1.16, 1.50), 0.055, 0.5)
 		for sx in [-1.0, 1.0]:
 			for sz in [-1.0, 1.0]:
-				_bevel_box(st, Vector3(sx * 1.08, 0.72, sz * 0.73), Vector3(0.12, 1.12, 0.12), 0.02, 0.8)
+				bevel_box(st, Vector3(sx * 1.08, 0.72, sz * 0.73), Vector3(0.12, 1.12, 0.12), 0.02, 0.8)
 		for sx in [-1.0, 1.0]:
-			_bevel_box(st, Vector3(sx * 1.12, 0.88, 0.0), Vector3(0.08, 0.12, 0.72), 0.02, 0.8)
-			_bevel_box(st, Vector3(sx * 1.12, 0.44, 0.0), Vector3(0.08, 0.12, 0.72), 0.02, 0.8)
-		_bevel_box(st, Vector3(0.0, 1.27, 0.0), Vector3(2.28, 0.08, 1.58), 0.02, 0.6)
+			bevel_box(st, Vector3(sx * 1.12, 0.88, 0.0), Vector3(0.08, 0.12, 0.72), 0.02, 0.8)
+			bevel_box(st, Vector3(sx * 1.12, 0.44, 0.0), Vector3(0.08, 0.12, 0.72), 0.02, 0.8)
+		bevel_box(st, Vector3(0.0, 1.27, 0.0), Vector3(2.28, 0.08, 1.58), 0.02, 0.6)
 		for hx in [-0.62, 0.62]:
-			_bevel_cyl(st, Vector3.ZERO, 0.055, 0.055, 0.24, 8, 0.01, 1.0, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(hx, 1.28, -0.77)))
-		_bevel_box(st, Vector3(0.0, 1.20, 0.76), Vector3(0.32, 0.18, 0.08), 0.02, 1.0)
+			bevel_cyl(st, Vector3.ZERO, 0.055, 0.055, 0.24, 8, 0.01, 1.0, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(hx, 1.28, -0.77)))
+		bevel_box(st, Vector3(0.0, 1.20, 0.76), Vector3(0.32, 0.18, 0.08), 0.02, 1.0)
 	)
 
 
 static func stake_chest_lid() -> ArrayMesh:
 	return _cached("stake_chest_lid", func(st: SurfaceTool):
-		_bevel_box(st, Vector3(0.0, -0.09, 0.0), Vector3(2.34, 0.11, 1.64), 0.025, 0.6)
-		_bevel_box(st, Vector3(0.0, 0.05, 0.0), Vector3(2.18, 0.19, 1.46), 0.06, 0.6)
+		bevel_box(st, Vector3(0.0, -0.09, 0.0), Vector3(2.34, 0.11, 1.64), 0.025, 0.6)
+		bevel_box(st, Vector3(0.0, 0.05, 0.0), Vector3(2.18, 0.19, 1.46), 0.06, 0.6)
 		for rx in [-0.76, 0.0, 0.76]:
-			_bevel_box(st, Vector3(rx, 0.06, 0.0), Vector3(0.16, 0.23, 1.56), 0.025, 0.8)
-		_bevel_box(st, Vector3(0.0, -0.06, 0.82), Vector3(0.24, 0.22, 0.08), 0.02, 1.0)
+			bevel_box(st, Vector3(rx, 0.06, 0.0), Vector3(0.16, 0.23, 1.56), 0.025, 0.8)
+		bevel_box(st, Vector3(0.0, -0.06, 0.82), Vector3(0.24, 0.22, 0.08), 0.02, 1.0)
 	)
 
 
 static func stake_shrine_body() -> ArrayMesh:
 	return _cached("stake_shrine_body", func(st: SurfaceTool):
-		_bevel_box(st, Vector3(0.0, 0.10, 0.0), Vector3(1.88, 0.20, 1.88), 0.045, 0.5)
-		_bevel_box(st, Vector3(0.0, 0.24, 0.0), Vector3(1.72, 0.12, 1.72), 0.03, 0.5)
-		_bevel_box(st, Vector3(0.0, 1.32, 0.0), Vector3(1.60, 2.08, 1.60), 0.055, 0.45)
+		bevel_box(st, Vector3(0.0, 0.10, 0.0), Vector3(1.88, 0.20, 1.88), 0.045, 0.5)
+		bevel_box(st, Vector3(0.0, 0.24, 0.0), Vector3(1.72, 0.12, 1.72), 0.03, 0.5)
+		bevel_box(st, Vector3(0.0, 1.32, 0.0), Vector3(1.60, 2.08, 1.60), 0.055, 0.45)
 		for sx in [-1.0, 1.0]:
 			for sz in [-1.0, 1.0]:
-				_bevel_box(st, Vector3(sx * 0.78, 1.24, sz * 0.78), Vector3(0.14, 1.92, 0.14), 0.025, 0.7)
+				bevel_box(st, Vector3(sx * 0.78, 1.24, sz * 0.78), Vector3(0.14, 1.92, 0.14), 0.025, 0.7)
 		for sx in [-1.0, 1.0]:
-			_bevel_box(st, Vector3(sx * 0.83, 1.35, 0.0), Vector3(0.08, 1.40, 0.44), 0.02, 0.7)
-		_bevel_box(st, Vector3(0.0, 2.34, 0.0), Vector3(1.76, 0.16, 1.76), 0.04, 0.5)
+			bevel_box(st, Vector3(sx * 0.83, 1.35, 0.0), Vector3(0.08, 1.40, 0.44), 0.02, 0.7)
+		bevel_box(st, Vector3(0.0, 2.34, 0.0), Vector3(1.76, 0.16, 1.76), 0.04, 0.5)
 	)
 
 
 static func stake_shrine_basin() -> ArrayMesh:
 	return _cached("stake_shrine_basin", func(st: SurfaceTool):
 		_bevel_ring(st, Vector3(0.0, 0.02, 0.0), 0.36, 0.58, 0.28, 8, 0.035, 0.8)
-		_bevel_cyl(st, Vector3(0.0, -0.02, 0.0), 0.38, 0.40, 0.18, 8, 0.02, 0.8)
+		bevel_cyl(st, Vector3(0.0, -0.02, 0.0), 0.38, 0.40, 0.18, 8, 0.02, 0.8)
 		for i in 4:
 			var a := PI * 0.25 + PI * 0.5 * float(i)
-			_bevel_box(st, Vector3(cos(a) * 0.56, -0.06, sin(a) * 0.56), Vector3(0.16, 0.18, 0.16), 0.02, 1.0)
+			bevel_box(st, Vector3(cos(a) * 0.56, -0.06, sin(a) * 0.56), Vector3(0.16, 0.18, 0.16), 0.02, 1.0)
 	)
 
 
 static func stake_ward_pillar() -> ArrayMesh:
 	return _cached("stake_ward_pillar", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, 0.10, 0.0), 0.76, 0.68, 0.20, 8, 0.035, 0.5)
-		_bolt_ring(st, Vector3(0.0, 0.21, 0.0), 0.58, 8, 0.045, 0.04)
-		_bevel_cyl(st, Vector3(0.0, 0.30, 0.0), 0.52, 0.44, 0.22, 8, 0.03, 0.5)
-		_bevel_cyl(st, Vector3(0.0, 1.50, 0.0), 0.38, 0.28, 2.24, 8, 0.02, 0.5)
+		bevel_cyl(st, Vector3(0.0, 0.10, 0.0), 0.76, 0.68, 0.20, 8, 0.035, 0.5)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, 0.21, 0.0), 0.58, 8, 0.045, 0.04, 0.88, 1.0, bevel_cyl)
+		bevel_cyl(st, Vector3(0.0, 0.30, 0.0), 0.52, 0.44, 0.22, 8, 0.03, 0.5)
+		bevel_cyl(st, Vector3(0.0, 1.50, 0.0), 0.38, 0.28, 2.24, 8, 0.02, 0.5)
 		for y in [0.78, 1.48, 2.18]:
 			var r := lerpf(0.42, 0.34, (y - 0.5) / 2.0)
 			_bevel_ring(st, Vector3(0.0, y, 0.0), r - 0.08, r + 0.06, 0.12, 8, 0.02, 0.8)
 		for i in 4:
 			var a := PI * 0.5 * float(i)
-			_bevel_box(st, Vector3(cos(a) * 0.36, 1.32, sin(a) * 0.36), Vector3(0.09, 1.76, 0.09), 0.015, 0.8)
-		_bevel_cyl(st, Vector3(0.0, 2.70, 0.0), 0.32, 0.58, 0.22, 8, 0.03, 0.6)
+			bevel_box(st, Vector3(cos(a) * 0.36, 1.32, sin(a) * 0.36), Vector3(0.09, 1.76, 0.09), 0.015, 0.8)
+		bevel_cyl(st, Vector3(0.0, 2.70, 0.0), 0.32, 0.58, 0.22, 8, 0.03, 0.6)
 	)
 
 
 static func stake_ward_lantern() -> ArrayMesh:
 	return _cached("stake_ward_lantern", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, 0.02, 0.0), 0.46, 0.42, 0.26, 8, 0.04, 0.8)
+		bevel_cyl(st, Vector3(0.0, 0.02, 0.0), 0.46, 0.42, 0.26, 8, 0.04, 0.8)
 		_bevel_ring(st, Vector3(0.0, 0.15, 0.0), 0.26, 0.56, 0.07, 8, 0.015, 0.9)
 		_bevel_ring(st, Vector3(0.0, -0.11, 0.0), 0.32, 0.58, 0.07, 8, 0.015, 0.9)
-		_bevel_cyl(st, Vector3(0.0, 0.24, 0.0), 0.34, 0.12, 0.14, 8, 0.02, 0.9)
+		bevel_cyl(st, Vector3(0.0, 0.24, 0.0), 0.34, 0.12, 0.14, 8, 0.02, 0.9)
 	)
 
 
 static func stake_tier_rivet() -> ArrayMesh:
 	return _cached("stake_tier_rivet", func(st: SurfaceTool):
 		var face_xf := Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3.ZERO)
-		_bevel_cyl(st, Vector3.ZERO, 0.12, 0.10, 0.08, 6, 0.018, 1.5, face_xf)
-		_bevel_cyl(st, Vector3(0.0, 0.04, 0.0), 0.065, 0.055, 0.04, 6, 0.01, 1.5, face_xf)
+		bevel_cyl(st, Vector3.ZERO, 0.12, 0.10, 0.08, 6, 0.018, 1.5, face_xf)
+		bevel_cyl(st, Vector3(0.0, 0.04, 0.0), 0.065, 0.055, 0.04, 6, 0.01, 1.5, face_xf)
 	)
 
 
 
 static func radio_mast() -> ArrayMesh:
 	return _cached("radio_mast", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -1.14, 0.0), 0.34, 0.26, 0.12, 6, 0.02, 0.8)
-		_bolt_ring(st, Vector3(0.0, -1.07, 0.0), 0.24, 6, 0.028, 0.03)
-		_bevel_cyl(st, Vector3(0.0, -0.78, 0.0), 0.13, 0.10, 0.68, 8, 0.015, 0.8)
-		_bevel_box(st, Vector3(0.0, -0.72, 0.11), Vector3(0.22, 0.30, 0.14), 0.02, 1.2)
-		_bevel_cyl(st, Vector3(0.0, 0.34, 0.0), 0.095, 0.058, 1.66, 8, 0.012, 0.8)
+		bevel_cyl(st, Vector3(0.0, -1.14, 0.0), 0.34, 0.26, 0.12, 6, 0.02, 0.8)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, -1.07, 0.0), 0.24, 6, 0.028, 0.03, 0.88, 1.0, bevel_cyl)
+		bevel_cyl(st, Vector3(0.0, -0.78, 0.0), 0.13, 0.10, 0.68, 8, 0.015, 0.8)
+		bevel_box(st, Vector3(0.0, -0.72, 0.11), Vector3(0.22, 0.30, 0.14), 0.02, 1.2)
+		bevel_cyl(st, Vector3(0.0, 0.34, 0.0), 0.095, 0.058, 1.66, 8, 0.012, 0.8)
 		for y in [-0.30, 0.28, 0.86]:
 			_bevel_ring(st, Vector3(0.0, y, 0.0), 0.06, 0.125, 0.08, 8, 0.015, 1.2)
-		_bevel_box(st, Vector3(0.0, 1.15, 0.0), Vector3(0.22, 0.10, 0.16), 0.018, 1.2)
+		bevel_box(st, Vector3(0.0, 1.15, 0.0), Vector3(0.22, 0.10, 0.16), 0.018, 1.2)
 	)
 
 
 static func radio_dish() -> ArrayMesh:
 	return _cached("radio_dish", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -0.10, 0.0), 0.16, 0.22, 0.14, 10, 0.02, 1.0)
+		bevel_cyl(st, Vector3(0.0, -0.10, 0.0), 0.16, 0.22, 0.14, 10, 0.02, 1.0)
 		_bevel_ring(st, Vector3(0.0, -0.02, 0.0), 0.12, 0.36, 0.07, 12, 0.015, 0.9)
 		_bevel_ring(st, Vector3(0.0, 0.06, 0.0), 0.32, 0.52, 0.07, 12, 0.015, 0.9)
 		_bevel_ring(st, Vector3(0.0, 0.14, 0.0), 0.48, 0.58, 0.08, 12, 0.018, 0.9)
-		_bevel_cyl(st, Vector3(0.0, 0.12, 0.0), 0.06, 0.04, 0.30, 6, 0.01, 1.2)
+		bevel_cyl(st, Vector3(0.0, 0.12, 0.0), 0.06, 0.04, 0.30, 6, 0.01, 1.2)
 		for i in 3:
 			var a := TAU * float(i) / 3.0
 			var strut_xf := Transform3D(Basis(Vector3(-sin(a), 0.0, cos(a)), 0.72), Vector3(cos(a) * 0.26, 0.18, sin(a) * 0.26))
-			_bevel_box(st, Vector3.ZERO, Vector3(0.035, 0.38, 0.035), 0.008, 1.2, strut_xf)
+			bevel_box(st, Vector3.ZERO, Vector3(0.035, 0.38, 0.035), 0.008, 1.2, strut_xf)
 	)
 
 
 static func radio_lamp_housing() -> ArrayMesh:
 	return _cached("radio_lamp_housing", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, 0.11, 0.11, 0.22, 8, 0.04, 1.5)
+		bevel_cyl(st, Vector3.ZERO, 0.11, 0.11, 0.22, 8, 0.04, 1.5)
 		_bevel_ring(st, Vector3(0.0, -0.07, 0.0), 0.07, 0.14, 0.05, 8, 0.01, 1.5)
 	)
 
@@ -366,36 +359,36 @@ static func radio_pulse_ring() -> ArrayMesh:
 static func dial_needle() -> ArrayMesh:
 	return _cached("dial_needle", func(st: SurfaceTool):
 		var face_xf := Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3.ZERO)
-		_bevel_cyl(st, Vector3.ZERO, 0.11, 0.09, 0.052, 8, 0.012, 1.5, face_xf)
-		_bevel_box(st, Vector3(0.0, 0.20, 0.0), Vector3(0.11, 0.34, 0.038), 0.012, 1.5)
-		_bevel_box(st, Vector3(0.0, 0.42, 0.0), Vector3(0.06, 0.18, 0.032), 0.01, 1.5)
-		_bevel_box(st, Vector3(0.0, -0.18, 0.0), Vector3(0.14, 0.22, 0.04), 0.012, 1.5)
-		_bevel_box(st, Vector3(0.0, -0.34, 0.0), Vector3(0.19, 0.12, 0.044), 0.015, 1.5)
+		bevel_cyl(st, Vector3.ZERO, 0.11, 0.09, 0.052, 8, 0.012, 1.5, face_xf)
+		bevel_box(st, Vector3(0.0, 0.20, 0.0), Vector3(0.11, 0.34, 0.038), 0.012, 1.5)
+		bevel_box(st, Vector3(0.0, 0.42, 0.0), Vector3(0.06, 0.18, 0.032), 0.01, 1.5)
+		bevel_box(st, Vector3(0.0, -0.18, 0.0), Vector3(0.14, 0.22, 0.04), 0.012, 1.5)
+		bevel_box(st, Vector3(0.0, -0.34, 0.0), Vector3(0.19, 0.12, 0.044), 0.015, 1.5)
 	)
 
 
 static func dial_post() -> ArrayMesh:
 	return _cached("dial_post", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -1.42, 0.0), 0.44, 0.36, 0.16, 8, 0.03, 0.6)
-		_bolt_ring(st, Vector3(0.0, -1.33, 0.0), 0.32, 6, 0.035, 0.03)
-		_bevel_cyl(st, Vector3(0.0, 0.0, 0.0), 0.22, 0.18, 2.86, 8, 0.02, 0.6)
+		bevel_cyl(st, Vector3(0.0, -1.42, 0.0), 0.44, 0.36, 0.16, 8, 0.03, 0.6)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, -1.33, 0.0), 0.32, 6, 0.035, 0.03, 0.88, 1.0, bevel_cyl)
+		bevel_cyl(st, Vector3(0.0, 0.0, 0.0), 0.22, 0.18, 2.86, 8, 0.02, 0.6)
 		for y in [-0.75, 0.15, 0.95]:
 			_bevel_ring(st, Vector3(0.0, y, 0.0), 0.16, 0.26, 0.10, 8, 0.02, 0.8)
-		_bevel_box(st, Vector3(0.0, 1.44, 0.0), Vector3(0.56, 0.16, 0.28), 0.025, 0.8)
+		bevel_box(st, Vector3(0.0, 1.44, 0.0), Vector3(0.56, 0.16, 0.28), 0.025, 0.8)
 	)
 
 
 static func dial_bezel() -> ArrayMesh:
 	return _cached("dial_bezel", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -0.02, 0.0), 1.12, 1.08, 0.14, 16, 0.025, 0.5)
+		bevel_cyl(st, Vector3(0.0, -0.02, 0.0), 1.12, 1.08, 0.14, 16, 0.025, 0.5)
 		_bevel_ring(st, Vector3(0.0, 0.06, 0.0), 0.96, 1.16, 0.09, 16, 0.02, 0.7)
-		_bolt_ring(st, Vector3(0.0, 0.10, 0.0), 1.06, 8, 0.04, 0.03)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, 0.10, 0.0), 1.06, 8, 0.04, 0.03, 0.88, 1.0, bevel_cyl)
 	)
 
 
 static func dial_redline() -> ArrayMesh:
 	return _cached("dial_redline", func(st: SurfaceTool):
-		_bevel_box(st, Vector3.ZERO, Vector3(0.22, 0.52, 0.055), 0.015, 1.2)
+		bevel_box(st, Vector3.ZERO, Vector3(0.22, 0.52, 0.055), 0.015, 1.2)
 	)
 
 
@@ -403,73 +396,73 @@ static func thermal_grate(radius: float) -> ArrayMesh:
 	var key := "thermal_grate:%.2f" % radius
 	return _cached(key, func(st: SurfaceTool):
 		_bevel_ring(st, Vector3.ZERO, radius * 0.76, radius, 0.22, 16, 0.03, 0.4)
-		_bolt_ring(st, Vector3(0.0, 0.11, 0.0), radius * 0.88, 8, minf(0.14, radius * 0.055), 0.04)
-		_bevel_cyl(st, Vector3(0.0, -0.02, 0.0), radius * 0.22, radius * 0.20, 0.16, 8, 0.02, 0.5)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, 0.11, 0.0), radius * 0.88, 8, minf(0.14, radius * 0.055), 0.04, 0.88, 1.0, bevel_cyl)
+		bevel_cyl(st, Vector3(0.0, -0.02, 0.0), radius * 0.22, radius * 0.20, 0.16, 8, 0.02, 0.5)
 		for i in 6:
 			var a := TAU * float(i) / 6.0
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * radius * 0.48, -0.01, sin(a) * radius * 0.48))
-			_bevel_box(st, Vector3.ZERO, Vector3(radius * 0.58, 0.10, maxf(0.16, radius * 0.07)), 0.02, 0.5, xf)
+			bevel_box(st, Vector3.ZERO, Vector3(radius * 0.58, 0.10, maxf(0.16, radius * 0.07)), 0.02, 0.5, xf)
 	)
 
 
 static func sluice_wheel() -> ArrayMesh:
 	return _cached("sluice_wheel", func(st: SurfaceTool):
 		_bevel_ring(st, Vector3.ZERO, 0.78, 1.04, 0.18, 16, 0.035, 0.7)
-		_bevel_cyl(st, Vector3.ZERO, 0.24, 0.22, 0.24, 8, 0.03, 0.9)
-		_bevel_cyl(st, Vector3(0.0, -0.22, 0.0), 0.125, 0.125, 0.42, 8, 0.018, 1.0)
+		bevel_cyl(st, Vector3.ZERO, 0.24, 0.22, 0.24, 8, 0.03, 0.9)
+		bevel_cyl(st, Vector3(0.0, -0.22, 0.0), 0.125, 0.125, 0.42, 8, 0.018, 1.0)
 		_bevel_ring(st, Vector3(0.0, -0.16, 0.0), 0.11, 0.19, 0.08, 8, 0.015, 1.0)
 		for i in 4:
 			var a := PI * 0.5 * float(i)
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * 0.50, 0.0, sin(a) * 0.50))
-			_bevel_box(st, Vector3.ZERO, Vector3(0.64, 0.12, 0.12), 0.02, 0.9, xf)
+			bevel_box(st, Vector3.ZERO, Vector3(0.64, 0.12, 0.12), 0.02, 0.9, xf)
 	)
 
 
 static func sluice_post() -> ArrayMesh:
 	return _cached("sluice_post", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -0.82, 0.0), 0.46, 0.36, 0.16, 8, 0.03, 0.6)
-		_bolt_ring(st, Vector3(0.0, -0.73, 0.0), 0.34, 6, 0.036, 0.03)
-		_bevel_cyl(st, Vector3(0.0, -0.06, 0.0), 0.23, 0.19, 1.56, 8, 0.025, 0.6)
+		bevel_cyl(st, Vector3(0.0, -0.82, 0.0), 0.46, 0.36, 0.16, 8, 0.03, 0.6)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, -0.73, 0.0), 0.34, 6, 0.036, 0.03, 0.88, 1.0, bevel_cyl)
+		bevel_cyl(st, Vector3(0.0, -0.06, 0.0), 0.23, 0.19, 1.56, 8, 0.025, 0.6)
 		_bevel_ring(st, Vector3(0.0, 0.32, 0.0), 0.17, 0.28, 0.10, 8, 0.02, 0.8)
-		_bevel_box(st, Vector3(0.0, 0.78, 0.0), Vector3(0.42, 0.34, 0.40), 0.04, 0.8)
-		_bevel_cyl(st, Vector3.ZERO, 0.165, 0.155, 0.16, 8, 0.02, 1.0, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0.0, 0.80, 0.20)))
+		bevel_box(st, Vector3(0.0, 0.78, 0.0), Vector3(0.42, 0.34, 0.40), 0.04, 0.8)
+		bevel_cyl(st, Vector3.ZERO, 0.165, 0.155, 0.16, 8, 0.02, 1.0, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0.0, 0.80, 0.20)))
 	)
 
 
 static func valve_door_slab(size: Vector3) -> ArrayMesh:
 	var key := "valve_door_slab:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_box(st, Vector3.ZERO, size, minf(0.12, minf(size.x, minf(size.y, size.z)) * 0.18), 0.35)
+		bevel_box(st, Vector3.ZERO, size, minf(0.12, minf(size.x, minf(size.y, size.z)) * 0.18), 0.35)
 		var rib_z := size.z + 0.14
-		_bevel_box(st, Vector3(0.0, size.y * 0.34, 0.0), Vector3(size.x * 0.92, maxf(0.28, size.y * 0.09), rib_z), 0.04, 0.45)
-		_bevel_box(st, Vector3(0.0, -size.y * 0.34, 0.0), Vector3(size.x * 0.92, maxf(0.28, size.y * 0.09), rib_z), 0.04, 0.45)
-		_bevel_box(st, Vector3(0.0, 0.0, 0.0), Vector3(size.x * 0.88, maxf(0.24, size.y * 0.08), rib_z), 0.04, 0.45)
+		bevel_box(st, Vector3(0.0, size.y * 0.34, 0.0), Vector3(size.x * 0.92, maxf(0.28, size.y * 0.09), rib_z), 0.04, 0.45)
+		bevel_box(st, Vector3(0.0, -size.y * 0.34, 0.0), Vector3(size.x * 0.92, maxf(0.28, size.y * 0.09), rib_z), 0.04, 0.45)
+		bevel_box(st, Vector3(0.0, 0.0, 0.0), Vector3(size.x * 0.88, maxf(0.24, size.y * 0.08), rib_z), 0.04, 0.45)
 		for sx in [-0.36, 0.36]:
-			_bevel_box(st, Vector3(size.x * sx, 0.0, 0.0), Vector3(maxf(0.24, size.x * 0.08), size.y * 0.82, rib_z * 0.96), 0.035, 0.45)
+			bevel_box(st, Vector3(size.x * sx, 0.0, 0.0), Vector3(maxf(0.24, size.x * 0.08), size.y * 0.82, rib_z * 0.96), 0.035, 0.45)
 	)
 
 
 static func cracked_wall_slab(size: Vector3) -> ArrayMesh:
 	var key := "cracked_wall_slab:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_box(st, Vector3.ZERO, size, minf(0.14, minf(size.x, minf(size.y, size.z)) * 0.2), 0.3)
-		_bevel_box(st, Vector3(0.0, -size.y * 0.44, 0.0), Vector3(size.x + 0.24, maxf(0.32, size.y * 0.12), size.z + 0.22), 0.05, 0.35)
-		_bevel_box(st, Vector3(0.0, size.y * 0.44, 0.0), Vector3(size.x + 0.16, maxf(0.24, size.y * 0.10), size.z + 0.14), 0.04, 0.35)
+		bevel_box(st, Vector3.ZERO, size, minf(0.14, minf(size.x, minf(size.y, size.z)) * 0.2), 0.3)
+		bevel_box(st, Vector3(0.0, -size.y * 0.44, 0.0), Vector3(size.x + 0.24, maxf(0.32, size.y * 0.12), size.z + 0.22), 0.05, 0.35)
+		bevel_box(st, Vector3(0.0, size.y * 0.44, 0.0), Vector3(size.x + 0.16, maxf(0.24, size.y * 0.10), size.z + 0.14), 0.04, 0.35)
 	)
 
 
 static func lift_deck(radius: float) -> ArrayMesh:
 	var key := "lift_deck:%.2f" % radius
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, 0.04, 0.0), radius * 0.96, radius, 0.92, 12, 0.08, 0.35)
+		bevel_cyl(st, Vector3(0.0, 0.04, 0.0), radius * 0.96, radius, 0.92, 12, 0.08, 0.35)
 		_bevel_ring(st, Vector3(0.0, 0.26, 0.0), radius * 0.86, radius + 0.12, 0.28, 12, 0.04, 0.4)
-		_bevel_cyl(st, Vector3(0.0, -0.34, 0.0), radius * 0.72, radius * 0.84, 0.32, 12, 0.05, 0.4)
+		bevel_cyl(st, Vector3(0.0, -0.34, 0.0), radius * 0.72, radius * 0.84, 0.32, 12, 0.05, 0.4)
 	)
 
 
 static func lift_piston() -> ArrayMesh:
 	return _cached("lift_piston", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, 0.92, 0.82, 12.0, 10, 0.06, 0.3)
+		bevel_cyl(st, Vector3.ZERO, 0.92, 0.82, 12.0, 10, 0.06, 0.3)
 		for y in [-4.0, -1.5, 1.5, 4.0]:
 			_bevel_ring(st, Vector3(0.0, y, 0.0), 0.78, 1.06, 0.34, 10, 0.04, 0.4)
 	)
@@ -478,12 +471,12 @@ static func lift_piston() -> ArrayMesh:
 static func barge_hull(size: Vector3) -> ArrayMesh:
 	var key := "barge_hull:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_box(st, Vector3(0.0, 0.0, 0.0), size, minf(0.14, size.y * 0.25), 0.25)
-		_bevel_box(st, Vector3(0.0, -size.y * 0.55, 0.0), Vector3(size.x * 0.86, size.y * 0.65, size.z * 0.86), 0.12, 0.28)
-		_bevel_box(st, Vector3(0.0, -0.05, 0.0), Vector3(size.x + 0.32, size.y * 0.42, size.z + 0.32), 0.08, 0.32)
+		bevel_box(st, Vector3(0.0, 0.0, 0.0), size, minf(0.14, size.y * 0.25), 0.25)
+		bevel_box(st, Vector3(0.0, -size.y * 0.55, 0.0), Vector3(size.x * 0.86, size.y * 0.65, size.z * 0.86), 0.12, 0.28)
+		bevel_box(st, Vector3(0.0, -0.05, 0.0), Vector3(size.x + 0.32, size.y * 0.42, size.z + 0.32), 0.08, 0.32)
 		for sx in [-1.0, 1.0]:
 			for sz in [-1.0, 1.0]:
-				_bevel_box(st, Vector3(sx * size.x * 0.48, -0.04, sz * size.z * 0.48), Vector3(0.85, size.y * 0.72, 0.85), 0.10, 0.4)
+				bevel_box(st, Vector3(sx * size.x * 0.48, -0.04, sz * size.z * 0.48), Vector3(0.85, size.y * 0.72, 0.85), 0.10, 0.4)
 	)
 
 
@@ -491,8 +484,8 @@ static func grapple_hook_anchor() -> ArrayMesh:
 	return _cached("grapple_hook_anchor", func(st: SurfaceTool):
 		var rot_xf := Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3.ZERO)
 		_bevel_ring(st, Vector3.ZERO, 0.52, 0.86, 0.28, 12, 0.05, 0.7, rot_xf)
-		_bevel_cyl(st, Vector3(0.0, 0.88, 0.0), 0.24, 0.30, 0.38, 8, 0.04, 0.8)
-		_bevel_box(st, Vector3(0.0, -0.78, 0.0), Vector3(0.36, 0.28, 0.32), 0.04, 0.8)
+		bevel_cyl(st, Vector3(0.0, 0.88, 0.0), 0.24, 0.30, 0.38, 8, 0.04, 0.8)
+		bevel_box(st, Vector3(0.0, -0.78, 0.0), Vector3(0.36, 0.28, 0.32), 0.04, 0.8)
 	)
 
 
@@ -500,7 +493,7 @@ static func grapple_hook_anchor() -> ArrayMesh:
 static func quench_vent_pad(radius: float) -> ArrayMesh:
 	var key := "quench_vent_pad:%.2f" % radius
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -0.015, 0.0), radius * 0.88, radius * 0.84, 0.07, 16, 0.018, 0.35)
+		bevel_cyl(st, Vector3(0.0, -0.015, 0.0), radius * 0.88, radius * 0.84, 0.07, 16, 0.018, 0.35)
 	)
 
 
@@ -508,12 +501,12 @@ static func quench_vent_grate(radius: float) -> ArrayMesh:
 	var key := "quench_vent_grate:%.2f" % radius
 	return _cached(key, func(st: SurfaceTool):
 		_bevel_ring(st, Vector3(0.0, 0.01, 0.0), radius * 0.74, radius, 0.11, 16, 0.025, 0.4)
-		_bolt_ring(st, Vector3(0.0, 0.065, 0.0), radius * 0.88, 8, minf(0.16, radius * 0.055), 0.035)
-		_bevel_cyl(st, Vector3(0.0, 0.02, 0.0), radius * 0.22, radius * 0.19, 0.08, 8, 0.02, 0.5)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, 0.065, 0.0), radius * 0.88, 8, minf(0.16, radius * 0.055), 0.035, 0.88, 1.0, bevel_cyl)
+		bevel_cyl(st, Vector3(0.0, 0.02, 0.0), radius * 0.22, radius * 0.19, 0.08, 8, 0.02, 0.5)
 		for i in 4:
 			var a := PI * 0.25 * float(i)
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(0.0, 0.032, 0.0))
-			_bevel_box(st, Vector3.ZERO, Vector3(radius * 1.66, 0.05, maxf(0.16, radius * 0.055)), 0.014, 0.5, xf)
+			bevel_box(st, Vector3.ZERO, Vector3(radius * 1.66, 0.05, maxf(0.16, radius * 0.055)), 0.014, 0.5, xf)
 	)
 
 
@@ -521,11 +514,11 @@ static func crane_mast(height: float) -> ArrayMesh:
 	var key := "crane_mast:%.2f" % height
 	return _cached(key, func(st: SurfaceTool):
 		var hh := height * 0.5
-		_bevel_cyl(st, Vector3(0.0, -hh + 0.35, 0.0), 1.65, 1.38, 0.70, 8, 0.08, 0.25)
-		_bevel_cyl(st, Vector3(0.0, 0.0, 0.0), 1.18, 0.94, height - 0.6, 8, 0.06, 0.25)
+		bevel_cyl(st, Vector3(0.0, -hh + 0.35, 0.0), 1.65, 1.38, 0.70, 8, 0.08, 0.25)
+		bevel_cyl(st, Vector3(0.0, 0.0, 0.0), 1.18, 0.94, height - 0.6, 8, 0.06, 0.25)
 		for i in 4:
 			var a := PI * 0.25 + PI * 0.5 * float(i)
-			_bevel_box(st, Vector3(cos(a) * 1.06, 0.0, sin(a) * 1.06), Vector3(0.32, height * 0.92, 0.32), 0.05, 0.3)
+			bevel_box(st, Vector3(cos(a) * 1.06, 0.0, sin(a) * 1.06), Vector3(0.32, height * 0.92, 0.32), 0.05, 0.3)
 		for f in [-0.32, 0.0, 0.32, 0.46]:
 			_bevel_ring(st, Vector3(0.0, height * f, 0.0), 0.86, 1.34, 0.34, 8, 0.05, 0.3)
 	)
@@ -534,17 +527,17 @@ static func crane_mast(height: float) -> ArrayMesh:
 static func crane_boom(size: Vector3) -> ArrayMesh:
 	var key := "crane_boom:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_box(st, Vector3.ZERO, size, 0.08, 0.3)
+		bevel_box(st, Vector3.ZERO, size, 0.08, 0.3)
 		for f in [-0.45, -0.22, 0.0, 0.22, 0.45]:
-			_bevel_box(st, Vector3(size.x * f, 0.0, 0.0), Vector3(0.24, size.y + 0.22, size.z + 0.22), 0.04, 0.4)
+			bevel_box(st, Vector3(size.x * f, 0.0, 0.0), Vector3(0.24, size.y + 0.22, size.z + 0.22), 0.04, 0.4)
 	)
 
 
 static func vent_nozzle() -> ArrayMesh:
 	return _cached("vent_nozzle", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -1.32, 0.0), 1.18, 1.02, 0.36, 10, 0.05, 0.35)
-		_bolt_ring(st, Vector3(0.0, -1.12, 0.0), 1.06, 8, 0.08, 0.06)
-		_bevel_cyl(st, Vector3(0.0, 0.0, 0.0), 0.90, 0.72, 2.76, 10, 0.05, 0.35)
+		bevel_cyl(st, Vector3(0.0, -1.32, 0.0), 1.18, 1.02, 0.36, 10, 0.05, 0.35)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, -1.12, 0.0), 1.06, 8, 0.08, 0.06, 0.88, 1.0, bevel_cyl)
+		bevel_cyl(st, Vector3(0.0, 0.0, 0.0), 0.90, 0.72, 2.76, 10, 0.05, 0.35)
 		for y in [-0.55, 0.25, 0.95]:
 			_bevel_ring(st, Vector3(0.0, y, 0.0), 0.70, 1.04, 0.18, 10, 0.03, 0.4)
 		_bevel_ring(st, Vector3(0.0, 1.38, 0.0), 0.56, 0.94, 0.26, 10, 0.04, 0.4)
@@ -558,15 +551,15 @@ static func lore_plate_rim(radius: float, h: float) -> ArrayMesh:
 		var r_out := radius * 1.08
 		var r_in := radius * 0.74
 		_bevel_ring(st, Vector3.ZERO, r_in, r_out, h, 16, minf(0.025, h * 0.35), 0.5)
-		_bevel_cyl(st, Vector3(0.0, -h * 0.22, 0.0), r_out * 0.96, r_in + 0.04, h * 0.52, 16, h * 0.1, 0.5)
-		_bolt_ring(st, Vector3(0.0, h * 0.32, 0.0), (r_in + r_out) * 0.52, 8, 0.075, h * 0.32)
+		bevel_cyl(st, Vector3(0.0, -h * 0.22, 0.0), r_out * 0.96, r_in + 0.04, h * 0.52, 16, h * 0.1, 0.5)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, h * 0.32, 0.0), (r_in + r_out) * 0.52, 8, 0.075, h * 0.32, 0.88, 1.0, bevel_cyl)
 	)
 
 
 static func lore_plate_face(face_radius: float, h: float) -> ArrayMesh:
 	var key := "lore_plate_face:%.3f:%.3f" % [face_radius, h]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, face_radius, face_radius * 0.94, h, 16, minf(0.02, h * 0.3), 0.6)
+		bevel_cyl(st, Vector3.ZERO, face_radius, face_radius * 0.94, h, 16, minf(0.02, h * 0.3), 0.6)
 		_bevel_ring(st, Vector3(0.0, h * 0.32, 0.0), face_radius * 0.44, face_radius * 0.62, h * 0.34, 16, 0.008, 0.8)
 	)
 
@@ -574,16 +567,16 @@ static func lore_plate_face(face_radius: float, h: float) -> ArrayMesh:
 static func mend_ward_ring(radius: float, h: float) -> ArrayMesh:
 	var key := "mend_ward_ring:%.2f:%.3f" % [radius, h]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -h * 0.1, 0.0), radius * 0.96, radius * 0.92, h * 0.72, 24, h * 0.2, 0.25)
+		bevel_cyl(st, Vector3(0.0, -h * 0.1, 0.0), radius * 0.96, radius * 0.92, h * 0.72, 24, h * 0.2, 0.25)
 		_bevel_ring(st, Vector3(0.0, h * 0.05, 0.0), radius * 0.86, radius, h * 0.92, 24, h * 0.25, 0.3)
-		_bolt_ring(st, Vector3(0.0, h * 0.34, 0.0), radius * 0.93, 12, 0.14, h * 0.32)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, h * 0.34, 0.0), radius * 0.93, 12, 0.14, h * 0.32, 0.88, 1.0, bevel_cyl)
 	)
 
 
 static func mend_ward_fill(radius: float, h: float) -> ArrayMesh:
 	var key := "mend_ward_fill:%.2f:%.3f" % [radius, h]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, radius * 0.95, radius * 0.92, h, 24, h * 0.28, 0.3)
+		bevel_cyl(st, Vector3.ZERO, radius * 0.95, radius * 0.92, h, 24, h * 0.28, 0.3)
 	)
 
 
@@ -591,13 +584,13 @@ static func door_clock_casing(size_m: float) -> ArrayMesh:
 	var key := "door_clock_casing:%.2f" % size_m
 	return _cached(key, func(st: SurfaceTool):
 		var face_xf := Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3.ZERO)
-		_bevel_cyl(st, Vector3.ZERO, size_m * 0.56, size_m * 0.54, 0.12, 8, 0.03, 0.8, face_xf)
+		bevel_cyl(st, Vector3.ZERO, size_m * 0.56, size_m * 0.54, 0.12, 8, 0.03, 0.8, face_xf)
 		_bevel_ring(st, Vector3(0.0, 0.06, 0.0), size_m * 0.42, size_m * 0.54, 0.07, 12, 0.018, 1.0, face_xf)
 		for sx in [-1.0, 1.0]:
 			for sy in [-1.0, 1.0]:
-				_bevel_box(st, Vector3(sx * size_m * 0.37, sy * size_m * 0.37, -0.02), Vector3(0.24, 0.24, 0.09), 0.028, 1.2)
-				_bevel_cyl(st, Vector3.ZERO, 0.045, 0.038, 0.04, 6, 0.008, 1.5, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(sx * size_m * 0.40, sy * size_m * 0.40, 0.035)))
-		_bevel_cyl(st, Vector3(0.0, size_m * 0.53, 0.0), 0.24, 0.12, 0.16, 8, 0.025, 1.2)
+				bevel_box(st, Vector3(sx * size_m * 0.37, sy * size_m * 0.37, -0.02), Vector3(0.24, 0.24, 0.09), 0.028, 1.2)
+				bevel_cyl(st, Vector3.ZERO, 0.045, 0.038, 0.04, 6, 0.008, 1.5, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(sx * size_m * 0.40, sy * size_m * 0.40, 0.035)))
+		bevel_cyl(st, Vector3(0.0, size_m * 0.53, 0.0), 0.24, 0.12, 0.16, 8, 0.025, 1.2)
 	)
 
 
@@ -605,59 +598,59 @@ static func door_clock_face(size_m: float) -> ArrayMesh:
 	var key := "door_clock_face:%.2f" % size_m
 	return _cached(key, func(st: SurfaceTool):
 		var face_xf := Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3.ZERO)
-		_bevel_cyl(st, Vector3.ZERO, size_m * 0.44, size_m * 0.43, 0.06, 16, 0.012, 1.0, face_xf)
+		bevel_cyl(st, Vector3.ZERO, size_m * 0.44, size_m * 0.43, 0.06, 16, 0.012, 1.0, face_xf)
 		for i in 12:
 			var a := TAU * float(i) / 12.0
 			var major := (i % 3 == 0)
 			var r := size_m * (0.355 if major else 0.37)
 			var tick_xf := Transform3D(Basis(Vector3.BACK, a), Vector3(sin(a) * r, cos(a) * r, 0.036))
-			_bevel_box(st, Vector3.ZERO, Vector3(0.035 if major else 0.022, 0.10 if major else 0.065, 0.024), 0.006, 2.0, tick_xf)
+			bevel_box(st, Vector3.ZERO, Vector3(0.035 if major else 0.022, 0.10 if major else 0.065, 0.024), 0.006, 2.0, tick_xf)
 	)
 
 
 static func door_clock_hand(width: float, length: float) -> ArrayMesh:
 	var key := "door_clock_hand:%.3f:%.3f" % [width, length]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_box(st, Vector3(0.0, 0.0, 0.0), Vector3(width, length, 0.042), minf(0.014, width * 0.25), 1.8)
-		_bevel_box(st, Vector3(0.0, length * 0.36, 0.0), Vector3(width * 0.55, length * 0.28, 0.036), 0.01, 1.8)
+		bevel_box(st, Vector3(0.0, 0.0, 0.0), Vector3(width, length, 0.042), minf(0.014, width * 0.25), 1.8)
+		bevel_box(st, Vector3(0.0, length * 0.36, 0.0), Vector3(width * 0.55, length * 0.28, 0.036), 0.01, 1.8)
 	)
 
 
 static func work_glove_leather() -> ArrayMesh:
 	return _cached("work_glove_leather", func(st: SurfaceTool):
-		_bevel_box(st, Vector3(0.0, 0.0, 0.0), Vector3(0.64, 0.21, 0.68), 0.055, 1.4)
-		_bevel_box(st, Vector3(0.0, 0.055, -0.22), Vector3(0.62, 0.12, 0.22), 0.035, 1.6)
+		bevel_box(st, Vector3(0.0, 0.0, 0.0), Vector3(0.64, 0.21, 0.68), 0.055, 1.4)
+		bevel_box(st, Vector3(0.0, 0.055, -0.22), Vector3(0.62, 0.12, 0.22), 0.035, 1.6)
 		for k in 4:
 			var f_len := 0.50 - absf(float(k) - 1.5) * 0.075
 			var x := -0.23 + float(k) * 0.155
 			var yaw := (float(k) - 1.5) * 0.09
 			var base_xf := Transform3D(Basis(Vector3.UP, yaw), Vector3(x, -0.015, -0.28))
-			_bevel_box(st, Vector3(0.0, 0.0, -f_len * 0.24), Vector3(0.145, 0.15, f_len * 0.64), 0.042, 1.8, base_xf)
-			_bevel_box(st, Vector3(0.0, -0.012, -f_len * 0.68), Vector3(0.125, 0.13, f_len * 0.54), 0.040, 1.8, base_xf)
+			bevel_box(st, Vector3(0.0, 0.0, -f_len * 0.24), Vector3(0.145, 0.15, f_len * 0.64), 0.042, 1.8, base_xf)
+			bevel_box(st, Vector3(0.0, -0.012, -f_len * 0.68), Vector3(0.125, 0.13, f_len * 0.54), 0.040, 1.8, base_xf)
 		var thumb_xf := Transform3D(Basis(Vector3.UP, 0.85), Vector3(-0.24, -0.015, 0.04))
-		_bevel_box(st, Vector3(0.0, 0.0, -0.14), Vector3(0.165, 0.155, 0.34), 0.045, 1.8, thumb_xf)
-		_bevel_box(st, Vector3(0.0, -0.01, -0.34), Vector3(0.135, 0.13, 0.24), 0.040, 1.8, thumb_xf)
+		bevel_box(st, Vector3(0.0, 0.0, -0.14), Vector3(0.165, 0.155, 0.34), 0.045, 1.8, thumb_xf)
+		bevel_box(st, Vector3(0.0, -0.01, -0.34), Vector3(0.135, 0.13, 0.24), 0.040, 1.8, thumb_xf)
 	)
 
 
 static func work_glove_cuff() -> ArrayMesh:
 	return _cached("work_glove_cuff", func(st: SurfaceTool):
-		_bevel_box(st, Vector3(0.0, 0.01, 0.42), Vector3(0.72, 0.24, 0.28), 0.045, 1.5)
-		_bevel_box(st, Vector3(0.0, 0.01, 0.30), Vector3(0.68, 0.22, 0.06), 0.018, 1.8)
+		bevel_box(st, Vector3(0.0, 0.01, 0.42), Vector3(0.72, 0.24, 0.28), 0.045, 1.5)
+		bevel_box(st, Vector3(0.0, 0.01, 0.30), Vector3(0.68, 0.22, 0.06), 0.018, 1.8)
 	)
 
 
 static func work_glove_peg() -> ArrayMesh:
 	return _cached("work_glove_peg", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, 0.0, 0.50), 0.038, 0.032, 0.46, 6, 0.01, 2.0)
-		_bevel_cyl(st, Vector3(0.0, 0.22, 0.50), 0.062, 0.055, 0.06, 6, 0.012, 2.0)
+		bevel_cyl(st, Vector3(0.0, 0.0, 0.50), 0.038, 0.032, 0.46, 6, 0.01, 2.0)
+		bevel_cyl(st, Vector3(0.0, 0.22, 0.50), 0.062, 0.055, 0.06, 6, 0.012, 2.0)
 	)
 
 
 static func chalk_stroke(width: float, length: float) -> ArrayMesh:
 	var key := "chalk_stroke:%.3f:%.3f" % [width, length]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_box(st, Vector3.ZERO, Vector3(width, length, 0.024), minf(0.008, width * 0.25), 2.0)
+		bevel_box(st, Vector3.ZERO, Vector3(width, length, 0.024), minf(0.008, width * 0.25), 2.0)
 	)
 
 
@@ -665,7 +658,7 @@ static func bevel_prop_box(size: Vector3) -> ArrayMesh:
 	var key := "bevel_prop_box:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
 	return _cached(key, func(st: SurfaceTool):
 		var b := clampf(minf(size.x, minf(size.y, size.z)) * 0.14, 0.015, 0.12)
-		_bevel_box(st, Vector3.ZERO, size, b, 0.4)
+		bevel_box(st, Vector3.ZERO, size, b, 0.4)
 	)
 
 
@@ -673,9 +666,9 @@ static func bevel_prop_post(size: Vector3) -> ArrayMesh:
 	var key := "bevel_prop_post:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
 	return _cached(key, func(st: SurfaceTool):
 		var b := clampf(minf(size.x, size.z) * 0.18, 0.02, 0.08)
-		_bevel_box(st, Vector3.ZERO, size, b, 0.5)
-		_bevel_box(st, Vector3(0.0, -size.y * 0.46, 0.0), Vector3(size.x + 0.14, size.y * 0.10, size.z + 0.14), b * 0.7, 0.6)
-		_bevel_box(st, Vector3(0.0, size.y * 0.46, 0.0), Vector3(size.x + 0.10, size.y * 0.08, size.z + 0.10), b * 0.7, 0.6)
+		bevel_box(st, Vector3.ZERO, size, b, 0.5)
+		bevel_box(st, Vector3(0.0, -size.y * 0.46, 0.0), Vector3(size.x + 0.14, size.y * 0.10, size.z + 0.14), b * 0.7, 0.6)
+		bevel_box(st, Vector3(0.0, size.y * 0.46, 0.0), Vector3(size.x + 0.10, size.y * 0.08, size.z + 0.10), b * 0.7, 0.6)
 	)
 
 
@@ -931,7 +924,7 @@ static func sable_stake_ring() -> ArrayMesh:
 		for i in 4:
 			var a := PI * 0.5 * float(i)
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * 0.285, 0.0, sin(a) * 0.285))
-			_bevel_box(st, Vector3.ZERO, Vector3(0.075, 0.048, 0.055), 0.012, 1.8, xf)
+			bevel_box(st, Vector3.ZERO, Vector3(0.075, 0.048, 0.055), 0.012, 1.8, xf)
 	)
 
 
@@ -940,7 +933,7 @@ static func activity_column_spire(width: float, height: float) -> ArrayMesh:
 	var key := "activity_column_spire:%.2f:%.2f" % [width, height]
 	return _cached(key, func(st: SurfaceTool):
 		var r := width * 0.5
-		_bevel_cyl(st, Vector3.ZERO, r, r * 0.88, height, 12, minf(0.08, r * 0.18), 0.2)
+		bevel_cyl(st, Vector3.ZERO, r, r * 0.88, height, 12, minf(0.08, r * 0.18), 0.2)
 	)
 
 
@@ -949,10 +942,10 @@ static func activity_glyph_cross(size_m: float) -> ArrayMesh:
 	return _cached(key, func(st: SurfaceTool):
 		var bar := size_m * 0.30
 		var b := bar * 0.22
-		_bevel_box(st, Vector3.ZERO, Vector3(size_m, bar, bar), b, 0.5)
-		_bevel_box(st, Vector3.ZERO, Vector3(bar, size_m, bar), b, 0.5)
-		_bevel_box(st, Vector3.ZERO, Vector3(bar, bar, size_m), b, 0.5)
-		_bevel_box(st, Vector3.ZERO, Vector3.ONE * (bar * 1.42), b * 0.9, 0.6)
+		bevel_box(st, Vector3.ZERO, Vector3(size_m, bar, bar), b, 0.5)
+		bevel_box(st, Vector3.ZERO, Vector3(bar, size_m, bar), b, 0.5)
+		bevel_box(st, Vector3.ZERO, Vector3(bar, bar, size_m), b, 0.5)
+		bevel_box(st, Vector3.ZERO, Vector3.ONE * (bar * 1.42), b * 0.9, 0.6)
 	)
 
 
@@ -1004,7 +997,7 @@ static func activity_glyph_cube(size_m: float) -> ArrayMesh:
 	var key := "activity_glyph_cube:%.2f" % size_m
 	return _cached(key, func(st: SurfaceTool):
 		var s := size_m * 0.80
-		_bevel_box(st, Vector3.ZERO, Vector3.ONE * s, s * 0.14, 0.5)
+		bevel_box(st, Vector3.ZERO, Vector3.ONE * s, s * 0.14, 0.5)
 		_bevel_ring(st, Vector3.ZERO, s * 0.38, s * 0.58, s * 0.18, 8, 0.03, 0.6)
 	)
 
@@ -1013,16 +1006,16 @@ static func activity_ring_dash(arc_len: float) -> ArrayMesh:
 	var key := "activity_ring_dash:%.3f" % arc_len
 	return _cached(key, func(st: SurfaceTool):
 		var z_len := maxf(0.18, arc_len)
-		_bevel_box(st, Vector3.ZERO, Vector3(0.45, 0.10, z_len), 0.024, 0.8)
+		bevel_box(st, Vector3.ZERO, Vector3(0.45, 0.10, z_len), 0.024, 0.8)
 		for sz in [-1.0, 1.0]:
-			_bevel_cyl(st, Vector3(0.0, 0.055, sz * z_len * 0.34), 0.055, 0.048, 0.03, 6, 0.008, 1.4)
+			bevel_cyl(st, Vector3(0.0, 0.055, sz * z_len * 0.34), 0.055, 0.048, 0.03, 6, 0.008, 1.4)
 	)
 
 
 static func activity_pay_beam(width: float, height: float) -> ArrayMesh:
 	var key := "activity_pay_beam:%.2f:%.2f" % [width, height]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, width * 0.52, width * 0.38, height, 8, 0.03, 0.3)
+		bevel_cyl(st, Vector3.ZERO, width * 0.52, width * 0.38, height, 8, 0.03, 0.3)
 	)
 
 
@@ -1031,9 +1024,9 @@ static func rescue_ring_dash(arc_len: float) -> ArrayMesh:
 	var key := "rescue_ring_dash:%.3f" % arc_len
 	return _cached(key, func(st: SurfaceTool):
 		var z_len := maxf(0.16, arc_len)
-		_bevel_box(st, Vector3.ZERO, Vector3(0.36, 0.085, z_len), 0.02, 1.0)
+		bevel_box(st, Vector3.ZERO, Vector3(0.36, 0.085, z_len), 0.02, 1.0)
 		for sz in [-1.0, 1.0]:
-			_bevel_cyl(st, Vector3(0.0, 0.046, sz * z_len * 0.32), 0.045, 0.038, 0.024, 6, 0.006, 1.6)
+			bevel_cyl(st, Vector3(0.0, 0.046, sz * z_len * 0.32), 0.045, 0.038, 0.024, 6, 0.006, 1.6)
 	)
 
 
@@ -1078,7 +1071,7 @@ static func rescue_cage_post(width: float, height: float) -> ArrayMesh:
 static func rescue_cage_lockbox(size: Vector3) -> ArrayMesh:
 	var key := "rescue_cage_lockbox:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_box(st, Vector3.ZERO, size, minf(0.04, size.z * 0.22), 1.0)
+		bevel_box(st, Vector3.ZERO, size, minf(0.04, size.z * 0.22), 1.0)
 		_bevel_ring(st, Vector3.ZERO, size.x * 0.16, size.x * 0.28, size.z * 0.55, 10, 0.015, 1.4, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0.0, size.y * 0.52, 0.0)))
 	)
 
@@ -1093,22 +1086,22 @@ static func launcher_mouth_ring(radius: float) -> ArrayMesh:
 			var a := TAU * float(i) / 8.0
 			var r_mid := (r_in + radius) * 0.52
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * r_mid, 0.04, sin(a) * r_mid))
-			_bevel_box(st, Vector3.ZERO, Vector3(0.48, 0.34, 0.36), 0.05, 0.6, xf)
-			_bevel_cyl(st, Vector3(cos(a) * r_mid, 0.22, sin(a) * r_mid), 0.085, 0.075, 0.06, 6, 0.012, 1.2)
+			bevel_box(st, Vector3.ZERO, Vector3(0.48, 0.34, 0.36), 0.05, 0.6, xf)
+			bevel_cyl(st, Vector3(cos(a) * r_mid, 0.22, sin(a) * r_mid), 0.085, 0.075, 0.06, 6, 0.012, 1.2)
 	)
 
 
 static func fluted_plume_column(r_bot: float, r_top: float, height: float) -> ArrayMesh:
 	var key := "fluted_plume_column:%.2f:%.2f:%.2f" % [r_bot, r_top, height]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, r_bot, r_top, height, 14, minf(0.18, minf(r_bot, r_top) * 0.22), 0.18)
+		bevel_cyl(st, Vector3.ZERO, r_bot, r_top, height, 14, minf(0.18, minf(r_bot, r_top) * 0.22), 0.18)
 	)
 
 
 static func cannon_band_collar() -> ArrayMesh:
 	return _cached("cannon_band_collar", func(st: SurfaceTool):
 		_bevel_ring(st, Vector3.ZERO, 2.18, 2.92, 0.48, 16, 0.07, 0.35)
-		_bolt_ring(st, Vector3(0.0, 0.25, 0.0), 2.58, 8, 0.11, 0.06)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, 0.25, 0.0), 2.58, 8, 0.11, 0.06, 0.88, 1.0, bevel_cyl)
 	)
 
 
@@ -1116,7 +1109,7 @@ static func grapple_cable_span(length: float) -> ArrayMesh:
 	var key := "grapple_cable_span:%.2f" % length
 	return _cached(key, func(st: SurfaceTool):
 		var span := maxf(0.5, length)
-		_bevel_cyl(st, Vector3.ZERO, 0.18, 0.18, span, 8, 0.025, 0.35)
+		bevel_cyl(st, Vector3.ZERO, 0.18, 0.18, span, 8, 0.025, 0.35)
 		if span > 1.8:
 			for sy in [-1.0, 1.0]:
 				_bevel_ring(st, Vector3(0.0, sy * (span * 0.5 - 0.38), 0.0), 0.14, 0.30, 0.38, 8, 0.035, 0.7)
@@ -1132,7 +1125,7 @@ static func grapple_target_ring(radius: float) -> ArrayMesh:
 			var a := PI * 0.5 * float(i)
 			var r_mid := (r_in + radius) * 0.5
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * r_mid, 0.0, sin(a) * r_mid))
-			_bevel_box(st, Vector3.ZERO, Vector3(0.44, 0.36, 0.30), 0.045, 0.7, xf)
+			bevel_box(st, Vector3.ZERO, Vector3(0.44, 0.36, 0.30), 0.045, 0.7, xf)
 	)
 
 
@@ -1142,22 +1135,22 @@ static func sluice_pay_ring() -> ArrayMesh:
 		for i in 4:
 			var a := PI * 0.5 * float(i)
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * 0.76, 0.02, sin(a) * 0.76))
-			_bevel_box(st, Vector3.ZERO, Vector3(0.18, 0.16, 0.14), 0.025, 1.2, xf)
+			bevel_box(st, Vector3.ZERO, Vector3(0.18, 0.16, 0.14), 0.025, 1.2, xf)
 	)
 
 
 static func steam_puff_cloud() -> ArrayMesh:
 	return _cached("steam_puff_cloud", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, 0.82, 0.76, 1.48, 10, 0.26, 0.5)
-		_bevel_cyl(st, Vector3(0.24, 0.12, 0.16), 0.54, 0.48, 0.96, 8, 0.18, 0.6)
-		_bevel_cyl(st, Vector3(-0.22, -0.10, -0.14), 0.52, 0.46, 0.92, 8, 0.18, 0.6)
+		bevel_cyl(st, Vector3.ZERO, 0.82, 0.76, 1.48, 10, 0.26, 0.5)
+		bevel_cyl(st, Vector3(0.24, 0.12, 0.16), 0.54, 0.48, 0.96, 8, 0.18, 0.6)
+		bevel_cyl(st, Vector3(-0.22, -0.10, -0.14), 0.52, 0.46, 0.92, 8, 0.18, 0.6)
 	)
 
 
 static func vent_dash_segment(arc_len: float) -> ArrayMesh:
 	var key := "vent_dash_segment:%.3f" % arc_len
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_box(st, Vector3.ZERO, Vector3(0.32, 0.08, maxf(0.16, arc_len)), 0.02, 1.0)
+		bevel_box(st, Vector3.ZERO, Vector3(0.32, 0.08, maxf(0.16, arc_len)), 0.02, 1.0)
 	)
 
 
@@ -1170,14 +1163,14 @@ static func launch_flight_ring(radius: float) -> ArrayMesh:
 		for i in 4:
 			var a := PI * 0.25 + PI * 0.5 * float(i)
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * (r_in + 0.12), 0.0, sin(a) * (r_in + 0.12)))
-			_bevel_box(st, Vector3.ZERO, Vector3(0.42, 0.20, 0.22), 0.035, 0.8, xf)
+			bevel_box(st, Vector3.ZERO, Vector3(0.42, 0.20, 0.22), 0.035, 0.8, xf)
 	)
 
 
 static func launch_landing_pad(radius: float) -> ArrayMesh:
 	var key := "launch_landing_pad:%.2f" % radius
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -0.02, 0.0), radius, radius * 0.96, 0.16, 24, 0.035, 0.2)
+		bevel_cyl(st, Vector3(0.0, -0.02, 0.0), radius, radius * 0.96, 0.16, 24, 0.035, 0.2)
 		_bevel_ring(st, Vector3(0.0, 0.05, 0.0), radius * 0.82, radius * 0.96, 0.10, 24, 0.022, 0.3)
 		_bevel_ring(st, Vector3(0.0, 0.05, 0.0), radius * 0.38, radius * 0.48, 0.09, 16, 0.02, 0.4)
 	)
@@ -1187,7 +1180,7 @@ static func launch_landing_pad(radius: float) -> ArrayMesh:
 static func scrap_beacon_column(r_bot: float, r_top: float, height: float) -> ArrayMesh:
 	var key := "scrap_beacon_column:%.3f:%.3f:%.2f" % [r_bot, r_top, height]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, r_bot, r_top, height, 12, minf(0.035, r_top * 0.4), 0.5)
+		bevel_cyl(st, Vector3.ZERO, r_bot, r_top, height, 12, minf(0.035, r_top * 0.4), 0.5)
 		_bevel_ring(st, Vector3(0.0, -height * 0.5 + 0.06, 0.0), r_bot * 0.65, r_bot * 1.32, 0.09, 8, 0.018, 1.2)
 	)
 
@@ -1242,15 +1235,15 @@ static func mend_ward_monolith(size: Vector3) -> ArrayMesh:
 	return _cached(key, func(st: SurfaceTool):
 		var hh := size.y * 0.5
 		var r_base := minf(size.x, size.z) * 0.54
-		_bevel_cyl(st, Vector3(0.0, -hh + 0.16, 0.0), r_base * 1.24, r_base * 1.12, 0.32, 8, 0.04, 0.6)
+		bevel_cyl(st, Vector3(0.0, -hh + 0.16, 0.0), r_base * 1.24, r_base * 1.12, 0.32, 8, 0.04, 0.6)
 		_bevel_ring(st, Vector3(0.0, -hh + 0.36, 0.0), r_base * 0.72, r_base * 1.16, 0.12, 8, 0.025, 0.8)
-		_bevel_cyl(st, Vector3(0.0, 0.02, 0.0), r_base * 0.92, r_base * 0.74, size.y * 0.68, 8, 0.045, 0.5)
+		bevel_cyl(st, Vector3(0.0, 0.02, 0.0), r_base * 0.92, r_base * 0.74, size.y * 0.68, 8, 0.045, 0.5)
 		_bevel_ring(st, Vector3(0.0, hh * 0.36, 0.0), r_base * 0.62, r_base * 0.98, 0.14, 8, 0.028, 0.8)
-		_bevel_cyl(st, Vector3(0.0, hh - 0.18, 0.0), r_base * 0.86, r_base * 0.62, 0.32, 8, 0.04, 0.7)
+		bevel_cyl(st, Vector3(0.0, hh - 0.18, 0.0), r_base * 0.86, r_base * 0.62, 0.32, 8, 0.04, 0.7)
 		for i in 4:
 			var a := PI * 0.5 * float(i)
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * r_base * 0.84, -0.04, sin(a) * r_base * 0.84))
-			_bevel_box(st, Vector3.ZERO, Vector3(0.14, size.y * 0.54, 0.12), 0.024, 0.9, xf)
+			bevel_box(st, Vector3.ZERO, Vector3(0.14, size.y * 0.54, 0.12), 0.024, 0.9, xf)
 	)
 
 
@@ -1270,22 +1263,22 @@ static func survey_stake_pole(height: float) -> ArrayMesh:
 
 static func survey_pennant_plate() -> ArrayMesh:
 	return _cached("survey_pennant_plate", func(st: SurfaceTool):
-		_bevel_box(st, Vector3(-0.36, 0.0, 0.0), Vector3(0.56, 0.68, 0.055), 0.014, 1.0)
-		_bevel_box(st, Vector3(0.14, 0.0, 0.0), Vector3(0.52, 0.44, 0.045), 0.012, 1.0)
-		_bevel_box(st, Vector3(0.48, 0.0, 0.0), Vector3(0.28, 0.22, 0.036), 0.010, 1.2)
-		_bevel_box(st, Vector3(-0.62, 0.0, 0.0), Vector3(0.08, 0.78, 0.085), 0.016, 1.2)
+		bevel_box(st, Vector3(-0.36, 0.0, 0.0), Vector3(0.56, 0.68, 0.055), 0.014, 1.0)
+		bevel_box(st, Vector3(0.14, 0.0, 0.0), Vector3(0.52, 0.44, 0.045), 0.012, 1.0)
+		bevel_box(st, Vector3(0.48, 0.0, 0.0), Vector3(0.28, 0.22, 0.036), 0.010, 1.2)
+		bevel_box(st, Vector3(-0.62, 0.0, 0.0), Vector3(0.08, 0.78, 0.085), 0.016, 1.2)
 	)
 
 
 static func weighbridge_plate(size: Vector3) -> ArrayMesh:
 	var key := "weighbridge_plate:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_box(st, Vector3.ZERO, size, minf(0.03, size.y * 0.32), 0.35)
+		bevel_box(st, Vector3.ZERO, size, minf(0.03, size.y * 0.32), 0.35)
 		for sz in [-1.0, 1.0]:
-			_bevel_box(st, Vector3(0.0, size.y * 0.45, sz * (size.z * 0.5 - 0.14)), Vector3(size.x * 0.96, size.y * 0.75, 0.22), 0.025, 0.5)
+			bevel_box(st, Vector3(0.0, size.y * 0.45, sz * (size.z * 0.5 - 0.14)), Vector3(size.x * 0.96, size.y * 0.75, 0.22), 0.025, 0.5)
 		for i in 5:
 			var x := lerpf(-size.x * 0.38, size.x * 0.38, float(i) / 4.0)
-			_bevel_box(st, Vector3(x, size.y * 0.52, 0.0), Vector3(0.22, 0.035, size.z * 0.82), 0.008, 0.6)
+			bevel_box(st, Vector3(x, size.y * 0.52, 0.0), Vector3(0.22, 0.035, size.z * 0.82), 0.008, 0.6)
 	)
 
 
@@ -1372,16 +1365,16 @@ static func furnace_smoke_material() -> ShaderMaterial:
 
 static func bay_bell_mesh() -> ArrayMesh:
 	return _cached("bay_bell_mesh", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, 0.12, 0.0), 0.88, 0.48, 1.12, 14, 0.08, 0.5)
+		bevel_cyl(st, Vector3(0.0, 0.12, 0.0), 0.88, 0.48, 1.12, 14, 0.08, 0.5)
 		_bevel_ring(st, Vector3(0.0, -0.46, 0.0), 0.72, 1.02, 0.22, 14, 0.045, 0.6)
-		_bevel_cyl(st, Vector3(0.0, 0.72, 0.0), 0.26, 0.20, 0.22, 8, 0.035, 0.8)
+		bevel_cyl(st, Vector3(0.0, 0.72, 0.0), 0.26, 0.20, 0.22, 8, 0.035, 0.8)
 	)
 
 
 static func bay_mug_mesh(r_bot: float, r_top: float, height: float) -> ArrayMesh:
 	var key := "bay_mug_mesh:%.2f:%.2f:%.2f" % [r_bot, r_top, height]
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, r_bot, r_top, height, 12, minf(0.04, r_top * 0.2), 0.8)
+		bevel_cyl(st, Vector3.ZERO, r_bot, r_top, height, 12, minf(0.04, r_top * 0.2), 0.8)
 		_bevel_ring(st, Vector3(0.0, height * 0.44, 0.0), r_top * 0.76, r_top * 1.08, height * 0.14, 12, 0.018, 1.0)
 	)
 
@@ -1389,22 +1382,22 @@ static func bay_mug_mesh(r_bot: float, r_top: float, height: float) -> ArrayMesh
 static func bay_marble_orb(radius: float) -> ArrayMesh:
 	var key := "bay_marble_orb:%.3f" % radius
 	return _cached(key, func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3.ZERO, radius * 0.92, radius * 0.92, radius * 1.75, 12, radius * 0.34, 1.2)
+		bevel_cyl(st, Vector3.ZERO, radius * 0.92, radius * 0.92, radius * 1.75, 12, radius * 0.34, 1.2)
 		_bevel_ring(st, Vector3.ZERO, radius * 0.68, radius * 1.02, radius * 0.32, 12, radius * 0.08, 1.4)
 	)
 
 
 static func bay_pin_mesh() -> ArrayMesh:
 	return _cached("bay_pin_mesh", func(st: SurfaceTool):
-		_bevel_cyl(st, Vector3(0.0, -0.26, 0.0), 0.28, 0.30, 0.92, 10, 0.045, 0.7)
+		bevel_cyl(st, Vector3(0.0, -0.26, 0.0), 0.28, 0.30, 0.92, 10, 0.045, 0.7)
 		_bevel_ring(st, Vector3(0.0, 0.18, 0.0), 0.16, 0.27, 0.12, 10, 0.025, 0.9)
-		_bevel_cyl(st, Vector3(0.0, 0.48, 0.0), 0.19, 0.16, 0.50, 10, 0.04, 0.8)
+		bevel_cyl(st, Vector3(0.0, 0.48, 0.0), 0.19, 0.16, 0.50, 10, 0.04, 0.8)
 	)
 
 
 static func bay_part_trophy() -> ArrayMesh:
 	return _cached("bay_part_trophy", func(st: SurfaceTool):
-		_bevel_box(st, Vector3.ZERO, Vector3(0.46, 0.46, 0.46), 0.065, 1.0)
+		bevel_box(st, Vector3.ZERO, Vector3(0.46, 0.46, 0.46), 0.065, 1.0)
 		_bevel_ring(st, Vector3.ZERO, 0.18, 0.32, 0.14, 8, 0.025, 1.2)
 	)
 

@@ -3,6 +3,7 @@ extends SceneTree
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 var game
 var settings := {}
@@ -41,7 +42,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--") and "=" in arg:
 			settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
-	if DisplayServer.get_name() == "headless" or not settings.has("out"):
+	if AppShell.headless() or not settings.has("out"):
 		printerr("visual_capture requires a rendered display and -- --out=<absolute directory> [--class=0|1|2] [--mode=traversal|dense|boss|pilots|warden] [--samples=1800|--seconds=120] [--growth=600] [--azimuth=35]")
 		quit(2)
 		return

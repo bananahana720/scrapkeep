@@ -8,6 +8,7 @@ const T := preload("res://tests/support/t.gd")
 const WeakPoints := preload("res://src/boss/weak_points.gd")
 const WeakPart := preload("res://src/boss/weak_part.gd")
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Waking := preload("res://src/boss/waking.gd")
 const Mind := preload("res://src/boss/mind.gd")
@@ -387,7 +388,7 @@ func _openers() -> void:
 
 func _bore(mod, phase: int) -> void:
 	var d: Dictionary = WakingAttacks.bore(1, mod.ctx.player.ball_position(), Vector3(mod._center.x, mod._top(), mod._center.z), phase, mod.PAD_RADIUS)[0]
-	var h = MindAttacks.build(d)
+	var h = Hazard.from_def(d)
 	h.ground = Callable(mod, "ground_height_at")
 	mod.add_child(h)
 	for i in 400:

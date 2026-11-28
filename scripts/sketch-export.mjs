@@ -1,15 +1,22 @@
 import { spawnSync } from "node:child_process";
-import { copyFile, cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
+import { isMain } from "./lib/cli.mjs";
+import {
+  GODOT_VERSION,
+  TOOLCHAIN,
+  resolveGodotBinary,
+  scratchGodotEnv,
+  withScratchGodotEnv,
+} from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const recordedBinary = "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
-const binary = process.env.GODOT_BIN || recordedBinary;
+const binary = resolveGodotBinary();
 const project = path.join(root, "sketches/core-loop");
 const stemRoot = path.join(project, "assets/music_ace");
 const manifestRel = "spillway/manifest.json";
@@ -205,7 +212,20 @@ export function buildStamp({
   winProof,
   bossSmoke,
   selfPlay = false,
+  headless = false,
 }) {
+  if (headless) {
+    return (
+      [
+        "commit: " + sha,
+        "built: " + stamp + " in a cloud container (scripts/cloud/export-headless.mjs)",
+        "godot: " + godot,
+        "stems: none (ACE stems live on Andrew's machine)",
+        "boss smoke: not run (needs a Vulkan GPU)",
+        winProof ?? "win proof: not run",
+      ].join("\n") + "\n"
+    );
+  }
   return (
     [
       "commit: " + sha,
@@ -395,10 +415,15 @@ export function selfPlayPresetText(presetText, name = preset) {
   throw new Error(`preset "${name}" has no exclude_filter`);
 }
 
-export function winProofEnv(state, repoRoot = root, baseEnv = process.env) {
+export function winProofEnv(
+  state,
+  repoRoot = root,
+  baseEnv = process.env,
+  platform = process.platform,
+) {
   return {
-    ...isolatedXdgEnv(baseEnv, state),
-    SCRAPKEEP_REPO_ROOT: repoRoot,
+    ...isolatedXdgEnv(baseEnv, state, platform),
+    ...(repoRoot ? { SCRAPKEEP_REPO_ROOT: repoRoot } : {}),
   };
 }
 
@@ -455,7 +480,7 @@ function bossSmoke(crash) {
   return smoke;
 }
 
-export const EXPORT_TEMPLATE_REL = "godot/export_templates/4.7.2.stable/linux_release.x86_64";
+export const EXPORT_TEMPLATE_REL = `godot/export_templates/${TOOLCHAIN.godotTemplateVersion}/linux_release.x86_64`;
 
 export function resolveExportTemplate({
   env = process.env,
@@ -469,29 +494,385 @@ export function resolveExportTemplate({
   return candidates.find((candidate) => exists(candidate)) ?? null;
 }
 
-export function isolatedXdgEnv(baseEnv, stateDir) {
-  return {
-    ...baseEnv,
-    XDG_DATA_HOME: path.join(stateDir, "data"),
-    XDG_CONFIG_HOME: path.join(stateDir, "config"),
-    XDG_CACHE_HOME: path.join(stateDir, "cache"),
-  };
+export function isolatedXdgEnv(baseEnv, stateDir, platform = process.platform) {
+  return scratchGodotEnv(stateDir, { baseEnv, platform });
 }
 
-export async function withIsolatedXdg(fn, { baseEnv = process.env, tmpRoot = os.tmpdir() } = {}) {
-  const stateDir = await mkdtemp(path.join(tmpRoot, "scrapkeep-export-xdg-"));
-  try {
-    for (const dir of ["data", "config", "cache"])
-      await mkdir(path.join(stateDir, dir), { recursive: true });
-    return await fn(isolatedXdgEnv(baseEnv, stateDir), stateDir);
-  } finally {
-    await rm(stateDir, { recursive: true, force: true });
-  }
+export function withIsolatedXdg(
+  fn,
+  { baseEnv = process.env, tmpRoot = os.tmpdir(), platform = process.platform } = {},
+) {
+  return withScratchGodotEnv(fn, {
+    prefix: "scrapkeep-export-xdg-",
+    tmpRoot,
+    baseEnv,
+    platform,
+  });
 }
 
 function fail(message) {
   console.error("sketch:export FAIL: " + message);
   process.exit(1);
+}
+
+function failCloud(message) {
+  console.error("cloud export: " + message);
+  process.exit(1);
+}
+
+function runCloud(command, args, options = {}) {
+  return spawnSync(command, args, {
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+    ...options,
+  });
+}
+
+async function copyProofLibraries(projectDir, destDir) {
+  const addons = path.join(projectDir, "addons");
+  const addonFiles = existsSync(addons)
+    ? readdirSync(addons, { recursive: true }).map((rel) =>
+        path.join("addons", String(rel)).split(path.sep).join("/"),
+      )
+    : [];
+  for (const rel of proofLibraries(addonFiles)) {
+    await mkdir(path.join(destDir, path.dirname(rel)), { recursive: true });
+    await copyFile(path.join(projectDir, rel), path.join(destDir, rel));
+  }
+}
+
+export async function runLinuxExport({
+  winProof: runProof = false,
+  selfPlay = false,
+  stemsFrom: stemsFromArg = null,
+  bossSmokeOnly = false,
+  headless = false,
+  binary: binaryArg,
+  projectDir = project,
+  repoRoot = root,
+  outBase = headless ? "artifacts/local/cloud-export" : "artifacts/local/core-loop-export",
+  stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, ""),
+  env = process.env,
+  platform = process.platform,
+  runCmd = headless ? runCloud : run,
+  exists = existsSync,
+  log = console.log,
+  failFn = headless ? failCloud : fail,
+  copyAddons = copyProofLibraries,
+  readFileFn = readFile,
+  writeFileFn = writeFile,
+  mkdirFn = mkdir,
+} = {}) {
+  const bin = binaryArg ?? (headless ? resolveGodotBinary({ env, requireExplicit: true }) : binary);
+  if (!bin || !exists(bin)) {
+    failFn(
+      headless
+        ? `set GODOT_BIN to the Godot ${GODOT_VERSION} editor (the cloud SessionStart hook does)`
+        : "Godot binary missing: " + (bin ?? "(not found; set GODOT_BIN)"),
+    );
+  }
+  const outputOf = (result) => (result.stdout ?? "") + (result.stderr ?? "");
+  const checkHeadlessStep = (label, result, extra = []) => {
+    const text = outputOf(result);
+    const problems = [...extra];
+    if (result.status !== 0) problems.push("exit " + result.status);
+    if (errorLine.test(text)) problems.push("SCRIPT ERROR or ERROR line in the output");
+    if (problems.length > 0) failFn(label + ": " + problems.join("; ") + "\n" + text.slice(-2000));
+    log("PASS " + label);
+    return text;
+  };
+
+  let crash = null;
+  let templateDataHome = null;
+  let tracks = [];
+  const manifests = {};
+  let stemsFrom = null;
+  let presetText = "";
+  const stemDir = path.join(projectDir, "assets/music_ace");
+
+  if (!headless) {
+    try {
+      crash = bossSmokeCrash(env);
+    } catch (error) {
+      failFn(error.message);
+    }
+    if (crash) log(`boss smoke: crash control on for ${crash} (SCRAPKEEP_BOSS_SMOKE_CRASH)`);
+    if (bossSmokeOnly) {
+      bossSmoke(crash);
+      return;
+    }
+    const template = resolveExportTemplate({ env, exists });
+    if (!template)
+      failFn(
+        "export template missing: " + path.join(os.homedir(), ".local/share", EXPORT_TEMPLATE_REL),
+      );
+    templateDataHome = path.resolve(template, "../../../..");
+
+    tracks = trackedManifests(stemDir);
+    if (!tracks.includes("spillway"))
+      failFn("ACE manifest missing: " + path.join(stemDir, manifestRel));
+    for (const track of tracks)
+      manifests[track] = JSON.parse(
+        await readFileFn(path.join(stemDir, track, "manifest.json"), "utf8"),
+      );
+    const common = runCmd("git", [
+      "-C",
+      repoRoot,
+      "rev-parse",
+      "--path-format=absolute",
+      "--git-common-dir",
+    ]);
+    if (common.status !== 0) failFn("git common dir not found\n" + common.stderr);
+    const fallback = defaultStemsFrom(common.stdout.trim());
+    stemsFrom = path.resolve(stemsFromArg ?? fallback);
+    for (const track of tracks) {
+      const missing = missingStems(manifests[track], path.join(stemsFrom, track), exists);
+      if (missing.length > 0)
+        failFn(missingStemsMessage(missing, path.join(stemsFrom, track), fallback));
+      const manifestPath = path.join(stemDir, track, "manifest.json");
+      const folderManifest = path.join(stemsFrom, track, "manifest.json");
+      if (exists(folderManifest)) {
+        const [tracked, found] = await Promise.all([
+          readFileFn(manifestPath),
+          readFileFn(folderManifest),
+        ]);
+        if (!tracked.equals(found))
+          failFn(
+            `stem folder manifest differs from the tracked manifest: ${folderManifest} vs ${manifestPath}`,
+          );
+      }
+    }
+
+    const named = tracks.flatMap((track) =>
+      Object.values(manifests[track].clips ?? {}).flatMap((clip) =>
+        Object.values(clip.files ?? {}).map((f) => `${track}/${f}`),
+      ),
+    );
+    const rejected = stemHashMismatches(path.join(stemDir, STEM_HASHES), stemsFrom, named);
+    if (rejected === null)
+      failFn(
+        `no ${STEM_HASHES} in ${stemDir}; the packed stems cannot be compared to what was cut (scripts/music/mx stem-hashes writes it)`,
+      );
+    if (rejected.length > 0)
+      failFn(
+        `${rejected.length} stem file(s) in ${stemsFrom} do not match ${STEM_HASHES}:\n` +
+          rejected.map((r) => `  ${r.file}: ${r.why}`).join("\n"),
+      );
+
+    presetText = await readFileFn(path.join(projectDir, "export_presets.cfg"), "utf8");
+    for (const name of [preset, proofPreset]) {
+      const included = checkPreset({ sketch: projectDir, presetText, presetName: name });
+      if (included.problems.length > 0)
+        failFn(`export include check "${name}"\n` + included.problems.join("\n"));
+    }
+  }
+
+  const outDir = path.join(repoRoot, outBase, stamp);
+  const exe = path.join(outDir, "core-loop.x86_64");
+
+  const runPipeline = async (xdgEnv) => {
+    const imported = runCmd(
+      bin,
+      ["--headless", "--path", projectDir, "--editor", "--import"],
+      xdgEnv ? { env: xdgEnv } : {},
+    );
+    if (headless) {
+      checkHeadlessStep("editor import", imported);
+    } else if (imported.status !== 0 || errorLine.test(outputOf(imported))) {
+      failFn("editor import failed\n" + outputOf(imported).slice(-2000));
+    }
+
+    const gate = runCmd(
+      bin,
+      [
+        "--headless",
+        "--path",
+        projectDir,
+        "--script",
+        "res://tests/release_gate_placeholder_test.gd",
+      ],
+      { env: { ...(xdgEnv ?? env), SCRAPKEEP_RELEASE_GATE: "1" } },
+    );
+    const gateFailures = releaseGateFailures(outputOf(gate), gate.status);
+    if (gateFailures.length > 0) failFn("release gate\n" + gateFailures.join("\n"));
+    if (headless) log("PASS release gate");
+
+    let smokeRun = null;
+    if (!headless) {
+      const placeholders = runCmd(process.execPath, [
+        path.join(repoRoot, "scripts/placeholder-gate.mjs"),
+        "--project",
+        projectDir,
+        "--limit",
+        "0",
+      ]);
+      const placeholderLine = outputOf(placeholders).trim().split("\n").pop() || "no output";
+      log("placeholder report (not blocking): " + placeholderLine);
+      smokeRun = bossSmoke(crash);
+    }
+
+    await mkdirFn(outDir, { recursive: true });
+    const presetPath = path.join(projectDir, "export_presets.cfg");
+    const restorePreset = () => writeFileSync(presetPath, presetText);
+    let exported;
+    try {
+      if (!headless && selfPlay) {
+        process.once("exit", restorePreset);
+        for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => process.exit(128));
+        await writeFileFn(presetPath, selfPlayPresetText(presetText));
+      }
+      exported = runCmd(
+        bin,
+        ["--headless", "--path", projectDir, "--export-release", preset, exe],
+        xdgEnv ? { env: { ...xdgEnv, XDG_DATA_HOME: templateDataHome } } : {},
+      );
+    } finally {
+      if (!headless && selfPlay) {
+        restorePreset();
+        process.removeListener("exit", restorePreset);
+      }
+    }
+    if (headless) {
+      checkHeadlessStep("export Linux x64", exported, exists(exe) ? [] : ["no executable"]);
+    } else {
+      const exportText = outputOf(exported);
+      if (exported.status !== 0 || errorLine.test(exportText) || !exists(exe))
+        failFn("export failed\n" + exportText.slice(-2000));
+    }
+
+    let stemsCopied = 0;
+    if (!headless) {
+      await cp(stemsFrom, path.join(outDir, "music_ace"), {
+        recursive: true,
+        filter: (source) => !source.endsWith(".import") && !source.endsWith(".gdignore"),
+      });
+      for (const track of tracks) {
+        await mkdirFn(path.join(outDir, "music_ace", track), { recursive: true });
+        await copyFile(
+          path.join(stemDir, track, "manifest.json"),
+          path.join(outDir, "music_ace", track, "manifest.json"),
+        );
+        stemsCopied += Object.keys(manifests[track].clips).length * manifests[track].stems.length;
+      }
+    }
+
+    const bootArgs = headless
+      ? ["--headless", "--quit-after", "300"]
+      : ["--headless", "--quit-after", "300", "--music=ace", "--ace-check"];
+    const bootOpts = xdgEnv ? { cwd: outDir, env: xdgEnv } : { cwd: outDir };
+    const boot = runCmd(exe, bootArgs, bootOpts);
+    const bootOutput = outputOf(boot);
+    if (headless) {
+      checkHeadlessStep("boot 300 frames", boot);
+    } else {
+      const failures = bootFailures(bootOutput);
+      if (boot.status !== 0) failures.push("boot exit " + boot.status);
+      if (failures.length > 0) failFn(failures.join("; ") + "\n" + bootOutput.slice(-2000));
+    }
+
+    const parkBoot = runCmd(exe, ["--headless", "--table=park", "--quit-after", "600"], bootOpts);
+    if (headless) {
+      checkHeadlessStep("park table boot 600 frames", parkBoot);
+    } else {
+      const parkText = outputOf(parkBoot);
+      const parkErrors = parkText
+        .split("\n")
+        .filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line));
+      if (parkBoot.status !== 0 || parkErrors.length > 0)
+        failFn(
+          "park table boot exit " +
+            parkBoot.status +
+            "\n" +
+            parkErrors.join("\n") +
+            "\n" +
+            parkText.slice(-1000),
+        );
+    }
+    return { smoke: smokeRun, bootText: bootOutput, stemCount: stemsCopied };
+  };
+
+  const { smoke, bootText, stemCount } = headless
+    ? await runPipeline(null)
+    : await withIsolatedXdg(runPipeline, { baseEnv: env, platform });
+
+  const proofOptions = {
+    binary: bin,
+    projectDir,
+    repoRoot,
+    runCmd,
+    failFn,
+    exists,
+    copyAddons,
+    readFileFn,
+    mkdirFn,
+    baseEnv: env,
+    platform,
+    checkDrift: !headless,
+    checkExisting: !headless,
+    includeRepoRoot: !headless,
+    onPackPass: headless ? (res) => checkHeadlessStep("export Linux x64 proof pack", res) : null,
+    onProofPass: headless ? (line) => log("PASS " + line) : null,
+  };
+
+  if (headless) {
+    const proofLine = runProof ? await winProof(outDir, proofOptions) : null;
+    const head = runCmd("git", ["-C", repoRoot, "rev-parse", "HEAD"]);
+    const sha = outputOf(head).trim();
+    await writeFileFn(
+      path.join(outDir, "BUILD.txt"),
+      buildStamp({
+        sha,
+        stamp,
+        godot: TOOLCHAIN.godotTemplateVersion,
+        winProof: proofLine,
+        headless: true,
+      }),
+    );
+    log("executable: " + exe);
+    return { exe, outDir, sha, proofLine };
+  }
+
+  const head = runCmd("git", ["-C", repoRoot, "rev-parse", "HEAD"]);
+  if (head.status !== 0) failFn("git HEAD not found\n" + head.stderr);
+  const sha = head.stdout.trim();
+  const sha7 = sha.slice(0, 7);
+  const status = runCmd("git", ["-C", repoRoot, "status", "--porcelain", "--untracked-files=no"]);
+  if (status.status !== 0) failFn("git status failed\n" + status.stderr);
+  const dirty = status.stdout.trim() !== "";
+  const version = sha7 + (dirty ? "-dirty" : "");
+  const proofLine = runProof ? await winProof(outDir, proofOptions) : null;
+  await writeFileFn(
+    path.join(outDir, "BUILD.txt"),
+    buildStamp({
+      sha,
+      dirty,
+      stamp,
+      godot: TOOLCHAIN.godotTemplateVersion,
+      stems: stemCount,
+      stemsFrom,
+      winProof: proofLine,
+      bossSmoke: smoke.lines.join("\n"),
+      selfPlay,
+    }),
+  );
+  await writeFileFn(path.join(outDir, "HOW-TO-RUN.txt"), howToRun({ sha7: version }));
+  const tar = runCmd("tar", tarArgs(outDir, sha7, dirty, selfPlay));
+  if (tar.status !== 0) failFn("tar failed\n" + tar.stderr);
+  const tarball = path.join(path.dirname(outDir), packageName(sha7, dirty, selfPlay) + ".tar.gz");
+
+  const size = (await stat(exe)).size;
+  log("version: " + version + " " + stamp);
+  log("package: " + tarball + " (" + ((await stat(tarball)).size / 1048576).toFixed(1) + " MiB)");
+  log("executable: " + exe);
+  log("pack size: " + size + " bytes (" + (size / 1048576).toFixed(1) + " MiB, pack embedded)");
+  log("stems from: " + stemsFrom);
+  log("sidecar stems: " + stemCount + " in " + path.join(outDir, "music_ace"));
+  log("boot tail:\n" + bootText.trim().split("\n").slice(-6).join("\n"));
+  if (proofLine) log(proofLine);
+  if (selfPlay)
+    log("self-play: pack carries tools/ (launch with -- --self-play); not the shipped pack");
+  log(nextStepLine());
+  return { exe, outDir, tarball, sha, proofLine };
 }
 
 async function main() {
@@ -501,281 +882,103 @@ async function main() {
   } catch (error) {
     fail(error.message);
   }
-  if (!existsSync(binary)) fail("Godot binary missing: " + binary);
-  let crash = null;
-  try {
-    crash = bossSmokeCrash(process.env);
-  } catch (error) {
-    fail(error.message);
-  }
-  if (crash) console.log(`boss smoke: crash control on for ${crash} (SCRAPKEEP_BOSS_SMOKE_CRASH)`);
-  if (args.bossSmokeOnly) {
-    bossSmoke(crash);
-    return;
-  }
-  const template = resolveExportTemplate();
-  if (!template)
-    fail(
-      "export template missing: " + path.join(os.homedir(), ".local/share", EXPORT_TEMPLATE_REL),
-    );
-  const templateDataHome = path.resolve(template, "../../../..");
-
-  const tracks = trackedManifests(stemRoot);
-  if (!tracks.includes("spillway"))
-    fail("ACE manifest missing: " + path.join(stemRoot, manifestRel));
-  const manifests = {};
-  for (const track of tracks)
-    manifests[track] = JSON.parse(
-      await readFile(path.join(stemRoot, track, "manifest.json"), "utf8"),
-    );
-  const common = run("git", [
-    "-C",
-    root,
-    "rev-parse",
-    "--path-format=absolute",
-    "--git-common-dir",
-  ]);
-  if (common.status !== 0) fail("git common dir not found\n" + common.stderr);
-  const fallback = defaultStemsFrom(common.stdout.trim());
-  const stemsFrom = path.resolve(args.stemsFrom ?? fallback);
-  for (const track of tracks) {
-    const missing = missingStems(manifests[track], path.join(stemsFrom, track));
-    if (missing.length > 0)
-      fail(missingStemsMessage(missing, path.join(stemsFrom, track), fallback));
-    const manifestPath = path.join(stemRoot, track, "manifest.json");
-    const folderManifest = path.join(stemsFrom, track, "manifest.json");
-    if (existsSync(folderManifest)) {
-      const [tracked, found] = await Promise.all([
-        readFile(manifestPath),
-        readFile(folderManifest),
-      ]);
-      if (!tracked.equals(found))
-        fail(
-          `stem folder manifest differs from the tracked manifest: ${folderManifest} vs ${manifestPath}`,
-        );
-    }
-  }
-
-  const named = tracks.flatMap((track) =>
-    Object.values(manifests[track].clips ?? {}).flatMap((clip) =>
-      Object.values(clip.files ?? {}).map((f) => `${track}/${f}`),
-    ),
-  );
-  const rejected = stemHashMismatches(path.join(stemRoot, STEM_HASHES), stemsFrom, named);
-  if (rejected === null)
-    fail(
-      `no ${STEM_HASHES} in ${stemRoot}; the packed stems cannot be compared to what was cut (scripts/music/mx stem-hashes writes it)`,
-    );
-  if (rejected.length > 0)
-    fail(
-      `${rejected.length} stem file(s) in ${stemsFrom} do not match ${STEM_HASHES}:\n` +
-        rejected.map((r) => `  ${r.file}: ${r.why}`).join("\n"),
-    );
-
-  const presetText = await readFile(path.join(project, "export_presets.cfg"), "utf8");
-  for (const name of [preset, proofPreset]) {
-    const included = checkPreset({ sketch: project, presetText, presetName: name });
-    if (included.problems.length > 0)
-      fail(`export include check "${name}"\n` + included.problems.join("\n"));
-  }
-
-  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
-  const outDir = path.join(root, "artifacts/local/core-loop-export", stamp);
-  const exe = path.join(outDir, "core-loop.x86_64");
-  const { smoke, bootText, stemCount } = await withIsolatedXdg(async (xdgEnv) => {
-    const imported = run(binary, ["--headless", "--path", project, "--editor", "--import"], {
-      env: xdgEnv,
-    });
-    if (imported.status !== 0 || errorLine.test(imported.stdout + imported.stderr))
-      fail("editor import failed\n" + (imported.stdout + imported.stderr).slice(-2000));
-
-    const gate = run(
-      binary,
-      ["--headless", "--path", project, "--script", "res://tests/release_gate_placeholder_test.gd"],
-      { env: { ...xdgEnv, SCRAPKEEP_RELEASE_GATE: "1" } },
-    );
-    const gateFailures = releaseGateFailures(gate.stdout + gate.stderr, gate.status);
-    if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
-
-    const placeholders = run(process.execPath, [
-      path.join(root, "scripts/placeholder-gate.mjs"),
-      "--project",
-      project,
-      "--limit",
-      "0",
-    ]);
-    const placeholderLine =
-      ((placeholders.stdout ?? "") + (placeholders.stderr ?? "")).trim().split("\n").pop() ||
-      "no output";
-    console.log("placeholder report (not blocking): " + placeholderLine);
-
-    const smokeRun = bossSmoke(crash);
-
-    await mkdir(outDir, { recursive: true });
-    const presetPath = path.join(project, "export_presets.cfg");
-    const restorePreset = () => writeFileSync(presetPath, presetText);
-    let exported;
-    try {
-      if (args.selfPlay) {
-        process.once("exit", restorePreset);
-        for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => process.exit(128));
-        await writeFile(presetPath, selfPlayPresetText(presetText));
-      }
-      exported = run(binary, ["--headless", "--path", project, "--export-release", preset, exe], {
-        env: { ...xdgEnv, XDG_DATA_HOME: templateDataHome },
-      });
-    } finally {
-      if (args.selfPlay) {
-        restorePreset();
-        process.removeListener("exit", restorePreset);
-      }
-    }
-    const exportText = exported.stdout + exported.stderr;
-    if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(exe))
-      fail("export failed\n" + exportText.slice(-2000));
-
-    await cp(stemsFrom, path.join(outDir, "music_ace"), {
-      recursive: true,
-      filter: (source) => !source.endsWith(".import") && !source.endsWith(".gdignore"),
-    });
-    let stemsCopied = 0;
-    for (const track of tracks) {
-      await mkdir(path.join(outDir, "music_ace", track), { recursive: true });
-      await copyFile(
-        path.join(stemRoot, track, "manifest.json"),
-        path.join(outDir, "music_ace", track, "manifest.json"),
-      );
-      stemsCopied += Object.keys(manifests[track].clips).length * manifests[track].stems.length;
-    }
-
-    const boot = run(exe, ["--headless", "--quit-after", "300", "--music=ace", "--ace-check"], {
-      cwd: outDir,
-      env: xdgEnv,
-    });
-    const bootOutput = boot.stdout + boot.stderr;
-    const failures = bootFailures(bootOutput);
-    if (boot.status !== 0) failures.push("boot exit " + boot.status);
-    if (failures.length > 0) fail(failures.join("; ") + "\n" + bootOutput.slice(-2000));
-
-    const parkBoot = run(exe, ["--headless", "--table=park", "--quit-after", "600"], {
-      cwd: outDir,
-      env: xdgEnv,
-    });
-    const parkText = parkBoot.stdout + parkBoot.stderr;
-    const parkErrors = parkText.split("\n").filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line));
-    if (parkBoot.status !== 0 || parkErrors.length > 0)
-      fail(
-        "park table boot exit " +
-          parkBoot.status +
-          "\n" +
-          parkErrors.join("\n") +
-          "\n" +
-          parkText.slice(-1000),
-      );
-    return { smoke: smokeRun, bootText: bootOutput, stemCount: stemsCopied };
-  });
-
-  const head = run("git", ["-C", root, "rev-parse", "HEAD"]);
-  if (head.status !== 0) fail("git HEAD not found\n" + head.stderr);
-  const sha = head.stdout.trim();
-  const sha7 = sha.slice(0, 7);
-  const status = run("git", ["-C", root, "status", "--porcelain", "--untracked-files=no"]);
-  if (status.status !== 0) fail("git status failed\n" + status.stderr);
-  const dirty = status.stdout.trim() !== "";
-  const version = sha7 + (dirty ? "-dirty" : "");
-  const proofLine = args.winProof ? await winProof(outDir) : null;
-  await writeFile(
-    path.join(outDir, "BUILD.txt"),
-    buildStamp({
-      sha,
-      dirty,
-      stamp,
-      godot: "4.7.2.stable",
-      stems: stemCount,
-      stemsFrom,
-      winProof: proofLine,
-      bossSmoke: smoke.lines.join("\n"),
-      selfPlay: args.selfPlay,
-    }),
-  );
-  await writeFile(path.join(outDir, "HOW-TO-RUN.txt"), howToRun({ sha7: version }));
-  const tar = run("tar", tarArgs(outDir, sha7, dirty, args.selfPlay));
-  if (tar.status !== 0) fail("tar failed\n" + tar.stderr);
-  const tarball = path.join(
-    path.dirname(outDir),
-    packageName(sha7, dirty, args.selfPlay) + ".tar.gz",
-  );
-
-  const size = (await stat(exe)).size;
-  console.log("version: " + version + " " + stamp);
-  console.log(
-    "package: " + tarball + " (" + ((await stat(tarball)).size / 1048576).toFixed(1) + " MiB)",
-  );
-  console.log("executable: " + exe);
-  console.log(
-    "pack size: " + size + " bytes (" + (size / 1048576).toFixed(1) + " MiB, pack embedded)",
-  );
-  console.log("stems from: " + stemsFrom);
-  console.log("sidecar stems: " + stemCount + " in " + path.join(outDir, "music_ace"));
-  console.log("boot tail:\n" + bootText.trim().split("\n").slice(-6).join("\n"));
-  if (proofLine) console.log(proofLine);
-  if (args.selfPlay)
-    console.log(
-      "self-play: pack carries tools/ (launch with -- --self-play); not the shipped pack",
-    );
-  console.log(nextStepLine());
+  await runLinuxExport(args);
 }
 
-async function winProof(outDir) {
-  const drift = proofPresetDrift(
-    parsePresets(await readFile(path.join(project, "export_presets.cfg"), "utf8")),
-  );
-  if (drift.length > 0) fail("proof preset drifted from the shipped preset\n" + drift.join("\n"));
+async function winProof(
+  outDir,
+  {
+    binary: bin = binary,
+    projectDir = project,
+    repoRoot = root,
+    runCmd = run,
+    failFn = fail,
+    exists = existsSync,
+    copyAddons = copyProofLibraries,
+    readFileFn = readFile,
+    mkdirFn = mkdir,
+    baseEnv = process.env,
+    platform = process.platform,
+    checkDrift = true,
+    checkExisting = true,
+    includeRepoRoot = true,
+    onPackPass = null,
+    onProofPass = null,
+  } = {},
+) {
+  if (checkDrift) {
+    const drift = proofPresetDrift(
+      parsePresets(await readFileFn(path.join(projectDir, "export_presets.cfg"), "utf8")),
+    );
+    if (drift.length > 0)
+      failFn("proof preset drifted from the shipped preset\n" + drift.join("\n"));
+  }
   const proofDir = outDir + "-win-proof";
-  if (existsSync(proofDir)) fail("win proof folder already exists: " + proofDir);
-  await mkdir(proofDir, { recursive: true });
+  if (checkExisting && exists(proofDir)) failFn("win proof folder already exists: " + proofDir);
+  await mkdirFn(proofDir, { recursive: true });
   const pack = path.join(proofDir, "proof.pck");
-  const exported = run(binary, [
+  const exported = runCmd(bin, [
     "--headless",
     "--path",
-    project,
+    projectDir,
     "--export-pack",
     proofPreset,
     pack,
   ]);
-  const exportText = exported.stdout + exported.stderr;
-  if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(pack))
-    fail("proof pack export failed\n" + exportText.slice(-2000));
+  if (onPackPass) {
+    onPackPass(exported);
+  } else {
+    const exportText = (exported.stdout ?? "") + (exported.stderr ?? "");
+    if (exported.status !== 0 || errorLine.test(exportText) || !exists(pack))
+      failFn("proof pack export failed\n" + exportText.slice(-2000));
+  }
+  await copyAddons(projectDir, proofDir);
 
   const lines = [];
   for (const proof of WIN_PROOFS) {
     const base = path.join(proofDir, proof.dir);
     const result = await playProofTries(proof, (attempt) =>
-      playWinProof((proof.tries ?? 1) > 1 ? path.join(base, "try-" + attempt) : base, pack, proof),
+      playWinProof((proof.tries ?? 1) > 1 ? path.join(base, "try-" + attempt) : base, pack, proof, {
+        binary: bin,
+        runCmd,
+        repoRoot,
+        baseEnv,
+        platform,
+        includeRepoRoot,
+        readFileFn,
+        exists,
+        mkdirFn,
+      }),
     );
-    if (!result.ok) fail(proof.label + "\n" + result.failure);
+    if (!result.ok) failFn(proof.label + "\n" + result.failure);
+    if (onProofPass) onProofPass(result.line);
     lines.push(result.line);
   }
   return lines.join("\n");
 }
 
-async function playWinProof(base, pack, proof) {
+async function playWinProof(
+  base,
+  pack,
+  proof,
+  {
+    binary: bin = binary,
+    runCmd = run,
+    repoRoot = root,
+    baseEnv = process.env,
+    platform = process.platform,
+    includeRepoRoot = true,
+    readFileFn = readFile,
+    exists = existsSync,
+    mkdirFn = mkdir,
+  } = {},
+) {
   const state = path.join(base, "state");
   for (const dir of ["data", "config", "cache"])
-    await mkdir(path.join(state, dir), { recursive: true });
-  const addons = path.join(project, "addons");
-  const addonFiles = existsSync(addons)
-    ? readdirSync(addons, { recursive: true }).map((rel) =>
-        path.join("addons", String(rel)).split(path.sep).join("/"),
-      )
-    : [];
-  for (const rel of proofLibraries(addonFiles)) {
-    await mkdir(path.join(path.dirname(pack), path.dirname(rel)), { recursive: true });
-    await copyFile(path.join(project, rel), path.join(path.dirname(pack), rel));
-  }
+    await mkdirFn(path.join(state, dir), { recursive: true });
   const out = path.join(base, "run");
-  const bot = run(
-    binary,
+  const bot = runCmd(
+    bin,
     [
       "--headless",
       "--fixed-fps",
@@ -790,12 +993,12 @@ async function playWinProof(base, pack, proof) {
     {
       cwd: path.dirname(pack),
       timeout: winProofTimeoutMs(proof),
-      env: winProofEnv(state),
+      env: winProofEnv(state, includeRepoRoot ? repoRoot : null, baseEnv, platform),
     },
   );
-  const botText = bot.stdout + bot.stderr;
+  const botText = (bot.stdout ?? "") + (bot.stderr ?? "");
   const rowsPath = path.join(out, "bots.ndjson");
-  const rowsText = existsSync(rowsPath) ? await readFile(rowsPath, "utf8") : "";
+  const rowsText = exists(rowsPath) ? await readFileFn(rowsPath, "utf8") : "";
   const failures = winProofFailures(botText, bot.status, rowsText);
   if (failures.length > 0)
     return {
@@ -824,5 +1027,4 @@ export async function playProofTries(proof, playOnce) {
   return { ok: true, line: last.line + note, outcomes };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  await main();
+if (isMain(import.meta.url)) await main();

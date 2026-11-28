@@ -1,6 +1,8 @@
 class_name WorkOrders
 extends RefCounted
 
+const WordBudget := preload("res://src/core/word_budget.gd")
+
 
 const ClassDef := preload("res://src/core/class_def.gd")
 const Items := preload("res://src/build/items.gd")
@@ -801,10 +803,6 @@ static func _save_camp_box(profile, box: Dictionary) -> void:
 	profile.set_camp(doc)
 
 
-static func _words(s: String) -> int:
-	return s.split(" ", false).size()
-
-
 static func _keys(value: Variant, out: Array) -> Array:
 	if value is Dictionary:
 		for key in value:
@@ -868,10 +866,10 @@ static func validate(
 					if key.contains(word):
 						problems.append("%s: key %s names banned word %s" % [id, key, word])
 			var title := str(r.get("name", ""))
-			if title == "" or _words(title) > NAME_WORDS or _has_banned_copy(title):
+			if title == "" or WordBudget.words_in(title) > NAME_WORDS or _has_banned_copy(title):
 				problems.append("%s: invalid name %s" % [id, title])
 			var text := str(r.get("text", ""))
-			if text == "" or _words(text) > TEXT_WORDS or _has_banned_copy(text):
+			if text == "" or WordBudget.words_in(text) > TEXT_WORDS or _has_banned_copy(text):
 				problems.append("%s: invalid text %s" % [id, text])
 			if str(r.get("track", "")) != expected_track:
 				problems.append("%s: track must be %s" % [id, expected_track])

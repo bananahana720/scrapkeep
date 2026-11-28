@@ -29,6 +29,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkStamps := preload("res://src/world/park/park_stamps.gd")
 const PinHash := preload("res://tests/support/pin_hash.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 # Every old-map scatter transform (kind, seed, instance buffer, maps sorted) is pinned in OLD_MAPS_PIN through
 # tests/support/pin_hash.gd. A change there moves an old map's scatter. Until 16 Nov 2026 this was a SHA-256 of the
@@ -299,7 +300,7 @@ func _park_chunks() -> void:
 	# The glb source is requested on the loader thread with the cache bypassed, so the main thread never
 	# loads it and the build is cold whatever the process has cached (KB5's receipt ran warm). Headless (the
 	# dummy rasterizer, whose mesh RID owner is not thread-safe) the sources load on the main thread instead.
-	if DisplayServer.get_name() != "headless":
+	if not AppShell.headless():
 		t.eq("the glb mesh sources load on the loader thread, not the main thread", chunks.get("threaded_loads"), 1)
 		t.check("the slot materials that are resources load on the loader thread", int(chunks.get("threaded_materials")) >= 1, str(chunks.get("threaded_materials")))
 	else:
@@ -466,7 +467,7 @@ func _plain_slopes() -> void:
 		# The chunks under the plain slopes' centres, every kit row.
 		var cells := {}
 		for row: Dictionary in plain:
-			var at: Vector2 = ParkMap._v2(row["at"])
+			var at: Vector2 = ParkMap.v2(row["at"])
 			cells[Vector2i(floori((at.x + ParkTerrain.HALF) / ParkTerrain.TILE_M), floori((at.y + ParkTerrain.HALF) / ParkTerrain.TILE_M))] = true
 		var on_plain := {}
 		var on_built := 0
@@ -490,7 +491,7 @@ func _plain_slopes() -> void:
 			var box := ParkStamps.bounds(ParkStamps.frame(row))
 			if not Rect2(box[0], box[1], box[2] - box[0], box[3] - box[1]).intersects(map.play_rect):
 				continue
-			if not on_plain.has(row["id"]) and not Scatter._kept_out(map.scatter["keep_out"], ParkMap._v2(row["at"])):
+			if not on_plain.has(row["id"]) and not Scatter._kept_out(map.scatter["keep_out"], ParkMap.v2(row["at"])):
 				problems.append("%s/%s has no scatter and nothing built on it" % [map_id, row["id"]])
 		if on_built > 0:
 			problems.append("%s %d pieces inside built footprints" % [map_id, on_built])
@@ -644,7 +645,7 @@ func _lane_mask_shape(map, graph, mask: Dictionary) -> void:
 	var rows := {}
 	for row: Dictionary in map.park["park_rows"]:
 		rows[row["id"]] = row
-	var lips: Vector2 = ParkMap._v2(rows["canal_lips"]["at"])
+	var lips: Vector2 = ParkMap.v2(rows["canal_lips"]["at"])
 	t.check("a routed grind row's chord midpoint is in the mask (dam canal_lips)", Scatter._in_lane(mask, lips.x, lips.y), str(lips))
 	var ends := 0
 	var marked := 0

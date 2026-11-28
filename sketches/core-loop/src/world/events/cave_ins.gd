@@ -2,6 +2,7 @@ extends Node3D
 
 
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const RubbleFall := preload("res://src/world/events/rubble_fall.gd")
 
 const RADIUS_M := 4.5
@@ -24,7 +25,7 @@ var _since_last := INF
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "CaveIns"
-	add_to_group("world_telegraphs")
+	add_to_group(Groups.WORLD_TELEGRAPHS)
 	var map = world.terrain.map()
 	if not "park" in map or map.park.is_empty():
 		return
@@ -50,7 +51,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_since_last += delta
 	_live = _live.filter(func(fall) -> bool: return is_instance_valid(fall))
-	for burrower in get_tree().get_nodes_in_group("enemy"):
+	for burrower in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if String(burrower.get("kind")) != "burrower":
 			continue
 		if burrower.has_method("is_dead") and burrower.is_dead():

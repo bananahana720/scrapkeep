@@ -1,14 +1,15 @@
 import { createHash } from "node:crypto";
 import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 import { checkLedger } from "./known-failing.mjs";
 import { checkWeekly } from "./gate/weekly.mjs";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { walkAsync } from "./lib/walk.mjs";
 import { checkWaveState } from "./wave-state.mjs";
 
-const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const scriptRoot = REPO_ROOT;
 const limits =
   "Structural documentation checks only. No build, runtime, browser or remote check is implied; link targets are checked for existence and anchors, not for content correctness.";
 
@@ -35,22 +36,6 @@ async function exists(file) {
   }
 }
 
-async function walk(root, directory, keep, skipDir = () => false) {
-  const files = [];
-  const absolute = path.join(root, directory);
-  if (!(await exists(absolute))) return files;
-  for (const item of await readdir(absolute, { withFileTypes: true })) {
-    const file = path.posix.join(directory, item.name);
-    if (item.isDirectory()) {
-      if (skipDir(file)) continue;
-      files.push(...(await walk(root, file, keep, skipDir)));
-    } else if (item.isFile() && keep(file)) {
-      files.push(file);
-    }
-  }
-  return files;
-}
-
 const PRUNE_EXACT_DIRS = new Set([
   "artifacts/local",
   "tests/fixtures",
@@ -71,8 +56,12 @@ function shouldSkipDir(dir) {
 }
 
 async function markdownFiles(root) {
-  const files = await walk(root, "", (file) => file.endsWith(".md"), shouldSkipDir);
-  return files.sort();
+  const entries = await walkAsync(root, {
+    filesOnly: true,
+    prune: (entry) => shouldSkipDir(entry.rel),
+    filter: (entry) => entry.name.endsWith(".md"),
+  });
+  return entries.map((entry) => entry.rel).sort();
 }
 
 function visibleLines(content, keepCodeText = false) {
@@ -358,6 +347,52 @@ async function checkLedgerStage(docs) {
   return findings.filter((finding) => finding.level === "failure").length;
 }
 
+const ARCHITECTURE_FILE = "sketches/core-loop/ARCHITECTURE.md";
+const CORE_LOOP_SRC_DIR = "sketches/core-loop/src";
+const CONTEXT_FILE = "sketches/core-loop/src/core/context.gd";
+
+async function checkArchitectureSync(docs) {
+  if (!(await docs.hasFile(CONTEXT_FILE))) return 0;
+  if (!(await docs.hasFile(ARCHITECTURE_FILE))) {
+    docs.fail("architecture", ARCHITECTURE_FILE, 1, `missing ${ARCHITECTURE_FILE}`);
+    return 1;
+  }
+  const { content } = await docs.load(ARCHITECTURE_FILE);
+  let failures = 0;
+  const entries = await readdir(path.join(docs.root, CORE_LOOP_SRC_DIR), { withFileTypes: true });
+  const subdirs = entries
+    .filter((item) => item.isDirectory() && !item.name.startsWith("."))
+    .map((item) => item.name)
+    .sort();
+  for (const dir of subdirs) {
+    if (!content.includes(`src/${dir}/`)) {
+      docs.fail(
+        "architecture",
+        ARCHITECTURE_FILE,
+        1,
+        `missing src/${dir}/ directory in ${ARCHITECTURE_FILE}; document ${CORE_LOOP_SRC_DIR}/${dir}/`,
+      );
+      failures++;
+    }
+  }
+  const contextText = await readFile(path.join(docs.root, CONTEXT_FILE), "utf8");
+  for (const [index, line] of contextText.split("\n").entries()) {
+    const match = /^var\s+([A-Za-z_][A-Za-z0-9_]*)\b/.exec(line);
+    if (!match) continue;
+    const field = match[1];
+    if (!content.includes(`\`${field}\``)) {
+      docs.fail(
+        "architecture",
+        ARCHITECTURE_FILE,
+        1,
+        `missing Context field \`${field}\` from ${CONTEXT_FILE}:${index + 1} in ${ARCHITECTURE_FILE}`,
+      );
+      failures++;
+    }
+  }
+  return failures;
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const docs = new Documents(options.root);
@@ -369,6 +404,7 @@ async function main() {
   const waveFindings = await checkWaveStateStage(docs);
   const ledgerFindings = await checkLedgerStage(docs);
   await checkRulingLetters(docs);
+  const architectureFindings = await checkArchitectureSync(docs);
   const manifest = {};
   for (const file of [...docs.cache.keys()].sort()) manifest[file] = docs.cache.get(file).sha256;
   const failures = docs.findings.filter((finding) => finding.level === "failure");
@@ -382,6 +418,7 @@ async function main() {
       agentFindings,
       waveFindings,
       ledgerFindings,
+      architectureFindings,
     },
     failures: failures.length,
     findings: docs.findings,
@@ -418,6 +455,8 @@ async function main() {
       " wave-state findings, " +
       ledgerFindings +
       " known-failing findings, " +
+      architectureFindings +
+      " architecture findings, " +
       failures.length +
       " failures. Report: " +
       options.report,

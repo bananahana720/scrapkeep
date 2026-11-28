@@ -942,7 +942,7 @@ func _run() -> void:
 	var charges: int = _player.abilities.slot("movement").charges
 	var landed := []
 	var chain_mult: float = _player.chain.multiplier()
-	var heft_mult: float = Ultimate.HEFT_MULT[ult._heft_index()]
+	var heft_mult: float = Ultimate.HEFT_MULT[ult.heft_index()]
 	var expected_damage: float = Ultimate.LANDING_DAMAGE * chain_mult * heft_mult
 	var slam_rate: float = _combat.punch_of("slam", 1.0)
 	var on_landed := func(_id: String, _at: Vector3, count: int, dealt: float): landed.append([count, dealt])
@@ -1167,7 +1167,7 @@ func _run() -> void:
 	_t.check("Line Drive waits for loaded_line; Foundry Cutter opens after set_piece",
 		not _combat.discovered.has("rivet_line_drive") and _combat.discovered.has("rivet_shrugged")
 		and log.has("set_piece") and log.find("set_piece") < log.find("rivet_foundry_cutter"), str(log))
-	_combat._discover("loaded_line", _player.ball_position())
+	_combat.discover("loaded_line", _player.ball_position())
 	await _step_cards(8)
 	_kit.last_punch = {"id": puncher.get_instance_id(), "clock": _kit._clock, "punch": 1.0, "dir": Vector3.RIGHT}
 	_game.events.enemy_pinned.emit(pinned, 1.0)

@@ -111,7 +111,7 @@ func refresh_keys() -> void:
 
 
 static func key_rows() -> Array:
-	return FieldNotes.CONTROLS.filter(func(row): return row.has("short") and row.has("caps"))
+	return ControlsDiagram.controls().filter(func(row): return row.has("short") and row.has("caps"))
 
 
 func _mechanics_row(ids: Array) -> HBoxContainer:

@@ -2,6 +2,7 @@ extends Node3D
 
 const Panels := preload("res://src/build/panels.gd")
 const Accretion := preload("res://src/build/accretion.gd")
+const MathUtil := preload("res://src/core/math_util.gd")
 
 
 const SOCKETS := 32
@@ -107,7 +108,7 @@ func seat(index: int, scale_by := 1.0) -> Transform3D:
 	var course := index / SOCKETS
 	var slot: int = _order[index % SOCKETS]
 	var dir: Vector3 = (_twist[course % _twist.size()] as Basis) * sockets()[slot] if course > 0 else sockets()[slot]
-	var basis := _facing(dir) * Basis(Vector3.UP, float(slot) * 0.7)
+	var basis := MathUtil.basis_up(dir) * Basis(Vector3.UP, float(slot) * 0.7)
 	return Transform3D(basis * Basis.from_scale(Vector3(PLATE_FACE * scale_by, 1.0, PLATE_FACE * scale_by)), dir * course_radius(course))
 
 
@@ -167,13 +168,6 @@ func _view(silhouette: String) -> MultiMeshInstance3D:
 	add_child(view)
 	_multimeshes[silhouette] = view
 	return view
-
-
-static func _facing(dir: Vector3) -> Basis:
-	var up := dir.normalized()
-	var side := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
-	side = (side - up * side.dot(up)).normalized()
-	return Basis(side, up, side.cross(up))
 
 
 static func plate_mesh(silhouette: String) -> Mesh:

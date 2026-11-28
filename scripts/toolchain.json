@@ -1,0 +1,9 @@
+{
+  "godotVersion": "4.7.2-stable",
+  "godotNumericVersion": "4.7.2",
+  "godotTemplateVersion": "4.7.2.stable",
+  "godotZipSha512": "9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65",
+  "godotBinSha256": "8d106cbe6144c2dc7e881d61d2429c1a8a76e6b22ef48bd5e48dcf934953f71e",
+  "godotTemplatesSha512": "ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079",
+  "sketchDir": "sketches/core-loop"
+}

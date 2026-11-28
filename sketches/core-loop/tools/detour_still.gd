@@ -2,6 +2,7 @@ extends SceneTree
 
 
 const Game := preload("res://src/game.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 var game
 var out := ""
@@ -11,7 +12,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			out = arg.trim_prefix("--out=")
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		quit(2)
 		return
 	if DirAccess.make_dir_recursive_absolute(out) != OK:

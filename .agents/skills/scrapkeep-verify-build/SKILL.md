@@ -36,7 +36,7 @@ Every step file of `scrapkeep-verify-game` runs on the packed build the same way
 
 ## Evidence
 
-Each drive writes `artifacts/local/verify-build/<evidence name>/` with the same files as the game skill: pictures, the step rows, the game log, the identity file (it names the packed game's path), and a copy of the save folder. Attach the decisive pictures and rows to the pull request or copy them to the area's folder under `/mnt/project-files/`; `artifacts/local/` is scratch.
+Each drive writes `artifacts/local/verify-build/<evidence name>/` with the same files as the game skill: pictures, the step rows, the game log, the identity file (it names the packed game's path), and a copy of the save folder. Keep working runs in `artifacts/local/` and attach the decisive pictures and rows to the pull request (or commit permanent evidence under the repo's evidence directory when requested).
 
 Proof standards:
 

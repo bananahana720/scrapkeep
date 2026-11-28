@@ -108,6 +108,14 @@ func render() -> void:
 	_lamp_material.emission_energy_multiplier = FlashGuard.spike(0.4, 0.4 + pulse * 5.0)
 
 
+func set_phase(phase: int) -> void:
+	if cycle == null:
+		return
+	cycle.phase = phase
+	cycle.elapsed = 0.0
+	render()
+
+
 func in_basin(point: Vector3) -> bool:
 	if basin.is_empty() or cycle == null:
 		return false

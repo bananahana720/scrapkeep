@@ -1,6 +1,8 @@
 extends SceneTree
 
-const ContentRegistry := preload("res://src/core/content_registry.gd")
+const ContentRegistry := preload("res://tests/support/content_registry.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
 
 # BUGFIX-CORE F005 (2026-10-09): tree reachability follows the whole heap chain. A blank
@@ -37,4 +39,11 @@ func _initialize() -> void:
 			want.append(index)
 	_t.check("the probe reaches a grandchild", want.has(6), "descendants %s" % [want])
 	_t.eq("a blank root cuts off its whole subtree", _reach_rows(ContentRegistry.validate_table(TABLE, rows, tables, false), str(pilot)), want)
+	var bus_names: Array = Array(GameEvents.signal_names())
+	bus_names.sort()
+	var kind_names: Array = EventKinds.ROWS.keys() + EventKinds.LINE_SIGNALS.keys()
+	kind_names.sort()
+	_t.eq("every GameEvents signal has a matching EventKinds row", bus_names, kind_names)
+	var bus_source := FileAccess.get_file_as_string("res://src/core/game_events.gd")
+	_t.check("game_events.gd uses no add_user_signal calls", not bus_source.contains("add_user_signal"))
 	quit(_t.verdict())

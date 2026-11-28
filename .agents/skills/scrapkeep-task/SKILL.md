@@ -32,11 +32,11 @@ When the selected sprint has no remaining active work, follow [ORCHESTRATOR.md#s
 
 ## Host adapter and base identity
 
-Follow `AGENTS.md` Rule 11 (`ruling ej`) for worker routing and [DEVICES.md](../../../project-guide/handoff/DEVICES.md) / [GEMINI.md](../../../GEMINI.md) for host setup:
+Worker routing, model selection, and non-admitting helper limits live solely in [AGENTS.md](../../../AGENTS.md) Rule 11; host setup lives in [DEVICES.md](../../../project-guide/handoff/DEVICES.md) and [GEMINI.md](../../../GEMINI.md).
 
-- **Antigravity**: invoke subagents with `.agents/agents/scrapkeep-*.md` (or `scrapkeep-gemini-workflows` with `run_workflow`), isolate writers with `workspace: "share"` or `scripts/new-worktree.sh`, and report active Gemini model/tier from runtime metadata.
-- **Claude Code**: write single-session changes yourself (`ruling by`), reserving subagents for search, research, noisy runs, and independent review (`.claude/agents/` fallback pins).
-- **Codex (GPT 6.2 Astra/Sol, rulings `ec`/`ee`)**: use distinct worktrees at the verified base; Codex verdicts are evidence and do not admit a unit.
+- **Antigravity**: invoke subagents via `.agents/agents/scrapkeep-*.md` (or `scrapkeep-gemini-workflows` with `run_workflow`) and isolate writers with `workspace: "share"` or `scripts/new-worktree.sh`.
+- **Claude Code**: follow [AGENTS.md](../../../AGENTS.md) rule 2 (single writer per branch; subagents read-only for search, research, noisy runs, and review; fallback pins in `.claude/agents/`).
+- **Codex**: isolate writers in distinct worktrees created at the verified base.
 - On any host, verify the base commit (`git rev-parse HEAD`) and runtime model/tier before admission. Run executable checks yourself and pass only diff, acceptance, and receipts to the reviewer.
 
 Use `scrapkeep-verify` for the candidate and integrated result. Resume from TRACKING and artifacts, not a remembered PID or a chat summary. Report actual runtime identities and evidence limits.

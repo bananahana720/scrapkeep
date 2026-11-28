@@ -1,15 +1,14 @@
 class_name ExperimentalAudioBank
 extends RefCounted
 
-const BUS_AMBIENT := "Ambient"
-const BUS_SFX := "SFX"
-const BUS_FALLBACK := "Master"
-const VALID_BUSES := [BUS_AMBIENT, BUS_SFX]
+const MixRows := preload("res://src/presentation/mix_rows.gd")
+
+const VALID_BUSES := [MixRows.BUS_AMBIENT, MixRows.BUS_SFX]
 
 const EVENT_SPECS := {
 	"smelter_ambience": {
 		"path": "res://assets/audio/experimental/smelter_ambience_loop.ogg",
-		"bus": BUS_AMBIENT,
+		"bus": MixRows.BUS_AMBIENT,
 		"loop": true,
 		"volume_db": -8.0,
 		"cooldown_s": 0.0,
@@ -19,68 +18,68 @@ const EVENT_SPECS := {
 	},
 	"hazard_squall_alarm": {
 		"path": "res://assets/audio/experimental/hazard_squall_alarm.ogg",
-		"bus": BUS_SFX,
+		"bus": MixRows.BUS_SFX,
 		"loop": true,
 		"volume_db": -4.0,
 		"cooldown_s": 1.5,
 		"duck_db": -3.0,
-		"duck_bus": BUS_AMBIENT,
+		"duck_bus": MixRows.BUS_AMBIENT,
 		"category": "alarm",
 	},
 	"apex_lockdown": {
 		"path": "res://assets/audio/experimental/apex_lockdown_stem.ogg",
-		"bus": BUS_AMBIENT,
+		"bus": MixRows.BUS_AMBIENT,
 		"loop": true,
 		"volume_db": -3.5,
 		"cooldown_s": 0.0,
 		"duck_db": -4.0,
-		"duck_bus": BUS_AMBIENT,
+		"duck_bus": MixRows.BUS_AMBIENT,
 		"category": "combat_stem",
 	},
 	"pa_salvage_press_lockdown": {
 		"path": "res://assets/audio/experimental/pa_salvage_press_lockdown.ogg",
-		"bus": BUS_SFX,
+		"bus": MixRows.BUS_SFX,
 		"loop": false,
 		"volume_db": -1.5,
 		"cooldown_s": 4.0,
 		"duck_db": -6.0,
-		"duck_bus": BUS_AMBIENT,
+		"duck_bus": MixRows.BUS_AMBIENT,
 		"category": "pa_dispatch",
 		"voice": "foreman",
 		"transcript": "Salvage press lockdown active. Remain stationary.",
 	},
 	"pa_foreman_rig_deployed": {
 		"path": "res://assets/audio/experimental/pa_foreman_rig_deployed.ogg",
-		"bus": BUS_SFX,
+		"bus": MixRows.BUS_SFX,
 		"loop": false,
 		"volume_db": -1.5,
 		"cooldown_s": 4.0,
 		"duck_db": -6.0,
-		"duck_bus": BUS_AMBIENT,
+		"duck_bus": MixRows.BUS_AMBIENT,
 		"category": "pa_dispatch",
 		"voice": "foreman",
 		"transcript": "Foreman rig deployed. Alignment begins now.",
 	},
 	"pa_hazard_squall_incoming": {
 		"path": "res://assets/audio/experimental/pa_hazard_squall_incoming.ogg",
-		"bus": BUS_SFX,
+		"bus": MixRows.BUS_SFX,
 		"loop": false,
 		"volume_db": -1.5,
 		"cooldown_s": 3.5,
 		"duck_db": -5.5,
-		"duck_bus": BUS_AMBIENT,
+		"duck_bus": MixRows.BUS_AMBIENT,
 		"category": "pa_dispatch",
 		"voice": "works_pa",
 		"transcript": "Hazard squall inbound. Clear the yard.",
 	},
 	"pa_airdrop_pod_inbound": {
 		"path": "res://assets/audio/experimental/pa_airdrop_pod_inbound.ogg",
-		"bus": BUS_SFX,
+		"bus": MixRows.BUS_SFX,
 		"loop": false,
 		"volume_db": -1.0,
 		"cooldown_s": 3.5,
 		"duck_db": -5.0,
-		"duck_bus": BUS_AMBIENT,
+		"duck_bus": MixRows.BUS_AMBIENT,
 		"category": "pa_dispatch",
 		"voice": "moss",
 		"transcript": "Airdrop pod inbound. Moss packed spares.",
@@ -142,7 +141,7 @@ static func spec(event_id: String) -> Dictionary:
 
 static func bus_for(event_id: String) -> String:
 	if not EVENT_SPECS.has(event_id):
-		return BUS_FALLBACK
+		return MixRows.BUS_MASTER
 	return String(EVENT_SPECS[event_id]["bus"])
 
 
@@ -160,12 +159,6 @@ static func ducking_for(event_id: String) -> Dictionary:
 		"duck_db": float(row["duck_db"]),
 		"duck_bus": String(row["duck_bus"]),
 	}
-
-
-static func resolve_bus(bus_name: String) -> String:
-	if AudioServer.get_bus_index(bus_name) >= 0:
-		return bus_name
-	return BUS_FALLBACK
 
 
 static func can_trigger(event_id: String, sim_time_s: float) -> bool:
@@ -210,7 +203,7 @@ static func configure_player(player: AudioStreamPlayer, event_id: String) -> boo
 		return false
 	var row: Dictionary = EVENT_SPECS[event_id]
 	player.stream = stream
-	player.bus = resolve_bus(String(row["bus"]))
+	player.bus = MixRows.resolve_bus(String(row["bus"]))
 	player.volume_db = float(row["volume_db"])
 	return true
 
@@ -246,15 +239,3 @@ static func load_pbr_mask(mask_id: String) -> Texture2D:
 	if loaded != null:
 		_texture_cache[mask_id] = loaded
 	return loaded
-
-
-static func pitted_iron_mask() -> Texture2D:
-	return load_pbr_mask("pitted_iron")
-
-
-static func slag_crust_mask() -> Texture2D:
-	return load_pbr_mask("slag_crust")
-
-
-static func corrosive_brine_mask() -> Texture2D:
-	return load_pbr_mask("corrosive_brine")

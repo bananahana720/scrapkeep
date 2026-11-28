@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Remnant := preload("res://src/combat/swarm_remnant.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const GLB := "res://assets/models/world_one/enemy_swarm_remnant.glb"
-const BASE_LOGIC_SHA := "7fddf220164b537e4f1ccaa4af5a1a1046ebc63ee3aedacd5cee9559aaa8ad10"
+const BASE_LOGIC_SHA := "b8a3fcbb32a8fa80a31d9092c079a9b71f5310a08f8310ea6f018c92016a8194"
 
 var failures := 0
 var game

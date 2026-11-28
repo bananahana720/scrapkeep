@@ -117,7 +117,7 @@ func _read(warden) -> void:
 	if path is Array and path.size() >= 2:
 		var points: Array = []
 		for entry in path:
-			var point = _point(entry)
+			var point = warden.get_script().parse_point(entry)
 			if point == null:
 				points.clear()
 				break
@@ -136,17 +136,6 @@ func _ground_offset(warden, offset: Vector3) -> float:
 	if warden.terrain == null or not warden.terrain.has_method("height"):
 		return -INF
 	return float(warden.terrain.height(at.x, at.z)) + float(warden.HALF_HEIGHT) - float(warden.home.y)
-
-
-static func _point(entry):
-	if entry is Vector3:
-		return entry
-	if entry is Array and entry.size() == 3:
-		for n in entry:
-			if not (n is int or n is float):
-				return null
-		return Vector3(float(entry[0]), float(entry[1]), float(entry[2]))
-	return null
 
 
 func _island(warden, delta: float) -> Vector3:

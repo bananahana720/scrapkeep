@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/cli.mjs";
 
 const HASHES = "STEMS.sha256";
 const MUSIC = path.join("sketches", "core-loop", "assets", "music_ace");
@@ -99,5 +100,4 @@ function main(argv) {
   return r.mismatched.length || r.missing.length ? 1 : 0;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

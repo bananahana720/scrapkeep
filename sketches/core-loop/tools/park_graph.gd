@@ -1405,11 +1405,11 @@ static func target_lines(ruling_rows: Dictionary) -> PackedStringArray:
 
 
 static func _pay(pay: Dictionary) -> Dictionary:
-	return Placement._pay(pay)
+	return Placement.pay(pay)
 
 
 static func _within(rarities: Array, allowed: Array) -> bool:
-	return Placement._within(rarities, allowed)
+	return Placement.within(rarities, allowed)
 
 
 # The pay ladder over the activity rows. The off-line pair is ranked by detour, the reward taken

@@ -46,6 +46,7 @@ class AudioCtx:
 	var calm := false
 
 var event_script: Script = EventKinds
+var _measure_cache := {}
 const PRESENTATION := ["juice", "vfx", "audio"]
 const RULES := ["strike", "death_parts", "amount", "gauge", "posture"]
 
@@ -194,7 +195,7 @@ func _harpoon_smash_frame() -> Dictionary:
 	ctx.events = events
 	var audio := Audio.new()
 	audio.setup(ctx)
-	audio.bake_now()
+	audio.sound_ready = true
 	var frame := Engine.get_process_frames()
 	# player_ball._finish_landing emits these three facts synchronously in this order.
 	events.slammed.emit(Vector3.ZERO, 1.0, 1.0)
@@ -272,6 +273,9 @@ func _slam_weight_ok(shared: Dictionary) -> bool:
 
 
 func _measure(id: String, ratio := 1.0) -> Dictionary:
+	var cache_key := "%s|%.9f" % [id, ratio]
+	if _measure_cache.has(cache_key):
+		return (_measure_cache[cache_key] as Dictionary).duplicate()
 	if not Bank.has_recipe(id):
 		return {}
 	var samples := Bank.samples(id)
@@ -282,18 +286,26 @@ func _measure(id: String, ratio := 1.0) -> Dictionary:
 	var sum_squares := 0.0
 	var onset_ms := INF
 	var gain := db_to_linear(Bank.trim_db(id))
+	var onset_thresh := db_to_linear(-30.0)
+	var prev_neg := samples[0] < 0.0
 	for i in samples.size():
-		var sample := samples[i] * gain
-		peak = maxf(peak, absf(sample))
+		var raw := samples[i]
+		var sample := raw * gain
+		var mag := absf(sample)
+		peak = maxf(peak, mag)
 		sum_squares += sample * sample
-		if onset_ms == INF and absf(sample) > db_to_linear(-30.0):
+		if onset_ms == INF and mag > onset_thresh:
 			onset_ms = 1000.0 * i / Bank.RATE / ratio
-	for i in range(1, samples.size()):
-		if (samples[i - 1] < 0.0) != (samples[i] < 0.0):
-			crosses += 1
+		if i > 0:
+			var neg := raw < 0.0
+			if neg != prev_neg:
+				crosses += 1
+			prev_neg = neg
 	var seconds := float(samples.size()) / Bank.RATE / ratio
-	return {"zcr": crosses / seconds, "seconds": seconds, "peak_db": linear_to_db(peak),
+	var out := {"zcr": crosses / seconds, "seconds": seconds, "peak_db": linear_to_db(peak),
 		"rms_db": linear_to_db(sqrt(sum_squares / samples.size())), "onset_ms": onset_ms}
+	_measure_cache[cache_key] = out
+	return out.duplicate()
 
 
 func _identity_errors(facts: Dictionary) -> Dictionary:

@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/cli.mjs";
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -678,16 +679,7 @@ function formatToken(tok) {
   return tok ? `${tok.kind}(${JSON.stringify(tok.value)})` : "<EOF>";
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const opts = parseTokenDiffArgs(process.argv.slice(2));
     const result = runTokenDiff(opts);

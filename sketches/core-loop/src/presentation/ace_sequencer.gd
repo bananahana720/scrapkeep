@@ -132,10 +132,6 @@ var pause_level := 1.0
 var _serial := 0
 
 
-static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String:
-	return MusicRows.resolve_manifest(manifest_path, sidecar_dir)
-
-
 static func from_stage(stage = "default", sidecar_dir := "", stages = MusicRows.StageDefs) -> RefCounted:
 	var pack := MusicRows.resolve(stage, sidecar_dir, stages)
 	return load("res://src/presentation/ace_sequencer.gd").new(pack["ace_manifest"], sidecar_dir)
@@ -145,7 +141,7 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 	rate_scale = AudioServer.get_mix_rate() / float(RATE)
 	if manifest_path == "":
 		return
-	var path := resolve_manifest(manifest_path, sidecar_dir)
+	var path := MusicRows.resolve_manifest(manifest_path, sidecar_dir)
 	manifest_source = path
 	if path == "":
 		missing = ProjectSettings.globalize_path(manifest_path)
@@ -191,7 +187,7 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 
 
 static func kept(manifest_path: String, sidecar_dir := "") -> bool:
-	var path := resolve_manifest(manifest_path, sidecar_dir)
+	var path := MusicRows.resolve_manifest(manifest_path, sidecar_dir)
 	_kept_lock.lock()
 	var held := _kept.has(path)
 	_kept_lock.unlock()
@@ -450,6 +446,16 @@ func set_fight_floor(value: float) -> void:
 	fight_floor = value
 	if section != "":
 		_retarget(STOP_RAMP)
+
+
+func prime_parameters(enabled: bool, values: Dictionary, released: bool, danger_floor: float, lift: bool) -> void:
+	parameter_enabled = enabled
+	if parameter_enabled:
+		parameters = values.duplicate()
+		parameter_released = released
+		_parameter_danger_floor = danger_floor
+		pressure = float(parameters.get("threat", 0.0))
+		ultimate_lift = lift
 
 
 func clear_release() -> void:

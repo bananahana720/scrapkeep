@@ -2,6 +2,7 @@ extends Node3D
 
 
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const FloorRule := preload("res://src/combat/floor_rule.gd")
@@ -112,7 +113,7 @@ func _land() -> void:
 			if on_ball.is_valid():
 				on_ball.call()
 	if enemy_damage > 0.0:
-		for enemy in get_tree().get_nodes_in_group("enemy"):
+		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 				continue
 			if enemy.has_method("is_dead") and enemy.is_dead():

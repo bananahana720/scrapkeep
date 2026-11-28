@@ -3,6 +3,7 @@ extends Node3D
 const Activities := preload("res://src/world/activities.gd")
 const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const LoopTally := preload("res://src/core/loop_tally.gd")
 const WaveCross := preload("res://src/world/wave_cross.gd")
 
@@ -223,7 +224,7 @@ func _carry(delta: float) -> void:
 	if _knock_wait > 0.0:
 		return
 	_knock_wait = FLOOD_KNOCK_GAP_S
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not _alive(enemy) or _flat(enemy.global_position, centre) > radius:
 			continue
 		enemy.knock(flow_dir, FLOOD_KNOCK)

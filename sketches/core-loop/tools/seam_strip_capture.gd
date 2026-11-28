@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const SEAMS := [
@@ -50,7 +51,7 @@ func _initialize() -> void:
 		printerr("seam_strip_capture: needs -- --out=<absolute dir> [--seed=<int>] [--selftest=0|1]%s" % ((" (unknown: %s)" % ", ".join(stray)) if not stray.is_empty() else ""))
 		quit(2)
 		return
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		printerr("seam_strip_capture: needs a rendered display (gamescope headless backend), not --headless")
 		quit(2)
 		return

@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
 const LiveRunBridge := preload("res://src/experimental/live_run_bridge.gd")
+const ExperimentalAudioBank := preload("res://src/presentation/experimental_audio_bank.gd")
 const DynamicSetpieces := preload("res://src/experimental/dynamic_setpieces.gd")
 const LiveWorldActors := preload("res://src/experimental/live_world_actors.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
@@ -102,7 +103,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	LiveRunBridge._reset()
+	ExperimentalAudioBank._reset()
 	await _test_piers_are_solid()
 	await _test_pads_launch_onto_decks()
 	_test_chunk_site_clearance()
@@ -111,7 +112,7 @@ func _run() -> void:
 	await _test_default_game_stays_clean()
 	await _test_opt_in_game()
 	await _test_park_table_siting()
-	LiveRunBridge._reset()
+	ExperimentalAudioBank._reset()
 	quit(_t.verdict())
 
 

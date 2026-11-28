@@ -45,7 +45,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	weight = 0.4
 	radius = SIZE
 	half_height = 0.3
-	collision_mask = 0
+	collision_mask = PhysicsLayers.NONE
 	_build_body()
 
 
@@ -121,10 +121,10 @@ func retire() -> void:
 		return
 	fit_state = State.RETIRING
 	_dead = true
-	collision_layer = 0
-	collision_mask = 0
+	collision_layer = PhysicsLayers.NONE
+	collision_mask = PhysicsLayers.NONE
 	_clear_telegraph()
-	remove_from_group("enemy")
+	remove_from_group(GROUP)
 	visible = false
 	set_physics_process(false)
 	queue_free()

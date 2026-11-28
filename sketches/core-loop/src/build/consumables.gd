@@ -202,12 +202,8 @@ const ROWS_W50 := {
 static var _packed_cache := {}
 
 
-static func _reset() -> void:
-	_packed_cache.clear()
-
-
 static func reset_for_tests() -> void:
-	_reset()
+	_packed_cache.clear()
 
 
 static func all_order() -> Array[String]:

@@ -10,6 +10,7 @@ const SpecialCues := preload("res://src/combat/special_cues.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const PauseGuard := preload("res://src/presentation/pause_guard.gd")
 
 
 const FAMILY := {Roster.FLEET: "fleet", Roster.REACTOR: "ancient", Roster.SWARM: "ancient", Roster.MIND: "ancient"}
@@ -139,7 +140,7 @@ func setup(ctx_ref) -> void:
 	_word_root = Node3D.new()
 	_word_root.name = "Words"
 	root.add_child(_word_root)
-	var pause_guard := PlayerFx.PauseGuard.new()
+	var pause_guard := PauseGuard.new()
 	pause_guard.root = _word_root
 	add_child(pause_guard)
 	for i in WORD_POOL:
@@ -232,7 +233,7 @@ func follow(id: String, node: Node3D, count: int, lift: float, seconds := INF, t
 		_busy[p] = true
 		p.amount_ratio = clampf(float(count) / float(p.amount), 0.0, 1.0)
 		p.global_transform = Transform3D(Basis.IDENTITY, node.global_position + Vector3.UP * lift)
-		p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else FxLibrary.colour(id, "enemy_struck"))
+		p.set_instance_shader_parameter(FxLibrary.TINT, tint if tint.a > 0.0 else FxLibrary.colour(id, "enemy_struck"))
 		FxLibrary.set_heat(p, FxLibrary.look(id))
 		p.emitting = true
 		_follows.append({"emitter": p, "node": node, "lift": lift, "until": _clock + seconds, "spin": spin})

@@ -179,8 +179,8 @@ func _trial(entry: Dictionary, mode: String, seed_value: int, unsafe_entry := fa
 	var at: Vector3 = s.to_global(local)
 	at.y = game.ctx.terrain.height(at.x, at.z) + Tuning.RADIUS + 0.1
 	game.player.reset_to(at)
-	game.player.active_body().global_position = at
-	game.player.active_body().linear_velocity = Vector3.ZERO
+	game.player.body().global_position = at
+	game.player.body().linear_velocity = Vector3.ZERO
 	game.player.set_frozen(mode == "idle")
 	game.player.set_physics_process(mode != "idle")
 	var driver := BotDriver.new(game, "completionist", seed_value)

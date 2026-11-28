@@ -116,7 +116,7 @@ func _physics_process(delta: float) -> bool:
 
 
 func _skips(audio) -> int:
-	return audio._music_pb.get_skips() if audio._music_pb != null else 0
+	return maxi(0, audio.music_skips())
 
 
 func _keep_band(ace) -> void:
@@ -209,7 +209,7 @@ func _finish() -> void:
 		"set_plans": _plan_rows(audio.set_director.plans),
 		"policy": _driver.policy, "outcome": _driver.outcome, "stage": _game.run.stage, "tail": _tail,
 		"ace_loaded": ace != null, "ace_missing": audio.ace_missing, "only": String(_settings.get("only", "")),
-		"music_skips": _skips(audio) - _skips_before if audio._music_pb != null else -1, "music_skips_before": _skips_before, "music_skip_rows": _skip_rows,
+		"music_skips": audio.music_skips() - _skips_before if audio.music_skips() >= 0 else -1, "music_skips_before": _skips_before, "music_skip_rows": _skip_rows,
 		"ace_bands": _bands.size(), "ace_misses": misses if ace != null else -1, "ace_short_reads": short_reads if ace != null else -1,
 		"ace_render_ms_per_second": snappedf(render_usec / 1000.0 / maxf(rendered / RATE, 0.001), 0.01) if ace != null else -1.0,
 		"note": "section times are the render head in seconds from the recording's start; the ring and device add about 75 ms",

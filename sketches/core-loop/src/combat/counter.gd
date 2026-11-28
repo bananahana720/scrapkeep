@@ -52,6 +52,7 @@ var _strafe := 1.0
 var _crew: MeshInstance3D
 var _stride := Vector3.ZERO
 var _eye: Node3D
+var _absorb := false
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -371,7 +372,7 @@ func _on_ball_hit(_amount: float, _source: String) -> void:
 func _on_missed(_threat_kind: String, at: Vector3) -> void:
 	if not _noticing() or not _just_struck() or global_position.distance_to(at) > NOTICE_MISS:
 		return
-	for other in get_tree().get_nodes_in_group("enemy"):
+	for other in get_tree().get_nodes_in_group(GROUP):
 		if other != self and other.has_method("_just_struck") and other._just_struck() \
 				and other.global_position.distance_to(at) < global_position.distance_to(at):
 			return
@@ -475,3 +476,11 @@ func _settle_look() -> void:
 
 func _facing_yaw(to_ball: Vector3) -> float:
 	return atan2(to_ball.x, to_ball.z)
+
+
+func take_damage(amount: float) -> float:
+	if _absorb:
+		_absorb = false
+		flash()
+		return 0.0
+	return super.take_damage(amount)

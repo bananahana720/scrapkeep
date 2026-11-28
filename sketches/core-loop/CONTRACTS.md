@@ -1,8 +1,12 @@
 # Core-loop contracts
 
-This file is the seam between the spine and the five modules: the four from wave 2 (combat, build, presentation, world) and the wave-4 boss. [DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other only through that context and the `GameEvents` bus. A module never loads, calls or edits a file in another module's folder.
+> **Live architecture map:** For the current `src/` directory map (all 11 subdirectories plus `src/game.gd`), runtime state owners, complete `Context` field inventory, `GameEvents` signal group index, and script dependency-cycle status (`L16`), read [ARCHITECTURE.md](ARCHITECTURE.md). This file keeps the behavioral seam contracts below; the Wave 2–4 five-module writer split (`Writer A`–`Writer E`) in the first section is historical context.
+
+[DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the behavioral seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other through that context and the `GameEvents` bus; script dependency cycles (`L16`), `src/` -> `res://tools/` imports (`L7`), and presentation/UI simulation-state boundaries (`L6`, `L8`–`L10`) are checked by `npm run sketch:lint`.
 
 ## Ownership
+
+Historical Wave 2–4 module seam split (live directory ownership and module mount order live in [ARCHITECTURE.md](ARCHITECTURE.md)):
 
 | Owner | May edit | Tests |
 | --- | --- | --- |
@@ -52,6 +56,8 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 - Build owns all tuning mods. It calls `tuning.clear_mods()` on every recompute and reapplies every part. Keys that are not F1 sliders (`weapon_damage`, `weapon_rate`, `weapon_range`, `turret_damage` and any similar key) are read with `tuning.mod(key)`, never `tuning.f(key)`.
 
 ## The context (`src/core/context.gd`)
+
+For the complete, lint-checked inventory of all `Context` fields (including `buffs`, `run_log`, `profile`, `progress`, `destructibles`, `screen_busy`, `dev`, and `_hit_stop`), see [ARCHITECTURE.md](ARCHITECTURE.md). The core seam summary below covers the original module contract fields:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -120,7 +126,7 @@ The stage-start snapshot holds `max_hp`, `hp`, `scrap`, `cogs`, `mass`, `bonus_c
 
 ## GameEvents signals (`src/core/game_events.gd`)
 
-Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds_test.gd` fails if one is missing, if a row has no sound, or if an objective uses the word "optional".
+`src/core/game_events.gd` is the canonical signal list and [ARCHITECTURE.md](ARCHITECTURE.md) indexes all current signal groups. Every signal has a row in `event_kinds.gd` keyed by its name; `spine_event_kinds_test.gd` fails if one is missing, if a row has no sound, or if an objective uses the word "optional". The table below documents the core seam semantics for the primary handshake signals:
 
 | Signal | Arguments | Emitted by | Meaning |
 | --- | --- | --- | --- |
@@ -706,18 +712,18 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 ## Workshop UI (v2 W8)
 
 - **Where.** The node `Workshop` under the game (`src/ui/workshop.gd`, a CanvasLayer on layer 4 that processes while paused; `game.get_node("Workshop")`) owns the upgrade pick (`pick`, `tree_pick.gd`), Moss's counter (`counter`, `shop_counter.gd`), his bubble (`bubble`, `moss_bubble.gd`) and the talk key (`talk`). It reads `player.tree`, `game.build.shop`, `ctx.terrain.near_moss(point)` and `world.bay_bark`, and listens to `tree_offered`, `tree_picked`, `bay_entered`, `bay_left`, `stage_entered` (a retry closes everything) and `flow_changed` (leaving play closes everything). World is unchanged.
-- **The hold.** `game.gd` carries two one-line hooks: `_ready` adds the workshop as its child after the tuning panel, and `_input` skips its click-to-recapture while the game's meta `menu_held` is true. The workshop sets that meta while a screen is open, turns the ball's `keyboard` source off, frees the mouse through `game._capture_mouse(false)`, and for the pick holds `get_tree().paused`. It re-asserts all of it every frame and after every `flow_changed`, because game.gd writes the same state on flow changes and on P and Tab; P and Tab are swallowed while the pick is up. On release it restores the tree pause to `pause_toggled() or notes_held()`, the keyboard to `flow.in_play()` and the capture likewise.
+- **The hold.** `game.gd` loads the workshop through `MENU_PATHS` (immediately via `menu_modules()` in `_ready` when `test_mode` is true, otherwise threaded after title boot via `_step_menu_modules_later()` or synchronously on first use via `workshop()`, `flow_changed`, or `run_started`), and `_input` skips its click-to-recapture while the game's meta `menu_held` is true. The workshop sets that meta while a screen is open, turns the ball's `keyboard` source off, frees the mouse through `game._capture_mouse(false)`, and for the pick holds `get_tree().paused`. It re-asserts all of it every frame and after every `flow_changed`, because game.gd writes the same state on flow changes and on P and Tab; P and Tab are swallowed while the pick is up. On release it restores the tree pause to `pause_toggled() or notes_held()`, the keyboard to `flow.in_play()` and the capture likewise.
 - **armed.** `workshop.armed` is false in test mode, so no screen opens and nothing is held unless a test sets it.
 - **The pick.** Opens deferred on `tree_offered` while in play, for `tree.path().size() + 1`. It calls `tree.pick(id)` and nothing else; a pending next depth reopens at once. `pick.chosen(index)` and `pick.later` are its signals; `workshop.open_pick()` opens a pending pick on demand (the counter's pick plate).
 - **The counter.** Opens when `should_open_counter(shop.inside, near_moss, speed)` holds (in reach, under `PULL_UP` 4 m/s, re-armed after leaving reach). It parks the ball with `player.set_frozen(true)` and releases it on leave, a retry or leaving play. `counter.acted(fact, record)` carries every verb's result record with its `LOOT_ROWS` fact; a refusal of any verb is `shop_refused`.
 - **Sound.** Shop facts play their `LOOT_ROWS` stand-in through `presentation.audio.play(fact, 0, pitch, "UI", row.sound)` when that method exists. A talk beat's pitch is its babble `root` relative to D3.
 - **Words.** The calm-screen budget is 40 words per screen, counted by `word_budget.gd` over the workshop layer. The fight HUD budget (25) is unchanged.
-- **Tests.** `ui_workshop_pick_test`, `ui_workshop_shop_test` and `ui_workshop_bay_test`; the input helper is `tests/workshop/push.gd`.
+- **Tests.** `ui_workshop_pick_test`, `ui_workshop_shop_test` and `ui_workshop_bay_test`; the input helper is `tests/support/push.gd`.
 
 ## Pause menu and help (v2 W10)
 
 - **Where.** The node `PauseMenu` under the game (`src/ui/pause_menu.gd`, a CanvasLayer on layer 6 that processes while paused; `game.get_node("PauseMenu")`). It sits above the screens (5) and the workshop (4) and under the field notes (10). `is_open()`, `open()`, `close()`, `press(id)` and `row(id)` are its surface; the ids are `resume`, `restart`, `notes`, `music`, `effects` and `quit`.
-- **game.gd hooks.** There are two small hunks. `_ready` adds the pause menu after the workshop, and `_screen_key` maps H on the title to `screens.toggle_help()`. Pausing goes through the existing `toggle_pause()`, `pause_toggled()`, `hold_notes()` and `_capture_mouse()`. P and Esc in play belong to the pause menu; field notes keep Tab only.
+- **game.gd hooks.** `game.gd` loads the pause menu after the workshop through `MENU_PATHS` (immediately via `menu_modules()` in `_ready` when `test_mode` is true, otherwise threaded after title boot via `_step_menu_modules_later()` or synchronously on first use), and `_screen_key` maps H on the title to `screens.toggle_help()`. Pausing goes through the existing `toggle_pause()`, `pause_toggled()`, `hold_notes()` and `_capture_mouse()`. P and Esc in play belong to the pause menu; field notes keep Tab only.
 - **Coexistence.** It opens only when `flow.in_play()`, the game's meta `menu_held` is false and the notes are not held. On close it restores `get_tree().paused` for an open workshop pick.
 - **Audio.** `audio.set_volume(bus, level)` sets `volumes[bus]` (0 to 1; SFX also sets UI) and calls `_apply_volumes()`. The menu plays its ticks through `audio.play("flow_changed", 0, pitch, "UI")`.
 - **Settings.** `settings_store.gd` reads and writes `settings.json` in `game.storage_dir` as `{"volumes": {bus: level}}`. The per-process folder in test mode keeps tests off the player's file.

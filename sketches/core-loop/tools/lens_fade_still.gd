@@ -6,6 +6,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Palette := preload("res://src/core/palette.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SETTLE := 45
 const WAIT_TICKS := 2400
@@ -30,7 +31,7 @@ func _initialize() -> void:
 			out = arg.trim_prefix("--out=")
 		elif arg.begins_with("--stage="):
 			stage = int(arg.trim_prefix("--stage="))
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		quit(2)
 		return
 	if DirAccess.make_dir_recursive_absolute(out) != OK:
@@ -98,7 +99,7 @@ func _run() -> void:
 	var dust := FxLibrary.build("roll_dust")
 	root.add_child(dust)
 	dust.amount_ratio = 1.0
-	dust.set_instance_shader_parameter("tint", FxLibrary.colour("roll_dust", "rolling"))
+	dust.set_instance_shader_parameter(FxLibrary.TINT, FxLibrary.colour("roll_dust", "rolling"))
 	var tone := FxLibrary.colour("roll_dust", "rolling")
 	dust.global_position = cam.global_position + fwd * LENS_M
 	dust.emitting = true

@@ -5,6 +5,7 @@ const Relics := preload("res://src/build/relics.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
@@ -70,9 +71,7 @@ var _inside: Array = []
 var flag: Node3D
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
 const REQUIRED := ["CacheShell", "CacheRoof", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"]
-static var _shared: Array = []
 const FINISH := {"device_concrete": 0, "device_metal": 1}
-static var _loaded := false
 
 
 func _init() -> void:
@@ -139,7 +138,7 @@ func _build_pedestals(parts: Array) -> void:
 		if parts.is_empty():
 			cylinder(0.8, 0.6, Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL), pedestal)
 		else:
-			_attach(parts, "CachePedestal", pedestal)
+			ModelKit.attach_part(parts, "CachePedestal", pedestal)
 		var gem := Node3D.new()
 		gem.name = "Gem"
 		gem.position = Vector3.UP * 1.4
@@ -348,15 +347,15 @@ func _build_model(parts: Array) -> void:
 		_collision_box(Vector3(1.0, tall, HALF_D * 2.0 + 2.0), Vector3(s * (HALF_W + 0.5), mid, 0.0))
 	_collision_box(Vector3(HALF_W * 2.0 + 2.0, 1.0, HALF_D * 2.0 + 2.0), Vector3(0.0, HEIGHT + 0.5, 0.0))
 	_wall = _collision_box(Vector3(HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, HALF_D + 0.5))
-	var panel := _attach(parts, "CacheWall", _wall)
+	var panel := ModelKit.attach_part(parts, "CacheWall", _wall)
 	panel.position = Vector3.ZERO
-	_attach(parts, "CacheShell", self)
-	_attach(parts, "CacheRoof", self)
+	ModelKit.attach_part(parts, "CacheShell", self)
+	ModelKit.attach_part(parts, "CacheRoof", self)
 	var chest := Vector3(0.0, 0.0, -HALF_D + 1.2)
 	chest.y = ground_y(chest)
-	var body := _attach(parts, "CacheChest", self)
+	var body := ModelKit.attach_part(parts, "CacheChest", self)
 	body.position = chest
-	_lid = _attach(parts, "CacheLid", self)
+	_lid = ModelKit.attach_part(parts, "CacheLid", self)
 	_lid.position = chest + Vector3.UP * 1.35
 
 
@@ -391,85 +390,19 @@ static func _finish_size(vertices: PackedVector3Array) -> Vector3:
 	return reach * 2.0
 
 
-static func _slot_material(slot: String) -> StandardMaterial3D:
-	if slot not in ["device_concrete", "device_metal", "device_marks"]:
-		return null
-	var mat := Palette.solid(Color.WHITE)
-	mat.resource_name = slot
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.95 if slot == "device_concrete" else 0.85
-	if slot == "device_metal":
-		mat.roughness = 0.68
-		mat.metallic = 0.28
+static func _finish_surface(mat: StandardMaterial3D, vertices: PackedVector3Array) -> Material:
+	if FINISH.has(mat.resource_name):
+		return StageMap.dressed_surface(Color.WHITE, FINISH[mat.resource_name],
+			_finish_size(vertices), Palette.CHARCOAL, mat)
 	return mat
 
 
 static func _parts() -> Array:
-	if _loaded:
-		return _shared
-	_loaded = true
-	var packed: PackedScene
-	if ResourceLoader.exists(MODEL):
-		packed = load(MODEL) as PackedScene
-	if packed != null:
-		var scene := packed.instantiate()
-		if scene == null:
-			push_warning("cracked_cache: %s cannot instantiate; keeping greybox" % MODEL)
-			return _shared
-		var valid := scene is Node3D
-		var found := {}
-		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
-			if view.mesh == null or view.mesh.get_surface_count() == 0:
-				valid = false
-				break
-			var mesh := view.mesh.duplicate() as Mesh
-			for s in mesh.get_surface_count():
-				var source := mesh.surface_get_material(s)
-				var mat := _slot_material(String(source.resource_name)) if source != null else null
-				var arrays := mesh.surface_get_arrays(s)
-				if (mat == null or arrays.size() != Mesh.ARRAY_MAX
-					or arrays[Mesh.ARRAY_VERTEX] == null or arrays[Mesh.ARRAY_VERTEX].is_empty()
-					or arrays[Mesh.ARRAY_COLOR] == null or arrays[Mesh.ARRAY_COLOR].size() != arrays[Mesh.ARRAY_VERTEX].size()):
-					valid = false
-					break
-				var finished: Material = mat
-				if FINISH.has(mat.resource_name):
-					finished = StageMap.dressed_surface(Color.WHITE, FINISH[mat.resource_name],
-						_finish_size(arrays[Mesh.ARRAY_VERTEX]), Palette.CHARCOAL, mat)
-				mesh.surface_set_material(s, finished)
-			var xf := Transform3D.IDENTITY
-			var walk: Node = view
-			while walk != scene and walk != null:
-				if walk is Node3D:
-					xf = (walk as Node3D).transform * xf
-				walk = walk.get_parent()
-			found[String(view.name)] = true
-			_shared.append({"name": String(view.name), "mesh": mesh, "xform": xf})
-		valid = valid and found.size() == REQUIRED.size()
-		for required in REQUIRED:
-			valid = valid and found.has(required)
-		scene.free()
-		if not valid:
-			_shared.clear()
-	if _shared.is_empty():
-		push_warning("cracked_cache: %s missing or malformed; keeping greybox" % MODEL)
-	return _shared
+	return ModelKit.device_parts(MODEL, REQUIRED, "cracked_cache", _finish_surface)
 
 
 static func model_part(part_name: String, parent: Node3D) -> MeshInstance3D:
-	return _attach(_parts(), part_name, parent)
-
-
-static func _attach(parts: Array, part_name: String, parent: Node3D) -> MeshInstance3D:
-	for part in parts:
-		if part.name == part_name:
-			var view := MeshInstance3D.new()
-			view.name = part.name
-			view.mesh = part.mesh
-			view.transform = part.xform
-			parent.add_child(view)
-			return view
-	return null
+	return ModelKit.attach_part(_parts(), part_name, parent)
 
 
 func _on_world_fact(kind: String, at: Vector3) -> void:

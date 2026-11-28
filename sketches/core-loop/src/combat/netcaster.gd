@@ -284,7 +284,7 @@ func _trigger_emp(origin: Vector3) -> void:
 		player.abilities.jam_left = 0.0
 		emp_stripped += 1
 	if is_inside_tree():
-		for node in get_tree().get_nodes_in_group("enemy"):
+		for node in get_tree().get_nodes_in_group(GROUP):
 			if node == null or not is_instance_valid(node) or node == self:
 				continue
 			if node.has_method("is_dead") and node.is_dead():

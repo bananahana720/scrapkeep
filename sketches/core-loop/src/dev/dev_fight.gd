@@ -1,9 +1,6 @@
 extends Node
 
 const Combat := preload("res://src/combat/combat.gd")
-const Rogue := preload("res://src/combat/rogue.gd")
-const Fleet := preload("res://src/combat/fleet.gd")
-const Roster := preload("res://src/combat/roster.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const DevCommands := preload("res://src/dev/dev_commands.gd")
 const Parts := preload("res://src/build/parts.gd")
@@ -23,7 +20,6 @@ const MAX_COUNT := 40
 const TIME_MIN := 0.0
 const TIME_MAX := 4.0
 const TIME_FLOOR := 0.05
-const STAGE_ALIASES := {"dam": 1, "flume": 2, "pit": 3, "sinkhole": 4, "islands": 5, "crown": 6}
 
 var game
 var god := false
@@ -31,7 +27,6 @@ var _time_scale := 1.0
 var _frozen := false
 var _stepping := false
 var _phys_steps := 0
-var _held_hook := Callable()
 var _spawned := 0
 
 
@@ -56,29 +51,11 @@ func ctx():
 
 
 func kinds(world := 0) -> Array[String]:
-	var found: Array[String] = []
-	for kind in Combat.KINDS + Rogue.ROWS.keys() + Fleet.SCRIPTS.keys() + Roster.ROWS.keys():
-		if kind in found:
-			continue
-		if Roster.has(kind) and not Fleet.SCRIPTS.has(kind) and not kind in Combat.KINDS and not Rogue.ROWS.has(kind):
-			if not Roster.row(kind).has("script") or not Roster.built(kind):
-				continue
-		if world == 0 or world_of(kind) in [0, world]:
-			found.append(kind)
-	return found
-
-
-func world_of(kind: String) -> int:
-	if Rogue.ROWS.has(kind):
-		return int(Rogue.ROWS[kind].get("world", 0))
-	return int(Roster.row(kind).get("world", 0))
+	return Combat.spawnable_kinds(world)
 
 
 func label(kind: String) -> String:
-	if Rogue.ROWS.has(kind):
-		return String(Rogue.ROWS[kind].name)
-	var named := Roster.name_of(kind) if Roster.has(kind) else ""
-	return named if named != "" else kind.replace("_", " ")
+	return Combat.kind_label(kind)
 
 
 func spawn(kind: String, count := 1, affix := "") -> String:
@@ -87,8 +64,9 @@ func spawn(kind: String, count := 1, affix := "") -> String:
 		return "!no fight running yet: start a run first"
 	if not game.flow.in_play():
 		return "!spawn works during a run, not on the %s screen" % game.flow.state_name()
-	if not (kind in Combat.KINDS or Rogue.ROWS.has(kind) or c.spawner.fleet.makes(kind)):
-		var near := kinds().filter(func(k: String): return k.begins_with(kind))
+	var all_kinds := Combat.spawnable_kinds()
+	if not kind in all_kinds:
+		var near := all_kinds.filter(func(k: String): return k.begins_with(kind))
 		if near.size() != 1:
 			return "!no enemy '%s'%s" % [kind, (" (did you mean %s?)" % ", ".join(near.slice(0, 5))) if not near.is_empty() else ""]
 		kind = near[0]
@@ -96,8 +74,8 @@ func spawn(kind: String, count := 1, affix := "") -> String:
 		return "!no affix '%s' (%s, %s)" % [affix, ", ".join(EliteAffixes.IDS), EliteAffixes.PLATED]
 	count = clampi(count, 1, MAX_COUNT)
 	var ball: Vector3 = c.player.ball_position()
-	var forward: Vector3 = -game.camera.yaw_basis().z
-	var centre := ball + Vector3(forward.x, 0.0, forward.z).normalized() * AHEAD
+	var forward: Vector3 = c.heading()
+	var centre := ball + forward * AHEAD
 	var clearance := BIG_CLEARANCE if kind in BIG_KINDS else MOB_CLEARANCE
 	for i in count:
 		var at := centre
@@ -138,12 +116,7 @@ func set_god(on: bool) -> String:
 	var c = ctx()
 	if c == null or c.run == null:
 		return "!no run state yet"
-	if on and not god:
-		_held_hook = c.run.defend_hook
-		c.run.defend_hook = func(_amount: float, _hp: float) -> float: return 0.0
-	elif not on and god:
-		c.run.defend_hook = _held_hook
-		_held_hook = Callable()
+	c.run.invulnerable = on
 	god = on
 	if on:
 		c.run.heal(c.run.max_hp)
@@ -280,10 +253,10 @@ func _physics_process(_delta: float) -> void:
 
 
 func register_extra(commands) -> void:
-	commands.add("stage", "<1..6|dam|flume|pit|sinkhole|islands|crown>", "jump directly to a stage by index or park alias", _cmd_stage)
+	commands.add("stage", "<1..N|alias>", "jump directly to a stage by index or map alias", _cmd_stage)
 	commands.add("retry", "", "retry the current stage or boss arena", _cmd_retry)
 	commands.add("seed", "<n>", "set deterministic run seed override and RNG seed", _cmd_seed)
-	commands.add("pilot", "<index|id>", "launch a run from the title screen with a pilot by 1-based index or id", _cmd_pilot)
+	commands.add("pilot", "<index|id>", "launch a run from the title screen with a pilot by 1-based index or id", launch_pilot)
 	commands.add("warp", "<x> <z> | spawn | beacon | landmark | moss | vault | warden | ahead [m]", "move the ball safely to a point or landmark", _cmd_warp)
 	commands.add("vel", "<vx> <vy> <vz>", "set the ball's velocity vector directly", _cmd_vel)
 	commands.add("speed", "<m/s>", "launch the ball forward along camera heading at m/s", _cmd_speed)
@@ -301,18 +274,48 @@ func register_extra(commands) -> void:
 	commands.add("flood", "[on|off]", "inspect or toggle the stage flood cycle", _cmd_flood)
 
 
+static func stage_aliases(stages) -> Dictionary:
+	var out := {}
+	if stages == null:
+		return out
+	for row in stages.DEFS:
+		var idx := int(row.get("stage", 0))
+		var map_id := String(row.get("map", "")).to_lower()
+		if idx <= 0 or map_id == "":
+			continue
+		out[map_id] = idx
+		var short := map_id.trim_prefix("park_")
+		if short != "" and short != map_id:
+			out[short] = idx
+	return out
+
+
+static func _stage_alias_names(stages) -> Array[String]:
+	var names: Array[String] = []
+	if stages == null:
+		return names
+	for row in stages.DEFS:
+		var map_id := String(row.get("map", "")).to_lower()
+		if map_id == "":
+			continue
+		names.append(map_id.trim_prefix("park_"))
+	return names
+
+
 func _cmd_stage(args: Array[String]):
 	var c = ctx()
 	if c == null or game.flow == null:
 		return "!no flow yet"
 	if not game.flow.in_play():
 		return "!start a run first"
+	var aliases := stage_aliases(c.stages)
+	var alias_list := "|".join(_stage_alias_names(c.stages))
 	if args.is_empty():
-		return "!stage <1..%d|dam|flume|pit|sinkhole|islands|crown>" % int(c.stages.COUNT)
+		return "!stage <1..%d|%s>" % [int(c.stages.COUNT), alias_list]
 	var raw := args[0].to_lower()
-	var idx := raw.to_int() if raw.is_valid_int() else int(STAGE_ALIASES.get(raw, -1))
+	var idx := raw.to_int() if raw.is_valid_int() else int(aliases.get(raw, -1))
 	if idx < 1 or idx > int(c.stages.COUNT):
-		return "!unknown stage '%s' (1..%d or dam|flume|pit|sinkhole|islands|crown)" % [args[0], int(c.stages.COUNT)]
+		return "!unknown stage '%s' (1..%d or %s)" % [args[0], int(c.stages.COUNT), alias_list]
 	game.flow.enter_stage(idx, Vector3.ZERO, false)
 	var def: Dictionary = game.flow.stage_def()
 	var map_name := String(def.get("map", ""))
@@ -343,7 +346,7 @@ func _cmd_seed(args: Array[String]):
 	return {"ok": true, "text": "seed %d" % n, "data": {"seed": n}}
 
 
-func _cmd_pilot(args: Array[String]):
+func launch_pilot(args: Array[String]):
 	if game.flow == null:
 		return "!no flow yet"
 	if game.flow.state_name() != "title":
@@ -433,10 +436,7 @@ func _cmd_warp(args: Array[String]):
 				pt = c.terrain.drop_point(wp.x + side.x, wp.z + side.z, 2.2)
 			"ahead":
 				var dist := DevCommands.number(args, 1, 20.0)
-				var fwd: Vector3 = -game.camera.yaw_basis().z if game.camera != null else Vector3.FORWARD
-				fwd.y = 0.0
-				fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
-				var dest: Vector3 = c.player.ball_position() + fwd * dist
+				var dest: Vector3 = c.player.ball_position() + c.heading() * dist
 				pt = c.terrain.drop_point(dest.x, dest.z, 2.2)
 			_:
 				return "!warp <x> <z> | spawn | beacon | landmark | moss | vault | warden | ahead [m]"
@@ -468,9 +468,8 @@ func _cmd_speed(args: Array[String]):
 	var s := args[0].to_float()
 	if not is_finite(s):
 		return "!speed must be finite"
-	var fwd: Vector3 = -game.camera.yaw_basis().z if game.camera != null else Vector3.FORWARD
-	fwd.y = 0.0
-	fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
+	var c = ctx()
+	var fwd: Vector3 = c.heading() if c != null else Vector3.FORWARD
 	var v := fwd * s
 	game.player.set_velocity_now(v, "dev")
 	return {"ok": true, "text": "speed %.1f m/s" % s,
@@ -501,7 +500,7 @@ func _cmd_parts(args: Array[String]):
 		return "!no run state yet"
 	var action := DevCommands.word(args, 0, "list").to_lower()
 	if action == "clear":
-		game.run.parts.clear()
+		game.run.clear_parts()
 		game.build.recompute()
 		game.build.sync_relics()
 		return {"ok": true, "text": "cleared parts", "data": {"parts": []}}
@@ -668,7 +667,7 @@ func _cmd_warden(args: Array[String]):
 		if is_instance_valid(w) and w.has_method("take_damage") and "hp" in w:
 			w.take_damage(float(w.hp) + 1.0)
 		if game.flow.sealed:
-			game.flow._unseal()
+			game.flow.force_unseal()
 		return {"ok": true, "text": "warden broken; beacon unsealed", "data": {"sealed": game.flow.sealed}}
 	return "!warden [engage|stagger|break]"
 
@@ -690,7 +689,7 @@ func _cmd_beacon(args: Array[String]):
 		if is_instance_valid(game.flow.warden):
 			_cmd_warden(["break"])
 		else:
-			game.flow._unseal()
+			game.flow.force_unseal()
 		return {"ok": true, "text": "beacon unsealed (%s)" % game.flow.state_name(),
 			"data": {"state": game.flow.state_name(), "sealed": game.flow.sealed}}
 	return "!beacon [unseal]"
@@ -704,13 +703,9 @@ func _cmd_flood(args: Array[String]):
 		return "!this stage has no flood"
 	var action := DevCommands.word(args, 0, "status").to_lower()
 	if action == "on":
-		f.cycle.phase = FloodCycle.HIGH
-		f.cycle.elapsed = 0.0
-		f.render()
+		f.set_phase(FloodCycle.HIGH)
 	elif action == "off":
-		f.cycle.phase = FloodCycle.DRY
-		f.cycle.elapsed = 0.0
-		f.render()
+		f.set_phase(FloodCycle.DRY)
 	elif action != "status":
 		return "!flood [on|off]"
 	var phase_name: String = FloodCycle.PHASE_NAMES[clampi(int(f.cycle.phase), 0, FloodCycle.PHASE_NAMES.size() - 1)]

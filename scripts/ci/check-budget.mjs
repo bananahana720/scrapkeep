@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, realpathSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { appendFileSync } from "node:fs";
+import { isMain } from "../lib/cli.mjs";
 
 export function parseBudgetArgs(argv) {
   let label = null;
@@ -103,16 +102,7 @@ export function runWithBudget(
   return { exit: 0, result };
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const { exit } = runWithBudget(process.argv.slice(2));
     process.exitCode = exit;

@@ -72,7 +72,7 @@ static func _parts() -> Dictionary:
 	var scene := (load("res://assets/models/world_one/enemy_deflector.glb") as PackedScene).instantiate()
 	var painted := Palette.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
-	preload("res://src/presentation/world23_chunk_craft.gd").enrich_standard_pbr(painted, 0.34, 0.35)
+	preload("res://src/presentation/craft/craft_lookdev.gd").enrich_standard_pbr(painted, 0.34, 0.35)
 	var flash := 0
 	var mesh: Mesh = (scene.find_child("DeflectorBody", true, false) as MeshInstance3D).mesh.duplicate()
 	for i in mesh.get_surface_count():
@@ -132,7 +132,7 @@ func _build_rim(wall_mesh: Mesh) -> void:
 	normal[thin] = 1.0
 	var craft := preload("res://src/presentation/world23_chunk_craft.gd")
 	var radius := 0.5 * float(sizes.max())
-	_rim_material = craft.make_weathered_pbr(
+	_rim_material = preload("res://src/presentation/craft/craft_lookdev.gd").make_weathered_pbr(
 		EventKinds.state_color("will_break"), 0.36, 0.42,
 		EventKinds.state_color("will_break"), PLATE_GLOW_LIVE, 0.5, 0.34
 	)

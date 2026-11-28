@@ -25,7 +25,7 @@ const ROWS := {
 	"kill_bursts": {"unit": "particles", "owner": "res://src/presentation/vfx.gd",
 		"read": "vfx_bursts", "worlds": "all", "what": "kill pop, debris, dust and part fountains (Vfx.BURSTS)"},
 	"sparkles": {"unit": "particles", "owner": "res://src/presentation/vfx.gd",
-		"read": "sparkles", "worlds": "all", "what": "scrap sparkles: SPARKLE_POOL emitters of up to SPARKLE_MAX each"},
+		"const": "SPARKLE_CEILING", "worlds": "all", "what": "scrap sparkles: SPARKLE_POOL emitters of up to SPARKLE_MAX each"},
 	"hook_bursts": {"unit": "particles", "owner": "res://src/presentation/world_fx/world_fx.gd",
 		"read": "hook_bursts", "worlds": "all", "what": "world hook bursts (splash, relay, secret): BURST_POOL per effect"},
 	"glyphs": {"unit": "nodes", "owner": "res://src/presentation/vfx.gd",
@@ -35,7 +35,7 @@ const ROWS := {
 	"machine_words": {"unit": "nodes", "owner": "res://src/presentation/machine_fx.gd",
 		"const": "WORD_POOL", "worlds": "all", "what": "KRNK, EJECT and the other machine words"},
 	"landmark_beam": {"unit": "draws", "owner": "res://src/presentation/landmark_beam.gd",
-		"read": "beam_layers", "worlds": "all", "what": "the ancient beam's core and veil cylinders"},
+		"const": "BEAM_LAYERS", "worlds": "all", "what": "the ancient beam's core and veil cylinders"},
 	"still_quads": {"unit": "draws", "owner": "res://src/presentation/world_fx/world_fx_specs.gd",
 		"read": "still_quads", "worlds": "all", "what": "still quads a set carries (the dam spray's rainbow); counted in every world as an upper bound"},
 	"water_mist": {"unit": "draws", "owner": "res://src/presentation/spillway_scenery.gd",
@@ -50,8 +50,6 @@ const ROWS := {
 		"read": "thermal_views", "worlds": "highdraft", "per": "thermal column", "what": "a thermal's motes and streaks multimeshes"},
 }
 
-const BEAM_LAYERS := 2
-const SPARKLE_MAX := 20
 const THERMAL_VIEWS := 2
 
 
@@ -65,12 +63,7 @@ static func ceiling(id: String) -> int:
 		"player_ceiling":
 			return PlayerFx.ceiling()
 		"vfx_bursts":
-			var n := 0
-			for kind in Vfx.BURSTS:
-				n += int(Vfx.BURSTS[kind].pool) * int(Vfx.BURSTS[kind].max)
-			return n
-		"sparkles":
-			return Vfx.SPARKLE_POOL * SPARKLE_MAX
+			return Vfx.burst_ceiling()
 		"hook_bursts":
 			var n := 0
 			for hook in Specs.HOOKS:
@@ -79,8 +72,6 @@ static func ceiling(id: String) -> int:
 			return n
 		"thermal_views":
 			return THERMAL_VIEWS
-		"beam_layers":
-			return BEAM_LAYERS
 		"still_quads":
 			var n := 0
 			for set_id in Specs.EXTRAS:

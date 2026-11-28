@@ -1,14 +1,8 @@
 import os from "node:os";
+import { PILOT_IDS } from "../lib/game-defs.mjs";
 import fairnessLines from "./fairness.json" with { type: "json" };
 
-export const PILOTS = [
-  "pylon_engineer",
-  "runner_gunner",
-  "demolitions_caster",
-  "tarn",
-  "tally",
-  "remembered_cannon",
-];
+export const PILOTS = [...PILOT_IDS];
 
 export const LEARNER1_FIGHT_REFERENCE = { min: 0.15, max: 0.35 };
 export const TARGETS = {

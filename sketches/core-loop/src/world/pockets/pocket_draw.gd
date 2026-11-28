@@ -201,13 +201,13 @@ static func _fits(prepared: Dictionary, entry: Dictionary, spot: Dictionary, pla
 
 static func _owned_pay(entry: Dictionary) -> Dictionary:
 	var pay: Dictionary = load("res://src/world/activities.gd").RULES[entry.activity].pay.duplicate(true)
-	if not pay.has("named") and not Placement._within(pay.rarities, Placement.PAY_ONLINE):
+	if not pay.has("named") and not Placement.within(pay.rarities, Placement.PAY_ONLINE):
 		pay.rarities = pay.rarities.filter(func(r): return r in Placement.PAY_FAR)
 	return pay
 
 static func _common_pay(entry: Dictionary) -> bool:
 	var pay := _owned_pay(entry)
-	return not Placement._within(Placement._pay(pay).rarities, Placement.PAY_FAR)
+	return not Placement.within(Placement.pay(pay).rarities, Placement.PAY_FAR)
 
 static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = [], modifier := {}, world := 0) -> Dictionary:
 	var result := {"sites": [], "metrics": {"initial_credits": CREDITS, "remaining_credits": CREDITS, "failed_placements": 0, "refunded_credits": 0, "chance_opportunities": 0, "chance_hits": 0, "anchors": prepared.anchors.size()}}

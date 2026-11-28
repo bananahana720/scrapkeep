@@ -11,8 +11,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[3]
 DOC = ROOT / "sketches/core-loop/design-v3/FEEL-READABILITY.md"
-DEFAULT_STILL = Path(
-    "/home/andrew/Projects/scrapkeep-worktrees/core-loop-v2/"
+DEFAULT_STILL = (
+    Path.home()
+    / "Projects/scrapkeep-worktrees/core-loop-v2/"
     "artifacts/local/alpha-capture/19fc173-seed1/25-warden3.png"
 )
 SIZE = (1920, 1080)

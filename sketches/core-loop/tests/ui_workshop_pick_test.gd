@@ -2,10 +2,10 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # The upgrade pick screen (v2 W8) and the run's briefing. A real run, the workshop armed as in play:
 #   - the kit pick opens with the run, pauses the tree and holds the mouse and keys, and the start

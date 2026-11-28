@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { cleanHead } from "./clean-head.mjs";
+import {
+  cleanHead,
+  emitJsonReceipt,
+  parseReceiptArgs,
+  root,
+  runReceiptCliSync,
+} from "./receipt-cli.mjs";
 
 export { cleanHead };
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const TEST = "sound_own_recipes_test";
 export const MIN_CHECKS = 5;
 
@@ -84,30 +89,19 @@ export function produce({ cwd = root, run = runTest } = {}) {
 }
 
 function main(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
-  if (args.log) {
-    const r = buildReceipt(readFileSync(args.log, "utf8"), "0000000");
-    process.stdout.write(
-      JSON.stringify(
-        { ...r, pass: false, measured: `log only, not a receipt: ${r.measured}` },
-        null,
-        2,
-      ) + "\n",
-    );
-    return 1;
-  }
-  let receipt;
+  let args;
   try {
-    receipt = produce();
+    args = parseReceiptArgs(argv, { valueFlags: { "--log": { key: "log" } } });
   } catch (e) {
-    console.error(String(e.message ?? e));
+    console.error(String(e?.message ?? e));
     return 2;
   }
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) writeFileSync(args.out, text);
-  else process.stdout.write(text);
-  return receipt.pass ? 0 : 1;
+  if (args.log) {
+    const r = buildReceipt(readFileSync(args.log, "utf8"), "0000000");
+    emitJsonReceipt({ ...r, pass: false, measured: `log only, not a receipt: ${r.measured}` });
+    return 1;
+  }
+  return runReceiptCliSync(() => ({ receipt: produce(), out: args.out }));
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))

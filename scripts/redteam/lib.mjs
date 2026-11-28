@@ -1,11 +1,6 @@
-export const PILOTS = [
-  "pylon_engineer",
-  "runner_gunner",
-  "demolitions_caster",
-  "tarn",
-  "tally",
-  "remembered_cannon",
-];
+import { PILOT_IDS } from "../lib/game-defs.mjs";
+
+export const PILOTS = [...PILOT_IDS];
 
 export const PERSONAS = [
   {
