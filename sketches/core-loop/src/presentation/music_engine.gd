@@ -726,6 +726,15 @@ static func settle_stingers() -> void:
 	_stinger_tasks.clear()
 
 
+static func reset_for_tests() -> void:
+	settle_stingers()
+	_stinger_tasks.clear()
+	_park_tasks.clear()
+	_park_warm_lock.lock()
+	_park_warm.clear()
+	_park_warm_lock.unlock()
+
+
 func schedule_restart(at: int, next_mode: int, next_theme := -1) -> void:
 	_add_action(at, {"type": "restart", "mode": next_mode, "theme": next_theme})
 

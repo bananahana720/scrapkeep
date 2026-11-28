@@ -13,6 +13,11 @@ static var score_transpose := 0
 const HOLD := 90000
 
 
+static func reset_for_tests() -> void:
+	score_step = Harmony.STEP
+	score_transpose = 0
+
+
 static func _cached(key: String) -> Variant:
 	_lock.lock()
 	var hit = _notes.get(key)

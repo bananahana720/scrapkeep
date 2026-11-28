@@ -75,6 +75,8 @@ const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -128,7 +130,15 @@ func _run() -> void:
 	WorldFxWord.quiet(true)
 	var hushed_word := WorldFxWord.stamp(root, "QUIET", Vector3.ZERO)
 	t.check("WorldFxWord.quiet(true) hides newly stamped words", not hushed_word.visible)
+	Synth.score_step = Harmony.BOSS_STEP
 	Synth.score_transpose = 3
+	SfxBank.unknown_callers["probe_caller"] = true
+	SfxBank._shift = 4
+	SfxBank._theme = 2
+	SfxBank.bake_cancel = true
+	SfxBank.set_voice_sidecar(true, {"sable|probe": "res://missing.wav"})
+	MusicEngine._park_tasks["probe"] = -1
+	MusicEngine._park_warm["probe"] = PackedFloat32Array([0.1])
 	Footings.plant_ignore_lines = true
 	RescueSite.model_path = "res://assets/models/__missing_cage__.glb"
 	MusicRows.stem_dir = "user://no_stems"
@@ -361,7 +371,13 @@ func _run() -> void:
 	var after_word := WorldFxWord.stamp(root, "LOUD", Vector3.ZERO)
 	t.check("WorldFxWord un-hushes after reset", after_word.visible)
 	after_word.free()
+	t.eq("Synth.score_step resets to Harmony.STEP", Synth.score_step, Harmony.STEP)
 	t.eq("Synth.score_transpose resets to 0", Synth.score_transpose, 0)
+	t.check("SfxBank.reset_for_tests clears mutable statics",
+		SfxBank.unknown_callers.is_empty() and SfxBank._shift == 0 and SfxBank._theme == 0
+		and not SfxBank.bake_cancel and not SfxBank._voice_tts and SfxBank._voice_clips.is_empty())
+	t.check("MusicEngine.reset_for_tests clears stinger and park warm state",
+		MusicEngine._stinger_tasks.is_empty() and MusicEngine._park_tasks.is_empty() and MusicEngine._park_warm.is_empty())
 	t.check("Footings.plant_ignore_lines resets to false", not Footings.plant_ignore_lines)
 	t.eq("RescueSite.model_path resets to MODEL", RescueSite.model_path, RescueSite.MODEL)
 	t.eq("MusicRows.stem_dir resets to empty", MusicRows.stem_dir, "")

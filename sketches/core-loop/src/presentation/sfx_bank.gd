@@ -295,6 +295,18 @@ static var _cache_lock := Mutex.new()
 static var bake_cancel := false
 
 
+static func reset_for_tests() -> void:
+	unknown_callers.clear()
+	_shift = 0
+	_theme = 0
+	bake_cancel = false
+	reset_voice_sidecar()
+	_cache_lock.lock()
+	_voice_tts = false
+	_voice_clips.clear()
+	_cache_lock.unlock()
+
+
 static func break_midis(variant := 0) -> Array:
 	var midis: Array = []
 	for note in BREAK_PHRASES[variant]["notes"]:
