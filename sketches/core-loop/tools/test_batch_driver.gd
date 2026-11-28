@@ -40,7 +40,6 @@ const StageLocks := preload("res://src/world/stage_locks.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
-const Enemy := preload("res://src/combat/enemy.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
@@ -280,7 +279,6 @@ func _reset() -> void:
 	Synergies.reset_for_tests()
 	EnemyMotion.headless_idle = false
 	EnemyClips.headless = false
-	Enemy.rim_color = Palette.ARC
 	WorldFx.current = null
 	WorldFxWord.quiet(false)
 	Footings.plant_ignore_lines = false

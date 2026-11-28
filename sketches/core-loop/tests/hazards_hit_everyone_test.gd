@@ -411,6 +411,7 @@ func _kill() -> void:
 	HazardHits.strike(root.get_tree(), func(_p) -> bool: return true, "lightning", 5.0, 1.0, {})
 	t.eq("kill: an enemy a hazard hits carries the tag while it takes the damage", e.struck_tags, 1)
 	t.check("kill: and not after", not e.has_meta(HazardHits.STRUCK))
+	run.events = null
 	w.free()
 
 

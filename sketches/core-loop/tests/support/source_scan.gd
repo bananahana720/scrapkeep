@@ -1,22 +1,37 @@
 extends RefCounted
 
+const DECLARATION := "(?m)^\\s*(?:static\\s+|@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*"
+
 
 static func matching(t, roots: Array, pattern: String) -> Array[String]:
 	var out: Array[String] = []
 	out.assign(captures(t, roots, pattern).keys())
-	out.sort()
 	return out
 
 
 static func captures(t, roots: Array, pattern: String) -> Dictionary:
 	var out := {}
-	var re := RegEx.new()
-	if re.compile(pattern, false) != OK or not re.is_valid():
-		t.check("source scan pattern compiles", false, pattern)
+	var re := _compile(t, pattern)
+	if re == null:
 		return out
+	var texts := sources(t, roots)
+	for path in texts:
+		var found := re.search_all(texts[path])
+		if found.is_empty():
+			continue
+		var rows: Array[PackedStringArray] = []
+		for hit in found:
+			rows.append(hit.strings)
+		out[path] = rows
+	return out
+
+
+static func sources(t, roots: Array) -> Dictionary:
+	var out := {}
 	if roots.is_empty():
 		t.check("source scan has roots", false, "no root folder")
 		return out
+	var paths: Array[String] = []
 	for root in roots:
 		var files: Array[String] = []
 		if not _walk(t, String(root), files):
@@ -24,20 +39,38 @@ static func captures(t, roots: Array, pattern: String) -> Dictionary:
 		if files.is_empty():
 			t.check("source scan finds scripts under " + String(root), false, "no .gd file")
 			continue
-		for path in files:
-			var text := FileAccess.get_file_as_string(path)
-			var err := FileAccess.get_open_error()
-			if err != OK or text.is_empty():
-				t.check("source scan reads " + path, false, "error %d, %d characters" % [err, text.length()])
-				continue
-			var found := re.search_all(text)
-			if found.is_empty():
-				continue
-			var rows: Array[PackedStringArray] = []
-			for hit in found:
-				rows.append(hit.strings)
-			out[path] = rows
+		paths.append_array(files)
+	paths.sort()
+	for path in paths:
+		var body := text(t, path)
+		if not body.is_empty():
+			out[path] = body
 	return out
+
+
+static func text(t, path: String) -> String:
+	var body := FileAccess.get_file_as_string(path)
+	var err := FileAccess.get_open_error()
+	if err != OK or body.is_empty():
+		t.check("source scan reads " + path, false, "error %d, %d characters" % [err, body.length()])
+		return ""
+	return body
+
+
+static func search(t, body: String, pattern: String) -> Array[RegExMatch]:
+	var re := _compile(t, pattern)
+	if re == null:
+		var none: Array[RegExMatch] = []
+		return none
+	return re.search_all(body)
+
+
+static func _compile(t, pattern: String) -> RegEx:
+	var re := RegEx.new()
+	if re.compile(pattern, false) != OK or not re.is_valid():
+		t.check("source scan pattern compiles", false, pattern)
+		return null
+	return re
 
 
 static func _walk(t, root: String, out: Array[String]) -> bool:

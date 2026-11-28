@@ -211,7 +211,6 @@ func _crack_colours(node: Node) -> Array:
 
 
 func _plate_checks() -> void:
-	Enemy.rim_color = CLASS_COLOUR
 	var live := EventKinds.state_color("will_break")
 	var slate := EventKinds.role_color("slate")
 	var brute: Node3D = _ctx.spawner.spawn_enemy("plated_brute", Vector3(0, 30, 0))
