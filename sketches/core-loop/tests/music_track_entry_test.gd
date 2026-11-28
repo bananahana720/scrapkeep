@@ -1,6 +1,7 @@
 extends SceneTree
 
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Track entry owns the band's fight state (music_engine.gd _end_escalation_build and
@@ -13,7 +14,7 @@ var _t := T.new("music_track_entry_test")
 
 
 func _initialize() -> void:
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	_escalation_build_ends_on_track()
 	_start_build_carries()
 	_pending_miniboss_dropped()

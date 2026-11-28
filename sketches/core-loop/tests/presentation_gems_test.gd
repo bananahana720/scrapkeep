@@ -2,6 +2,8 @@ extends SceneTree
 
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
+const MusicPhrases := preload("res://src/presentation/music_phrases.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 
@@ -13,7 +15,7 @@ var _failures := 0
 
 
 func _initialize() -> void:
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	_g1_band()
 	_g2_rice_cooker()
 	_g3_g4_warden_club()
@@ -100,11 +102,11 @@ func _g5_palettes() -> void:
 
 func _g6_brindle_quotes() -> void:
 	var ok := true
-	var quotes := {"1": [MusicEngine.MOTIF_WEIR, Harmony.BRINDLE], "2": [MusicEngine.MOTIF_SLUICE, Harmony.BRINDLE_PHRYGIAN], "3": [MusicEngine.MOTIF, Harmony.BRINDLE]}
+	var quotes := {"1": [MusicPhrases.MOTIF_WEIR, Harmony.BRINDLE], "2": [MusicPhrases.MOTIF_SLUICE, Harmony.BRINDLE_PHRYGIAN], "3": [MusicPhrases.MOTIF, Harmony.BRINDLE]}
 	for section in quotes:
 		var engine := MusicEngine.new()
 		engine.force_track("brindle", 0, section, true)
-		ok = ok and engine._lead == MusicEngine.make_lead(engine.phrase_index, quotes[section][0], quotes[section][1], 73)
+		ok = ok and engine._lead == MusicPhrases.make_lead(engine.phrase_index, quotes[section][0], quotes[section][1], 73)
 	var last: Array = MusicEngine.VICTORY_LEAD[MusicEngine.VICTORY_LEAD.size() - 1]
 	_check("G6 Brindle quotes the run in reverse", ok and int(last[1]) == 86, "phase 1 quotes Weir, 2 Sluice, 3 Spillway; the victory lands on high D (%d)" % int(last[1]))
 

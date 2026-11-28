@@ -6,6 +6,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
+const MusicPhrases := preload("res://src/presentation/music_phrases.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 
@@ -111,12 +112,6 @@ const ROTATIONS := [
 const ECHO_VOICES := [["bell", "mallet"], ["clav", "bell"], ["mallet", "bell"]]
 const ARP_SHAPES := [[0, 1, 2, 3, 2, 1], [0, 2, 1, 3], [3, 2, 1, 0, 1, 2]]
 
-const MOTIF := [[2, 69, 2], [4, 72, 1], [5, 74, 1], [6, 76, 2], [8, 74, 2], [10, 72, 1], [11, 69, 3],
-	[16, 67, 2], [18, 65, 2], [20, 69, 6]]
-const MOTIF_SLUICE := [[0, 74, 1], [2, 77, 1], [3, 79, 1], [5, 81, 3], [8, 84, 2], [10, 81, 1], [11, 79, 1],
-	[12, 77, 2], [14, 74, 2], [16, 72, 2], [18, 74, 4], [24, 77, 1], [25, 79, 1], [26, 74, 4]]
-const MOTIF_WEIR := [[0, 62, 2], [2, 65, 2], [4, 69, 2], [6, 72, 2], [8, 74, 3], [11, 76, 1], [12, 77, 4],
-	[16, 76, 2], [18, 74, 2], [20, 72, 6]]
 const VICTORY_LEAD := [[0, 74, 2], [2, 77, 2], [4, 81, 4], [8, 79, 2], [10, 77, 2], [12, 76, 4], [16, 72, 2],
 	[18, 76, 2], [20, 79, 4], [24, 77, 2], [26, 76, 2], [28, 73, 4], [32, 74, 4], [36, 81, 4], [40, 86, 8]]
 const CLAV_CALM := {0: 0, 3: 2, 8: 1, 11: 3}
@@ -292,221 +287,6 @@ func _init() -> void:
 	for i in _gains.size():
 		_gains[i] = _targets[i]
 	_lead = _make_track_lead()
-
-
-static func prepare() -> void:
-	_prepare_chords(Harmony.PROGRESSION + Harmony.CADENCE + [Harmony.MINOR_OF["G13"], Harmony.MINOR_OF["Cmaj9"], Harmony.MINOR_OF["Bbmaj9"]], ["lead"], 0)
-	for drum in Synth.DRUMS:
-		if SfxBank.bake_cancel:
-			return
-		Synth.drum(drum)
-	for chord in Harmony.PROGRESSION:
-		if SfxBank.bake_cancel:
-			return
-		Synth.note("reese", chord["root"] + 19)
-
-
-static func prepare_opening() -> void:
-	_prepare_club(Harmony.PROGRESSION, 0, [12, 19, 22, 24])
-	_prepare_chords(Harmony.PROGRESSION, ["brass", "talk"], 0)
-	_prepare_chords(Harmony.PROGRESSION, ["lead", "brass", "talk"], 1)
-	_prepare_club(Harmony.PROGRESSION, 1, [12, 18, 19, 22])
-	for shift in [0, 1]:
-		_prepare_club(Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE], shift, [12, 18, 19, 22])
-	for midi in range(58, 88):
-		if SfxBank.bake_cancel:
-			return
-		Synth.note("choir_ah", midi)
-		Synth.note("choir_oo", midi)
-		Synth.note("keys", midi)
-		Synth.note("talk", midi)
-		Synth.note("tom", midi)
-		Synth.note("beep", midi)
-	for midi in range(58, 104):
-		if SfxBank.bake_cancel:
-			return
-		Synth.note("bell", midi)
-		Synth.note("mallet", midi)
-		Synth.note("clav", midi)
-	for midi in range(34, 72):
-		if SfxBank.bake_cancel:
-			return
-		Synth.note("fbass", midi)
-		Synth.note("reese", midi + 10)
-	for cell in Harmony.motif("reactor")["cells"]:
-		Synth.note("sub", int(cell[1]))
-
-
-static func _prepare_club(chords: Array, shift: int, reese_offsets: Array) -> void:
-	for chord in chords:
-		if SfxBank.bake_cancel:
-			return
-		var voicing := _shift(chord["voicing"], shift)
-		var root: int = int(chord["root"]) + shift
-		Synth.stab_chord(voicing, false)
-		Synth.stab_chord(voicing, true)
-		for offset in [0, 7, 10, 12]:
-			Synth.note("fbass", root + offset)
-		if SfxBank.bake_cancel:
-			return
-		for offset in reese_offsets:
-			Synth.note("reese", root + offset)
-		for midi in voicing:
-			if SfxBank.bake_cancel:
-				return
-			Synth.note("clav", midi)
-			Synth.note("clav", midi + 12)
-			Synth.note("clav", midi + 24)
-
-
-# Serialized because GDScript lazy operator cache is not thread-safe on concurrent cold calls (SIGSEGV in _prepare_wobble).
-static var _rest_lock := Mutex.new()
-
-
-static func prepare_rest() -> void:
-	_rest_lock.lock()
-	_bake_rest()
-	_rest_lock.unlock()
-
-
-static func _bake_rest() -> void:
-	var chords: Array = []
-	for list in [Harmony.SLUICE, Harmony.WEIR, Harmony.BRINDLE, Harmony.VICTORY, Harmony.MINOR_OF.values(), Harmony.BRINDLE_PHRYGIAN]:
-		chords.append_array(list)
-	_prepare_chords(chords, ["brass", "talk"], 0)
-	_prepare_chords(Harmony.BRINDLE_PHRYGIAN, ["brass"], 1)
-	_prepare_chords(Harmony.BRINDLE, ["brass"], 2)
-	for list in [Harmony.WEIR, Harmony.BRINDLE, Harmony.MINOR_OF.values(), Harmony.BRINDLE_PHRYGIAN]:
-		for chord in list:
-			if SfxBank.bake_cancel:
-				return
-			Synth.organ_chord(chord["voicing"])
-	for pair in [[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 1], [Harmony.BRINDLE, 2]]:
-		for chord in pair[0]:
-			if SfxBank.bake_cancel:
-				return
-			Synth.organ_chord(_shift(chord["voicing"], pair[1]))
-	for pair in [[Harmony.SLUICE, 0], [Harmony.WEIR, 0], [Harmony.VICTORY, 0], [Harmony.BRINDLE, 0],
-			[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 1], [Harmony.BRINDLE, 2]]:
-		_prepare_club(pair[0], pair[1], [12, 19, 22, 24])
-	var lifted: Array = Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
-	_prepare_chords(lifted, ["lead", "brass", "talk"], 1)
-	_prepare_chords(Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE], [], 0)
-	for shift in [0, 1]:
-		for chord in lifted:
-			if SfxBank.bake_cancel:
-				return
-			var voicing := _shift(chord["voicing"], shift)
-			Synth.stab_chord(voicing, false)
-			Synth.stab_chord(voicing, true)
-			for offset in [0, 7, 10, 12]:
-				Synth.note("fbass", int(chord["root"]) + shift + offset)
-			if SfxBank.bake_cancel:
-				return
-			for offset in [12, 18, 19, 22]:
-				Synth.note("reese", int(chord["root"]) + shift + offset)
-	for shift in [0, 1, 2, 3]:
-		for level in 3:
-			if SfxBank.bake_cancel:
-				return
-			SfxBank.samples_at("synergy_fanfare", Harmony.STEP, shift, level)
-			SfxBank.samples_at("synergy_fanfare", Harmony.BOSS_STEP, shift, level)
-		if shift == 0:
-			continue
-		for id in ["class_up", "class_down", "stinger_milestone", "threat_up", "boss_phase"]:
-			if SfxBank.bake_cancel:
-				return
-			SfxBank.samples_at(id, Harmony.STEP, shift)
-			SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
-	for id in SfxBank.STINGER_BEATS:
-		if SfxBank.bake_cancel:
-			return
-		if SfxBank.file_backed(id):
-			for shift in [0, 1, 2, 3] if id == "stinger_boss_defeated" else [0]:
-				SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
-	_prepare_wobble(Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.BRINDLE, [0], [Harmony.BOSS_STEP], ["wub"])
-	_prepare_wobble(Harmony.BRINDLE_PHRYGIAN, [1], [Harmony.BOSS_STEP], ["wub"])
-	_prepare_wobble(Harmony.BRINDLE, [2], [PHASE3_STEP], ["wub"])
-	_prepare_wobble(Harmony.BRINDLE + Harmony.VICTORY, [0, 2], [Harmony.STEP], ["wub"])
-	var boss_chords: Array = Harmony.BRINDLE + Harmony.BRINDLE_PHRYGIAN + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
-	for shift in [0, 1, 2, 3]:
-		for chord in boss_chords:
-			if SfxBank.bake_cancel:
-				return
-			var voicing := _shift(chord["voicing"], shift)
-			Synth.pad_chord(voicing)
-			Synth.organ_chord(voicing)
-			if SfxBank.bake_cancel:
-				return
-			Synth.stab_chord(voicing, false)
-			Synth.stab_chord(voicing, true)
-			Synth.chord(voicing)
-			Synth.note("sub", int(chord["root"]) + shift)
-	for chord in Harmony.VICTORY:
-		if SfxBank.bake_cancel:
-			return
-		var voicing := _shift(chord["voicing"], int(BOSS_SECTIONS.mind.victory.key))
-		Synth.chord(voicing)
-		Synth.stab_chord(voicing, true)
-		Synth.pad_chord(voicing)
-		var root := int(chord["root"]) + int(BOSS_SECTIONS.mind.victory.key)
-		Synth.note("sub", root)
-		Synth.note("reese", root + 12)
-		Synth.note("fbass", root)
-		Synth.note("fbass", root + 12)
-	for step in [Harmony.BOSS_STEP, PHASE3_STEP]:
-		if SfxBank.bake_cancel:
-			return
-		SfxBank.samples_at("build_riser", step)
-
-
-static func prepare_all() -> void:
-	prepare()
-	prepare_opening()
-	prepare_rest()
-
-
-static func _shift(voicing: Array, by: int) -> Array:
-	var out := []
-	for midi in voicing:
-		out.append(int(midi) + by)
-	return out
-
-
-static func _prepare_chords(chords: Array, leads: Array, shift: int) -> void:
-	for chord in chords:
-		if SfxBank.bake_cancel:
-			return
-		var voicing := _shift(chord["voicing"], shift)
-		Synth.note("sub", chord["root"] + shift)
-		Synth.note("reese", chord["root"] + 12 + shift)
-		Synth.chord(voicing)
-		if SfxBank.bake_cancel:
-			return
-		Synth.pad_chord(voicing)
-		for midi in voicing:
-			Synth.note("bell", midi + 12)
-			Synth.note("bell", midi + 24)
-	for midi in range(60 + shift, 87 + shift):
-		if SfxBank.bake_cancel:
-			return
-		for voice in leads:
-			Synth.note(voice, midi)
-
-
-static func _prepare_wobble(chords: Array, shifts: Array, steps: Array, vowels: Array) -> void:
-	var roots := {}
-	for chord in chords:
-		roots[int(chord["root"])] = true
-		roots[int(chord["root"]) - 1] = true
-	for root in roots:
-		for shift in shifts:
-			for step in steps:
-				for rate in DROP_RATES.map(func(r: String): return RATES[r]):
-					for vowel in vowels:
-						if SfxBank.bake_cancel:
-							return
-						Synth.wob(root + shift, int(step) * Harmony.STEPS_PER_BEAT / int(rate), vowel)
 
 
 static func layer_gains(value: float) -> PackedFloat32Array:
@@ -976,7 +756,7 @@ func set_ultimate_lift(on: bool) -> void:
 
 func set_class_motif(id: String) -> void:
 	class_motif = id
-	_class_counter = _make_class_counter()
+	_class_counter = MusicPhrases.make_class_counter(class_motif, _progression())
 
 
 func set_fleet_ticks(ticks: int) -> int:
@@ -1336,16 +1116,7 @@ static func _render_park(row: Dictionary, cell: int, length: int, progress: floa
 			"sub": buf = Synth.sub(midi, n)
 			"buzz": buf = Synth.buzz(midi, n, 0.0)
 			"chime": buf = Synth.chime(midi, n)
-			"steam_whistle":
-				buf = Synth.buffer(n)
-				var phase := 0.0
-				var step_hz := TAU * Harmony.hz(midi) / Harmony.RATE
-				var bend := Harmony.ratio(2)
-				var rng := RandomNumberGenerator.new()
-				rng.seed = 0x57EA
-				for i in n:
-					phase += step_hz * lerpf(1.0, bend, float(i) / n)
-					buf[i] = sin(phase) + 0.12 * rng.randf_range(-1.0, 1.0)
+			"steam_whistle": buf = Synth.steam_whistle(midi, n)
 			_: buf = Synth.note(row.voice, midi).slice(0, n)
 		if row.has("accent"):
 			Synth.add_into(buf, Synth.drum(row.accent), 0, 0.35)
@@ -1810,8 +1581,8 @@ func _reset_bar() -> void:
 func _new_phrase() -> void:
 	phrase_index += 1
 	_lead = _make_track_lead()
-	_counter = _make_counter(_lead)
-	_class_counter = _make_class_counter()
+	_counter = MusicPhrases.make_counter(_lead, _progression())
+	_class_counter = MusicPhrases.make_class_counter(class_motif, _progression())
 
 
 func _on_bar() -> void:
@@ -2047,8 +1818,8 @@ func _next_chord(bar: int) -> Dictionary:
 
 func _voicing(chord: Dictionary) -> Array:
 	if _dominant_mask_live():
-		return _shift(_held_chord()["voicing"], _chord_key())
-	return _shift(chord["voicing"], _chord_key())
+		return MusicPhrases.shift_voicing(_held_chord()["voicing"], _chord_key())
+	return MusicPhrases.shift_voicing(chord["voicing"], _chord_key())
 
 
 func _dominant_mask_live() -> bool:
@@ -2080,12 +1851,12 @@ func _make_track_lead() -> Array:
 			if section == "victory":
 				return VICTORY_LEAD
 			if section == "chase":
-				return make_lead(phrase_index, MOTIF, Harmony.BRINDLE, 73)
+				return MusicPhrases.make_lead(phrase_index, MusicPhrases.MOTIF, Harmony.BRINDLE, 73)
 			var quote := {"1": 2, "2": 1, "3": 0}.get(section, 0) as int
-			return make_lead(phrase_index, [MOTIF, MOTIF_SLUICE, MOTIF_WEIR][quote], _progression(), 73)
+			return MusicPhrases.make_lead(phrase_index, [MusicPhrases.MOTIF, MusicPhrases.MOTIF_SLUICE, MusicPhrases.MOTIF_WEIR][quote], _progression(), 73)
 		"title":
 			_lead_voice = LEAD_VOICE[0]
-			return MOTIF
+			return MusicPhrases.MOTIF
 		"summary":
 			_lead_voice = "brass"
 			return VICTORY_LEAD if section == "won" else []
@@ -2093,14 +1864,14 @@ func _make_track_lead() -> Array:
 			var progression := _progression()
 			if _lounge_live():
 				_lead_voice = "sax_lounge"
-				return make_lounge_lead(phrase_index, [MOTIF, MOTIF_SLUICE, MOTIF_WEIR][theme], progression, [1] if theme == 2 else [0, 1])
+				return MusicPhrases.make_lounge_lead(phrase_index, [MusicPhrases.MOTIF, MusicPhrases.MOTIF_SLUICE, MusicPhrases.MOTIF_WEIR][theme], progression, [1] if theme == 2 else [0, 1])
 			_lead_voice = LEAD_VOICE[theme]
 			match theme:
 				1:
-					return make_lead(phrase_index, MOTIF_SLUICE, progression, 73)
+					return MusicPhrases.make_lead(phrase_index, MusicPhrases.MOTIF_SLUICE, progression, 73)
 				2:
-					return make_lead(phrase_index, MOTIF_WEIR, progression, -1, [1])
-			return make_lead(phrase_index, MOTIF, progression, 73)
+					return MusicPhrases.make_lead(phrase_index, MusicPhrases.MOTIF_WEIR, progression, -1, [1])
+			return MusicPhrases.make_lead(phrase_index, MusicPhrases.MOTIF, progression, 73)
 
 
 func _trigger_dnb(bar: int, s: int, chord: Dictionary) -> void:
@@ -2600,43 +2371,6 @@ func _play_counter(phrase_bar: int, s: int) -> void:
 				_start_note("sub", int(event[1]) - 24, steps, COUNTER, gain * 0.35, 0.0)
 
 
-func _make_counter(lead: Array) -> Array:
-	var progression := _progression()
-	var out: Array = []
-	for event in lead:
-		var step := (int(event[0]) + 32) % 128
-		var chord: Dictionary = progression[(step / 16) % progression.size()]
-		var midi := Harmony.scale_shift(int(event[1]), -2, Harmony.DORIAN)
-		midi = Harmony.nearest_tone(midi, chord["tones"]) if step % 4 == 0 else Harmony.snap(midi, chord["scale"])
-		while midi > 79:
-			midi -= 12
-		while midi < 57:
-			midi += 12
-		out.append([step, midi, event[2]])
-	out.sort_custom(func(a: Array, b: Array): return a[0] < b[0])
-	return out
-
-
-func _make_class_counter() -> Array:
-	var row := Harmony.motif(class_motif)
-	if row.get("family", "") != "class":
-		return []
-	var cells: Array = row["cells"]
-	var last: Array = cells[cells.size() - 1]
-	var span: int = int(last[0]) + int(last[2])
-	var octave: int = row.get("band_octave", 0)
-	var progression := _progression()
-	var out: Array = []
-	for k in 4:
-		var start := 32 * k + 30 - span
-		var chord: Dictionary = progression[(start / 16) % progression.size()]
-		var first: int = int(cells[0][1]) + octave
-		var shift := Harmony.nearest_tone(first, chord["tones"]) - first
-		for cell in cells:
-			out.append([start + int(cell[0]), Harmony.snap(int(cell[1]) + octave + shift, chord["scale"]), int(cell[2])])
-	return out
-
-
 func _revoice() -> void:
 	_rotation += 1
 	var rot := _rotation_state()
@@ -2917,104 +2651,3 @@ static func _soft(x: float) -> float:
 	if a <= 0.75:
 		return x
 	return signf(x) * (0.75 + 0.25 * tanh((a - 0.75) * 4.0))
-
-
-static func make_lead(index: int, motif := MOTIF, progression := Harmony.PROGRESSION, ending := 73, answers := [0, 1, 2]) -> Array:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 20260926 + index * 7919
-	var shift: int = [0, 1, 2, -1][rng.randi() % 4]
-	var pick := rng.randi() % answers.size()
-	var notes := []
-	notes.append_array(_place(_transpose(motif, shift), 0))
-	notes.append_array(_place(_answer(motif, answers[pick], shift), 32))
-	notes.append_array(_place(_transpose(motif, shift + 2), 64))
-	notes.append_array(_place(_answer(motif, answers[(pick + 1) % answers.size()], shift), 96))
-	var span := progression.size() * 16
-	var fitted := []
-	for event in notes:
-		var step: int = event[0]
-		if step >= mini(128, span * 2):
-			continue
-		var chord: Dictionary = progression[(step / 16) % progression.size()]
-		var midi: int = event[1]
-		midi = Harmony.nearest_tone(midi, chord["tones"]) if step % 4 == 0 else Harmony.snap(midi, chord["scale"])
-		while midi < 62:
-			midi += 12
-		while midi > 84:
-			midi -= 12
-		fitted.append([step, midi, mini(event[2], 128 - step)])
-	if not fitted.is_empty():
-		var last: Array = fitted[fitted.size() - 1]
-		if ending >= 0:
-			last[1] = ending
-		else:
-			var chord: Dictionary = progression[(int(last[0]) / 16) % progression.size()]
-			last[1] = Harmony.nearest_tone(last[1], chord["tones"])
-	var taken := {}
-	for event in fitted:
-		taken[event[0]] = true
-	var ornamented := []
-	for event in fitted:
-		if event[0] % 4 == 0 and event[0] > 0 and not taken.has(event[0] - 1) and rng.randf() < 0.35:
-			ornamented.append([event[0] - 1, event[1] - 1, 1])
-		ornamented.append(event)
-	return ornamented
-
-
-static func make_lounge_lead(index: int, motif: Array, progression: Array, answers := [0, 1]) -> Array:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 20260927 + index * 7919
-	var slow: Array = []
-	for cell in motif:
-		slow.append([int(cell[0]) * 2, int(cell[1]), int(cell[2]) * 2])
-	var notes: Array = _place(slow, 0)
-	notes.append_array(_place(_answer(slow, answers[rng.randi() % answers.size()], 0), 64))
-	var fitted: Array = []
-	for event in notes:
-		var step: int = event[0]
-		if step >= 128:
-			continue
-		var chord: Dictionary = progression[(step / 16) % progression.size()]
-		var midi: int = event[1]
-		midi = Harmony.nearest_tone(midi, chord["tones"]) if step % 4 == 0 else Harmony.snap(midi, chord["scale"])
-		while midi < 62:
-			midi += 12
-		while midi > 81:
-			midi -= 12
-		fitted.append([step, midi, mini(event[2], 128 - step)])
-	if not fitted.is_empty():
-		var last: Array = fitted[fitted.size() - 1]
-		last[1] = Harmony.nearest_tone(last[1], progression[(int(last[0]) / 16) % progression.size()]["tones"])
-	return fitted
-
-
-static func _place(cell: Array, offset: int) -> Array:
-	var placed := []
-	for event in cell:
-		placed.append([event[0] + offset, event[1], event[2]])
-	return placed
-
-
-static func _transpose(cell: Array, steps: int) -> Array:
-	var moved := []
-	for event in cell:
-		moved.append([event[0], Harmony.scale_shift(event[1], steps, Harmony.DORIAN) if steps != 0 else event[1], event[2]])
-	return moved
-
-
-static func _answer(cell: Array, kind: int, shift: int) -> Array:
-	var source := _transpose(cell, shift)
-	var answer := []
-	match kind:
-		0:
-			var pivot: int = source[0][1]
-			for event in source:
-				answer.append([event[0], Harmony.snap(2 * pivot - event[1], Harmony.DORIAN), event[2]])
-		1:
-			for i in source.size():
-				answer.append([source[i][0], source[source.size() - 1 - i][1], source[i][2]])
-		_:
-			for event in source:
-				if event[0] + 2 < 32:
-					answer.append([event[0] + 2, Harmony.scale_shift(event[1], -2, Harmony.DORIAN), event[2]])
-	return answer

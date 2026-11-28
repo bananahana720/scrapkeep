@@ -807,6 +807,18 @@ static func wob(midi: int, period: int, vowel := "wub") -> PackedFloat32Array:
 	return buf
 
 
+static func steam_whistle(midi: int, n: int) -> PackedFloat32Array:
+	var buf := buffer(n)
+	var phase := 0.0
+	var step_hz := TAU * Harmony.hz(midi) / Harmony.RATE
+	var bend := Harmony.ratio(2)
+	var rng := _rng(0x57EA)
+	for i in n:
+		phase += step_hz * lerpf(1.0, bend, float(i) / n)
+		buf[i] = sin(phase) + 0.12 * rng.randf_range(-1.0, 1.0)
+	return buf
+
+
 static func choir(midi: int, vowel: String, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)

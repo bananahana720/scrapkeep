@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
+const MusicPhrases := preload("res://src/presentation/music_phrases.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
@@ -121,8 +122,9 @@ func _run() -> void:
 	_t.check("music engine takes the motif", engine != null and engine.class_motif in [PROBE_MOTIF, PROBE_ID],
 		"engine motif %s" % [engine.class_motif if engine != null else "no engine"])
 	if engine != null:
-		_t.check("music engine plays no class counter-line for an unknown motif", engine.call("_make_class_counter").is_empty(),
-			"counter-line for %s has %d notes" % [engine.class_motif, engine.call("_make_class_counter").size()])
+		var counter := MusicPhrases.make_class_counter(engine.class_motif, engine._progression())
+		_t.check("music engine plays no class counter-line for an unknown motif", counter.is_empty(),
+			"counter-line for %s has %d notes" % [engine.class_motif, counter.size()])
 
 	# Stage 1 to the Warden's break, the reward and the launch out of it.
 	await _frames(SETTLE)

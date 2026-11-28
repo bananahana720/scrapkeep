@@ -9,6 +9,7 @@ const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
@@ -434,7 +435,7 @@ static func _landing_ids(rung: int, tones: Array) -> Array:
 
 static func _bake_everything(ids: Array) -> void:
 	SfxBank.bake_all(ids)
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	_bake_done = not SfxBank.bake_cancel
 
 
@@ -517,7 +518,7 @@ func _notification(what: int) -> void:
 func bake_opening_now() -> void:
 	bake_now()
 	_finish_opening()
-	MusicEngine.prepare_opening()
+	MusicPrebake.prepare_opening()
 
 
 func _ready_for_run() -> void:
@@ -543,9 +544,9 @@ static func finish_band_bakes() -> void:
 
 static func _start_band_bakes() -> void:
 	if _opening_task < 0:
-		_opening_task = WorkerThreadPool.add_task(MusicEngine.prepare_opening, false, "presentation opening band bake")
+		_opening_task = WorkerThreadPool.add_task(MusicPrebake.prepare_opening, false, "presentation opening band bake")
 	if _rest_task < 0:
-		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, true, "presentation band bake")
+		_rest_task = WorkerThreadPool.add_task(MusicPrebake.prepare_rest, true, "presentation band bake")
 
 
 func bake_now() -> void:

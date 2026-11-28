@@ -264,7 +264,6 @@
     "sketches/core-loop/src/presentation/jolt_layer_audio.gd:_streams",
     "sketches/core-loop/src/presentation/landmark_proxy.gd:_materials",
     "sketches/core-loop/src/presentation/music_engine.gd:_park_warm_lock",
-    "sketches/core-loop/src/presentation/music_engine.gd:_rest_lock",
     "sketches/core-loop/src/presentation/park_props.gd:_cache_owner",
     "sketches/core-loop/src/presentation/park_props.gd:_far_sources",
     "sketches/core-loop/src/presentation/park_props.gd:_material",

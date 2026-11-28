@@ -3,6 +3,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 
 # S1-HITCH: a note the band renders on first use costs 35 to 85 ms in one frame. With the
@@ -15,8 +16,8 @@ var _seen := 0
 
 
 func _initialize() -> void:
-	MusicEngine.prepare()
-	MusicEngine.prepare_opening()
+	MusicPrebake.prepare()
+	MusicPrebake.prepare_opening()
 	var baked := Synth._notes.size()
 	_seen = baked
 	var late: Array = []
