@@ -295,7 +295,7 @@ func _ready() -> void:
 			return false
 		return ctx.spawner.would_crush(enemy, kind, force)
 
-	flow.setup(ctx, beacon)
+	flow.setup(ctx, beacon, Build.Panels.draw)
 	if not test_mode or run_store_path != "":
 		flow.store = RunStore.new(run_store_path if run_store_path != "" else storage_dir.path_join("run.json"))
 	events.flow_changed.connect(_on_flow_changed)

@@ -1,10 +1,11 @@
 extends RefCounted
 
+const SourceScan := preload("res://tests/support/source_scan.gd")
+
 const CORE_ROOT := "res://src/core"
 const UPWARD_PATTERN := "[\"'](res://src/(?:build|combat|boss|world|movement|presentation|ui)/[^\"']+)[\"']"
 
 const ALLOWED := [
-	["res://src/core/ability_state.gd", "res://src/ui/glyphs.gd"],
 	["res://src/core/beacon.gd", "res://src/combat/dispatcher.gd"],
 	["res://src/core/beacon.gd", "res://src/combat/roster_dig.gd"],
 	["res://src/core/beacon.gd", "res://src/presentation/material_slots.gd"],
@@ -55,42 +56,27 @@ const ALLOWED := [
 ]
 
 
-func _gd_files(root: String) -> Array[String]:
-	var out: Array[String] = []
-	var dir := DirAccess.open(root)
-	if dir == null:
-		return out
-	dir.list_dir_begin()
-	var name := dir.get_next()
-	while name != "":
-		if name.begins_with("."):
-			name = dir.get_next()
-			continue
-		var full := root.path_join(name)
-		if dir.current_is_dir():
-			out.append_array(_gd_files(full))
-		elif name.ends_with(".gd"):
-			out.append(full)
-		name = dir.get_next()
-	dir.list_dir_end()
-	out.sort()
-	return out
-
-
 func _pair_key(pair: Array) -> String:
 	return "%s -> %s" % [pair[0], pair[1]]
 
 
 func run(t) -> void:
 	var re := RegEx.new()
-	re.compile(UPWARD_PATTERN)
+	var compiled := re.compile(UPWARD_PATTERN) == OK and re.is_valid()
+	t.check("upward pattern compiles", compiled, UPWARD_PATTERN)
+	if not compiled:
+		return
 	var allowed_set := {}
 	for pair in ALLOWED:
 		allowed_set[_pair_key(pair)] = true
 	var found_set := {}
 	var unexpected: Array[String] = []
-	for path in _gd_files(CORE_ROOT):
+	for path in SourceScan.matching(t, [CORE_ROOT], UPWARD_PATTERN):
 		var src := FileAccess.get_file_as_string(path)
+		var err := FileAccess.get_open_error()
+		if err != OK:
+			t.check("reads " + path, false, "error %d" % err)
+			continue
 		for m in re.search_all(src):
 			var key := _pair_key([path, m.get_string(1)])
 			if found_set.has(key):
