@@ -1,7 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const AreaField := preload("res://src/combat/area_field.gd")
-const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
+const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -77,7 +77,7 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
-	_presence = JoltAudio.player("presence", self)
+	_presence = FoleyAudio.player("jolt_layer_presence", self)
 	if _presence != null:
 		_presence.autoplay = true
 	var parts := _parts()
@@ -190,7 +190,7 @@ func _live(delta: float) -> bool:
 		_rim_time = maxf(0.0, _rim_time - delta * 2.0)
 	var pulsed: bool = field.step(delta)
 	tele.set_progress(field.lead_fraction())
-	if field.pulses != _told and field.until_pulse() <= JoltAudio.TELL_LEAD:
+	if field.pulses != _told and field.until_pulse() <= FoleyAudio.JOLT_TELL_LEAD:
 		_told = field.pulses
 		_cue("tell")
 		_crackle(8, 6)
@@ -294,13 +294,13 @@ func _on_end() -> void:
 
 
 func _die() -> void:
-	JoltAudio.one_shot("break", get_parent(), global_position)
+	FoleyAudio.one_shot("jolt_layer_break", get_parent(), global_position)
 	super._die()
 
 
 func _cue(part: String) -> void:
 	if is_inside_tree():
-		JoltAudio.one_shot(part, get_parent(), global_position)
+		FoleyAudio.one_shot("jolt_layer_" + part, get_parent(), global_position)
 
 
 func _crackle(arcs: int, sparks: int) -> void:

@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
-const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
+const WavIo := preload("res://src/presentation/wav_io.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 const DIR := "res://assets/audio/world/"
@@ -27,7 +27,7 @@ static func stream(key: String) -> AudioStreamWAV:
 	if _streams.has(key):
 		return _streams[key]
 	var r := row(key)
-	var out: AudioStreamWAV = FoleyAudio.wav(path(key)) if not r.is_empty() else null
+	var out: AudioStreamWAV = WavIo.load_wav(path(key)) if not r.is_empty() else null
 	if out != null and r["play"] == "loop":
 		out = out.duplicate()
 		out.loop_mode = AudioStreamWAV.LOOP_FORWARD
@@ -38,7 +38,7 @@ static func stream(key: String) -> AudioStreamWAV:
 
 
 static func pcm(file: String) -> AudioStreamWAV:
-	return FoleyAudio.wav(DIR + file + ".wav", true)
+	return WavIo.load_wav(DIR + file + ".wav", true)
 
 
 # Godot distance attenuation boosts closer than unit_m past trim; tend() computes falloff manually.

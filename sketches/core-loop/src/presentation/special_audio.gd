@@ -1,13 +1,12 @@
 extends RefCounted
 
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const SpecialCues := preload("res://src/combat/special_cues.gd")
 
 
 const CAP := 2
 const DROP_DB := -3.0
-const PRESENCE_UNIT_SIZE := 12.0
-const PRESENCE_MAX_DISTANCE := 70.0
 
 
 static func is_special(kind: String) -> bool:
@@ -33,12 +32,7 @@ static func rammed(enemy: Object) -> bool:
 
 
 static func presence_player(name: String) -> AudioStreamPlayer3D:
-	var player := AudioStreamPlayer3D.new()
+	var id := name + "_presence"
+	var player := FoleyAudio.player(id, null, SfxBank.loop_stream(id))
 	player.name = "SpecialPresence"
-	player.stream = SfxBank.loop_stream(name + "_presence")
-	player.bus = "SFX"
-	player.volume_db = SfxBank.trim_db(name + "_presence")
-	player.unit_size = PRESENCE_UNIT_SIZE
-	player.max_distance = PRESENCE_MAX_DISTANCE
-	player.autoplay = false
 	return player
