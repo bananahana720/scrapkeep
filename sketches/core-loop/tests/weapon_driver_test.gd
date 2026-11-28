@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 # E1-01 WeaponDriver extraction & Pattern cadence fields:
@@ -264,12 +265,12 @@ func _check_warm_batch_repeatability() -> void:
 
 
 func _check_structural_boundaries() -> void:
-	var driver_src := FileAccess.get_file_as_string("res://src/combat/weapon_driver.gd")
+	var driver_src := SourceScan.text(_t, "res://src/combat/weapon_driver.gd")
 	_t.check("weapon_driver.gd has zero static vars", not driver_src.contains("static var "), "")
 	for combat_path in ["res://src/combat/combat.gd", "res://src/combat/hero_hooks.gd", "res://src/combat/consumable_runtime.gd", "res://src/combat/cannon_kit.gd"]:
-		var combat_src := FileAccess.get_file_as_string(combat_path)
+		var combat_src := SourceScan.text(_t, combat_path)
 		_t.check("%s is read and never reaches into weapon_driver private members" % combat_path.get_file(), combat_src != "" and not combat_src.contains("weapon_driver._"), "")
-	var bot_src := FileAccess.get_file_as_string("res://tools/bot_driver.gd")
+	var bot_src := SourceScan.text(_t, "res://tools/bot_driver.gd")
 	_t.check("bot_driver.gd never reaches into weapon_driver private members", not bot_src.contains("weapon_driver._"), "")
 
 

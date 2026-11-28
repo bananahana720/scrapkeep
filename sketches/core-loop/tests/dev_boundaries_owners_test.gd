@@ -12,6 +12,7 @@ const MakerSets := preload("res://src/build/maker_sets.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const PartResource := preload("res://src/experimental/part_resource.gd")
 const RunState := preload("res://src/core/run_state.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 const ALLOWED_PRIVATE_CALLS := [
@@ -31,15 +32,6 @@ func _run() -> void:
 	_check_owner_apis()
 	await _check_standalone_overlay()
 	quit(_t.verdict())
-
-
-func _src_files(dir_path: String) -> Array[String]:
-	var out: Array[String] = []
-	for file in DirAccess.get_files_at(dir_path):
-		if file.ends_with(".gd"):
-			out.append(dir_path.path_join(file))
-	out.sort()
-	return out
 
 
 func _strip_strings_and_comments(line: String) -> String:
@@ -66,13 +58,14 @@ func _strip_strings_and_comments(line: String) -> String:
 
 
 func _check_dev_private_calls() -> void:
-	var re := RegEx.create_from_string("([A-Za-z0-9_\\)\\]]+)\\._([A-Za-z0-9_]+)\\(")
+	var pattern := "([A-Za-z0-9_\\)\\]]+)\\._([A-Za-z0-9_]+)\\("
 	var unexpected: Array[String] = []
-	for path in _src_files("res://src/dev"):
-		var text := FileAccess.get_file_as_string(path)
+	var sources := SourceScan.sources(_t, ["res://src/dev"])
+	for path in sources:
+		var text: String = sources[path]
 		for raw_line in text.split("\n"):
 			var code := _strip_strings_and_comments(raw_line)
-			for m in re.search_all(code):
+			for m in SourceScan.search(_t, code, pattern):
 				var entry := "%s: %s._%s(" % [path, m.get_string(1), m.get_string(2)]
 				if not entry in ALLOWED_PRIVATE_CALLS:
 					unexpected.append(entry)
@@ -80,12 +73,12 @@ func _check_dev_private_calls() -> void:
 
 
 func _check_single_owners() -> void:
-	var console_src := FileAccess.get_file_as_string("res://src/dev/dev_console.gd")
-	var fight_src := FileAccess.get_file_as_string("res://src/dev/dev_fight.gd")
-	var overlay_src := FileAccess.get_file_as_string("res://src/dev/dev_overlay.gd")
-	var part_src := FileAccess.get_file_as_string("res://src/experimental/part_resource.gd")
-	var bridge_src := FileAccess.get_file_as_string("res://src/experimental/live_run_bridge.gd")
-	var driver_src := FileAccess.get_file_as_string("res://tools/test_batch_driver.gd")
+	var console_src := SourceScan.text(_t, "res://src/dev/dev_console.gd")
+	var fight_src := SourceScan.text(_t, "res://src/dev/dev_fight.gd")
+	var overlay_src := SourceScan.text(_t, "res://src/dev/dev_overlay.gd")
+	var part_src := SourceScan.text(_t, "res://src/experimental/part_resource.gd")
+	var bridge_src := SourceScan.text(_t, "res://src/experimental/live_run_bridge.gd")
+	var driver_src := SourceScan.text(_t, "res://tools/test_batch_driver.gd")
 
 	_t.check("LENS_RANGES lives on DevLens with distance max 400",
 		not console_src.contains("const LENS_RANGES") and console_src.contains("DevLens.LENS_RANGES")

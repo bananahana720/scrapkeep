@@ -7,6 +7,7 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const StubBoss := preload("res://src/boss/stub_boss.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("boss_owners_test")
@@ -21,17 +22,14 @@ func _initialize() -> void:
 
 func _src_files(dir_path: String) -> Array[String]:
 	var out: Array[String] = []
-	for file in DirAccess.get_files_at(dir_path):
-		if file.ends_with(".gd"):
-			out.append(dir_path.path_join(file))
-	out.sort()
+	out.assign(SourceScan.sources(_t, [dir_path]).keys())
 	return out
 
 
 func _owners_of(token: String, paths: Array[String]) -> Array[String]:
 	var found: Array[String] = []
 	for path in paths:
-		if FileAccess.get_file_as_string(path).contains(token):
+		if SourceScan.text(_t, path).contains(token):
 			found.append(path)
 	return found
 
@@ -46,7 +44,7 @@ func _check_waking_mind_boundary() -> void:
 	for path in _src_files("res://src/boss"):
 		if not path.get_file().begins_with("waking"):
 			continue
-		var text := FileAccess.get_file_as_string(path)
+		var text := SourceScan.text(_t, path)
 		for target in forbidden:
 			if text.contains(target):
 				hits.append("%s -> %s" % [path, target])
