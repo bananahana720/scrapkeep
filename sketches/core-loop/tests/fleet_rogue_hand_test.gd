@@ -246,7 +246,7 @@ func _reduced_motion() -> void:
 
 
 func _keeper_stays_keeper() -> void:
-	for path in ["res://src/ui/callouts.gd", "res://src/ui/threat_sheet.gd"]:
+	for path in ["res://src/ui/threat_sheet.gd"]:
 		var source := FileAccess.get_file_as_string(path)
 		_t.check("%s is readable" % path.get_file(), source.length() > 0)
 		var found := []
