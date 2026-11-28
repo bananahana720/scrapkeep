@@ -8,7 +8,7 @@ extends SceneTree
 # thresholds. The 50-seed bot sweep is a tool run, not this file (tools/bot_run.gd, tools/balance_report.gd).
 
 const T := preload("res://tests/support/t.gd")
-const StageBeats := preload("res://src/core/stage_beats.gd")
+const StageBeats := preload("res://src/world/stage_beats.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")

@@ -99,7 +99,7 @@ class Recorder:
 
 	func _init(events, flow, loot_tail_ticks: int = -1) -> void:
 		_flow = flow
-		_outer = load("res://src/core/stage_beats.gd")
+		_outer = load("res://src/world/stage_beats.gd")
 		loot_tail = loot_tail_ticks if loot_tail_ticks >= 0 else int(ceil(LOOT_TAIL_S * Engine.physics_ticks_per_second))
 		events.stage_entered.connect(_on_stage_entered)
 		events.stage_cleared.connect(_on_stage_cleared)
