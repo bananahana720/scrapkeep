@@ -7,6 +7,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 
 const MAX_SATELLITES := 5
 const ORBIT_BASE_RADIUS := 3.1
@@ -453,7 +454,7 @@ func _step_orbitals(delta: float, enemies: Array) -> void:
 			var eid := e.get_instance_id()
 			if float(_satellite_hit_cd.get(eid, -INF)) > _clock:
 				continue
-			var hull := float(e.get("radius")) if e.get("radius") != null else 0.9
+			var hull := ActiveBase.enemy_girth(e, 0.9)
 			var flat := e.global_position - pos
 			flat.y = 0.0
 			if flat.length() > ORBIT_HIT_RADIUS + hull:
@@ -592,7 +593,7 @@ func _step_ghost_conductor(enemies: Array) -> void:
 			var eid := e.get_instance_id()
 			if float(_tether_cd.get(eid, -INF)) > _clock:
 				continue
-			var hull := float(e.get("radius")) if e.get("radius") != null else 0.9
+			var hull := ActiveBase.enemy_girth(e, 0.9)
 			if combat.in_line(ball, hpos, width, e.global_position, hull):
 				_tether_cd[eid] = _clock + cd
 				_fx_arc(ball + Vector3.UP * 0.5, hpos + Vector3.UP * 0.5, Palette.AMBER)
@@ -722,7 +723,7 @@ func _maybe_prism_refract(bolt: Dictionary, enemy: Node3D, point: Vector3) -> vo
 			var cid := ce.get_instance_id()
 			if cid in hit_ids:
 				continue
-			var hull := float(ce.get("radius")) if ce.get("radius") != null else 0.9
+			var hull := ActiveBase.enemy_girth(ce, 0.9)
 			if combat.in_line(point, tip, PRISM_RAY_WIDTH, ce.global_position, hull):
 				hit_ids.append(cid)
 				_deal_proc(ce, dmg, rdir, 3.0)

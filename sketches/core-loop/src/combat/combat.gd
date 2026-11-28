@@ -64,6 +64,7 @@ const BallRules := preload("res://src/movement/ball_rules.gd")
 const AllyHusk := preload("res://src/combat/ally_husk.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const HeroFx := preload("res://src/presentation/hero_fx.gd")
+const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 
 const MUZZLE := 1.25
 const AIM_SLACK := 14.0
@@ -2361,8 +2362,7 @@ func shot_bits() -> int:
 func apply_heat(enemy: Node3D, point: Vector3) -> Dictionary:
 	var hit := heat_hit(_heated, enemy.get_instance_id(), _clock)
 	if hit["lit"] or hit["bonus"]:
-		var radius = enemy.get("radius")
-		effects.ring(point, (float(radius) if radius != null else 1.0) + (0.6 if hit["bonus"] else 0.3), ShotBits.TABLE["heat"]["color"])
+		effects.ring(point, _hull(enemy) + (0.6 if hit["bonus"] else 0.3), ShotBits.TABLE["heat"]["color"])
 	return hit
 
 
@@ -2739,8 +2739,7 @@ static func in_line(from: Vector3, to: Vector3, width: float, point: Vector3, hu
 
 
 static func _hull(enemy: Node3D) -> float:
-	var r = enemy.get("radius")
-	return float(r) if r != null else 1.0
+	return ActiveBase.enemy_girth(enemy, 1.0)
 
 
 func _ground_under(at: Vector3) -> Vector3:
