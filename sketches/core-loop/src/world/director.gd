@@ -602,7 +602,7 @@ static func read_park(map_id: String) -> Dictionary:
 static func prepare_park(map_id: String) -> void:
 	if _parks.has(map_id) or not map_id.begins_with("park_"):
 		return
-	load("res://src/world/park/park_schema.gd")._registry()
+	load("res://src/world/park/park_schema.gd").warm_registry()
 	load("res://src/world/park/park_recipes.gd").origin("")
 	var out := {}
 	_parks[map_id] = {"task": WorkerThreadPool.add_task(func(): out.merge(read_park(map_id)), false, "director park " + map_id), "out": out}

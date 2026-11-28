@@ -79,7 +79,7 @@ func run(t) -> void:
 	t.eq("no ParkMap._ reach-ins outside park_map.gd",
 		_offenders("res://src", "ParkMap\\._[a-z]", "res://src/world/park/park_map.gd", ALLOWED_PARK_MAP_REACH_INS), [])
 	t.eq("no ParkSchema._ reach-ins outside park_schema.gd",
-		_offenders("res://src", "ParkSchema\\._[a-z]", "res://src/world/park/park_schema.gd", ALLOWED_PARK_SCHEMA_REACH_INS), [])
+		_offenders("res://src", "(?:ParkSchema|park_schema\\.gd\"\\))\\._[a-z]", "res://src/world/park/park_schema.gd", ALLOWED_PARK_SCHEMA_REACH_INS), [])
 	t.eq("no ParkRecipes._ or Recipes._ reach-ins outside park_recipes.gd",
 		_offenders("res://src", "(?<![A-Za-z0-9_])(?:ParkRecipes|Recipes)\\._[a-z]", "res://src/world/park/park_recipes.gd", ALLOWED_PARK_RECIPES_REACH_INS), [])
 	t.eq("no Placement._ reach-ins outside park_placement.gd",
