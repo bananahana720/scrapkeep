@@ -20,7 +20,6 @@ const MAX_COUNT := 40
 const TIME_MIN := 0.0
 const TIME_MAX := 4.0
 const TIME_FLOOR := 0.05
-const STAGE_ALIASES := {"dam": 1, "flume": 2, "pit": 3, "sinkhole": 4, "islands": 5, "crown": 6}
 
 var game
 var god := false
@@ -253,7 +252,7 @@ func _physics_process(_delta: float) -> void:
 
 
 func register_extra(commands) -> void:
-	commands.add("stage", "<1..6|dam|flume|pit|sinkhole|islands|crown>", "jump directly to a stage by index or park alias", _cmd_stage)
+	commands.add("stage", "<1..N|alias>", "jump directly to a stage by index or map alias", _cmd_stage)
 	commands.add("retry", "", "retry the current stage or boss arena", _cmd_retry)
 	commands.add("seed", "<n>", "set deterministic run seed override and RNG seed", _cmd_seed)
 	commands.add("pilot", "<index|id>", "launch a run from the title screen with a pilot by 1-based index or id", launch_pilot)
@@ -274,18 +273,48 @@ func register_extra(commands) -> void:
 	commands.add("flood", "[on|off]", "inspect or toggle the stage flood cycle", _cmd_flood)
 
 
+static func stage_aliases(stages) -> Dictionary:
+	var out := {}
+	if stages == null:
+		return out
+	for row in stages.DEFS:
+		var idx := int(row.get("stage", 0))
+		var map_id := String(row.get("map", "")).to_lower()
+		if idx <= 0 or map_id == "":
+			continue
+		out[map_id] = idx
+		var short := map_id.trim_prefix("park_")
+		if short != "" and short != map_id:
+			out[short] = idx
+	return out
+
+
+static func _stage_alias_names(stages) -> Array[String]:
+	var names: Array[String] = []
+	if stages == null:
+		return names
+	for row in stages.DEFS:
+		var map_id := String(row.get("map", "")).to_lower()
+		if map_id == "":
+			continue
+		names.append(map_id.trim_prefix("park_"))
+	return names
+
+
 func _cmd_stage(args: Array[String]):
 	var c = ctx()
 	if c == null or game.flow == null:
 		return "!no flow yet"
 	if not game.flow.in_play():
 		return "!start a run first"
+	var aliases := stage_aliases(c.stages)
+	var alias_list := "|".join(_stage_alias_names(c.stages))
 	if args.is_empty():
-		return "!stage <1..%d|dam|flume|pit|sinkhole|islands|crown>" % int(c.stages.COUNT)
+		return "!stage <1..%d|%s>" % [int(c.stages.COUNT), alias_list]
 	var raw := args[0].to_lower()
-	var idx := raw.to_int() if raw.is_valid_int() else int(STAGE_ALIASES.get(raw, -1))
+	var idx := raw.to_int() if raw.is_valid_int() else int(aliases.get(raw, -1))
 	if idx < 1 or idx > int(c.stages.COUNT):
-		return "!unknown stage '%s' (1..%d or dam|flume|pit|sinkhole|islands|crown)" % [args[0], int(c.stages.COUNT)]
+		return "!unknown stage '%s' (1..%d or %s)" % [args[0], int(c.stages.COUNT), alias_list]
 	game.flow.enter_stage(idx, Vector3.ZERO, false)
 	var def: Dictionary = game.flow.stage_def()
 	var map_name := String(def.get("map", ""))
