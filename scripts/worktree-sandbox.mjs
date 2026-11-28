@@ -316,7 +316,7 @@ export function patchGameGd(text) {
     changed = true;
   }
 
-  if (!out.includes('return _dev_held or get_meta("menu_held", false)')) {
+  if (!out.includes("\treturn _dev_held or ")) {
     const replaced = out.replace(
       'return get_meta("menu_held", false)',
       'return _dev_held or get_meta("menu_held", false)',
@@ -357,7 +357,7 @@ export function patchIntentGd(text) {
 }
 
 export function patchWorkshopGd(text) {
-  if (text.includes("func pausing() -> bool:")) {
+  if (text.includes("func pausing() -> bool:") || text.includes("game.hold_play(")) {
     return { text, changed: false };
   }
   const replaced = text.replace(

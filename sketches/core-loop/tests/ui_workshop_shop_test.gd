@@ -66,10 +66,10 @@ func _process(_delta: float) -> bool:
 				_report("pull up", _ws.should_open_counter(true, true, 1.0) and not _ws.should_open_counter(true, true, 9.0)
 						and not _ws.should_open_counter(true, false, 1.0), "slow in reach opens; fast or out of reach does not")
 				_ws.open_counter()
-				_report("counter opens", _ws.counter.is_open() and _game.get_meta("menu_held", false) and _game.player.frozen() and not paused
+				_report("counter opens", _ws.counter.is_open() and _game.menu_held() and _game.player.frozen() and not paused
 						and _ws.talk.visible,
 					"open %s, held %s, ball parked %s, tree paused %s, talk key shown %s"
-						% [_ws.counter.is_open(), _game.get_meta("menu_held", false), _game.player.frozen(), paused, _ws.talk.visible])
+						% [_ws.counter.is_open(), _game.menu_held(), _game.player.frozen(), paused, _ws.talk.visible])
 				_next("buy")
 		"buy":
 			if _wait == SETTLE:
@@ -154,7 +154,7 @@ func _process(_delta: float) -> bool:
 				Push.click(root, _ws.pick.cards()[0])
 				var owner: Control = root.gui_get_focus_owner()
 				_report("pick plate", plate != null and over and seen <= CALM_BUDGET and _game.player.tree.path().size() == 1
-						and _ws.counter.visible and _ws.counter.is_open() and not paused and _game.get_meta("menu_held", false)
+						and _ws.counter.visible and _ws.counter.is_open() and not paused and _game.menu_held()
 						and owner != null and _ws.counter.is_ancestor_of(owner) and _ws.counter.tile_for("pick") == null,
 					"plate %s; the pick stood in for the counter %s with %d words; after the click the path is %s, counter back %s with focus %s, paused %s"
 						% [plate != null, over, seen, _game.player.tree.path(), _ws.counter.visible, owner, paused])
@@ -191,8 +191,8 @@ func _process(_delta: float) -> bool:
 						and _game.codex.known(Shop.CODEX_ID) and Shop.LINES.values().has(_ws.bubble.text),
 					"hook %s before, %s after; bubble %s \"%s\"" % [locked, hook.state() if hook != null else "none", _ws.bubble.mood, _ws.bubble.text])
 				Push.key(root, KEY_ESCAPE)
-				_report("leave", not _ws.counter.is_open() and not _game.get_meta("menu_held", false) and not _game.player.frozen(),
-					"open %s, held %s, ball parked %s" % [_ws.counter.is_open(), _game.get_meta("menu_held", false), _game.player.frozen()])
+				_report("leave", not _ws.counter.is_open() and not _game.menu_held() and not _game.player.frozen(),
+					"open %s, held %s, ball parked %s" % [_ws.counter.is_open(), _game.menu_held(), _game.player.frozen()])
 				_next("cut")
 		"cut":
 			if _wait == 3:
@@ -205,8 +205,8 @@ func _process(_delta: float) -> bool:
 		"cut_settled":
 			if _wait == 40:
 				var owner: Control = root.gui_get_focus_owner()
-				_report("counter cut mid slide", not _ws.counter.visible and not _game.get_meta("menu_held", false) and (owner == null or owner.is_visible_in_tree()),
-					"visible %s, held %s, focus owner %s" % [_ws.counter.visible, _game.get_meta("menu_held", false), owner])
+				_report("counter cut mid slide", not _ws.counter.visible and not _game.menu_held() and (owner == null or owner.is_visible_in_tree()),
+					"visible %s, held %s, focus owner %s" % [_ws.counter.visible, _game.menu_held(), owner])
 				print("ui_workshop_shop_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 				quit(0 if _failures == 0 else 1)
 				return true

@@ -25,6 +25,9 @@ const BRIEF_WORDS := "Moss packed three. Take one."
 const BRIEF_ROWS := [[BRIEF_LINE, 22, 118.0], [BRIEF_WORDS, 30, 66.0]]
 const BRIEF_ROW_H := 44.0
 const OUTSIDE_RUN := ["title", "class_select"]
+const COUNTER_HOLD := ["input", "mouse"]
+const PICK_HOLD := ["pause", "input", "mouse"]
+const CARD_HOLD := ["mouse"]
 
 var game
 var armed := true
@@ -137,8 +140,6 @@ func setup(game_ref) -> void:
 			close_all()
 		else:
 			companion_panel.close()
-			if _held:
-				_enforce_hold()
 		sync_start_card_pointer())
 
 
@@ -155,12 +156,10 @@ func _start_card_wants_pointer() -> bool:
 func sync_start_card_pointer() -> void:
 	if _start_card_wants_pointer():
 		_start_pointer_held = true
-		game.set_menu_held(true)
-		game.capture_mouse(false)
+		game.hold_play("start_card", true, CARD_HOLD)
 	elif _start_pointer_held:
 		_start_pointer_held = false
-		game.set_menu_held(_held)
-		game.recapture_mouse()
+		game.hold_play("start_card", false)
 
 
 func shop():
@@ -306,10 +305,6 @@ func card_holds_only() -> bool:
 	return _start_pointer_held and not _held and not get_tree().paused
 
 
-func pausing() -> bool:
-	return _paused
-
-
 func _apply_hold() -> void:
 	var briefed := briefing()
 	_hold_quiet(armed and _start_card_showing())
@@ -320,26 +315,9 @@ func _apply_hold() -> void:
 		return
 	_held = held_now
 	_paused = pause
-	game.set_menu_held(held_now)
-	get_tree().paused = pause or game.pause_toggled() or game.notes_held()
-	if held_now:
-		_enforce_hold()
-		return
-	if game.keyboard != null:
-		game.keyboard.enabled = game.flow.in_play()
-	if _start_card_wants_pointer():
+	if not held_now:
 		sync_start_card_pointer()
-		return
-	game.capture_mouse(game.flow.in_play())
-
-
-func _enforce_hold() -> void:
-	if game.keyboard != null:
-		game.keyboard.enabled = false
-	if game.mouse_captured():
-		game.capture_mouse(false)
-	if _paused and not get_tree().paused:
-		get_tree().paused = true
+	game.hold_play("workshop", held_now, PICK_HOLD if pause else COUNTER_HOLD)
 
 
 func _hold_quiet(on: bool) -> void:
@@ -483,8 +461,6 @@ static func babble_beat(record: Dictionary) -> int:
 func _process(_delta: float) -> void:
 	sync_start_card_pointer()
 	_apply_hold()
-	if _held:
-		_enforce_hold()
 	var s = shop()
 	var inside: bool = armed and s != null and s.inside and game.flow.in_play()
 	var near := inside and _near_moss()

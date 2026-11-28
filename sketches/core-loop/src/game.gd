@@ -139,6 +139,9 @@ var _settings_store
 
 var _pause_toggled := false
 var _notes_held := false
+var _holds := {}
+var _held_velocity := Vector3.ZERO
+var _held_state_velocity := Vector3.ZERO
 var _restart_held := 0.0
 var _restart_latched := false
 var summary_latched := false
@@ -765,17 +768,46 @@ func notes_held() -> bool:
 
 
 func _apply_pause() -> void:
-	get_tree().paused = _pause_toggled or _notes_held or _dev_frozen
+	get_tree().paused = pause_wanted() or _dev_frozen
 
 
 func pause_wanted() -> bool:
-	var shop := get_node_or_null("Workshop")
-	return _pause_toggled or _notes_held or (shop != null and shop.pausing())
+	return _pause_toggled or _notes_held or _holding("pause")
 
 
 func freeze_for_dev(on: bool) -> void:
 	_dev_frozen = on
-	get_tree().paused = on or pause_wanted()
+	_apply_pause()
+
+
+func hold_play(who: String, on: bool, effects: Array = []) -> void:
+	if on and _holds.has(who) and _holds[who] == effects:
+		return
+	var had_input := _holding("input")
+	var had_mouse := _holding("mouse")
+	var had_velocity := _holding("velocity")
+	if on:
+		_holds[who] = effects
+	elif not _holds.erase(who):
+		return
+	if _holding("velocity") and not had_velocity:
+		_held_velocity = player.body().linear_velocity
+		_held_state_velocity = player.state.velocity
+	_apply_pause()
+	if keyboard != null and _holding("input") != had_input:
+		keyboard.enabled = had_input and flow.in_play()
+	if _holding("mouse") != had_mouse:
+		capture_mouse(had_mouse and flow.in_play())
+	if had_velocity and not _holding("velocity"):
+		if player.body().linear_velocity != _held_velocity or player.state.velocity != _held_state_velocity:
+			player.set_velocity_now(_held_velocity)
+
+
+func _holding(effect: String) -> bool:
+	for effects in _holds.values():
+		if effect in effects:
+			return true
+	return false
 
 
 func hold_for_dev(on: bool) -> void:
@@ -793,9 +825,9 @@ func _on_flow_changed(_state: String) -> void:
 	if playing and not launch_take.busy():
 		_say_first_control()
 	if keyboard != null:
-		keyboard.enabled = playing
+		keyboard.enabled = playing and not _holding("input")
 		keyboard.walk = false
-	capture_mouse(playing)
+	capture_mouse(playing and not _holding("mouse"))
 	if playing:
 		var holder := get_viewport().gui_get_focus_owner()
 		if holder != null:
@@ -804,9 +836,9 @@ func _on_flow_changed(_state: String) -> void:
 
 func walk_input(live: bool) -> void:
 	if keyboard != null:
-		keyboard.enabled = live
+		keyboard.enabled = live and not _holding("input")
 		keyboard.walk = live
-	capture_mouse(live)
+	capture_mouse(live and not _holding("mouse"))
 
 
 func _take_live() -> bool:
@@ -1192,11 +1224,7 @@ func mouse_captured() -> bool:
 
 
 func menu_held() -> bool:
-	return _dev_held or get_meta("menu_held", false)
-
-
-func set_menu_held(held: bool) -> void:
-	set_meta("menu_held", held)
+	return _dev_held or not _holds.is_empty()
 
 
 func recapture_mouse() -> void:

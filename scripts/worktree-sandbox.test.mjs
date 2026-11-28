@@ -213,6 +213,42 @@ describe("worktree-sandbox idempotent console seam overlay", () => {
     assert.equal(patchWorkshopGd(w1.text).changed, false);
   });
 
+  it("leaves a game.gd and workshop.gd that hold play through hold_play unchanged", () => {
+    const heldGame = [
+      "var keyboard",
+      "var _dev_held := false",
+      "var _dev_frozen := false",
+      "func _ready() -> void:",
+      "\tauto_pause.setup(self)",
+      "\tif dev and not test_mode:",
+      '\t\tload("res://src/dev/dev_console.gd").hook(self)',
+      "func freeze_for_dev(on: bool) -> void:",
+      "\t_dev_frozen = on",
+      "\t_apply_pause()",
+      "func capture_mouse(capture: bool) -> void:",
+      "\tInput.mouse_mode = Input.MOUSE_MODE_CAPTURED if capture and not _dev_held else Input.MOUSE_MODE_VISIBLE",
+      "func menu_held() -> bool:",
+      "\treturn _dev_held or not _holds.is_empty()",
+    ].join("\n");
+    const game = patchGameGd(heldGame);
+    assert.equal(game.changed, false);
+    assert.equal(game.text, heldGame);
+
+    const heldWorkshop = [
+      "func _apply_hold() -> void:",
+      '\tgame.hold_play("workshop", held_now, PICK_HOLD if pause else COUNTER_HOLD)',
+    ].join("\n");
+    const workshop = patchWorkshopGd(heldWorkshop);
+    assert.equal(workshop.changed, false);
+    assert.equal(workshop.text, heldWorkshop);
+
+    const noMenuHeld = heldGame.replace(
+      "\treturn _dev_held or not _holds.is_empty()",
+      "\treturn false",
+    );
+    assert.throws(() => patchGameGd(noMenuHeld), /seam anchor 'menu_held' not found/);
+  });
+
   it("overlays src/dev and patches seams idempotently inside a sandbox directory", () => {
     const base = path.join(REPO_ROOT, "artifacts", "local", "dev-ref");
     mkdirSync(base, { recursive: true });
