@@ -7,7 +7,16 @@ const SpineDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const T := preload("res://tests/support/t.gd")
 
 const PUSH_OWNER := "res://tests/support/push.gd"
-const ALLOWED_PRESS_HELPERS: Array[String] = []
+const ALLOWED_KEY_LOOP_HELPERS: Array[String] = []
+const ALLOWED_SINGLE_EDGE_KEY_PUSHES: Array[String] = [
+	"res://tests/death_summary_loop_test.gd:_key",
+	"res://tests/flourish_test.gd:_live",
+	"res://tests/run_tier_test.gd:_card",
+	"res://tests/run_tier_test.gd:_continue_replay",
+	"res://tests/ui_settings_pages_test.gd:_run",
+	"res://tests/ui_skill_bar_test.gd:_key",
+	"res://tests/world23_flourishes_test.gd:_skip_and_nonblocking",
+]
 
 var _t := T.new("test_tool_owners_test")
 
@@ -48,7 +57,8 @@ func _check_spawner_double_owners() -> void:
 func _check_push_owners() -> void:
 	var old_path := "res://tests/" + "workshop/push.gd"
 	var stale_refs: Array[String] = []
-	var press_helpers: Array[String] = []
+	var loop_helpers: Array[String] = []
+	var single_edge_helpers: Array[String] = []
 	var scripts := _scripts("res://tests/")
 	scripts.append_array(_scripts("res://tools/"))
 	scripts.sort()
@@ -56,40 +66,74 @@ func _check_push_owners() -> void:
 		var text := FileAccess.get_file_as_string(path)
 		if text.contains(old_path):
 			stale_refs.append(path)
-		if path != PUSH_OWNER and _has_key_push_press(text):
-			press_helpers.append(path)
+		if path == PUSH_OWNER:
+			continue
+		for block in _key_push_blocks(text):
+			var entry := "%s:%s" % [path, block["name"]]
+			if block["loop"]:
+				loop_helpers.append(entry)
+			else:
+				single_edge_helpers.append(entry)
 	_t.eq("no script references old workshop push path", stale_refs, [])
+	_check_allowlist("no unlisted press-and-release loop helper builds InputEventKey with push_input",
+		loop_helpers, ALLOWED_KEY_LOOP_HELPERS)
+	_check_allowlist("no unlisted single-edge helper builds InputEventKey with push_input",
+		single_edge_helpers, ALLOWED_SINGLE_EDGE_KEY_PUSHES)
+
+
+func _check_allowlist(label: String, found: Array[String], allowed: Array[String]) -> void:
 	var unexpected: Array[String] = []
-	for path in press_helpers:
-		if not path in ALLOWED_PRESS_HELPERS:
-			unexpected.append(path)
-	var stale_allowed: Array[String] = []
-	for path in ALLOWED_PRESS_HELPERS:
-		if not path in press_helpers:
-			stale_allowed.append(path)
-	_t.eq("no unlisted _press helper builds InputEventKey.new() with push_input", unexpected, [])
-	_t.eq("allowed _press helper list has no stale entries", stale_allowed, [])
+	for entry in found:
+		if not entry in allowed:
+			unexpected.append(entry)
+	var stale: Array[String] = []
+	for entry in allowed:
+		if not entry in found:
+			stale.append(entry)
+	_t.eq(label, unexpected, [])
+	_t.eq("%s (no stale allowlist entries)" % label, stale, [])
 
 
-static func _has_key_push_press(text: String) -> bool:
-	var lines := text.split("\n")
-	var in_press := false
+static func _key_push_blocks(text: String) -> Array[Dictionary]:
+	var key_ctor := "InputEventKey" + ".new()"
+	var push_call := "push_" + "input"
+	var loop_re := RegEx.create_from_string("for\\s+\\w+\\s+in\\s+\\[\\s*(?:true\\s*,\\s*false|false\\s*,\\s*true)\\s*\\]")
+	var out: Array[Dictionary] = []
+	var func_name := ""
 	var has_key := false
 	var has_push := false
-	for line in lines:
+	var has_loop := false
+	for line in text.split("\n"):
 		var stripped := line.strip_edges()
 		if stripped.begins_with("func ") or stripped.begins_with("static func ") or stripped.begins_with("class "):
-			if in_press and has_key and has_push:
-				return true
-			in_press = stripped.begins_with("func _press(") or stripped.begins_with("static func _press(")
+			if func_name != "" and has_key and has_push:
+				out.append({"name": func_name, "loop": has_loop})
+			func_name = _extract_func_name(stripped)
 			has_key = false
 			has_push = false
-		if in_press:
-			if line.contains("InputEventKey.new()"):
+			has_loop = false
+		if func_name != "":
+			if line.contains(key_ctor):
 				has_key = true
-			if line.contains("push_input"):
+			if line.contains(push_call):
 				has_push = true
-	return in_press and has_key and has_push
+			if loop_re.search(line) != null:
+				has_loop = true
+	if func_name != "" and has_key and has_push:
+		out.append({"name": func_name, "loop": has_loop})
+	return out
+
+
+static func _extract_func_name(stripped: String) -> String:
+	var rest := ""
+	if stripped.begins_with("static func "):
+		rest = stripped.substr(12)
+	elif stripped.begins_with("func "):
+		rest = stripped.substr(5)
+	else:
+		return ""
+	var paren := rest.find("(")
+	return rest.substr(0, paren).strip_edges() if paren > 0 else ""
 
 
 static func _scripts(dir: String) -> Array[String]:

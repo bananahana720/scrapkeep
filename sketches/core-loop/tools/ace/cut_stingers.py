@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent.parent
-DEFAULT_PACKS = Path.home() / "Projects/scrapkeep/sketches/core-loop/assets/music_ace"
+DEFAULT_PACKS = PROJECT / "assets/music_ace"
 RATE = 44100
 TARGET_LUFS = -16.0
 CEILING_DBTP = -1.0
