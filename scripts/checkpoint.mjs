@@ -1,21 +1,14 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { requireGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 import { pool, runProcess as runChild } from "./lib/proc.mjs";
 import { gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, "..");
@@ -758,4 +751,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

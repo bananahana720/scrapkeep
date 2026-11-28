@@ -1,6 +1,5 @@
 import fs from "node:fs";
-import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { isMain } from "../lib/cli.mjs";
 
 export const med = (xs) => {
   const s = xs.filter((x) => x != null).sort((a, b) => a - b);
@@ -66,4 +65,4 @@ function main() {
   }
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

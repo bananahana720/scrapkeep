@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { FACTS_HEADING, parseWaveFacts } from "./wave-state.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 export const BACKLOG_FILE = "BACKLOG.md";
 export const STATE_FILE = "project-guide/handoff/STATE.md";
@@ -479,10 +479,7 @@ function main() {
   );
 }
 
-if (
-  process.argv[1] &&
-  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
-) {
+if (isMain(import.meta.url)) {
   try {
     main();
   } catch (error) {

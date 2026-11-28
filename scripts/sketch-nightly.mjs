@@ -1,12 +1,5 @@
 #!/usr/bin/env node
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +17,7 @@ import {
   summarizeRun,
 } from "./checkpoint.mjs";
 import { gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 export const MAX_WALL_MS = 60 * 60_000;
 export const MAX_FLAKE_RATE = 0.01;
@@ -607,7 +601,7 @@ async function main() {
   process.exitCode = outcome.exit;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
+if (isMain(import.meta.url))
   main().catch((error) => {
     console.error(`sketch:nightly: ${error.message}`);
     process.exitCode = 2;
