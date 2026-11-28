@@ -6,7 +6,6 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -57,6 +56,7 @@ import { resolveGodotBinary, withScratchGodotEnv } from "./godot-home.mjs";
 import { discoverTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
 import { packDurationShards } from "./ci/shard-plan.mjs";
 import { git, gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const binary = resolveGodotBinary();
 
@@ -1771,7 +1771,7 @@ async function main() {
   finish();
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   if (process.argv[2] === "--fold-timings") {
     const files = process.argv.slice(3);
     if (files.length === 0)

@@ -1,12 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  realpathSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
@@ -66,6 +59,7 @@ import {
 import { runProcess } from "./lib/proc.mjs";
 import { runnerReceiptFileName, runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
 import { gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 export {
   BATCH_MAX_MS,
@@ -650,4 +644,4 @@ async function main() {
   process.exit(receiptFailure ?? (ok ? 0 : 1));
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

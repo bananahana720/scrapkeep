@@ -15,6 +15,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv, userDataEnv } from "./godot-home.mjs";
 import { holdQuietSync } from "./lib/machine-lock.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
@@ -526,7 +527,7 @@ function engineCapture(args, env, outDir, platform, quiet) {
   );
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = main(
       undefined,

@@ -1,10 +1,11 @@
-import { readFileSync, realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { checkLedger } from "../known-failing.mjs";
 import { WEEKLY_FILE, gateLists } from "./shard.mjs";
 import { gitOptional } from "../lib/git.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const BOT_BLOCK = 5;
@@ -231,7 +232,7 @@ async function main() {
   return problems.length === 0 ? 0 : 1;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = await main();
   } catch (error) {

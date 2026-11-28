@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import path from "node:path";
-import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { runWindowed } from "./gate/display-run.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 export const SCRIPT = "res://tools/water_flow_stills.gd";
 export const ENGINE_ARGS = ["--resolution", "1280x720", "--audio-driver", "Dummy"];
@@ -32,7 +32,7 @@ async function main(argv) {
   return run.exit ?? 2;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2)).then(
     (code) => process.exit(code),
     (e) => {

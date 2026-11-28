@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import {
   COLUMNS,
@@ -16,6 +15,7 @@ import {
 } from "../challenge/lib.mjs";
 import { fightMaxHp, fightNotes, med } from "../challenge/worst-window.mjs";
 import { COMMIT_SHA_RE, parseReceiptArgs, writeJsonReceipt } from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const W1_FIGHTS = ["w1", "w2", "brindle"];
 export const NOVICE_DEATH_SHARE = 0.6;
@@ -505,5 +505,4 @@ function main(argv) {
   return Object.values(receipts).every((r) => r.pass) ? 0 : 1;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));
