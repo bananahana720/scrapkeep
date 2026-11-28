@@ -17,6 +17,7 @@ import sys
 
 unit, pr, branch, head, base, gate, brief = sys.argv[1:8]
 extra = pathlib.Path(sys.argv[8]).read_text().strip() if len(sys.argv) > 8 else ""
+extra = extra.replace("HEAD_SHA", head).replace("BASE_SHA", base).replace("GATE_SHA", gate)
 for sha in (head, base, gate):
     assert re.fullmatch(r"[0-9a-f]{40}", sha), f"not a full SHA: {sha}"
 
