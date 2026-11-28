@@ -11,6 +11,7 @@ import {
   readdirSync,
   realpathSync,
   rmSync,
+  statSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
@@ -25,6 +26,7 @@ import {
   HOOK_BUDGET_S,
   STALE_COPY_MS,
   changedFilesForRange,
+  copyFolder,
   evaluateHookOutcome,
   executeHookPlan,
   isHighLoad,
@@ -34,6 +36,7 @@ import {
   pushedChanges,
   rangeBase,
   readPushedFiles,
+  removeStaleCopies,
   workingTreeDrift,
 } from "./pre-push.mjs";
 
@@ -624,6 +627,7 @@ test("a pushed script whose name git would quote is checked like any other, on a
 });
 
 const HOOK = path.join(REPO_ROOT, "scripts/hooks/pre-push.mjs");
+const OWN_FOLDER = `scrapkeep-pre-push-${process.getuid()}`;
 const runHook = (tmp) =>
   spawnSync(process.execPath, [HOOK], {
     env: { ...process.env, TMPDIR: tmp },
@@ -676,7 +680,7 @@ test(
       process.kill(-stopped.pid, "SIGKILL");
     } catch {}
 
-    const folder = path.join(tmp, "scrapkeep-pre-push");
+    const folder = path.join(tmp, OWN_FOLDER);
     const [left, ...more] = readdirSync(folder);
     assert.deepEqual(more, []);
     assert.match(left, new RegExp(`^copy-${stopped.pid}-[A-Za-z0-9]{6}$`));
@@ -690,6 +694,13 @@ test(
       [`copy-${stopped.pid}-eeeeee`]: "link",
       [`copy-${stopped.pid}-ffffff`]: "file",
       [`copy-${stopped.pid}-ggggggg`]: "dir",
+      "copy-0-hhhhhh": "dir",
+      "copy-1-iiiiii": "dir",
+      "copy-012345-jjjjjj": "dir",
+      "copy-2147483648-kkkkkk": "dir",
+      "copy-4294967294-llllll": "dir",
+      "copy-4294967295-mmmmmm": "dir",
+      "copy-4294967296-nnnnnn": "dir",
     };
     mkdirSync(path.join(outside, "inner"), { recursive: true });
     for (const [name, kind] of Object.entries(kept)) {
@@ -711,13 +722,73 @@ test(
   },
 );
 
-test("the hook stops when the folder for its copies is not a plain folder", () => {
-  for (const make of [(at) => writeFileSync(at, ""), (at) => symlinkSync(os.tmpdir(), at)]) {
+test("the hook stops when the folder for its copies is not a plain folder of this user's that only this user can write", () => {
+  for (const [make, wrong] of [
+    [(at) => writeFileSync(at, ""), /is not a folder/],
+    [(at) => symlinkSync(os.tmpdir(), at), /is not a folder/],
+    [
+      (at) => {
+        mkdirSync(at);
+        chmodSync(at, 0o777);
+      },
+      /can be written by other users \(mode 777\)/,
+    ],
+    [
+      (at) => {
+        mkdirSync(at);
+        chmodSync(at, 0o720);
+      },
+      /can be written by other users \(mode 720\)/,
+    ],
+  ]) {
     const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-folder-"));
     scratchDirs.push(tmp);
-    make(path.join(tmp, "scrapkeep-pre-push"));
+    const folder = path.join(tmp, OWN_FOLDER);
+    make(folder);
     const ran = runHook(tmp);
     assert.equal(ran.status, 2, ran.stdout);
-    assert.match(ran.stderr, /^pre-push: .*scrapkeep-pre-push/);
+    assert.ok(ran.stderr.startsWith(`pre-push: ${folder} `), ran.stderr);
+    assert.match(ran.stderr, wrong);
   }
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-folder-"));
+  scratchDirs.push(tmp);
+  const someoneElse = process.getuid() + 1;
+  assert.throws(
+    () => removeStaleCopies({ tmp, uid: someoneElse, errLog: assert.fail }),
+    new RegExp(
+      `scrapkeep-pre-push-${someoneElse} belongs to user ${process.getuid()}, not to this user \\(${someoneElse}\\)`,
+    ),
+  );
+  assert.equal(copyFolder({ tmp }), path.join(tmp, OWN_FOLDER));
+  assert.equal(statSync(path.join(tmp, OWN_FOLDER)).mode & 0o077, 0, "made for this user only");
 });
+
+test(
+  "a stale copy that cannot be removed is named in one line and the push goes on",
+  {
+    skip: process.getuid() === 0 ? "root can remove a file in a folder it may not write" : false,
+  },
+  () => {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-stuck-"));
+    scratchDirs.push(tmp);
+    const folder = copyFolder({ tmp });
+    const dead = spawnSync(process.execPath, ["-e", ""]).pid;
+    const stuck = path.join(folder, `copy-${dead}-aaaaaa`);
+    mkdirSync(path.join(stuck, "locked"), { recursive: true });
+    writeFileSync(path.join(stuck, "locked/kept.mjs"), "");
+    chmodSync(path.join(stuck, "locked"), 0o500);
+    try {
+      const old = new Date(Date.now() - 2 * STALE_COPY_MS);
+      utimesSync(stuck, old, old);
+      const ran = runHook(tmp);
+      assert.equal(ran.status, 0, ran.stderr);
+      assert.match(ran.stdout, /^pre-push: PASS in /);
+      const said = ran.stderr.split("\n").filter(Boolean);
+      assert.equal(said.length, 1, ran.stderr);
+      assert.ok(said[0].startsWith(`pre-push: left the stale copy ${stuck}: `), said[0]);
+      assert.ok(existsSync(path.join(stuck, "locked/kept.mjs")));
+    } finally {
+      chmodSync(path.join(stuck, "locked"), 0o700);
+    }
+  },
+);
