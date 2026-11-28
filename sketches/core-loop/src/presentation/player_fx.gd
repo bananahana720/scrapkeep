@@ -24,7 +24,6 @@ const CARVE_NORMAL_Y := 0.82
 const MOTES := 12
 const MOTE_RADIUS := 1.65
 const ELEMENT_COLORS := {"frost": Palette.ICE, "arc": Palette.ARC, "kinetic": Palette.SAND}
-const HEAT_COLOR := ImpactFrame.HEAT_COLOR
 const HEAT_SHARE := 0.85
 const INK := Palette.INK_DEEP
 
@@ -93,7 +92,6 @@ const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
 const SMASH_WORD_MPS := [22.0, 12.0]
 const SMASH_FRAME_MPS := [32.0, 18.0]
-const FRAME_FRAMES := ImpactFrame.FRAMES
 const FRAME_GAP_S := 0.6
 const NEAR_EPSILON := 0.01
 
@@ -377,7 +375,7 @@ static func heat_k(value: float) -> float:
 
 
 func heat_tint(color: Color) -> Color:
-	return color.lerp(HEAT_COLOR, HEAT_SHARE * heat_k(might))
+	return color.lerp(ImpactFrame.HEAT_COLOR, HEAT_SHARE * heat_k(might))
 
 
 func dominant_color() -> Color:
@@ -944,7 +942,7 @@ static func _word_rect(cam: Camera3D, at: Vector3, right: bool, width_px: float,
 func _word_color(id: String) -> Color:
 	match id:
 		"ignite":
-			return HEAT_COLOR
+			return ImpactFrame.HEAT_COLOR
 		"heft_up", "fused":
 			return Palette.BRASS
 	return player.class_color().lerp(Color.WHITE, FlashGuard.whiten(0.2))
@@ -1260,7 +1258,7 @@ func _draw_overdrive(delta: float) -> void:
 		word("ignite", _beside_ball())
 		impact_frame(player.shown_position(), 0.6)
 		if vfx != null:
-			vfx.glyph("overdrive", back, 0.8, 4.0, 0.3, v, "ring", HEAT_COLOR)
+			vfx.glyph("overdrive", back, 0.8, 4.0, 0.3, v, "ring", ImpactFrame.HEAT_COLOR)
 	var on := heat > 0.01
 	var shell := shell_heat() if _shell_band > 0 else 0.0
 	var lit := maxf(heat, shell)

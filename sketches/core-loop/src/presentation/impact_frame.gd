@@ -13,6 +13,7 @@ const WEDGE_WIDTH_MIN := 5.0
 const WEDGE_WIDTH_MAX := 16.0
 const YIELD_MARGIN_PX := WEDGE_WIDTH_MAX
 const MAX_RECTS := 64
+# Godot FRAGCOORD varies with window origin/scale under canvas_items; varying VERTEX stays in Control px.
 const YIELD_SHADER := """
 shader_type canvas_item;
 uniform vec4 rects[64];

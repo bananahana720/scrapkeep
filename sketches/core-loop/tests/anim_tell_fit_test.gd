@@ -37,7 +37,7 @@ const WardenCls := preload("res://src/combat/warden.gd")
 const ForemanCls := preload("res://src/combat/foreman.gd")
 const DispatcherCls := preload("res://src/combat/dispatcher.gd")
 const SplitterCls := preload("res://src/combat/splitter.gd")
-const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const WardenDress := preload("res://src/presentation/warden_dress.gd")
 
 const M := "res://assets/models/"
 const TELL_FLOOR := 0.6
@@ -185,13 +185,13 @@ func _brindle() -> void:
 	_peak("boss_brindle", "drone_deploy", BossModel.blend_for("drone_deploy"), Rules.DRONE_WARN, "boss_model.gd:158 BLENDS")
 
 
-# Wardens: the charge clip hero_assets.gd:48 WARDEN_BODY_CHARGE plays against PULSE_TELEGRAPH.
+# Wardens: the charge clip warden_dress.gd BODY_CHARGE plays against PULSE_TELEGRAPH.
 func _wardens() -> void:
 	var window: float = WardenCls.PULSE_TELEGRAPH
-	for kind in HeroAssets.WARDEN_BODY_CHARGE:
-		var clip: String = HeroAssets.WARDEN_BODY_CHARGE[kind]
-		var glb: String = HeroAssets.WARDEN_BODIES[kind]["body"] if HeroAssets.WARDEN_BODIES.has(kind) else ""
-		if not t.check("%s has a body GLB in WARDEN_BODIES" % kind, glb != "", kind):
+	for kind in WardenDress.BODY_CHARGE:
+		var clip: String = WardenDress.BODY_CHARGE[kind]
+		var glb: String = WardenDress.BODIES[kind]["body"] if WardenDress.BODIES.has(kind) else ""
+		if not t.check("%s has a body GLB in WardenDress.BODIES" % kind, glb != "", kind):
 			continue
 		# The swarm's `pulse` is the 2.0 s charge then the 0.4 s slam (hero_assets.gd:46-47), so
 		# it covers the telegraph but is longer than it.

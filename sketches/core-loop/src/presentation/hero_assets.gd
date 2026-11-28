@@ -8,13 +8,6 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const WardenDress := preload("res://src/presentation/warden_dress.gd")
-const WARDEN_BASE := WardenDress.BASE
-const WARDEN_KITS := WardenDress.KITS
-const WARDEN_MANTLES := WardenDress.MANTLES
-const WARDEN_BODIES := WardenDress.BODIES
-const WARDEN_BODY_BLENDS := WardenDress.BODY_BLENDS
-const WARDEN_BODY_CHARGE := WardenDress.BODY_CHARGE
-const MIND_CHUNK_FINGERS := WardenDress.MIND_CHUNK_FINGERS
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Accretion := preload("res://src/build/accretion.gd")
@@ -2095,13 +2088,13 @@ func _warden_scene(path: String) -> Node3D:
 func _dress_warden(warden) -> void:
 	if not is_inside_tree() or not is_instance_valid(warden) or not warden.is_inside_tree() or _wardens.has(warden.get_instance_id()):
 		return
-	if warden._look == null or warden._kit == null or not WARDEN_KITS.has(warden.family):
+	if warden._look == null or warden._kit == null or not WardenDress.KITS.has(warden.family):
 		return
 	if WardenDress.wears_body(warden):
 		_dress_warden_body(warden)
 		return
-	var base := _warden_scene(WARDEN_BASE)
-	var kit := _warden_scene("res://assets/models/warden_kit_%s.glb" % WARDEN_KITS[warden.family])
+	var base := _warden_scene(WardenDress.BASE)
+	var kit := _warden_scene("res://assets/models/warden_kit_%s.glb" % WardenDress.KITS[warden.family])
 	if base == null or kit == null:
 		if base != null: base.free()
 		if kit != null: kit.free()
@@ -2204,7 +2197,7 @@ func _body_scene(path: String) -> Node3D:
 
 func _dress_warden_body(warden) -> void:
 	var kind: String = warden.family
-	var row: Dictionary = WARDEN_BODIES[kind]
+	var row: Dictionary = WardenDress.BODIES[kind]
 	var body := _body_scene(row.body)
 	var weak := body.find_child(row.point, true, false) as Node3D if body != null else null
 	var player := body.find_child("AnimationPlayer", true, false) as AnimationPlayer if body != null else null
@@ -2350,7 +2343,7 @@ func _hold_body(id: int) -> void:
 
 
 func _mount_mantle(warden, kit: Node3D, rec: Dictionary) -> void:
-	var row: Dictionary = WARDEN_MANTLES.get(int(warden.stage), {})
+	var row: Dictionary = WardenDress.MANTLES.get(int(warden.stage), {})
 	if row.is_empty() or row.family != warden.family:
 		return
 	var mantle := _warden_scene(row.path)
@@ -2451,7 +2444,7 @@ func _step_prewarm() -> void:
 
 
 func _prewarm_warden_strokes() -> void:
-	var base := _warden_scene(WARDEN_BASE)
+	var base := _warden_scene(WardenDress.BASE)
 	if base == null or not base.has_node("JawL") or not base.has_node("JawR"):
 		if base != null: base.free()
 		return

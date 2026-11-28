@@ -13,6 +13,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Alpha := preload("res://src/core/alpha_defs.gd")
 const Hero := preload("res://src/presentation/hero_assets.gd")
+const WardenDress := preload("res://src/presentation/warden_dress.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Companion := preload("res://src/core/companion.gd")
@@ -178,7 +179,7 @@ func _warden_paths(warden: Node) -> Array:
 	var painter = game.presentation.hero_assets
 	if painter.warden_of(warden).is_empty():
 		return []
-	return [Hero.WARDEN_BASE, "res://assets/models/warden_kit_%s.glb" % Hero.WARDEN_KITS[warden.family]]
+	return [WardenDress.BASE, "res://assets/models/warden_kit_%s.glb" % WardenDress.KITS[warden.family]]
 
 
 func _table_minimums() -> void:
@@ -193,7 +194,7 @@ func _table_minimums() -> void:
 				_require(Roster.ROWS.has(kind), "%s absent from merged enemy roster" % kind)
 	_require(Roster.ROWS.size() >= 25, "merged enemy table needs at least 25 rows")
 	_require(Worlds.BOSSES.size() >= 3, "boss table needs at least 3 rows")
-	_require(Hero.WARDEN_KITS.size() >= 3, "Warden kit table needs at least 3 rows")
+	_require(WardenDress.KITS.size() >= 3, "Warden kit table needs at least 3 rows")
 	_require(Alpha.DEFS.size() >= 6, "alpha stage table needs at least 6 rows")
 	_require(Hero.PILOTS.size() >= 6 and Hero.SHELLS.size() >= 6, "pilot and shell tables need at least 6 rows each")
 	_require(ClassDef.all().size() >= 6, "class table needs at least 6 rows")
@@ -230,7 +231,7 @@ func _enemies() -> void:
 
 
 func _wardens() -> void:
-	for family in Hero.WARDEN_KITS:
+	for family in WardenDress.KITS:
 		await _warden("warden_kit", family, {"warden_family": family, "warden_variant": "", "stage": 1})
 	for stage in Alpha.DEFS:
 		await _warden("warden_stage", "stage_%s/%s/%s" % [stage.stage, stage.warden_family,
@@ -239,7 +240,7 @@ func _wardens() -> void:
 
 func _warden(category: String, subject: String, row: Dictionary) -> void:
 	var family := String(row.warden_family)
-	_require(Hero.WARDEN_KITS.has(family), "%s has no Warden kit mapping" % subject)
+	_require(WardenDress.KITS.has(family), "%s has no Warden kit mapping" % subject)
 	var warden := Warden.new()
 	game.add_child(warden)
 	warden.setup(game.player, game.ctx.terrain, game, func(): return false, 1.0,

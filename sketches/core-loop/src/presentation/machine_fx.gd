@@ -10,6 +10,7 @@ const SpecialCues := preload("res://src/combat/special_cues.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const PauseGuard := preload("res://src/presentation/pause_guard.gd")
 
 
 const FAMILY := {Roster.FLEET: "fleet", Roster.REACTOR: "ancient", Roster.SWARM: "ancient", Roster.MIND: "ancient"}
@@ -150,7 +151,7 @@ func setup(ctx_ref) -> void:
 	_word_root = Node3D.new()
 	_word_root.name = "Words"
 	root.add_child(_word_root)
-	var pause_guard := PlayerFx.PauseGuard.new()
+	var pause_guard := PauseGuard.new()
 	pause_guard.root = _word_root
 	add_child(pause_guard)
 	for i in WORD_POOL:

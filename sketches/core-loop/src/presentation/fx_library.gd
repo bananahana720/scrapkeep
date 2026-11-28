@@ -176,7 +176,7 @@ void fragment() {
 	vec3 base = tint.rgb * COLOR.rgb;
 	float hot = clamp(heat * (1.0 - v_life) * (1.0 - smoothstep(0.0, 0.35, r)), 0.0, 1.0);
 	vec3 fill = mix(base, vec3(1.0), hot);
-	ALBEDO = mix(fill, ink_colour, smoothstep(0.66, 0.72, r));
+	ALBEDO = mix(fill, vec3(0.141, 0.165, 0.157), smoothstep(0.66, 0.72, r));
 	ALPHA = tint.a * COLOR.a;
 }
 """],

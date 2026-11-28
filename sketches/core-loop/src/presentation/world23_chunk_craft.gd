@@ -179,13 +179,9 @@ static func dress_chunk(chunk_root: Node) -> int:
 			continue
 		mi.mesh = mesh
 		mi.material_override = null
-		bind_surface_materials(mi)
+		Lookdev.bind_surface_materials(mi, get_material)
 		count += 1
 	return count
-
-
-static func bind_surface_materials(mi: MeshInstance3D) -> int:
-	return Lookdev.bind_surface_materials(mi, get_material)
 
 
 static func apply_surface_materials_to_mesh(am: ArrayMesh) -> void:

@@ -17,13 +17,13 @@ func _initialize() -> void:
 func _run() -> void:
 	var hook := HeroAssets.new()
 	root.add_child(hook)
-	for stage in HeroAssets.WARDEN_MANTLES:
-		var row: Dictionary = HeroAssets.WARDEN_MANTLES[stage]
+	for stage in WardenDress.MANTLES:
+		var row: Dictionary = WardenDress.MANTLES[stage]
 		var warden := Warden.new()
 		warden.stage = stage
 		warden.family = row.family
 		warden._posture = BossPosture.new()
-		var kit := hook._warden_scene("res://assets/models/warden_kit_%s.glb" % HeroAssets.WARDEN_KITS[row.family])
+		var kit := hook._warden_scene("res://assets/models/warden_kit_%s.glb" % WardenDress.KITS[row.family])
 		root.add_child(kit)
 		var rec := {"warden": warden, "materials": {}, "mantle": null, "mantle_tool": null}
 		hook._mount_mantle(warden, kit, rec)
