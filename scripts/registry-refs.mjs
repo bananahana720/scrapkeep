@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { isMain } from "./lib/cli.mjs";
-import { REPO_ROOT } from "./lib/git.mjs";
+import { REPO_ROOT, git } from "./lib/git.mjs";
 
 export const REGISTRY_DIR = "assets/registry.d";
 export const LOADER = ["loader"];
@@ -49,22 +49,35 @@ export function registryRows(project) {
   return rows;
 }
 
-function problem(project, ref, read) {
-  const abs = path.resolve(project, ref.file);
-  const rel = path.relative(project, abs);
-  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return "lies outside the project";
-  let isFile = false;
+export function trackedFiles(project) {
+  const files = new Set(
+    git(["ls-files", "-z", "--", "."], { cwd: project, trim: false }).split("\0").filter(Boolean),
+  );
+  if (files.size === 0) throw new Error(`git tracks no file under ${project}`);
+  return files;
+}
+
+function readTracked(project, rel) {
   try {
-    isFile = statSync(abs).isFile();
-  } catch {
-    return "names a file that does not exist";
+    return readFileSync(path.join(project, rel), "utf8");
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+    return git(["show", `:./${rel}`], { cwd: project, trim: false });
   }
-  if (!isFile) return "names a folder, not a file";
+}
+
+function problem(project, ref, tracked, read) {
+  const rel = path.relative(project, path.resolve(project, ref.file)).split(path.sep).join("/");
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return "lies outside the project";
+  if (!tracked.has(rel))
+    return [...tracked].some((file) => file.startsWith(`${rel}/`))
+      ? "names a folder, not a file"
+      : "names a file that git does not track";
   if (ref.name === null) return null;
   if (!NAME.test(ref.name)) return `names ":${ref.name}", which is not a function name`;
   const declaration = DECLARATION[path.extname(ref.file)];
   if (!declaration) return `names a function in a ${path.extname(ref.file) || "plain"} file`;
-  return declaration(ref.name).test(read(abs))
+  return declaration(ref.name).test(read(rel))
     ? null
     : `names ${ref.name}, which the file does not define`;
 }
@@ -72,10 +85,11 @@ function problem(project, ref, read) {
 const field = (row, keys) => keys.reduce((value, key) => value?.[key], row);
 
 export function brokenRefs(project) {
+  const tracked = trackedFiles(project);
   const sources = new Map();
-  const read = (abs) => {
-    if (!sources.has(abs)) sources.set(abs, readFileSync(abs, "utf8"));
-    return sources.get(abs);
+  const read = (rel) => {
+    if (!sources.has(rel)) sources.set(rel, readTracked(project, rel));
+    return sources.get(rel);
   };
   const counts = { rows: 0, loaders: 0, generators: 0 };
   const findings = [];
@@ -85,7 +99,7 @@ export function brokenRefs(project) {
       const ref = codeRef(field(row, keys));
       if (ref === null) continue;
       counts[keys === LOADER ? "loaders" : "generators"]++;
-      const why = problem(project, ref, read);
+      const why = problem(project, ref, tracked, read);
       if (why)
         findings.push(`${fragment} ${row.id ?? row.path}: ${keys.join(".")} ${ref.token} ${why}`);
     }

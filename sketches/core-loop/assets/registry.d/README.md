@@ -24,7 +24,7 @@ matching the current registry. Both IDs and paths must be unique.
 A `loader` names the code that loads the asset, and `provenance.recipe` (or
 `provenance.helper`) names the script that made it. When the field starts with a
 path (its first word holds a `/` or ends in a file extension, with or without
-`res://`), that file must exist under `sketches/core-loop`, and a
+`res://`), git must track that file under `sketches/core-loop`, and a
 `path:name` must name a function the file defines (`func` in GDScript, `def` in
 Python). A line number goes stale with the next edit, so name the function
 instead. Any other first word is free text. `node scripts/registry-refs.mjs`
