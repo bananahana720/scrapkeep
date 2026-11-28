@@ -155,8 +155,8 @@ export const NODE_PATH_RULES = [
   {
     name: "palette",
     match:
-      /^(src\/core\/palette\.gd|tools\/blender\/common\.py|tools\/palette_gd\.py|tools\/icons\/)/,
-    tests: ["scripts/palette-gd.test.mjs"],
+      /^(src\/core\/palette\.gd|tools\/blender\/common\.py|tools\/blender\/park\/props\/kit\.py|tools\/palette_gd\.py|tools\/icons\/)/,
+    tests: ["scripts/palette-gd.test.mjs", "tests/palette-kit.test.js"],
   },
 ];
 
