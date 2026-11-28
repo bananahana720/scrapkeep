@@ -32,7 +32,6 @@ const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const TuningPanel := preload("res://src/ui/tuning_panel.gd")
 const World := preload("res://src/world/world.gd")
@@ -43,17 +42,8 @@ const Bindings := preload("res://src/core/bindings.gd")
 const Glyphs := preload("res://src/core/glyphs.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
-const AbilityBar := preload("res://src/ui/ability_bar.gd")
-const AimReticle := preload("res://src/ui/aim_reticle.gd")
-const BossPlate := preload("res://src/ui/boss_plate.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const RewardView := preload("res://src/ui/reward_view.gd")
-const MossBubble := preload("res://src/ui/moss_bubble.gd")
-const ClassCard := preload("res://src/ui/class_card.gd")
-const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
-const ClassPreview := preload("res://src/ui/class_preview.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
@@ -1054,21 +1044,7 @@ func set_quality(level: int) -> void:
 
 static func set_motion_statics(on: bool) -> void:
 	Comfort.reduced_motion = on
-	EnemyMotion.motion_scale = 0.0 if on else 1.0
-	HighdraftFx.preferred = on
-	AbilityBar.reduced_motion = on
-	UiTokens.reduced_motion = on
-	AimReticle.reduced_motion = on
-	RewardView.reduced_motion = on
-	MossBubble.reduced_motion = on
-	preload("res://src/ui/caller_tile.gd").reduced_motion = on
-	ClassCard.reduced_motion = on
-	PilotAntics.reduced_motion = on
-	ClassPreview.reduced_motion = on
-	BossPlate.reduced_motion = on
-	WorldFx.preferred = on
 	preload("res://src/presentation/spillway_scenery.gd").set_water_calm(on)
-	preload("res://src/presentation/flourish_player.gd").reduced_motion = on
 
 
 func set_reduced_motion(on: bool) -> void:

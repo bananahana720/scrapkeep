@@ -4,13 +4,13 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Roster := preload("res://src/combat/roster.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpecialCues := preload("res://src/combat/special_cues.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const PauseGuard := preload("res://src/presentation/pause_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const FAMILY := {Roster.FLEET: "fleet", Roster.REACTOR: "ancient", Roster.SWARM: "ancient", Roster.MIND: "ancient"}
@@ -771,7 +771,7 @@ func _process(delta: float) -> void:
 	if root == null:
 		return
 	_clock += delta
-	reduced_motion = EnemyMotion.motion_scale <= 0.0
+	reduced_motion = Comfort.reduced_motion
 	_sample -= delta
 	if _sample <= 0.0:
 		_sample = SAMPLE_SECONDS

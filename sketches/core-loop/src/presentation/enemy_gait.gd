@@ -1,6 +1,7 @@
 extends RefCounted
 
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const TURN_RATE := 6.0
@@ -85,7 +86,7 @@ func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking :=
 			_yaw = 0.0
 	_aim = NAN
 	var spin := Basis(Vector3.UP, _yaw)
-	var scale := EnemyMotion.motion_scale
+	var scale := Comfort.motion_scale()
 	var planar := Vector3(velocity.x, 0.0, velocity.z)
 	_felt = _felt.lerp(planar, 1.0 - exp(-SPEED_FOLLOW * delta))
 	var goal := (_felt * LEAN_TRAVEL - (planar - _felt) * LEAN_LAG) / WALK_REF

@@ -9,6 +9,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const Inset := preload("res://src/presentation/flourish_inset.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const LAYER := 39
 const SKIP_GRACE := 1.5
@@ -37,7 +38,6 @@ const INSET_VIEW := Rect2(0.715, 0.295, 0.25, 0.32)
 const INSET_TILT := 2.0
 const BASE_HEIGHT := 1080.0
 
-static var reduced_motion := false
 
 var ctx
 var playing := false
@@ -378,7 +378,7 @@ func _build(piece: Dictionary) -> Node:
 		"inset":
 			return _inset(piece)
 		"speed_lines":
-			if reduced_motion:
+			if Comfort.reduced_motion:
 				return null
 			_lines.set("mode", "speed")
 			var line_colour: Color = _colour(String(piece.get("colour", ""))) if piece.has("colour") else Color.WHITE
@@ -496,7 +496,7 @@ func _panels(texts: Array) -> Control:
 		panel.add_child(_wrapped(String(texts[i]), int(22 * s)))
 		panel.rotation_degrees = [-1.5, 1.0, -0.5][i % 3]
 		strip.add_child(panel)
-		if i > 0 and not reduced_motion:
+		if i > 0 and not Comfort.reduced_motion:
 			panel.modulate.a = 0.0
 	_seat(strip, _column_at("left_top"))
 	return strip
@@ -527,7 +527,7 @@ func _inset(piece: Dictionary) -> Control:
 		INSET_VIEW.size * screen, maxi(3, int(6 * _scale())))
 	inset.position = INSET_VIEW.position * screen
 	inset.rotation_degrees = INSET_TILT
-	inset.still = reduced_motion
+	inset.still = Comfort.reduced_motion
 	_pop(inset, 1.2)
 	return inset
 
@@ -649,7 +649,7 @@ func _place_word(label: Control, piece: Dictionary) -> bool:
 
 
 func _pop(node: Control, from: float) -> void:
-	if reduced_motion or not is_inside_tree():
+	if Comfort.reduced_motion or not is_inside_tree():
 		return
 	node.pivot_offset = node.size * 0.5
 	node.scale = Vector2.ONE * from

@@ -3,6 +3,7 @@ extends Control
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const LaunchCard := preload("res://src/ui/launch_card.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const BONE := LaunchCard.BONE
@@ -383,7 +384,7 @@ func _make_room() -> bool:
 
 
 func _still() -> bool:
-	return UiTokens.reduced_motion
+	return Comfort.reduced_motion
 
 
 func _retract_time() -> float:

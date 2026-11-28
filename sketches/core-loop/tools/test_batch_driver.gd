@@ -2,7 +2,6 @@ extends RefCounted
 
 const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
-const Game := preload("res://src/game.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
@@ -191,7 +190,6 @@ func _reset() -> void:
 	Engine.max_fps = max_fps
 	ChallengeDials.reset()
 	BuffLedger.reset_for_tests()
-	Game.set_motion_statics(false)
 	Comfort.reduced_motion = false
 	FlashGuard.on = false
 	GraphicsPreset.reset_for_tests()

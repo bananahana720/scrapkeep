@@ -6,6 +6,7 @@ const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const PARTS_MIN := 3
@@ -16,7 +17,6 @@ const SHRINK := 0.5
 const SPECK := 0.01
 const TICK_STEPS := [0.0, 0.5, 1.0, 0.5]
 
-static var motion_scale := 1.0
 static var headless_idle := false
 
 var seconds := 0.5
@@ -242,7 +242,7 @@ static func pop_shift_tag(enemy: Node3D, kind: String, direction: Vector3, land 
 	tag.velocity = toss * TAG_OUT + Vector3.UP * TAG_UP
 	var axis := Vector3(-toss.z, 0.35, toss.x).normalized()
 	tag.spin = axis * TAG_SPIN
-	tag.spin_scale = motion_scale
+	tag.spin_scale = Comfort.motion_scale()
 	tag.mount_visual(_build_tag_mesh(), _build_tag_material(), Basis(Vector3.UP, angle) * Basis(Vector3.RIGHT, 0.45))
 	if land.is_valid():
 		tag.ground = land
@@ -262,7 +262,7 @@ static func attack_clock(kind: String, enemy: Object) -> float:
 
 
 static func idle_offset(idle: Dictionary, clock: float, period: float) -> Vector3:
-	var amp := float(idle.get("amplitude", 0.0)) * motion_scale
+	var amp := float(idle.get("amplitude", 0.0)) * Comfort.motion_scale()
 	if amp <= 0.0 or period <= 0.0:
 		return Vector3.ZERO
 	var turn := fposmod(clock / period, 1.0)
@@ -309,7 +309,7 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3, land := Cal
 	parent.add_child(node)
 	var at := enemy.global_position
 	node.global_transform = Transform3D(Basis.IDENTITY, at)
-	if land.is_valid() and motion_scale > 0.0 and active() and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne":
+	if land.is_valid() and not Comfort.reduced_motion and active() and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne":
 		node.ground = land
 		node.rest = LAND_REST
 	var material: Material = null

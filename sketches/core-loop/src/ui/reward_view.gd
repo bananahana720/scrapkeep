@@ -7,6 +7,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const CARD := Vector2(360.0, 112.0)
@@ -18,7 +19,6 @@ const CRATE_SCALE := 1.4
 const RAYS := 14
 const BITS := 32
 
-static var reduced_motion := false
 
 var now := 0
 var card := {}
@@ -304,13 +304,13 @@ func _draw_ceremony(screen: Vector2) -> void:
 func _draw_crate(centre: Vector2, t: float, p: float, landed: float, alpha: float) -> void:
 	var yours: Color = ceremony.get("class_color", Palette.SAND)
 	var tint: Color = ceremony.get("tint", Palette.AMBER)
-	var amp := (1.5 + 11.0 * p * p) * (0.0 if reduced_motion else 1.0)
+	var amp := (1.5 + 11.0 * p * p) * (0.0 if Comfort.reduced_motion else 1.0)
 	var w := 30.0 + 55.0 * p
 	var shake := Vector2(sin(t * w), cos(t * w * 1.37)) * amp
 	var origin := centre + shake + Vector2(0.0, -_screen().y * 0.35 * (1.0 - _ease(landed)))
 	for ring in 4:
 		draw_circle(centre, (150.0 + 70.0 * ring) * (0.6 + 0.6 * p), Color(yours, (0.16 - 0.035 * ring) * p * alpha))
-	draw_set_transform(origin, sin(t * w * 0.8) * 0.06 * p * (0.0 if reduced_motion else 1.0), Vector2.ONE * CRATE_SCALE)
+	draw_set_transform(origin, sin(t * w * 0.8) * 0.06 * p * (0.0 if Comfort.reduced_motion else 1.0), Vector2.ONE * CRATE_SCALE)
 	var body := Rect2(-CRATE * 0.5, CRATE)
 	draw_rect(body.grow(4.0), _faded(Color(Palette.CHARCOAL, 0.8), alpha))
 	draw_rect(body, _faded(Palette.COPPER.darkened(0.4), alpha))

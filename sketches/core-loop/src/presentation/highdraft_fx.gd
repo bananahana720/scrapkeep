@@ -10,6 +10,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
@@ -37,12 +38,7 @@ var cloud_placements: Array[Transform3D] = []
 var cloud_velocities: Array[Vector3] = []
 var clock := 0.0
 var frozen := false
-static var preferred: bool:
-	get:
-		return Kit.reduced_motion
-	set(on):
-		Kit.reduced_motion = on
-var reduced_motion := preferred
+var reduced_motion := Comfort.reduced_motion
 var low := false
 var _map
 var _last_ball := Vector3.INF

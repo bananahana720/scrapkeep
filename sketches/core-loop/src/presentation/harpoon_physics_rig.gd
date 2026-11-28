@@ -2,7 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const DEFAULT_SEGMENTS := 20
@@ -45,7 +45,7 @@ static func reset_for_tests() -> void:
 
 
 static func is_reduced_motion(override_flag := false) -> bool:
-	return override_flag or EnemyMotion.motion_scale <= 0.0
+	return override_flag or Comfort.reduced_motion
 
 
 
@@ -131,7 +131,7 @@ class CableSolver extends RefCounted:
 		_was_taut = false
 
 	func _calm() -> bool:
-		return EnemyMotion.motion_scale <= 0.0 or reduced_motion
+		return Comfort.reduced_motion or reduced_motion
 
 	func step(delta: float, from: Vector3, to: Vector3, taut: bool) -> void:
 		var dt := clampf(delta, 0.0, 0.05)
@@ -292,16 +292,16 @@ class HarpoonHead extends MeshInstance3D:
 				clamp_impulse = 0.0
 			"bite":
 				target_jaw_angle = JAW_ANGLE_BITE
-				if trigger_clamp and not (reduced_motion or EnemyMotion.motion_scale <= 0.0):
+				if trigger_clamp and not (reduced_motion or Comfort.reduced_motion):
 					clamp_impulse = 1.0
-				elif reduced_motion or EnemyMotion.motion_scale <= 0.0:
+				elif reduced_motion or Comfort.reduced_motion:
 					jaw_angle = JAW_ANGLE_BITE
 					clamp_impulse = 0.0
 			"world":
 				target_jaw_angle = JAW_ANGLE_WORLD
-				if trigger_clamp and not (reduced_motion or EnemyMotion.motion_scale <= 0.0):
+				if trigger_clamp and not (reduced_motion or Comfort.reduced_motion):
 					clamp_impulse = 0.7
-				elif reduced_motion or EnemyMotion.motion_scale <= 0.0:
+				elif reduced_motion or Comfort.reduced_motion:
 					jaw_angle = JAW_ANGLE_WORLD
 					clamp_impulse = 0.0
 			_:
@@ -310,7 +310,7 @@ class HarpoonHead extends MeshInstance3D:
 
 	func step_head(delta: float, live: bool, reduced_motion := false, accent_color := Color(-1.0, 0.0, 0.0, 0.0)) -> void:
 		var dt := clampf(delta, 0.0, 0.05)
-		var calm := reduced_motion or EnemyMotion.motion_scale <= 0.0
+		var calm := reduced_motion or Comfort.reduced_motion
 		live_pulse_age += dt
 		if calm:
 			jaw_angle = target_jaw_angle

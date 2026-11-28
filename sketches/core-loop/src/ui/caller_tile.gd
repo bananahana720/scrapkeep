@@ -7,6 +7,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const SIDE := 68.0
@@ -37,7 +38,6 @@ const CALLERS := {
 	"mind": {"hands": "works", "icon": "fac_mind", "color": Palette.ANCIENT},
 }
 
-static var reduced_motion := false
 
 var pilots: Array = []
 var speaker := ""
@@ -120,10 +120,10 @@ func _draw() -> void:
 		return
 	var color: Color = _look["color"]
 	var beat := _age * SYLLABLES * TAU
-	var live := talking() and not reduced_motion
+	var live := talking() and not Comfort.reduced_motion
 	var hop := -absf(sin(beat * 0.5)) * HOP if live else 0.0
 	var tilt := sin(beat * 0.5 + 0.6) * TILT if live else 0.0
-	var pop := 1.0 if reduced_motion else minf(1.0, _age / POP_IN)
+	var pop := 1.0 if Comfort.reduced_motion else minf(1.0, _age / POP_IN)
 	pop = 1.0 + 0.18 * sin(pop * PI) if pop < 1.0 else 1.0
 	var centre := Vector2(SIDE, SIDE) * 0.5
 	draw_set_transform(centre + Vector2(0.0, hop), tilt, Vector2(pop, pop))
@@ -237,7 +237,7 @@ func _draw_tag(color: Color, live: bool, beat: float) -> void:
 	var w := text_w + bars_w + 16.0
 	var at := Vector2(-4.0, -TAG_H * 0.55)
 	var ink := tag_ink(color)
-	draw_set_transform(at, 0.0 if reduced_motion else TAG_TILT, Vector2.ONE)
+	draw_set_transform(at, 0.0 if Comfort.reduced_motion else TAG_TILT, Vector2.ONE)
 	draw_rect(Rect2(Vector2(2.0, 2.0), Vector2(w, TAG_H)), Color(Palette.CHARCOAL, 0.9))
 	draw_rect(Rect2(Vector2.ZERO, Vector2(w, TAG_H)).grow(KEYLINE), Palette.CHARCOAL)
 	draw_rect(Rect2(Vector2.ZERO, Vector2(w, TAG_H)), color)
