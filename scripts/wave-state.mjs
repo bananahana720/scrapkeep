@@ -1,8 +1,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/cli.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 export const STATE_FILE = "project-guide/handoff/STATE.md";
 export const FACTS_HEADING = "## Wave facts";
@@ -235,8 +235,7 @@ export function replaceWaveFacts(text, facts) {
 }
 
 function git(root, args) {
-  const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  return result.status === 0 ? result.stdout.trim() : null;
+  return gitOptional(args, { cwd: root });
 }
 
 export function readGit(root) {
@@ -263,8 +262,7 @@ export function readGit(root) {
     head,
     promotion,
     headIsPromotion: promotion !== null && promotion.sha === head,
-    isAncestor: (sha) =>
-      spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", sha, "HEAD"]).status === 0,
+    isAncestor: (sha) => git(root, ["merge-base", "--is-ancestor", sha, "HEAD"]) !== null,
   };
 }
 
@@ -445,7 +443,7 @@ async function main() {
   process.exitCode = failures.length ? 1 : 0;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     await main();
   } catch (error) {

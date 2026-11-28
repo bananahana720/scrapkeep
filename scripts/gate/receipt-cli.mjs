@@ -4,7 +4,7 @@ import {
   formatJsonReceipt,
   writeJsonReceipt,
 } from "../lib/receipt.mjs";
-import { cleanHead, root } from "./clean-head.mjs";
+import { REPO_ROOT as root, cleanHead } from "../lib/git.mjs";
 
 export { COMMIT_SHA_RE, cleanHead, commitsMatch, formatJsonReceipt, root, writeJsonReceipt };
 

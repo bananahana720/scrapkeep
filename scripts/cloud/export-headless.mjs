@@ -1,5 +1,4 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "../lib/cli.mjs";
 import { runLinuxExport } from "../sketch-export.mjs";
 
 export function runCloudExport(argv = process.argv.slice(2), options = {}) {
@@ -10,5 +9,4 @@ export function runCloudExport(argv = process.argv.slice(2), options = {}) {
   });
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  await runCloudExport();
+if (isMain(import.meta.url)) await runCloudExport();

@@ -22,8 +22,9 @@ import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
 import { checkImportStamp, sketchState, stampPath, writeImportStamp } from "../import-stamp.mjs";
 import { defaultChallengeJobs } from "../challenge/lib.mjs";
 import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
+import { REPO_ROOT, git as runGit } from "../lib/git.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const root = REPO_ROOT;
 const SKETCH = "sketches/core-loop";
 export const BANDS_FILE = path.join(root, "scripts", "gate", "bands.json");
 const BOT_BLOCK = 5;
@@ -1033,9 +1034,7 @@ function parseArguments(argv) {
 }
 
 function git(...args) {
-  const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr.trim()}`);
-  return result.stdout.trim();
+  return runGit(args, { cwd: root });
 }
 
 function buildPlan(options) {
@@ -1083,13 +1082,7 @@ async function run(options) {
     owners,
     saveOwners: (map) => writeFileSync(ownersFile, JSON.stringify(map, null, 2) + "\n"),
     add: (dir) => {
-      const result = spawnSync(
-        "git",
-        ["-C", root, "worktree", "add", "--detach", dir, options.head],
-        { encoding: "utf8" },
-      );
-      if (result.status !== 0)
-        throw new Error(`git worktree add ${dir} failed: ${result.stderr.trim()}`);
+      runGit(["worktree", "add", "--detach", dir, options.head], { cwd: root });
       const siblings = readdirSync(wtDir, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
         .map((entry) => path.join(wtDir, entry.name))
@@ -1128,9 +1121,7 @@ async function run(options) {
     const loadStart = loadNow();
     let exit = 70;
     try {
-      const found = spawnSync("git", ["-C", wt, "rev-parse", "HEAD"], {
-        encoding: "utf8",
-      }).stdout.trim();
+      const found = runGit(["rev-parse", "HEAD"], { cwd: wt });
       if (found !== options.head) throw new Error(`${wt} is at ${found.slice(0, 8)}, not ${head8}`);
       exit = await kinds[step.kind](step, {
         wt,

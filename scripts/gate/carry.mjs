@@ -1,12 +1,11 @@
-import { spawnSync } from "node:child_process";
-import { realpathSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
+import { isMain } from "../lib/cli.mjs";
+import { REPO_ROOT, git as runGit } from "../lib/git.mjs";
 import { buildIndex, isTopLevelTest, referrers } from "../sketch-fast.mjs";
 import { gateLists } from "./shard.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const root = REPO_ROOT;
 const SKETCH = "sketches/core-loop";
 
 export function sortChanges(paths, sketch = SKETCH) {
@@ -53,9 +52,7 @@ export function place(name, lists) {
 }
 
 function git(...args) {
-  const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr.trim()}`);
-  return result.stdout.trim();
+  return runGit(args, { cwd: root });
 }
 
 function main() {
@@ -93,7 +90,7 @@ function main() {
   return 0;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = main();
   } catch (error) {

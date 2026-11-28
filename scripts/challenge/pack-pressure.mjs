@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dedupeBy, parseNdjson, shardJobs } from "./lib.mjs";
 import { gateBotArgs, planGateJobs, summarizeRun } from "./gates-lib.mjs";
 import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
+import { isMain } from "../lib/cli.mjs";
 import { pool, runProcess, stateEnv } from "./proc.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -105,7 +106,7 @@ function argsFor(job, out) {
   ];
 }
 
-const main = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const main = isMain(import.meta.url);
 if (main && opts.report) report(opts.report);
 else if (main) await run();
 
