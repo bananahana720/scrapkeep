@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
@@ -9,26 +9,50 @@ import { isMain } from "../lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-function expandToken(token, baseDir = root) {
-  if (!token.includes("*")) return [token];
-  const dir = path.dirname(token);
-  const pattern = path.basename(token);
-  const regex = new RegExp(
-    "^" + pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$",
+export const TEST_SCOPES = Object.freeze([
+  Object.freeze({ dir: "tests", suffix: ".test.js", recursive: false }),
+  Object.freeze({ dir: "scripts", suffix: ".test.mjs", recursive: true }),
+  Object.freeze({
+    dir: "project-guide/handoff/sitting-kit",
+    suffix: ".test.mjs",
+    recursive: false,
+  }),
+]);
+
+export const EXCLUDED_TESTS = Object.freeze({
+  "scripts/budget-audit.test.mjs":
+    "audits every model in sketches/core-loop/assets/registry.json, which the node-tests partial checkout leaves out of sketches/core-loop/assets/models/; scripts/sketch-fast.mjs runs it on a full checkout through NODE_PATH_RULES",
+  "scripts/far-faults.test.mjs":
+    "scans the park prop models under sketches/core-loop/assets/models/park/props/, which the node-tests partial checkout leaves out; scripts/sketch-fast.mjs runs it on a full checkout through NODE_PATH_RULES",
+});
+
+function walkScope(baseDir, relDir, suffix, recursive, out) {
+  const absDir = path.join(baseDir, relDir);
+  if (!existsSync(absDir)) return;
+  const entries = readdirSync(absDir, { withFileTypes: true }).sort((a, b) =>
+    a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
   );
-  return readdirSync(path.join(baseDir, dir))
-    .filter((name) => regex.test(name))
-    .sort()
-    .map((name) => path.posix.join(dir, name));
+  for (const entry of entries) {
+    if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+    const relPath = path.posix.join(relDir, entry.name);
+    if (entry.isDirectory()) {
+      if (recursive) walkScope(baseDir, relPath, suffix, true, out);
+    } else if (entry.isFile() && entry.name.endsWith(suffix)) {
+      out.push(relPath);
+    }
+  }
 }
 
-export function resolveTestFiles(testScript, baseDir = root) {
-  const prefix = "node --test ";
-  if (!testScript.startsWith(prefix)) {
-    throw new Error(`expected package.json "test" script to start with "${prefix}"`);
+export function discoverTestFiles(
+  baseDir = root,
+  { scopes = TEST_SCOPES, excluded = EXCLUDED_TESTS } = {},
+) {
+  const found = [];
+  for (const scope of scopes) {
+    walkScope(baseDir, scope.dir, scope.suffix, scope.recursive, found);
   }
-  const tokens = testScript.slice(prefix.length).trim().split(/\s+/).filter(Boolean);
-  return [...new Set(tokens.flatMap((token) => expandToken(token, baseDir)))];
+  const excludedSet = new Set(Object.keys(excluded));
+  return [...new Set(found)].filter((file) => !excludedSet.has(file)).sort();
 }
 
 export function shuffleFiles(files, seed) {
@@ -172,8 +196,10 @@ if (isMain(import.meta.url)) {
       throw new Error("--shard with --shuffle requires an explicit --seed");
     }
     const seed = opts.shuffle ? (opts.seed ?? (Date.now() & 0xffffffff) >>> 0) : null;
-    const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
-    const files = resolveTestFiles(pkg.scripts?.test ?? "", root);
+    const files = discoverTestFiles(root);
+    if (files.length === 0) {
+      throw new Error("no Node test files discovered");
+    }
     const args = buildNodeTestArgs(files, { shard: opts.shard, shuffle: opts.shuffle, seed });
     const selectedCount = args.length - 1;
     if (opts.shuffle) {

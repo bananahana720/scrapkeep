@@ -357,7 +357,7 @@ static func _line_path(out: Array, id: String, waypoints: Array, waymarks: Array
 			named.append(point)
 			if not waymarks.has(point):
 				_add(out, id, "reference", "waypoint %s is no waymark" % point)
-		elif not _is_vec(point, 2):
+		elif not is_vec(point, 2):
 			_add(out, id, "type", "waypoint %s is neither a waymark id nor [x, z]" % str(point))
 	if waypoints.is_empty() or str(waypoints[0]) != DROP_IN:
 		_add(out, id, "line", "line does not start at " + DROP_IN)
@@ -401,7 +401,7 @@ static func _waymarks(out: Array, waymarks: Array, places: Dictionary) -> void:
 
 static func _wear_row(out: Array, id: String, row: Dictionary) -> void:
 	var points: Array = row["points"]
-	if points.size() < 2 or not points.all(func(p): return _is_vec(p, 2)):
+	if points.size() < 2 or not points.all(func(p): return is_vec(p, 2)):
 		_add(out, id, "points", "points must be two or more [x, z] pairs")
 	if float(row["width_m"]) <= 0.0:
 		_add(out, id, "width", "width_m %s must be above 0" % str(row["width_m"]))
@@ -420,7 +420,7 @@ static func _approach(out: Array, approach, play_rect: Array) -> void:
 	if String(card["to"]).strip_edges() == "":
 		_add(out, "approach", "missing", "approach.far_card.to must be non-empty")
 	if card.has("size"):
-		if not _is_vec(card["size"], 2) or float(card["size"][0]) <= 0.0 or float(card["size"][1]) <= 0.0:
+		if not is_vec(card["size"], 2) or float(card["size"][0]) <= 0.0 or float(card["size"][1]) <= 0.0:
 			_add(out, "approach", "approach", "far_card.size %s must be [width, height] above 0" % str(card["size"]))
 	if card.has("yaw_deg") and not _is_num(card["yaw_deg"]):
 		_add(out, "approach", "type", "far_card.yaw_deg %s is not n" % str(card["yaw_deg"]))
@@ -450,7 +450,7 @@ static func _cable_rows(out: Array, park: Dictionary, homes: Dictionary, ctx: Di
 		if not homes.has(row["to"]):
 			_add(out, id, "reference", "cable to %s is no home row" % str(row["to"]))
 		var via: Array = row["via"]
-		if not via.all(func(p): return _is_vec(p, 2)):
+		if not via.all(func(p): return is_vec(p, 2)):
 			_add(out, id, "type", "cable via must hold [x, z] pairs")
 		var pip_f := float(row["pip"])
 		var pip := int(pip_f)
@@ -563,7 +563,7 @@ static func _event_row(out: Array, id: String, row: Dictionary, rows: Dictionary
 	if kind == "sluice_surge" and row["trigger"].get("on") != "activity":
 		_add(out, id, "trigger", "a sluice_surge opens on its surge_run activity, not on %s" % str(row["trigger"].get("on")))
 	if _fields(out, id, row["telegraph"], TELEGRAPH_FIELDS):
-		var floor_s := _lead_floor(row)
+		var floor_s := lead_floor(row)
 		if float(row["telegraph"]["lead_s"]) < floor_s:
 			_add(out, id, "lead_floor", "lead_s %s is under the %s s floor for %s" % [row["telegraph"]["lead_s"], floor_s, kind])
 	var effect: Dictionary = row["effect"]
@@ -589,7 +589,7 @@ static func _event_row(out: Array, id: String, row: Dictionary, rows: Dictionary
 		_add(out, id, "guardrail", "%s at %s, a %s row" % [kind, site["id"], site["society"]])
 
 
-static func _lead_floor(row: Dictionary) -> float:
+static func lead_floor(row: Dictionary) -> float:
 	if ARRIVAL_FAMILIES.has(row["family"]):
 		return LEAD_ARRIVAL_S
 	if GROUND_KINDS.has(row["kind"]) or str(row["effect"].get("swap", "")) != "":
@@ -694,11 +694,11 @@ static func _recipe(out: Array, id: String, recipe: String) -> void:
 		return
 	if recipe == LANDMARK or recipe == SCATTER:
 		return
-	if not RECIPES.has(recipe) and not _registry().has(recipe):
+	if not RECIPES.has(recipe) and not warm_registry().has(recipe):
 		_add(out, id, "recipe", "%s names no registry row" % recipe)
 
 
-static func _registry() -> Dictionary:
+static func warm_registry() -> Dictionary:
 	_registry_lock.lock()
 	if not _registry_read:
 		var read := read_file(REGISTRY_PATH)
@@ -773,11 +773,11 @@ static func _typed(value, want: String) -> bool:
 		"o":
 			return value is Dictionary
 		"v2":
-			return _is_vec(value, 2)
+			return is_vec(value, 2)
 		"v3":
-			return _is_vec(value, 3)
+			return is_vec(value, 3)
 		"v4":
-			return _is_vec(value, 4)
+			return is_vec(value, 4)
 	return false
 
 
@@ -785,7 +785,7 @@ static func _is_num(value) -> bool:
 	return value is float or value is int
 
 
-static func _is_vec(value, n: int) -> bool:
+static func is_vec(value, n: int) -> bool:
 	if not value is Array or value.size() != n:
 		return false
 	for v in value:

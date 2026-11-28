@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { checkLedger } from "./known-failing.mjs";
 import { checkWeekly } from "./gate/weekly.mjs";
 import { REPO_ROOT } from "./lib/git.mjs";
+import { checkSweep } from "./structure-sweep.mjs";
 import { walkAsync } from "./lib/walk.mjs";
 import { checkWaveState } from "./wave-state.mjs";
 
@@ -306,6 +307,13 @@ async function checkWaveStateStage(docs) {
   return findings.filter((finding) => finding.level === "failure").length;
 }
 
+function checkSweepStage(docs) {
+  const findings = checkSweep(docs.root);
+  for (const finding of findings)
+    docs.fail("structure-sweep", finding.file, finding.line, finding.message);
+  return findings.length;
+}
+
 const RULINGS_FILE = "project-guide/handoff/DECISIONS.md";
 async function checkRulingLetters(docs) {
   try {
@@ -404,6 +412,7 @@ async function main() {
   const waveFindings = await checkWaveStateStage(docs);
   const ledgerFindings = await checkLedgerStage(docs);
   await checkRulingLetters(docs);
+  const sweepFindings = checkSweepStage(docs);
   const architectureFindings = await checkArchitectureSync(docs);
   const manifest = {};
   for (const file of [...docs.cache.keys()].sort()) manifest[file] = docs.cache.get(file).sha256;
@@ -419,6 +428,7 @@ async function main() {
       waveFindings,
       ledgerFindings,
       architectureFindings,
+      sweepFindings,
     },
     failures: failures.length,
     findings: docs.findings,
@@ -457,6 +467,8 @@ async function main() {
       " known-failing findings, " +
       architectureFindings +
       " architecture findings, " +
+      sweepFindings +
+      " structure-sweep findings, " +
       failures.length +
       " failures. Report: " +
       options.report,

@@ -3,6 +3,7 @@ extends SceneTree
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Rows := preload("res://src/presentation/rows.gd")
@@ -324,14 +325,14 @@ static func _babble_demo() -> Take:
 	engine.set_lounge(true)
 	t.play("bench_clank", t.sec(0.6), 1)
 	var at := t.sec(1.4)
-	var gain := db_to_linear(SfxBank.trim_db("babble")) * t.sfx_gain
+	var gain := db_to_linear(VoiceSynth.trim_db("babble")) * t.sfx_gain
 	for beat in 7:
 		t.play("sable_ready", at, 1)
 		var line: PackedFloat32Array
 		if beat < 6:
-			line = SfxBank.babble(MOSS_LINES[beat], beat + 1)
+			line = VoiceSynth.babble(MOSS_LINES[beat], beat + 1)
 		else:
-			line = SfxBank.babble(MOSS_RELENT, SfxBank.BABBLE_RELENT)
+			line = VoiceSynth.babble(MOSS_RELENT, VoiceSynth.BABBLE_RELENT)
 		t.to(at + t.sec(0.3))
 		t.add(line, at + t.sec(0.3), gain, 0.15)
 		at += t.sec(0.3) + line.size() + t.sec(0.7)

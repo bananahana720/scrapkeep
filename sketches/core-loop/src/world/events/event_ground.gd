@@ -103,17 +103,30 @@ class Ground:
 			if ParkMap.footprint_contains(profile.site, Vector2(x, z)):
 				h = maxf(h, profile.surface.height(Vector2(x, z)))
 		return h
-	func _ensure(_index: int) -> int:
-		return 0
-	func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
-		return _terrain._grid_height(heights, x, z)
+	func floor_height(x: float, z: float) -> float:
+		return _floor(0, x, z)
+	func bare_grid_height(x: float, z: float) -> float:
+		return _terrain.grid_height(_heights[0], x, z)
+	func hole_floor(x: float, z: float) -> float:
+		return ParkTerrain.hole_floor(_holes[0], _under[0], x, z)
+	func copy_roofs() -> void:
+		_roofs = _roofs.map(func(roof: Surface) -> Surface: return roof.copy())
+	func with_profile(profile: Dictionary) -> Ground:
+		var ground := Ground.new()
+		ground._heights = _heights
+		ground._holes = _holes
+		ground._under = _under
+		ground._roofs = _roofs
+		ground._profiles = _profiles + [profile]
+		ground._terrain = _terrain
+		return ground
 	func _floor(_i: int, x: float, z: float) -> float:
 		var roof_y := -INF
 		for roof: Surface in _roofs:
 			roof_y = maxf(roof_y, roof.height(Vector2(x, z)))
 		if roof_y > -INF:
-			return maxf(roof_y, _terrain._retained_park_height(_heights[0], _holes[0], x, z))
-		return _terrain._park_height(_heights[0], _holes[0], _under[0], x, z)
+			return maxf(roof_y, _terrain.retained_park_height(_heights[0], _holes[0], x, z))
+		return _terrain.park_height(_heights[0], _holes[0], _under[0], x, z)
 
 
 class Snapshot:
@@ -123,29 +136,22 @@ class Snapshot:
 	func copy_roofs() -> void:
 		if _copied:
 			return
-		terrain._roofs = terrain._roofs.map(func(roof: Surface) -> Surface: return roof.copy())
+		terrain.copy_roofs()
 		_copied = true
 	func with_profile(profile: Dictionary) -> Snapshot:
-		var ground := Ground.new()
-		ground._heights = terrain._heights
-		ground._holes = terrain._holes
-		ground._under = terrain._under
-		ground._roofs = terrain._roofs
-		ground._profiles = terrain._profiles + [profile]
-		ground._terrain = terrain._terrain
 		var out := Snapshot.new()
-		out.terrain = ground
+		out.terrain = terrain.with_profile(profile)
 		out._copied = _copied
 		return out
 
 
 static func snapshot(terrain, index: int, copy_now := true) -> Snapshot:
-	var i := index - 1
+	var grid: Dictionary = terrain.park_stage_grid(index)
 	var ground := Ground.new()
-	ground._heights = [terrain._heights[i]]
-	ground._holes = [terrain._holes[i]]
-	ground._under = [terrain._under[i]]
-	for roof in terrain._cave_roofs.get(i, {}).values():
+	ground._heights = [grid.get("heights", PackedFloat32Array())]
+	ground._holes = [grid.get("holes", PackedByteArray())]
+	ground._under = [grid.get("under", PackedFloat32Array())]
+	for roof in terrain.cave_roofs(index).values():
 		ground._roofs.append(roof.surface.copy() if copy_now else roof.surface)
 	ground._terrain = terrain.get_script()
 	var out := Snapshot.new()
@@ -155,13 +161,13 @@ static func snapshot(terrain, index: int, copy_now := true) -> Snapshot:
 
 
 static func pristine(terrain, index: int) -> bool:
-	for roof in terrain._cave_roofs.get(index - 1, {}).values():
+	for roof in terrain.cave_roofs(index).values():
 		if roof.surface != roof.baseline:
 			return false
 	return true
 
 
-static func _rectangle(low: Vector2, high: Vector2) -> Array:
+static func rectangle(low: Vector2, high: Vector2) -> Array:
 	return [low, Vector2(high.x, low.y), high, Vector2(low.x, high.y)]
 
 
@@ -216,13 +222,12 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 						for point in [a, b, c, d]:
 							if not corners.has(point):
 								var y: float = _water_ground(world, point) if water else world.terrain.height(point.x, point.y)
-								if not water and "_heights" in world.terrain:
-									y = maxf(y, world.terrain._grid_height(world.terrain._heights[world.terrain.stage - 1], point.x, point.y))
+								if not water and world.terrain.has_method("bare_grid_height"):
+									y = maxf(y, world.terrain.bare_grid_height(point.x, point.y))
 								corners[point] = y
 							heights.append(corners[point])
-						if water and "_holes" in world.terrain:
-							var terrain = world.terrain
-							var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], a.x + ParkTerrain.STEP * 0.5, a.y + ParkTerrain.STEP * 0.5)
+						if water and world.terrain.has_method("hole_floor"):
+							var floor_y: float = world.terrain.hole_floor(a.x + ParkTerrain.STEP * 0.5, a.y + ParkTerrain.STEP * 0.5)
 							if not is_nan(floor_y):
 								for k in 4:
 									heights[k] = minf(heights[k], floor_y)
@@ -307,14 +312,11 @@ static func _clip_edge(polygon: Array, a: Vector2, b: Vector2) -> Array:
 
 
 static func _water_ground(world, point: Vector2) -> float:
-	var ground: float = world.terrain.height(point.x, point.y)
-	if world.terrain.has_method("_floor"):
-		ground = world.terrain._floor(world.terrain._ensure(world.terrain.stage), point.x, point.y)
-	if "_holes" in world.terrain:
-		var terrain = world.terrain
+	var ground: float = world.terrain.floor_height(point.x, point.y) if world.terrain.has_method("floor_height") else world.terrain.height(point.x, point.y)
+	if world.terrain.has_method("hole_floor"):
 		for delta in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2.ONE]:
 			var probe: Vector2 = point + delta * ParkTerrain.STEP * 0.5
-			var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], probe.x, probe.y)
+			var floor_y: float = world.terrain.hole_floor(probe.x, probe.y)
 			if not is_nan(floor_y):
 				ground = minf(ground, floor_y)
 	return ground
@@ -479,7 +481,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	if row.kind == "cave_in":
 		var roof: Dictionary = world.terrain.cave_roof(row.id) if world.terrain.has_method("cave_roof") else {}
 		if roof.is_empty():
-			roof = roof_body(owner, project_surface(world, record.geometry, [_rectangle(-record.geometry.half, record.geometry.half)]))
+			roof = roof_body(owner, project_surface(world, record.geometry, [rectangle(-record.geometry.half, record.geometry.half)]))
 		roof.body.name = "Natural_" + row.id
 		roof["moved"] = overlay_map.moved
 		overlay_map.swaps[id] = {"body": roof.body, "roof": roof, "cave": true, "owners": {}, "progress": 0.0}
@@ -549,17 +551,17 @@ static func overlay_surface(world, kind: String, geometry: Dictionary, deferred 
 		if kind == "impact":
 			return base + maxf(0.0, Gorge.crater_profile(Vector2(x, z).length() * Gorge.CRATER_OUT / radius))
 		return base + Gorge.rubble_profile(Vector2(x, z).length() * Gorge.RUBBLE_RADIUS / radius)
-	return project_surface(world, geometry, [_rectangle(-half, half)],
+	return project_surface(world, geometry, [rectangle(-half, half)],
 		Callable() if kind == "collapse" else func(local, base): return float(height.call(local.x, local.y)) - base,
 		false, null, null, null, deferred)
 
 
 static func plan_overlays(world, items: Array) -> Dictionary:
 	var terrain = world.terrain
-	if items.is_empty() or not "_cave_roofs" in terrain or not terrain.overlays.is_empty():
+	if items.is_empty() or not terrain.has_method("park_stage_grid") or not terrain.overlays.is_empty():
 		return {}
 	var stage: int = terrain.stage
-	if not terrain._is_park[stage - 1] or terrain._heights[stage - 1].is_empty():
+	if terrain.park_stage_grid(stage).is_empty():
 		return {}
 	var ground := snapshot(terrain, stage, false)
 	var out := {}
@@ -570,14 +572,14 @@ static func plan_overlays(world, items: Array) -> Dictionary:
 	for item: Dictionary in items:
 		reach[item.id] = _rect_bounds(item.geometry.at, item.geometry.half, item.geometry.yaw)
 	return {"task": WorkerThreadPool.add_task(work, true, "event overlays"), "out": out, "stage": stage,
-		"roofs": terrain._cave_roofs.get(stage - 1, {}).values().map(func(roof): return roof.surface), "reach": reach}
+		"roofs": terrain.cave_roofs(stage).values().map(func(roof): return roof.surface), "reach": reach}
 
 
 static func planned_overlay(world, plan: Dictionary, id: String) -> Dictionary:
 	var terrain = world.terrain
 	if plan.is_empty() or terrain.stage != plan.stage or not plan.get("reach", {}).has(id) or _overlay_under(world, plan.reach[id]):
 		return {}
-	if terrain._cave_roofs.get(plan.stage - 1, {}).values().map(func(roof): return roof.surface) != plan.roofs:
+	if terrain.cave_roofs(plan.stage).values().map(func(roof): return roof.surface) != plan.roofs:
 		return {}
 	settle_overlays(plan)
 	if not plan.out.has(id):
@@ -698,7 +700,7 @@ static func span_surface(site: Dictionary, depth_m: float, deferred := false) ->
 	var corners := PackedVector3Array()
 	var low := Vector2.INF
 	var high := -Vector2.INF
-	for local: Vector2 in _rectangle(-half, half):
+	for local: Vector2 in rectangle(-half, half):
 		var point := local.rotated(-yaw) + centre
 		corners.append(Vector3(point.x, float(site.y) - depth_m * (local.y + half.y) / (2.0 * half.y), point.y))
 		low = low.min(point)

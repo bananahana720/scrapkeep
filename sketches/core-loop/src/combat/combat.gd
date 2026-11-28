@@ -64,6 +64,7 @@ const BallRules := preload("res://src/movement/ball_rules.gd")
 const AllyHusk := preload("res://src/combat/ally_husk.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const HeroFx := preload("res://src/presentation/hero_fx.gd")
+const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 
 const MUZZLE := 1.25
 const AIM_SLACK := 14.0
@@ -350,7 +351,7 @@ func setup(ctx_ref) -> void:
 	devices = Devices.new()
 	sticky.ledger = devices
 	wear_trail = WearTrail.new()
-	wear_trail.setup(ctx, effects, _floor_at)
+	wear_trail.setup(ctx, effects, floor_at)
 	wear_trail.deal = _trail_deal
 	churn = ChurnGround.new()
 	churn.setup(ctx)
@@ -764,9 +765,9 @@ func _read_armour(enemy: Node3D, hit: Dictionary, result: Dictionary) -> void:
 	_armour_known[armour] = true
 	match armour:
 		"plated":
-			_discover("armour_plated", enemy.global_position)
+			discover("armour_plated", enemy.global_position)
 		"wet":
-			_discover("armour_wet", enemy.global_position)
+			discover("armour_wet", enemy.global_position)
 
 
 func _door_crit(hit: Dictionary) -> void:
@@ -1445,17 +1446,17 @@ func _physics_process(delta: float) -> void:
 	var had_overdrive := _overdrive > 0.0
 	_overdrive = maxf(0.0, _overdrive - delta)
 	if had_overdrive and _overdrive <= 0.0:
-		_clear_buff("overdrive")
+		clear_buff("overdrive")
 	if _mounted_boost_left > 0.0:
 		_mounted_boost_left = maxf(0.0, _mounted_boost_left - delta)
 	if _spring_until >= 0.0 and _clock >= _spring_until:
 		_spring_until = -1.0
-		_clear_buff("spring")
+		clear_buff("spring")
 	if _pike_count > 0:
 		var pike_row := _pike_row()
 		if pike_row.is_empty() or _clock - _pike_last >= float(pike_row.get("idle_s", 3.0)):
 			_pike_count = 0
-			_clear_buff("pike")
+			clear_buff("pike")
 	_rocket_left = maxf(0.0, _rocket_left - delta)
 	_tick_cloak(delta)
 	_tick_upgrades(delta)
@@ -1664,7 +1665,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	if sprung:
 		damage *= SPRING_MULT
 		_spring_until = -1.0
-		_clear_buff("spring")
+		clear_buff("spring")
 	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, reach + AIM_SLACK)
 	var point: Vector3 = aim["point"]
 	var forward := point - ball
@@ -1687,7 +1688,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 		layout_pat.count = clampi(int(layout_pat.count) + spark_count - 1, 1, Pattern.MAX_VOLLEY)
 		layout_pat.spread_deg = maxf(float(layout_pat.spread_deg), 6.0)
 	var layout: Array = layout_pat.layout(forward, volleys)
-	var shot: int = _shot_bits() if source == "weapon" else 0
+	var shot: int = shot_bits() if source == "weapon" else 0
 	var ricochet_carve: bool = source == "weapon" and ctx.player.state.carving and _has_cross_synergy("ricochet_canyon")
 	var rc_row: Dictionary = Synergies.cross_system_row("ricochet_canyon") if ricochet_carve else {}
 	var sixth_hot: bool = source == "weapon" and weapon == Weapons.RAPID_LASER and bool(shot_desc.get("sixth_hot", false))
@@ -1780,7 +1781,7 @@ func _pike_press(source: String) -> Dictionary:
 	var row := _pike_row()
 	if row.is_empty():
 		_pike_count = 0
-		_clear_buff("pike")
+		clear_buff("pike")
 		return {}
 	var step := pike_advance(_pike_count, _pike_last, _clock, row)
 	_pike_count = int(step["count"])
@@ -1789,7 +1790,7 @@ func _pike_press(source: String) -> Dictionary:
 		_post_buff("pike", {"icon": "pike", "tone": Palette.AMBER, "kind": BuffLedger.KIND_COUNT,
 			"stacks": _pike_count, "max_stacks": maxi(1, int(row.get("every", 6)) - 1)})
 	else:
-		_clear_buff("pike")
+		clear_buff("pike")
 	return step
 
 
@@ -2261,7 +2262,7 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 			_clamped.erase(id)
 	var acts := int(bolt.get("acts", 0))
 	if ShotBits.has(int(bolt.get("bits", 0)), ShotBits.bit("heat")):
-		var heat := _heat(enemy, point)
+		var heat := apply_heat(enemy, point)
 		damage *= float(heat["mult"])
 		if heat["lit"] or heat["bonus"]:
 			acts = ShotBits.union(acts, ShotBits.bit("heat"))
@@ -2353,16 +2354,15 @@ static func pull_force(pilot_heft: float, body_heft: float, nth: int) -> float:
 	return PULL_KNOCK * minf(pilot_heft / maxf(body_heft, 0.01), PULL_RATIO_CAP) * pow(PULL_FALLOFF, nth)
 
 
-func _shot_bits() -> int:
+func shot_bits() -> int:
 	var build = ctx.build if ctx != null else null
 	return int(build.shot_bits()) if build != null and build.has_method("shot_bits") else 0
 
 
-func _heat(enemy: Node3D, point: Vector3) -> Dictionary:
+func apply_heat(enemy: Node3D, point: Vector3) -> Dictionary:
 	var hit := heat_hit(_heated, enemy.get_instance_id(), _clock)
 	if hit["lit"] or hit["bonus"]:
-		var radius = enemy.get("radius")
-		effects.ring(point, (float(radius) if radius != null else 1.0) + (0.6 if hit["bonus"] else 0.3), ShotBits.TABLE["heat"]["color"])
+		effects.ring(point, _hull(enemy) + (0.6 if hit["bonus"] else 0.3), ShotBits.TABLE["heat"]["color"])
 	return hit
 
 
@@ -2408,33 +2408,6 @@ func _step_deferred_procs() -> void:
 			entry["part"], entry["source"], entry["impact"], float(entry["chip"]))
 	_draining_procs = false
 
-
-func nearest_enemies(at: Vector3, reach: float, limit: int) -> Array:
-	return _nearest_list(at, reach, limit)
-
-
-func apply_heat(enemy: Node3D, point: Vector3) -> Dictionary:
-	return _heat(enemy, point)
-
-
-func post_consumable_buff(buff_id: String, icon: String, tone: Color, duration_s: float) -> void:
-	_post_consumable_buff(buff_id, icon, tone, duration_s)
-
-
-func clear_buff(id: String) -> void:
-	_clear_buff(id)
-
-
-func synergy_context(extra := {}) -> Dictionary:
-	return _synergy_context(extra)
-
-
-func shot_bits() -> int:
-	return _shot_bits()
-
-
-func floor_at(at: Vector3) -> Vector3:
-	return _floor_at(at)
 
 
 func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "", impact := "", chip := CHIP) -> void:
@@ -2491,7 +2464,7 @@ func _nearest(at: Vector3, reach: float, exclude: Array) -> Node3D:
 	return best
 
 
-func _nearest_list(at: Vector3, reach: float, limit: int) -> Array:
+func nearest_enemies(at: Vector3, reach: float, limit: int) -> Array:
 	var found := []
 	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead():
@@ -2766,15 +2739,14 @@ static func in_line(from: Vector3, to: Vector3, width: float, point: Vector3, hu
 
 
 static func _hull(enemy: Node3D) -> float:
-	var r = enemy.get("radius")
-	return float(r) if r != null else 1.0
+	return ActiveBase.enemy_girth(enemy, 1.0)
 
 
 func _ground_under(at: Vector3) -> Vector3:
 	return at + Vector3.DOWN * 0.9
 
 
-func _floor_at(at: Vector3) -> Vector3:
+func floor_at(at: Vector3) -> Vector3:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at, at + Vector3.DOWN * 80.0, PhysicsLayers.WORLD_MASK))
 	return hit["position"] if not hit.is_empty() else _ground_under(at)
@@ -2877,7 +2849,7 @@ func _cannon_phase() -> int:
 
 
 func _cannon_ground(p: Vector3) -> float:
-	return _floor_at(p + Vector3.UP).y
+	return floor_at(p + Vector3.UP).y
 
 
 func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: float, damage: float, source: String,
@@ -2975,7 +2947,7 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 			if entry["source"] != "item_proc":
 				_cannon_recital(entry["family"], enemy.global_position)
 			if options.has("discovery"):
-				_discover("cannon_lane_charge", enemy.global_position)
+				discover("cannon_lane_charge", enemy.global_position)
 		if entry["expose"] and is_instance_valid(enemy) and not enemy.is_dead():
 			_cannon_expose(enemy, float(entry["window"]), entry["verb"])
 
@@ -3007,13 +2979,6 @@ func _clear_cannon_paint() -> void:
 		ctx.player.indicator.clear("cannon_bracket_r")
 
 
-func _relic_overdrive(slot: String) -> float:
-	if ctx == null or ctx.run == null:
-		return 1.0
-	var relic_id := String(Relics.held(ctx.run.parts).get(slot, ""))
-	return Relics.overdrive_of(relic_id) if relic_id != "" else 1.0
-
-
 func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true) -> Dictionary:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
@@ -3031,12 +2996,12 @@ func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true)
 	var ahead: float = maxf(1.0, reach - half)
 	var walk_od := 1.0
 	if walked:
-		walk_od = _relic_overdrive(AbilityState.WEAPON)
+		walk_od = relic_swaps.overdrive_for(AbilityState.WEAPON) if relic_swaps != null else 1.0
 		var walk_reach := WALK_REACH * walk_od
 		var flat := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
 		var dir_w := flat.normalized() if flat.length_squared() > 0.0001 else _flat_aim()
 		var end_at: Vector3 = _walk["end"]
-		centre = _floor_at(end_at + Vector3.UP)
+		centre = floor_at(end_at + Vector3.UP)
 		target = centre + dir_w * 10.0
 		radius = walk_reach + half
 		ahead = walk_reach
@@ -3198,7 +3163,7 @@ func _fire_plate(f: float, shape: Dictionary) -> void:
 func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.05 or ctx.player.abilities.cap(AbilityState.SMASH, "family", "") != "rush":
 		return
-	var landing := _floor_at(at + Vector3.UP)
+	var landing := floor_at(at + Vector3.UP)
 	var target := landing + _flat_aim() * 6.0
 	var best := Weapons.RUSH_REACH
 	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
@@ -3340,7 +3305,7 @@ func _cannon_recital(family: String, at: Vector3) -> void:
 		_recital_index = 0
 	if _recital_index == MindAttacks.FAMILIES.size():
 		_recital_index = 0
-		_discover("cannon_recital", at)
+		discover("cannon_recital", at)
 		var audio = _cannon_audio()
 		if audio != null:
 			audio.cannon_motif("cannon_recital", true)
@@ -3511,7 +3476,7 @@ func _step_line(intent, delta: float) -> void:
 			var waiting := _line_load
 			_line_load = {}
 			_fire_line_skill(String(waiting["id"]), float(waiting["fraction"]))
-			_discover("loaded_line", kit.anchor)
+			discover("loaded_line", kit.anchor)
 	if not _line_load.is_empty():
 		_line_load["left"] = float(_line_load["left"]) - delta
 		if float(_line_load["left"]) <= 0.0:
@@ -3672,7 +3637,7 @@ func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 func _ult_hit(enemy: Node3D, kind: String, damage: float, from: Vector3, landing: bool) -> float:
 	if enemy.has_method("_apply_posture") and enemy.has_method("staggered"):
 		if landing and enemy.staggered():
-			_discover("set_piece_core", enemy.global_position)
+			discover("set_piece_core", enemy.global_position)
 			var held: Node3D = ctx.player.smash_landing
 			ctx.player.smash_landing = enemy
 			_hit(enemy, "slam", damage, enemy.global_position - from, 0.0, "", "special", "slam")
@@ -3896,7 +3861,7 @@ func _run_gather(point: Vector3, valid: bool) -> bool:
 	if not valid:
 		return false
 	last_card = {"card": "gather_plate", "at": point, "hits": 0, "spent": false}
-	var at := _floor_at(point + Vector3.UP)
+	var at := floor_at(point + Vector3.UP)
 	plate = {"at": at, "until": _clock + Weapons.GATHER_SECONDS}
 	_gather_tick = 0.0
 	effects.ring(at, Weapons.GATHER_RADIUS, Palette.COPPER)
@@ -4000,7 +3965,7 @@ func _link_from(first: Node3D, mult := 1.0, shape := {}) -> int:
 	var centre: Vector3 = shape.get("centre", first.global_position)
 	var radius: float = shape.get("radius", Weapons.LINK_NEIGHBOUR_REACH)
 	var clips := [first]
-	for enemy in _nearest_list(centre, radius * 2.0, 16):
+	for enemy in nearest_enemies(centre, radius * 2.0, 16):
 		if clips.size() > Weapons.LINK_NEIGHBOURS:
 			break
 		if enemy != first and in_ring(centre, radius, enemy):
@@ -4213,7 +4178,7 @@ func tally_target(id: String, ball: Vector3, aim: Dictionary) -> Dictionary:
 	if plate.is_empty():
 		return {}
 	var at: Vector3 = plate["at"]
-	var reach: float = Ultimate.ARC_REACH[ultimate._heft_index()] if id == "plate_flywheel" else ctx.player.grapple_range()
+	var reach: float = Ultimate.ARC_REACH[ultimate.heft_index()] if id == "plate_flywheel" else ctx.player.grapple_range()
 	var forward: Vector3 = aim.get("forward", Vector3.ZERO)
 	var flat_aim := Vector3(forward.x, 0.0, forward.z)
 	var to := Vector3(at.x - ball.x, 0.0, at.z - ball.z)
@@ -4225,13 +4190,13 @@ func tally_target(id: String, ball: Vector3, aim: Dictionary) -> Dictionary:
 
 
 func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
-	var cap: int = Weapons.CLIP_CAP[ultimate._heft_index()]
+	var cap: int = Weapons.CLIP_CAP[ultimate.heft_index()]
 	var made := 0
 	if id == "plate_audit":
 		var ground = _audit_ground(ball)
 		if ground == null:
 			return 0
-		var radius: float = Weapons.AUDIT_STAMP_RADIUS + float(ultimate._knob("ult_volley", 0))
+		var radius: float = Weapons.AUDIT_STAMP_RADIUS + float(ultimate.knob("ult_volley", 0))
 		effects.ring(ground, radius, Palette.COPPER)
 		for enemy in _tally_enemies():
 			if in_ring(ground, radius, enemy):
@@ -4249,7 +4214,7 @@ func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float
 			if gap <= Weapons.GATHER_RADIUS:
 				near.append([gap, enemy])
 		near.sort_custom(func(a, b): return a[0] < b[0])
-		for entry in near.slice(0, Weapons.FLY_KNOT_CLIPS + int(ultimate._knob("ult_volley", 0))):
+		for entry in near.slice(0, Weapons.FLY_KNOT_CLIPS + int(ultimate.knob("ult_volley", 0))):
 			made += _ride_clip(entry[1], cap)
 	else:
 		for enemy in _volley_picks(ball, aim, ultimate.volley_targets()):
@@ -4326,17 +4291,15 @@ func _densest_knot(ball: Vector3):
 		if score > best_score:
 			best_score = score
 			best = enemy.global_position
-	return _floor_at(best + Vector3.UP) if best != null else null
+	return floor_at(best + Vector3.UP) if best != null else null
 
 
 func tally_peak(id: String, at: Vector3) -> void:
-	var legs: Array = ultimate._plan.get("legs", [])
-	var b: Vector3 = legs.back()["to"] if not legs.is_empty() else at
-	var left := -float(ultimate._leg_time)
-	for i in range(ultimate._leg, legs.size()):
-		left += float(legs[i]["seconds"])
+	var state: Dictionary = ultimate.leg_state()
+	var b: Vector3 = state["final_to"] if state["final_to"] != null else at
+	var left := float(state["total_remaining"])
 	if plate.is_empty() or _flat_gap(plate["at"], b) > 1.0:
-		plate = {"at": _floor_at(b + Vector3.UP), "until": 0.0}
+		plate = {"at": floor_at(b + Vector3.UP), "until": 0.0}
 		_gather_tick = 0.0
 	plate["radius"] = ultimate.landing_radius() + (Weapons.FLY_LANDING_BONUS if id == "plate_flywheel" else 0.0)
 	plate["until"] = _clock + maxf(left, 0.0) + Weapons.GATHER_TICK
@@ -4359,7 +4322,7 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		struck[enemy.get_instance_id()] = true
 		dealt += _ult_hit(enemy, "ultimate", amount, at, true)
 		hits += 1
-	var share: float = float(ultimate._knob("ult_settle", Weapons.SETTLE_SHARE))
+	var share: float = float(ultimate.knob("ult_settle", Weapons.SETTLE_SHARE))
 	var debts: Array = ride_clips.keys()
 	if not link_group.is_empty() and float(link_group["until"]) > _clock:
 		for cid in link_group["ids"]:
@@ -4400,13 +4363,13 @@ func _step_tally_piece(delta: float) -> void:
 			_gather_pull(p["at"], Weapons.GATHER_RADIUS)
 	if tally_piece != "plate_flywheel" or _fly_pulled or ultimate == null or ultimate.phase() != Ultimate.FLIGHT:
 		return
-	var legs: Array = ultimate._plan.get("legs", [])
-	if legs.is_empty() or ultimate._leg != legs.size() - 1:
+	var state: Dictionary = ultimate.leg_state()
+	if not bool(state["is_last"]):
 		return
-	if float(legs[ultimate._leg]["seconds"]) - float(ultimate._leg_time) > Weapons.FLY_PULL_LEAD:
+	if float(state["remaining"]) > Weapons.FLY_PULL_LEAD:
 		return
 	_fly_pulled = true
-	var b: Vector3 = legs[ultimate._leg]["to"]
+	var b: Vector3 = state["to"]
 	var reach: float = ultimate.landing_radius() + Weapons.FLY_LANDING_BONUS + Weapons.FLY_PULL
 	for enemy in _tally_enemies():
 		if not _ordinary(enemy):
@@ -4435,7 +4398,7 @@ func _step_tally_cards() -> void:
 		if frame > int(entry["queued"]) and codex.known(entry["after"]):
 			_tally_cards.erase(id)
 			_tally_card_frame = frame
-			_discover(id, entry["at"])
+			discover(id, entry["at"])
 			return
 
 
@@ -4498,7 +4461,7 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 
 
 func _on_mounted(at: Vector3, banked_speed: float) -> void:
-	if ultimate != null and ultimate.active() and ultimate._id == "outpost":
+	if ultimate != null and ultimate.active() and ultimate.active_id() == "outpost":
 		return
 	if ctx.run.class_def == null or not ctx.flow.in_play():
 		return
@@ -4519,7 +4482,7 @@ func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null, li
 	var count: int = burst["targets"] if limit < 0 else limit
 	var targets: Array
 	if drawn_centre == null:
-		targets = _nearest_list(at, burst["radius"], count)
+		targets = nearest_enemies(at, burst["radius"], count)
 	else:
 		targets = _nearest_in_ring(drawn_centre, burst["radius"], count)
 	var color := Weapons.color(Weapons.PYLON_TURRET)
@@ -4878,7 +4841,7 @@ func _tick_cloak(delta: float) -> void:
 	if cloak_left <= 0.0:
 		cloak_left = 0.0
 		kit.cloaked = false
-		_clear_buff("cloak")
+		clear_buff("cloak")
 		ctx.events.cloak_broken.emit("faded")
 
 
@@ -4888,7 +4851,7 @@ func _cloak_shot() -> float:
 	if not _knob("cloak_keep"):
 		cloak_left = 0.0
 		ctx.player.kit.cloaked = false
-		_clear_buff("cloak")
+		clear_buff("cloak")
 		ctx.events.cloak_broken.emit("shot")
 	return Weapons.CLOAK_CRIT
 
@@ -4979,14 +4942,14 @@ func _proc_blast(scale: float) -> void:
 
 
 func _proc_detonate(scale: float) -> void:
-	_detonate({"pos": _floor_at(ctx.player.ball_position()),
+	_detonate({"pos": floor_at(ctx.player.ball_position()),
 		"radius": Weapons.BASE[Weapons.STICKY_CHARGE]["bolt_radius"] * scale,
 		"damage": _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE) * scale,
 		"crit": false, "born": _clock, "_source": "item_proc"})
 
 
 func _proc_charges(scale: float) -> void:
-	var ground := _floor_at(ctx.player.ball_position())
+	var ground := floor_at(ctx.player.ball_position())
 	var count := int(scale)
 	for i in count:
 		var angle := TAU * float(i) / float(count)
@@ -5016,7 +4979,7 @@ func _tick_upgrades(delta: float) -> void:
 			_forced_source = prev_source
 			_pulse_left = _knob("mount_pulse")
 		elif kit.gliding and _knob("glide_bombs") > 0.0:
-			var ground := _floor_at(ctx.player.ball_position())
+			var ground := floor_at(ctx.player.ball_position())
 			var glide_charge: Dictionary = sticky.drop(ground, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
 				Weapons.MINI_FUSE, Weapons.MINI_ARM, _knob("sticky_reach"), _clock)
 			glide_charge["_source"] = "item_proc"
@@ -5259,7 +5222,7 @@ func _on_shell_returned(shell: Node3D) -> void:
 		var owned: bool = enemy == shell.lobber
 		strike(enemy, "shell", SHELL_RETURN_DAMAGE)
 		if owned and enemy.is_dead():
-			_discover("shell_return", enemy.global_position)
+			discover("shell_return", enemy.global_position)
 
 
 func _threat() -> float:
@@ -5339,7 +5302,7 @@ func _declare_codex() -> void:
 		codex.declare(entry)
 
 
-func _discover(id: String, at: Vector3) -> void:
+func discover(id: String, at: Vector3) -> void:
 	if ctx.flow != null and not ctx.flow.in_play():
 		return
 	if not discovered.has(id):
@@ -5352,13 +5315,13 @@ func _discover(id: String, at: Vector3) -> void:
 
 func _on_chain_state(state: String, _target: Node3D, at: Vector3, _cause: String) -> void:
 	if state == "chain_link" and ctx.player.chain.combo >= 3:
-		_discover("chain", at)
+		discover("chain", at)
 
 
 func _detect_before(enemy: Node3D, kind: String, _result: Dictionary) -> void:
 	var target_kind = enemy.get("kind")
 	if kind == "ram" and target_kind == "chaser" and enemy.state_name() == "windup":
-		_discover("counter_ram", enemy.global_position)
+		discover("counter_ram", enemy.global_position)
 
 
 func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
@@ -5370,9 +5333,9 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 		while not _crushes.is_empty() and _clock - _crushes[0] > CRUSH_WINDOW:
 			_crushes.pop_front()
 		if _crushes.size() >= CRUSH_CHAIN:
-			_discover("crush_chain", at)
+			discover("crush_chain", at)
 	if kind in ["runner", "arc", "turret", "sticky", "line"] and _since_slingshot <= PARTING_WINDOW:
-		_discover("parting_shot", at)
+		discover("parting_shot", at)
 
 
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
@@ -5543,7 +5506,7 @@ func _post_buff(id: String, spec: Dictionary) -> void:
 		ctx.buffs.post(id, spec)
 
 
-func _clear_buff(id: String) -> void:
+func clear_buff(id: String) -> void:
 	if ctx != null and ctx.get("buffs") != null:
 		ctx.buffs.clear_id(id)
 
@@ -5552,7 +5515,7 @@ func _clear_combat_buffs() -> void:
 	for id in ["overdrive", "cloak", "spring", "pike", "grapple_mut_live_bus",
 			"consumable_nitro_siphon", "consumable_anchor_flare",
 			"consumable_overclock_card", "consumable_foreman_memo"]:
-		_clear_buff(id)
+		clear_buff(id)
 
 
 static func _signal_argc(obj: Object, kind: String) -> int:
@@ -5580,9 +5543,9 @@ func _bank_world(_anchor: Vector3, _fraction: float, _mult: float) -> void:
 	var learned: bool = ctx.codex != null and ctx.codex.known("loaded_line")
 	ctx.player.bank_shot()
 	if learned:
-		_discover("bank_shot", _anchor)
+		discover("bank_shot", _anchor)
 		if switched:
-			_discover("switchback", _anchor)
+			discover("switchback", _anchor)
 
 
 func _bank_geometry(_fraction: float) -> Dictionary:
@@ -5630,7 +5593,7 @@ func _micro_row(part_id: String) -> Dictionary:
 	return Parts.micro_mutation(part_id)
 
 
-func _synergy_context(extra := {}) -> Dictionary:
+func synergy_context(extra := {}) -> Dictionary:
 	var c := extra.duplicate()
 	if ctx != null and ctx.run != null:
 		if not c.has("heft_class") and ctx.run.has_method("heft_class"):
@@ -5650,27 +5613,20 @@ func _synergy_context(extra := {}) -> Dictionary:
 func _has_cross_synergy(id: String, extra := {}) -> bool:
 	if ctx == null:
 		return false
-	var context := _synergy_context(extra)
+	var context := synergy_context(extra)
 	var build = ctx.build
 	var fx = build.get("effects") if build != null else null
 	if fx != null and fx.has_method("has_cross_synergy") and fx.has_cross_synergy(id, context):
 		return true
 	if ctx.run == null:
 		return false
-	return Synergies.cross_system_awake(id, ctx.run.parts, Callable(self, "_part_synergy_info"), context)
-
-
-static func _part_synergy_info(part_id: String) -> Dictionary:
-	var d: Resource = Parts.def(part_id)
-	if d == null:
-		return {}
-	return {"tags": d.tags, "bits": d.bits}
+	return Synergies.cross_system_awake(id, ctx.run.parts, OrbitalSatellites.part_synergy_info, context)
 
 
 func active_cross_synergies(extra := {}) -> Array:
 	if ctx == null or ctx.run == null:
 		return []
-	return Synergies.cross_system_active(ctx.run.parts, Callable(self, "_part_synergy_info"), _synergy_context(extra))
+	return Synergies.cross_system_active(ctx.run.parts, OrbitalSatellites.part_synergy_info, synergy_context(extra))
 
 
 func micro_mutation_count(part_id: String) -> int:
@@ -6068,7 +6024,7 @@ func _reset_grapple_muts_state(clear_counts := false) -> void:
 	_live_bus_charged_until = -1.0
 	_live_bus_charges = 0
 	_tether_slam_armed.clear()
-	_clear_buff("grapple_mut_live_bus")
+	clear_buff("grapple_mut_live_bus")
 	if ctx != null and ctx.destructibles != null and ctx.destructibles.has_method("set_swing_heft_bonus"):
 		ctx.destructibles.set_swing_heft_bonus(0)
 	if clear_counts:
@@ -6347,7 +6303,7 @@ func _step_grapple_mutations(delta: float, enemies: Array) -> void:
 	if _live_bus_charges > 0 and _clock >= _live_bus_charged_until:
 		_live_bus_charges = 0
 		_live_bus_charged_until = -1.0
-		_clear_buff("grapple_mut_live_bus")
+		clear_buff("grapple_mut_live_bus")
 	if not _tether_slam_armed.is_empty() and _clock >= float(_tether_slam_armed.get("until", -1.0)):
 		_tether_slam_armed.clear()
 	var kit = ctx.player.kit
@@ -6612,7 +6568,7 @@ func _consume_grapple_mut_strike(hit: Dictionary) -> void:
 		var arc_r := float(row.get("arc_radius_m", 8.0))
 		_live_bus_charges = 0
 		_live_bus_charged_until = -1.0
-		_clear_buff("grapple_mut_live_bus")
+		clear_buff("grapple_mut_live_bus")
 		var at: Vector3 = hit["at"]
 		effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, at + Vector3.UP * 0.5, Palette.AMBER)
 		effects.ring(at, 4.5, Palette.AMBER)
@@ -6715,20 +6671,20 @@ func _step_consumables(delta: float, enemies: Array) -> void:
 		_nitro_left = maxf(0.0, _nitro_left - delta)
 		_step_nitro_siphon(enemies)
 		if _nitro_left <= 0.0:
-			_clear_buff("consumable_nitro_siphon")
+			clear_buff("consumable_nitro_siphon")
 
 	if _overclock_left > 0.0:
 		_overclock_left = maxf(0.0, _overclock_left - delta)
 		_refresh_overclock_cooldowns()
 		if _overclock_left <= 0.0:
-			_clear_buff("consumable_overclock_card")
+			clear_buff("consumable_overclock_card")
 
 	if _memo_left > 0.0:
 		_memo_left = maxf(0.0, _memo_left - delta)
 		_hold_memo_formation()
 		if _memo_left <= 0.0:
 			_release_memo_formation()
-			_clear_buff("consumable_foreman_memo")
+			clear_buff("consumable_foreman_memo")
 
 	if not _balloons.is_empty():
 		var kept_balloons: Array = []
@@ -6746,7 +6702,7 @@ func _step_consumables(delta: float, enemies: Array) -> void:
 			b.queue_free()
 		_balloons = kept_balloons
 		if _balloons.is_empty():
-			_clear_buff("consumable_anchor_flare")
+			clear_buff("consumable_anchor_flare")
 
 
 func use_consumable(override_id := "") -> Dictionary:
@@ -6815,7 +6771,7 @@ func _fire_nitro_siphon(at: Vector3) -> Dictionary:
 	var row := Consumables.row_of(Consumables.NITRO_SIPHON)
 	var dur := float(row.get("duration_s", 6.0))
 	_nitro_left = maxf(_nitro_left, dur)
-	_post_consumable_buff("consumable_nitro_siphon", String(row["icon"]), row["color"], _nitro_left)
+	post_consumable_buff("consumable_nitro_siphon", String(row["icon"]), row["color"], _nitro_left)
 	var ripped := _step_nitro_siphon(get_tree().get_nodes_in_group(Groups.ENEMY))
 	effects.ring(at, 4.5, row.get("color", Palette.COPPER))
 	return {"duration_s": dur, "ripped": ripped}
@@ -6883,7 +6839,7 @@ func _fire_anchor_flare(at: Vector3) -> Dictionary:
 	var balloon := Consumables.spawn_balloon(sky_at, dur, radius)
 	ctx.root.add_child(balloon)
 	_balloons.append(balloon)
-	_post_consumable_buff("consumable_anchor_flare", String(row["icon"]), row["color"], dur)
+	post_consumable_buff("consumable_anchor_flare", String(row["icon"]), row["color"], dur)
 	effects.arc(at, sky_at, row.get("color", Palette.ARC))
 	return {"balloon": balloon, "at_sky": sky_at, "duration_s": dur}
 
@@ -6893,7 +6849,7 @@ func _fire_overclock_card(at: Vector3) -> Dictionary:
 	var dur := float(row.get("duration_s", 8.0))
 	_overclock_left = maxf(_overclock_left, dur)
 	_refresh_overclock_cooldowns()
-	_post_consumable_buff("consumable_overclock_card", String(row["icon"]), row["color"], _overclock_left)
+	post_consumable_buff("consumable_overclock_card", String(row["icon"]), row["color"], _overclock_left)
 	effects.ring(at, 4.0, row.get("color", Palette.SAND))
 	return {"duration_s": dur}
 
@@ -6995,7 +6951,7 @@ func _fire_foreman_memo(at: Vector3) -> Dictionary:
 		if enemy.has_method("plating_now") and float(enemy.plating_now()) > 0.0:
 			_add_shred(enemy, float(enemy.plating_now()) / maxf(SHRED_PER_PUNCH, 0.01))
 		enemy.process_mode = Node.PROCESS_MODE_DISABLED
-	_post_consumable_buff("consumable_foreman_memo", String(row["icon"]), Palette.SAND, _memo_left)
+	post_consumable_buff("consumable_foreman_memo", String(row["icon"]), Palette.SAND, _memo_left)
 	return {"duration_s": dur, "frozen": targets.size(), "cost": paid_cost}
 
 
@@ -7045,7 +7001,7 @@ func _fire_moss_patch(at: Vector3) -> Dictionary:
 	return {"healed": ctx.run.hp - hp_before, "knocked": knocked, "grace_s": grace_s}
 
 
-func _post_consumable_buff(buff_id: String, icon: String, tone: Color, duration_s: float) -> void:
+func post_consumable_buff(buff_id: String, icon: String, tone: Color, duration_s: float) -> void:
 	if ctx == null or ctx.buffs == null or duration_s < 3.0:
 		return
 	ctx.buffs.post(buff_id, {
@@ -7078,7 +7034,7 @@ func _clear_consumables_runtime() -> void:
 			d.queue_free()
 	_consumable_drops.clear()
 	for id in ["consumable_nitro_siphon", "consumable_anchor_flare", "consumable_overclock_card", "consumable_foreman_memo", "consumable_duplicator_spool"]:
-		_clear_buff(id)
+		clear_buff(id)
 	Consumables.clear_w50(ctx.run if ctx != null else null)
 
 
@@ -7117,7 +7073,7 @@ func ally_husk_hit(_husk: Node3D, enemy: Node3D, damage: float, origin: Vector3,
 	var chip := CHIP
 	var knock := Weapons.LEDGER_KNOCK
 	if ShotBits.has(shot_bits, ShotBits.bit("heat")):
-		var heat := _heat(enemy, enemy.global_position)
+		var heat := apply_heat(enemy, enemy.global_position)
 		final_damage *= float(heat["mult"])
 	if ShotBits.has(shot_bits, ShotBits.bit("pierce")):
 		chip = Weapons.PIERCE_CHIP

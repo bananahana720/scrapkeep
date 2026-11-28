@@ -1,13 +1,14 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ALPHA_MAPS, PARK_MAPS, PILOT_IDS } from "./lib/game-defs.mjs";
-import { REPO_ROOT } from "./lib/git.mjs";
+import { REPO_ROOT, git } from "./lib/git.mjs";
 import { isMain } from "./lib/cli.mjs";
 import { walkSync } from "./lib/walk.mjs";
 import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
 
 const root = REPO_ROOT;
-const BASELINE_FILE = path.join(root, "scripts", "sketch-lint.baseline.json");
+export const BASELINE_PATH = "scripts/sketch-lint.baseline.json";
+const BASELINE_FILE = path.join(root, BASELINE_PATH);
 export const BASELINE_RULES = {
   L1: { shape: "keys" },
   L2: { shape: "keys" },
@@ -22,7 +23,9 @@ export const BASELINE_RULES = {
   L15: { shape: "count" },
   L16: { shape: "keys" },
   ...Object.fromEntries(WORD_RULES.map((rule) => [rule, { shape: "count" }])),
+  L18: { shape: "keys" },
 };
+const UID_FOLDERS = ["addons", "src", "tests", "tools"];
 const MAX_QUARANTINE = 0;
 const QUARANTINE_HEADER = "test\towner\treason\tadded\tdeadline";
 const TEST_FOLDERS = new Set(["unit", "support", "doubles", "fixtures", "trees", "workshop"]);
@@ -608,6 +611,53 @@ export function applyBaseline(findings, baseline, exists) {
   return kept;
 }
 
+export function readBaselineAt(ref, { cwd = root } = {}) {
+  git(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], { cwd });
+  if (!git(["ls-tree", "--full-tree", "--name-only", ref, "--", BASELINE_PATH], { cwd })) return {};
+  try {
+    return JSON.parse(git(["show", `${ref}:${BASELINE_PATH}`], { cwd }));
+  } catch (error) {
+    throw new Error(
+      `the base copy of ${BASELINE_PATH} at ${ref} could not be read, so the shrink-only check could not run; fetch ${ref} with its files and run again: ${error.message}`,
+    );
+  }
+}
+
+export function baselineGrowth(before, after) {
+  const size = (list) =>
+    Array.isArray(list) ? list.length : Object.values(list ?? {}).reduce((a, b) => a + b, 0);
+  const grew = [];
+  for (const [rule, now] of Object.entries(after)) {
+    if (!Object.hasOwn(before, rule)) continue;
+    const was = before[rule];
+    if (size(now) <= size(was)) continue;
+    const unmatched = [...(Array.isArray(was) ? was : [])];
+    const added = Array.isArray(now)
+      ? now.filter((key) => {
+          const at = unmatched.indexOf(key);
+          if (at === -1) return true;
+          unmatched.splice(at, 1);
+          return false;
+        })
+      : Object.entries(now)
+          .filter(([file, count]) => count > (was?.[file] ?? 0))
+          .map(([file, count]) => `${file} (${was?.[file] ?? 0} to ${count})`);
+    const fix =
+      rule === "L14"
+        ? "register a reset in sketches/core-loop/tools/test_batch_driver.gd"
+        : "fix the offence";
+    grew.push(
+      finding(
+        "BASELINE",
+        BASELINE_PATH,
+        1,
+        `${rule} list grew from ${size(was)} to ${size(now)} entries (new: ${added.join(", ")}): ${fix} instead of listing it`,
+      ),
+    );
+  }
+  return grew;
+}
+
 export function baselineFrom(findings) {
   const baseline = {};
   for (const [rule, spec] of Object.entries(BASELINE_RULES)) {
@@ -627,10 +677,19 @@ export function baselineFrom(findings) {
 }
 
 export function parseLintArgs(argv) {
-  const options = { sketch: null, writeBaseline: false };
+  const options = { sketch: null, writeBaseline: false, base: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--sketch" && argv[i + 1]) options.sketch = argv[++i];
-    else if (argv[i] === "--write-baseline") options.writeBaseline = true;
+    else if (argv[i] === "--base") {
+      const ref = argv[++i];
+      if (!ref || ref.startsWith("-"))
+        throw new Error("--base requires a ref, as in --base origin/main");
+      options.base = ref;
+    } else if (argv[i] === "--write-baseline") options.writeBaseline = true;
+    else if (argv[i].startsWith("-"))
+      throw new Error(
+        `unknown argument ${argv[i]}; use --sketch NAME, --base REF or --write-baseline`,
+      );
   }
   return options;
 }
@@ -738,7 +797,6 @@ export const L13_ALLOWED = {
   "tools/look_harness.gd": { sites: 1, why: "forwards --display-driver to child process" },
   "tools/offscreen_window.gd": { sites: 1, why: "checks Mac embedded display driver" },
   "tools/perf_bench.gd": { sites: 1, why: "records display driver metadata" },
-  "tools/pilot_liveliness_capture.gd": { sites: 1, why: "checks embedded display driver" },
   "tools/qa/snag_sweep.gd": { sites: 1, why: "records display driver metadata" },
   "tools/stress_capture.gd": { sites: 1, why: "records display driver metadata" },
   "tools/visual_capture.gd": { sites: 1, why: "records display driver metadata" },
@@ -1119,6 +1177,27 @@ export function lintL17(file, text) {
   return findings;
 }
 
+export function lintL18(paths) {
+  const tracked = new Set(paths);
+  const findings = [];
+  for (const file of paths) {
+    if (file.endsWith(".gd") && !tracked.has(`${file}.uid`))
+      findings.push(
+        finding(
+          "L18",
+          file,
+          1,
+          "script has no tracked NAME.gd.uid beside it; run a Godot import and commit the .uid file",
+        ),
+      );
+    else if (file.endsWith(".gd.uid") && !tracked.has(file.slice(0, -".uid".length)))
+      findings.push(
+        finding("L18", file, 1, "uid file has no NAME.gd beside it; delete the orphan"),
+      );
+  }
+  return findings;
+}
+
 function walk(directory) {
   return walkSync(directory, { includeDirs: true });
 }
@@ -1214,6 +1293,14 @@ export function lintSketch(sketch) {
   findings.push(...lintL3(flagFiles, tuning));
   const tests = walk(path.join(directory, "tests"));
   findings.push(...lintL4(tests, `${relative}/tests`));
+  findings.push(
+    ...lintL18(
+      git(["ls-files", "--", ...UID_FOLDERS], { cwd: directory })
+        .split("\n")
+        .filter(Boolean)
+        .map((file) => `${relative}/${file}`),
+    ),
+  );
   const quarantine = path.join(directory, "tests", "QUARANTINE.tsv");
   if (existsSync(quarantine)) {
     const names = new Set(
@@ -1229,7 +1316,13 @@ export function lintSketch(sketch) {
 }
 
 function main() {
-  const options = parseLintArgs(process.argv.slice(2));
+  let options;
+  try {
+    options = parseLintArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(`sketch-lint: ${error.message}`);
+    process.exit(2);
+  }
   if (
     !options.sketch ||
     !existsSync(path.join(root, "sketches", options.sketch, "project.godot"))
@@ -1257,6 +1350,10 @@ function main() {
     baseline,
     (file) => existsSync(path.join(root, file)) && statSync(path.join(root, file)).isFile(),
   );
+  if (options.base)
+    findings.push(
+      ...baselineGrowth(readBaselineAt(git(["merge-base", options.base, "HEAD"])), baseline),
+    );
   for (const item of findings) console.log(formatFinding(item));
   if (options.sketch === "core-loop") {
     for (const [rel, entry] of Object.entries(LIGHT_OWNERS).filter(([, entry]) => entry.open)) {

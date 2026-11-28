@@ -2,6 +2,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 
 # A pad chord rendered on first use costs 120 to 215 ms in one frame on the cloud (Synth.HOLD
@@ -18,7 +19,7 @@ func _initialize() -> void:
 	_t.check("Brindle's fight plays pads", not _pads().is_empty(), "no pad rendered driving phase 2 unbaked")
 	for key in _pads():
 		Synth._notes.erase(key)
-	MusicEngine.prepare_all()
+	MusicPrebake.prepare_all()
 	var baked := _pads()
 	var late: Array = []
 	for section in ["1", "2", "3", "chase"]:

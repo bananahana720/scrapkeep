@@ -656,7 +656,7 @@ func _on_flow_changed(state: String) -> void:
 
 
 func _start_ahead(stage: int) -> void:
-	if ctx.terrain == null or not ctx.terrain.has_method("_worker_builds") or not ctx.terrain._worker_builds():
+	if ctx.terrain == null or not ctx.terrain.has_method("worker_builds") or not ctx.terrain.worker_builds():
 		return
 	if not "maps" in ctx.terrain or stage > ctx.terrain.maps.size() or not ctx.terrain.is_ready(stage):
 		return

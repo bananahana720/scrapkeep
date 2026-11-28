@@ -71,7 +71,7 @@ Principle: **quick restart** (a master that survives and a body that respawns ma
 | # | RoR2 pattern | Godot 4 equivalent | Small-team fit |
 |---|---|---|---|
 | 1 | Catalogs and content packs | `Resource` subclasses in folders; an autoload registry with a name-to-resource dictionary; extra resource directories for packs | Yes; skip async pack loading |
-| 2 | Body versus master | Persistent `Node` for run data (inventory, scrap, crew); a respawned body scene for physics and state | Yes; it is also the node the crew needs (TADR-011; see companions) |
+| 2 | Body versus master | Persistent `Node` for run data (inventory, scrap, crew); a respawned body scene for physics and state | Yes; it is also the node the crew needs (TADR-013; see companions) |
 | 3 | Entity state machines | State nodes under a machine node; `@export` state reference for data-driven prefabs; priority integer on each state | Yes |
 | 4 | Damage pipeline | A `RefCounted` damage-info object; one `deal_damage()` function; signals for dealt and death; buff timers in `_physics_process` | Yes; start with one signal chain |
 | 5 | Networking authority | `MultiplayerSynchronizer` and `@rpc`, server authority | Costly; single-player first (TADR-005 scopes networking) |
