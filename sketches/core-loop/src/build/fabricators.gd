@@ -262,10 +262,6 @@ func add_press_at(at: Vector3, facing: Vector3, part_id: String) -> Dictionary:
 	return rec
 
 
-func scrappers() -> Array[Dictionary]:
-	return _scrappers
-
-
 func presses() -> Array[Dictionary]:
 	return _presses
 
@@ -307,15 +303,6 @@ func _roll(held: Array) -> String:
 		if _stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 		else Parts.roll(_rng, rarities, _class_id, held, 1)
 	return picks[0] if not picks.is_empty() else "hot_rivets"
-
-
-func roll_press_target(held: Array, stage := -1) -> String:
-	if _rng == null:
-		_rng = RandomNumberGenerator.new()
-	var at_stage := _stage if stage < 0 else stage
-	var rarities: Array = ["rare"] if at_stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 else ["common", "rare"]
-	var picks: Array = Parts.roll_high_impact(_rng, rarities, _class_id, held, 1, [], {}, at_stage, false)
-	return String(picks[0]) if not picks.is_empty() else "hot_rivets"
 
 
 func step(ball: Vector3, delta: float, cogs: int, held: Array) -> Array[Dictionary]:

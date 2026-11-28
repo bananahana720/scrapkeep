@@ -1490,10 +1490,6 @@ func _grant_evolutions() -> void:
 		ctx.run.add_part(part_id, "evolution")
 
 
-func synergy_read() -> Array:
-	return sheet.synergies.map(func(key): return {"id": key, "name": Synergies.ROWS[key]["name"], "maker": Synergies.ROWS[key]["maker"]})
-
-
 func _step_synergies(ball: Vector3, delta: float) -> void:
 	for at in _rams:
 		field.flash_ring(at, WRECK_RADIUS, Palette.AMBER)
