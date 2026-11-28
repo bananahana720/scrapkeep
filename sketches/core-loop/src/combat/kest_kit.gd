@@ -534,7 +534,7 @@ func blast_hit(charge: Dictionary, enemy: Node3D, damage: float, at: Vector3) ->
 
 func _detonate_payload(charge: Dictionary) -> void:
 	_cable_burst = charge.get("_cable", false) and charge.get("_body") == null
-	combat._detonate(charge)
+	combat.detonate(charge)
 	_cable_burst = false
 	if charge.get("_cable", false):
 		cable = {}
@@ -543,7 +543,7 @@ func _detonate_payload(charge: Dictionary) -> void:
 
 
 func _hold_cloak() -> void:
-	combat._start_cloak()
+	combat.start_cloak()
 	combat.cloak_left = INF
 	ctx.player.kit.cloaked = true
 

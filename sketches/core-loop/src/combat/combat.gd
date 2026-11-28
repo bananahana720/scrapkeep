@@ -1539,7 +1539,7 @@ func _physics_process(delta: float) -> void:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	bolts.step(delta, space, enemies, shells)
 	for charge in sticky.step(delta, space, enemies):
-		_detonate(charge)
+		detonate(charge)
 	_step_devices(delta)
 	if ally_husks != null:
 		ally_husks.step(delta, enemies)
@@ -2455,7 +2455,7 @@ func deal_hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, kn
 		var live: bool = _marks[id] > _clock
 		_marks.erase(id)
 		if live and _knob("mark_burst"):
-			_detonate({"pos": enemy.global_position, "radius": Weapons.BASE[Weapons.STICKY_CHARGE]["bolt_radius"],
+			detonate({"pos": enemy.global_position, "radius": Weapons.BASE[Weapons.STICKY_CHARGE]["bolt_radius"],
 				"damage": _patterns[Weapons.STICKY_CHARGE].damage * damage_mod(Weapons.STICKY_CHARGE), "crit": false, "born": _clock,
 				"_source": "item_proc"})
 
@@ -4421,7 +4421,7 @@ func _tally_discover(id: String, after: String, at: Vector3) -> void:
 
 
 func _step_tally_cards() -> void:
-	var codex = _codex()
+	var codex = run_codex()
 	var frame := Engine.get_physics_frames()
 	if codex == null or frame <= _tally_card_frame:
 		return
@@ -4469,7 +4469,7 @@ func fire_line(f: float, shape: Dictionary) -> void:
 			snapped_tokens[tok] = true
 	for charge in caught:
 		var tok: int = int(charge.get("snap_token", 0))
-		_detonate(charge, snapped_tokens.has(tok))
+		detonate(charge, snapped_tokens.has(tok))
 	var hit := 0
 	var from: Vector3 = shape["from"]
 	var to: Vector3 = shape["to"]
@@ -4487,7 +4487,7 @@ func fire_line(f: float, shape: Dictionary) -> void:
 			Weapons.MINI_FUSE, Weapons.MINI_ARM, _knob("sticky_reach"), _clock)
 		fuse_charge["_source"] = "item_proc"
 	effects.arc(from + Vector3.UP * 0.5, to + Vector3.UP * 0.5, ClassDef.KEST_COLOR)
-	_start_cloak()
+	start_cloak()
 	last_burst = {"at": from, "to": to, "damage": damage, "hit": hit, "kind": "line", "caught": caught.size(),
 		"breaks_props": not caught.is_empty()}
 
@@ -4562,13 +4562,13 @@ func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.
 		deal_hit(enemy, "runner", damage, -away if pull else away, Weapons.OVERDRIVE_KNOCK * scale, "", "", "overdrive")
 		hit += 1
 	if boost:
-		_boost(Weapons.OVERDRIVE_SECONDS * p.special_scale)
+		add_overdrive(Weapons.OVERDRIVE_SECONDS * p.special_scale)
 	effects.ring(at, radius, ClassDef.RIVET_COLOR)
 	last_burst = {"at": at, "radius": radius, "damage": damage, "hit": hit, "kind": "runner",
 		"overdrive": _overdrive, "breaks_props": false}
 
 
-func _boost(seconds: float) -> void:
+func add_overdrive(seconds: float) -> void:
 	_overdrive = minf(Weapons.OVERDRIVE_MAX, _overdrive + seconds) if _overdrive > 0.0 else seconds
 	_post_buff("overdrive", {"icon": "overdrive", "tone": Palette.COPPER, "kind": BuffLedger.KIND_TIMER,
 		"duration_s": maxf(Weapons.OVERDRIVE_SECONDS, _overdrive), "left_s": _overdrive})
@@ -4595,7 +4595,7 @@ func _step_sticky_weapon(intent, delta: float, shots: Array = []) -> void:
 					if tok <= 0 or int(c.get("snap_token", 0)) == tok:
 						targets.append(c)
 				for c in targets:
-					_detonate(sticky.take(c), true)
+					detonate(sticky.take(c), true)
 				return
 		var snap: Dictionary = weapon_driver.state_snapshot()
 		var snap_locked: bool = bool(snap.get("snap_locked", false))
@@ -4718,7 +4718,7 @@ func _throw_sticky(landing: Vector3, snap_token := 0, tail_drop := false) -> voi
 	for i in count:
 		var live: Array = sticky.live()
 		if live.size() >= devices.cap(Devices.STICKY):
-			_detonate(sticky.take(live[0]))
+			detonate(sticky.take(live[0]))
 		var spot := landing
 		if count > 1:
 			var angle := TAU * float(i) / float(count)
@@ -4736,7 +4736,7 @@ func _throw_sticky(landing: Vector3, snap_token := 0, tail_drop := false) -> voi
 	ctx.events.shot_fired.emit(Weapons.STICKY_CHARGE, origin, landing)
 
 
-func _detonate(charge: Dictionary, snapped := false) -> void:
+func detonate(charge: Dictionary, snapped := false) -> void:
 	var at: Vector3 = charge["pos"]
 	var radius: float = charge["radius"]
 	var damage: float = charge["damage"]
@@ -4769,7 +4769,7 @@ func _detonate(charge: Dictionary, snapped := false) -> void:
 	ctx.break_props(at, radius, "sticky")
 	ctx.events.sticky_detonated.emit(at, charge["crit"])
 	_rocket_jump(at)
-	_start_cloak()
+	start_cloak()
 	var tok: int = int(charge.get("snap_token", 0))
 	if tok > 0 and not snapped:
 		var still_live := false
@@ -4786,7 +4786,7 @@ func _detonate(charge: Dictionary, snapped := false) -> void:
 			if other.get("_inert", false) or (not sticky.charges.has(other) and not ultimate.caught_charges().has(other)):
 				continue
 			if (other["pos"] as Vector3).distance_to(at) <= _knob("sticky_chain"):
-				_detonate(sticky.take(other) if sticky.charges.has(other) else ultimate.take_charge(other))
+				detonate(sticky.take(other) if sticky.charges.has(other) else ultimate.take_charge(other))
 
 
 func _rocket_jump(at: Vector3) -> void:
@@ -4830,7 +4830,7 @@ func _on_demo_slammed(at: Vector3) -> void:
 
 func _on_blink(from: Vector3, to: Vector3) -> void:
 	effects.ring(from, 2.5, ClassDef.KEST_COLOR)
-	_start_cloak()
+	start_cloak()
 	if _knob("blink_cut"):
 		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not enemy.is_dead() and in_line(from, to, Weapons.BLINK_CUT_WIDTH, enemy.global_position, hull_radius(enemy)):
@@ -4839,7 +4839,7 @@ func _on_blink(from: Vector3, to: Vector3) -> void:
 		_cloud = {"at": from, "left": _knob("smoke_cloud")}
 
 
-func _start_cloak() -> void:
+func start_cloak() -> void:
 	if not ctx.player.abilities.cap(AbilityState.MOVEMENT, "cloak", false):
 		return
 	var fresh := cloak_left <= 0.0
@@ -4859,9 +4859,9 @@ func _tick_cloak(delta: float) -> void:
 		if _cloud["left"] <= 0.0:
 			_cloud = {}
 		elif ctx.player.ball_position().distance_to(_cloud["at"]) <= Weapons.SMOKE_CLOUD_RADIUS:
-			_start_cloak()
+			start_cloak()
 	if _knob("glide_cloak") and kit.gliding:
-		_start_cloak()
+		start_cloak()
 	kit.cloaked = cloak_left > 0.0
 	if cloak_left <= 0.0:
 		return
@@ -4919,7 +4919,7 @@ func _proc_actions() -> Dictionary:
 		"grant_move": func(_scale: float): abilities.call().grant(AbilityState.MOVEMENT),
 		"refund_special": func(scale: float): _refund_special(abilities.call(), scale),
 		"refund_move": func(scale: float): abilities.call().refund(AbilityState.MOVEMENT, scale),
-		"overdrive": func(scale: float): _boost(scale),
+		"overdrive": func(scale: float): add_overdrive(scale),
 		"air": func(_scale: float): ctx.player.state.air_actions = 1,
 	}
 
@@ -4974,7 +4974,7 @@ func _proc_blast(scale: float) -> void:
 
 
 func _proc_detonate(scale: float) -> void:
-	_detonate({"pos": floor_at(ctx.player.ball_position()),
+	detonate({"pos": floor_at(ctx.player.ball_position()),
 		"radius": Weapons.BASE[Weapons.STICKY_CHARGE]["bolt_radius"] * scale,
 		"damage": _patterns[Weapons.STICKY_CHARGE].damage * damage_mod(Weapons.STICKY_CHARGE) * scale,
 		"crit": false, "born": _clock, "_source": "item_proc"})
@@ -5242,11 +5242,11 @@ func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: 
 	var cover: bool = ctx.flow.in_stage() and ChallengeDials.by_stage_or("hazard.shell_cover_by_stage", ctx.flow.stage(), 0.0) > 0.5
 	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber, cover)
 	shell.hit_player.connect(_on_player_hit.bind("lobber"))
-	shell.returned_landed.connect(_on_shell_returned)
+	shell.returned_landed.connect(on_shell_returned)
 	shell.exploded.connect(func(at: Vector3, blast: float, deal_hit: bool): effects.ring(at, blast, Palette.HAZARD))
 
 
-func _on_shell_returned(shell: Node3D) -> void:
+func on_shell_returned(shell: Node3D) -> void:
 	var ring: Node3D = shell.ring
 	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not is_instance_valid(ring) or not ring.contains(enemy.global_position - Vector3.UP * enemy.half_height):
@@ -5322,12 +5322,12 @@ func codex_entries() -> Array:
 	return CodexEntries.all()
 
 
-func _codex():
+func run_codex():
 	return ctx.get("codex") if ctx != null else null
 
 
 func _declare_codex() -> void:
-	var codex = _codex()
+	var codex = run_codex()
 	if codex == null or not codex.has_method("declare"):
 		return
 	for entry in CodexEntries.all():
@@ -5340,7 +5340,7 @@ func discover(id: String, at: Vector3) -> void:
 	if not discovered.has(id):
 		discovery_log.append(id)
 	discovered[id] = at
-	var codex = _codex()
+	var codex = run_codex()
 	if codex != null and codex.has_method("mark_discovered"):
 		codex.mark_discovered(id, at, ["player"])
 

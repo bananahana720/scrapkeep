@@ -535,7 +535,7 @@ func _on_demo_slammed(at: Vector3) -> void:
 		elif kind == "ult" and combat.ultimate.caught_charges().has(charge):
 			taken = combat.ultimate.take_charge(charge)
 		if not taken.is_empty():
-			combat._detonate(taken, false)
+			combat.detonate(taken, false)
 			detonated += 1
 	_thermite_detonating = false
 	_record("thermite_slam", {"at": at, "to": to_pt, "detonated": detonated, "radius": THERMITE_DETONATE_RADIUS, "color": ClassDef.KEST_COLOR})

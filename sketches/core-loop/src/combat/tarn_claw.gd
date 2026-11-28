@@ -215,7 +215,7 @@ func step(delta: float) -> void:
 	_step_piece(delta)
 	for id in _cards.keys():
 		var entry: Dictionary = _cards[id]
-		var codex = combat._codex()
+		var codex = combat.run_codex()
 		var frame := Engine.get_physics_frames()
 		if frame > _card_frame and frame > int(entry["queued"]) and codex != null and codex.known(entry["after"]):
 			combat.discover(id, entry["at"])
@@ -418,7 +418,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	if id == "redjaw_rend" and had_tow:
 		_discover("tarn_redjaw_rend", "set_piece", at)
 	if id == "rake_run":
-		combat._boost(3.0)
+		combat.add_overdrive(3.0)
 	_clear_piece()
 	return [hits, damage]
 

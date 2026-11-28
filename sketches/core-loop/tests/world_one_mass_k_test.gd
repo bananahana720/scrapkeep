@@ -205,7 +205,7 @@ func _reaches(charge: Dictionary) -> bool:
 		_struck.clear()
 		var shot: Dictionary = charge.duplicate()
 		shot["pos"] = centre - Vector3(offset, 0.0, 0.0)
-		_combat._detonate(shot)
+		_combat.detonate(shot)
 		hits.append(_struck.any(func(s): return s[0] == probe and s[1] == "sticky"))
 	_clear_enemies()
 	return hits[0] and not hits[1]

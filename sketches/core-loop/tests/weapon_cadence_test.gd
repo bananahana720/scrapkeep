@@ -1084,7 +1084,7 @@ func _run_live() -> void:
 		"plain=%.2f pierce=%.2f" % [float(plain_res["dealt"]), float(pierce_res["dealt"])])
 
 	# 3. Overdrive shortens Rivet floor to 0.125 s (0.20 / 1.6) and posts Overdrive row to BuffLedger.
-	combat._boost(Weapons.OVERDRIVE_SECONDS)
+	combat.add_overdrive(Weapons.OVERDRIVE_SECONDS)
 	var od_ctx: Dictionary = combat._weapon_step_context(Weapons.RAPID_LASER, combat._patterns[Weapons.RAPID_LASER], combat._rate(Weapons.RAPID_LASER))
 	_t.near("Overdrive rate_mult is 1.6 (0.125 s floor)", float(od_ctx["rate_mult"]), 1.6, 0.001)
 	var od_row: Dictionary = _find_buff(_game.ctx.buffs.active_rows(), "overdrive")

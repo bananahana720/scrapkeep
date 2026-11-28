@@ -521,8 +521,7 @@ func _step_model(delta: float) -> void:
 		_wipes += 1
 		for enemy in _driver.crew:
 			if PriorityDriver.alive(enemy):
-				_game.combat._shred.erase(enemy.get_instance_id())
-				_game.combat._show_shred(enemy, 0.0)
+				_game.combat.wipe_shred(enemy)
 	if model.has("spawn_every") and _model_clock >= float(_settings.get("spawn-every", model["spawn_every"])):
 		_model_clock = 0.0
 		var standing := 0

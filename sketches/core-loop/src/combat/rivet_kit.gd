@@ -1639,7 +1639,7 @@ func _discover(id: String, after: String, at: Vector3) -> void:
 func _step_cards() -> void:
 	for id in _cards.keys():
 		var entry: Dictionary = _cards[id]
-		var codex = combat._codex()
+		var codex = combat.run_codex()
 		var frame := Engine.get_physics_frames()
 		var known: bool = String(entry["after"]) == "" or (codex != null and codex.known(entry["after"]))
 		if frame > _card_frame and frame > int(entry["queued"]) and known:

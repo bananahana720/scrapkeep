@@ -292,7 +292,7 @@ func _on_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D)
 	ctx.root.add_child(shell)
 	shell.setup(ctx.player, ground, ctx.root, _is_live, origin, landing, flight, lobber)
 	shell.hit_player.connect(_on_hit.bind("lobber"))
-	shell.returned_landed.connect(combat._on_shell_returned)
+	shell.returned_landed.connect(combat.on_shell_returned)
 	shell.exploded.connect(func(at: Vector3, blast: float, _hit: bool): combat.effects.ring(at, blast, Palette.HAZARD))
 	_shells.append(shell)
 

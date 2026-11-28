@@ -333,7 +333,7 @@ func _rocket_start() -> void:
 
 
 func _blast_at_feet() -> void:
-	_combat._detonate({"pos": _player.ball_position() + Vector3.DOWN * 0.5, "radius": 3.0, "damage": 0.0, "crit": false})
+	_combat.detonate({"pos": _player.ball_position() + Vector3.DOWN * 0.5, "radius": 3.0, "damage": 0.0, "crit": false})
 
 
 func _rocket_floor() -> void:
