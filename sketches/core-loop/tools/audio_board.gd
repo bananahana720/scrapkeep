@@ -116,7 +116,7 @@ class Take:
 		to(from)
 		var id := "hold_" + kind
 		var gain := db_to_linear(SfxBank.trim_db(id) + Audio.PRIORITY_DB[2]) * sfx_gain
-		add(SfxBank.hold(kind, until - from, strain), from, gain, 0.0)
+		add(SfxBank.new().hold(kind, until - from, strain), from, gain, 0.0)
 		cues.append([from, id])
 
 	func finish(length: int) -> void:

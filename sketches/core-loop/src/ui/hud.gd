@@ -213,7 +213,7 @@ var _plate_rogue := 0
 var _engaged := false
 var _struggle := Objectives.Struggle.new()
 var _done := Objectives.Done.new()
-var _detour_site = null
+var _detour := Objectives.Detour.new()
 var _detour_ticked = null
 var _detour_done := Objectives.Done.new()
 var _site = null
@@ -1049,7 +1049,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_begin_engagement(false)
 	_done.clear()
 	_detour_done.clear()
-	_detour_site = null
+	_detour.clear()
 	_detour_ticked = null
 	_site = null
 	if retry:
@@ -1376,46 +1376,22 @@ func detour_reading(goal: Dictionary) -> Dictionary:
 	if game.world == null:
 		return {}
 	var goal_id := String(goal.get("id", ""))
-	var held_run: bool = is_instance_valid(_detour_site) and _detour_site == _site
+	var held_run: bool = is_instance_valid(_detour.site) and _detour.site == _site
 	if (held_run or _detour_done.showing()) and goal_id in ["find_warden", "find_activity"]:
 		return _held_detour(held_run)
 	if not Objectives.detour_shown(goal_id):
 		return {}
-	var ball: Vector3 = game.player.shown_position()
 	var rescue = game.world.get("rescue")
-	if rescue != null:
-		for waiting in rescue.waiting():
-			var cage = rescue.cage(String(waiting["quest"]))
-			return {"what": "cage", "icon": Interactables.row("ally")["icon"], "color": Interactables.color("ally"),
-				"words": Objectives.cage_words(cage.terms() if cage != null else ""),
-				"distance": int(ball.distance_to(waiting["at"]))}
 	var warden = game.flow.warden if is_instance_valid(game.flow.warden) else null
-	var best = null
-	var best_m := INF
-	for site in edge_markers.unfinished_sites():
-		if site.started or site.failed:
-			continue
-		if warden != null and not _ahead_of(ball, site.global_position, warden.global_position):
-			continue
-		var m := ball.distance_to(site.global_position)
-		if m < best_m:
-			best = site
-			best_m = m
-	if is_instance_valid(_detour_site) and _detour_site.started and not _detour_site.done and not _detour_site.failed \
-			and _detour_site.rule.finishes != "trade":
-		var to_kept: Vector3 = _detour_site.global_position - ball
-		if _detour_site.surge_live or Vector2(to_kept.x, to_kept.z).length() <= game.world.activities.LET_GO_M:
-			return _site_row(_detour_site, int(to_kept.length()))
-	_detour_site = best
-	if best == null:
+	var pick := _detour.pick(game.player.shown_position(), rescue.waiting() if rescue != null else [], edge_markers.unfinished_sites(),
+		warden.global_position if warden != null else null, game.world.activities.LET_GO_M)
+	if pick.has("cage"):
+		var cage = rescue.cage(String(pick["cage"]["quest"]))
+		return {"what": "cage", "icon": Interactables.row("ally")["icon"], "color": Interactables.color("ally"),
+			"words": Objectives.cage_words(cage.terms() if cage != null else ""), "distance": pick["metres"]}
+	if pick.is_empty():
 		return {}
-	return _site_row(best, int(best_m))
-
-
-static func _ahead_of(ball: Vector3, point: Vector3, goal: Vector3) -> bool:
-	var to_point := Vector2(point.x - ball.x, point.z - ball.z)
-	var to_goal := Vector2(goal.x - ball.x, goal.z - ball.z)
-	return to_point.dot(to_goal) > 0.0
+	return _site_row(pick["site"], pick["metres"])
 
 
 func _site_row(site, metres: int, words := "") -> Dictionary:
@@ -1428,17 +1404,17 @@ func _site_row(site, metres: int, words := "") -> Dictionary:
 func _held_detour(running: bool) -> Dictionary:
 	if running or (_done.showing() and _done.words == _detour_done.words):
 		return {}
-	var row := _site_row(_detour_site, -1, _detour_done.words) if is_instance_valid(_detour_site) else {"what": "", "icon": "", "words": _detour_done.words, "color": Color.WHITE, "distance": -1}
+	var row := _site_row(_detour.site, -1, _detour_done.words) if is_instance_valid(_detour.site) else {"what": "", "icon": "", "words": _detour_done.words, "color": Color.WHITE, "distance": -1}
 	row["color"] = EventKinds.color("activity_done") if _detour_done.won else Palette.RUST
 	row["done"] = "won" if _detour_done.won else "lost"
 	return row
 
 
 func _note_detour(id: String, good: bool) -> void:
-	if not Objectives.detour_site_matches(_detour_site, id, good, _detour_ticked):
+	if not Objectives.detour_site_matches(_detour.site, id, good, _detour_ticked):
 		return
 	if good:
-		_detour_ticked = _detour_site
+		_detour_ticked = _detour.site
 	var text := Objectives.done_words(id, game.world.activities.called(id)) if good else Objectives.lost_words(id)
 	_detour_done.note(text, good)
 

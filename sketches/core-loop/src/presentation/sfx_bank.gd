@@ -258,8 +258,6 @@ const ASSIST_MOVES := ["bonk", "arc", "pile", "slip", "anvil", "static", "bulldo
 const ASSIST_STING_DB := -7.0
 
 static var _samples := {}
-static var _shift := 0
-static var _theme := 0
 static var _lock := Mutex.new()
 const THEMED := ["synergy_fanfare"]
 static var _streams := {}
@@ -268,10 +266,18 @@ static var _rendered := {}
 static var _cache_lock := Mutex.new()
 static var bake_cancel := false
 
+var _step := Harmony.STEP
+var _shift := 0
+var _theme := 0
+
+
+func _init(step := Harmony.STEP, shift := 0, theme := 0) -> void:
+	_step = step
+	_shift = shift
+	_theme = theme
+
 
 static func reset_for_tests() -> void:
-	_shift = 0
-	_theme = 0
 	bake_cancel = false
 
 
@@ -581,7 +587,7 @@ static func samples(id: String) -> PackedFloat32Array:
 	if _cache_has(_samples, id):
 		return _cache_get(_samples, id)
 	_lock.lock()
-	var buf: PackedFloat32Array = _cache_get(_samples, id) if _cache_has(_samples, id) else _cache_put(_samples, id, Synth.normalize(_bake(id), 0.9))
+	var buf: PackedFloat32Array = _cache_get(_samples, id) if _cache_has(_samples, id) else _cache_put(_samples, id, Synth.normalize(new()._bake(id), 0.9))
 	_lock.unlock()
 	return buf
 
@@ -602,16 +608,7 @@ static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedF
 		if _cache_has(_samples, shared):
 			_cache_put(_samples, key, _cache_get(_samples, shared))
 	if not _cache_has(_samples, key):
-		if _gridded(id):
-			Synth.score_step = step
-		Synth.score_transpose = shift
-		_shift = shift
-		_theme = theme
-		_cache_put(_samples, key, Synth.normalize(_bake(id), 0.9))
-		Synth.score_step = Harmony.STEP
-		Synth.score_transpose = 0
-		_shift = 0
-		_theme = 0
+		_cache_put(_samples, key, Synth.normalize(new(step if _gridded(id) else Harmony.STEP, shift, theme)._bake(id), 0.9))
 	_lock.unlock()
 	return _cache_get(_samples, key)
 
@@ -632,12 +629,16 @@ static func _gridded(id: String) -> bool:
 	return STINGER_BEATS.has(id) or id.begins_with(PILOT_QUOTE) or id.begins_with(SET_ANSWER)
 
 
-static func _hz(midi: float) -> float:
+func _hz(midi: float) -> float:
 	return Harmony.hz(midi + _shift)
 
 
-static func _n(instrument: String, midi: int) -> PackedFloat32Array:
+func _n(instrument: String, midi: int) -> PackedFloat32Array:
 	return Synth.note(instrument, midi + _shift)
+
+
+func _score(score: Array, tail_seconds := 1.0) -> PackedFloat32Array:
+	return Synth.render_score(score, tail_seconds, _step, _shift)
 
 
 static func stream(id: String) -> AudioStreamWAV:
@@ -670,7 +671,7 @@ static func bake_all(ids: Array) -> void:
 		samples_at(id, Harmony.BOSS_STEP)
 
 
-static func _bake(id: String) -> PackedFloat32Array:
+func _bake(id: String) -> PackedFloat32Array:
 	if FILE_SOUNDS.has(id) or id.begins_with(STINGER_PREFIX):
 		var file := file_samples(id)
 		if file.size() > 0:
@@ -687,7 +688,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 	if id.begins_with("cable_kest_") or id.begins_with("raid_kest_") or id.begins_with("tick_kest_"):
 		if id == "cable_kest_fizz":
 			return _mix([[_noise(0.5, 1800.0, 4800.0, 4.0), 0, 0.6], [_tone(0.5, _hz(62), _hz(63), "sine", 4.0), 0, 0.4]])
-		return Synth.render_score(kest_score(id), 0.7)
+		return _score(kest_score(id), 0.7)
 	match id:
 		"ui_tick":
 			return _tone(0.03, _hz(86), _hz(86), "sine", 120.0)
@@ -869,34 +870,34 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"music_pressure":
 			return _riser()
 		"stinger_run":
-			return Synth.render_score(_score_run(0), 0.8)
+			return _score(_score_run(0), 0.8)
 		"stinger_stage":
-			return Synth.render_score([[0, 0, 2, "kick", 1.0], [0, 0, 2, "open_hat", 0.6], [0, 62, 2, "keys", 0.5],
+			return _score([[0, 0, 2, "kick", 1.0], [0, 0, 2, "open_hat", 0.6], [0, 62, 2, "keys", 0.5],
 				[0, 65, 2, "keys", 0.5], [0, 69, 2, "keys", 0.5], [0, 72, 2, "keys", 0.5], [0, 74, 2, "lead", 0.6]], 0.5)
 		"stinger_world", "stinger_world_down5", "stinger_world_up5":
 			for world in range(1, WORLD_STEPS.size() + 1):
 				if world_stinger(world) == id:
-					return Synth.render_score(_score_world(WORLD_STEPS[world - 1]), 0.6)
-			return Synth.render_score(_score_world(0), 0.6)
+					return _score(_score_world(WORLD_STEPS[world - 1]), 0.6)
+			return _score(_score_world(0), 0.6)
 		"stinger_clear":
-			return Synth.render_score(_score_clear(0), 1.4)
+			return _score(_score_clear(0), 1.4)
 		"stinger_run_end":
 			var finale := _score_run(0)
 			finale.append_array(_score_clear(16))
-			return Synth.render_score(finale, 2.0)
+			return _score(finale, 2.0)
 		"stinger_milestone":
-			return Synth.render_score(_score_milestone(), 1.2)
+			return _score(_score_milestone(), 1.2)
 		"gates_open":
-			return Synth.render_score([[0, 62, 2, "bell", 0.5], [1, 65, 2, "bell", 0.54], [2, 69, 2, "bell", 0.58],
+			return _score([[0, 62, 2, "bell", 0.5], [1, 65, 2, "bell", 0.54], [2, 69, 2, "bell", 0.58],
 				[3, 72, 2, "bell", 0.6], [4, 76, 6, "bell", 0.64], [4, 76, 8, "lead", 0.38], [4, 38, 10, "sub", 0.45],
 				[4, 57, 12, "keys", 0.36], [4, 60, 12, "keys", 0.36],
 				[4, 64, 12, "keys", 0.36], [4, 65, 12, "keys", 0.36], [4, 0, 2, "open_hat", 0.48]], 1.0)
 		"stinger_unseal":
 			return _unseal()
 		"class_up":
-			return Synth.render_score(_score_class_up(), 0.9)
+			return _score(_score_class_up(), 0.9)
 		"class_down":
-			return _mix([[Synth.render_score(_score_class_down(), 0.7), 0, 1.0], [_noise(0.18, 3500.0, 1500.0, 14.0), Synth.seconds(0.05), 0.25]])
+			return _mix([[_score(_score_class_down(), 0.7), 0, 1.0], [_noise(0.18, 3500.0, 1500.0, 14.0), Synth.seconds(0.05), 0.25]])
 		"clank":
 			return _clank()
 		"scrap_rip":
@@ -907,7 +908,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"core_socket":
 			return _core_socket()
 		"synergy_fanfare":
-			return Synth.render_score(_score_synergy(), 1.4)
+			return _score(_score_synergy(), 1.4)
 		"achievement_chime":
 			return _mix([[_cut(_n("bell", 84), 0.45), 0, 0.8], [_cut(_n("bell", 91), 0.4), Synth.seconds(0.08), 0.6]])
 		"rescue_fanfare":
@@ -949,14 +950,14 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"slow_rise":
 			return _cut(_mix([[_tone(0.3, _hz(57), _hz(74), "sine", -8.0), 0, 0.7], [_noise(0.3, 500.0, 3600.0, 2.0, 0.2), 0, 0.45]]), 0.3, 1800)
 		"vault_drop":
-			return Synth.render_score([[0, 0, 2, "kick", 1.0], [0, 0, 8, "crash", 0.6], [0, 38, 8, "sub", 0.8],
+			return _score([[0, 0, 2, "kick", 1.0], [0, 0, 8, "crash", 0.6], [0, 38, 8, "sub", 0.8],
 				[0, 62, 4, "bell", 0.5], [0, 66, 4, "bell", 0.45], [0, 69, 4, "bell", 0.45], [2, 74, 6, "bell", 0.55]], 0.6)
 		"synergy_hit":
 			return _mix([[_fm(0.22, _hz(81), 3.5, 1.4, 14.0), 0, 0.8], [_noise(0.06, 5000.0, 3000.0, 60.0), 0, 0.2]])
 		"boss_arena_in":
 			return _brindle_in()
 		"boss_phase":
-			return Synth.render_score([[0, 0, 2, "boom", 1.0], [0, 0, 2, "anvil", 0.9], [0, 50, 6, "brass", 0.5],
+			return _score([[0, 0, 2, "boom", 1.0], [0, 0, 2, "anvil", 0.9], [0, 50, 6, "brass", 0.5],
 				[0, 53, 6, "brass", 0.5], [0, 57, 6, "brass", 0.5], [0, 63, 6, "brass", 0.5], [4, 0, 1, "anvil", 0.7],
 				[6, 0, 1, "anvil", 0.8], [6, 62, 2, "brass", 0.6], [6, 74, 2, "brass", 0.45]], 0.6)
 		"boss_telegraph":
@@ -1049,7 +1050,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"active_glass_lance":
 			return _glass_lance()
 		"hold_pit", "hold_bola", "hold_tether", "hold_net", "hold_riser":
-			return hold(id.get_slice("_", 1), Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
+			return hold(id.get_slice("_", 1), _step * Harmony.STEPS_PER_BEAT * 2)
 		"tenacity_choke":
 			return Synth.drum("choke")
 		"callout_chime":
@@ -1075,7 +1076,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"ceremony_build":
 			return _ceremony_build()
 		"ceremony_resolve":
-			return Synth.render_score(_score_ceremony_resolve(), 1.2)
+			return _score(_score_ceremony_resolve(), 1.2)
 		"bet_roll":
 			return _bet_roll()
 		"bet_clunk":
@@ -1119,7 +1120,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"lift_hiss":
 			return _lift_hiss()
 		"crater_hold":
-			return hold("crater", Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
+			return hold("crater", _step * Harmony.STEPS_PER_BEAT * 2)
 		"arena_lock_slam":
 			return _arena_lock_slam()
 		"arena_wave_whistle":
@@ -1230,15 +1231,15 @@ static func _bake(id: String) -> PackedFloat32Array:
 		var bits := id.trim_prefix(GRID_NOTE).rsplit("_", true, 1)
 		return _mix([[_cut(_n(bits[0], int(bits[1])), GRID_NOTE_SECONDS), 0, 1.0]])
 	if id.begins_with(PILOT_QUOTE):
-		return Synth.render_score(pilot_quote_score(id.trim_prefix(PILOT_QUOTE)), 0.5)
+		return _score(pilot_quote_score(id.trim_prefix(PILOT_QUOTE)), 0.5)
 	if id.begins_with(SET_ANSWER):
-		return Synth.render_score(SetDirector.answer_score(id.trim_prefix(SET_ANSWER)), 0.5)
+		return _score(SetDirector.answer_score(id.trim_prefix(SET_ANSWER)), 0.5)
 	if _assist_parts(id).size() > 0:
 		return _assist_sting(_assist_parts(id))
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
 
 
-static func _assist_base(move: String) -> Array:
+func _assist_base(move: String) -> Array:
 	match move:
 		"bonk":
 			return [[_fm(0.22, _hz(74), 1.0, 2.5, 18.0, -7.0), 0, 0.8], [_tone(0.16, 140.0, 55.0, "sine", 24.0), 0, 0.9]]
@@ -1258,7 +1259,7 @@ static func _assist_base(move: String) -> Array:
 	return []
 
 
-static func _assist_sting(parts: Array) -> PackedFloat32Array:
+func _assist_sting(parts: Array) -> PackedFloat32Array:
 	var layers := _assist_base(String(parts[0]))
 	if int(parts[1]) >= 2:
 		layers.append([_tone(0.7, _hz(38), _hz(31), "sine", 4.5), 0, 0.85])
@@ -1269,7 +1270,7 @@ static func _assist_sting(parts: Array) -> PackedFloat32Array:
 	return _cut(_mix(layers, int(parts[1]) >= 2), 0.95)
 
 
-static func bite(variant: int) -> PackedFloat32Array:
+func bite(variant: int) -> PackedFloat32Array:
 	match variant:
 		1:
 			return _mix([[_tone(0.14, 260.0, 90.0, "saw_dark", 24.0), 0, 1.0], [_noise(0.025, 3500.0, 2000.0, 140.0), 0, 0.5],
@@ -1281,7 +1282,7 @@ static func bite(variant: int) -> PackedFloat32Array:
 		[_fm(0.24, _hz(81), 3.5, 5.0, 16.0), 0, 1.0]])
 
 
-static func crack(variant: int) -> PackedFloat32Array:
+func crack(variant: int) -> PackedFloat32Array:
 	match variant:
 		1:
 			return _mix([[_tone(0.3, _hz(74), _hz(74), "saw_dark", 9.0), 0, 0.8], [_noise(0.06, 5000.0, 1800.0, 60.0), 0, 0.9],
@@ -1302,7 +1303,7 @@ static func zip() -> PackedFloat32Array:
 	return _mix([[_noise(0.16, 5500.0, 800.0, 16.0, 0.004), 0, 1.0], [_tone(0.14, 1700.0, 500.0, "sine", 22.0), 0, 0.35]])
 
 
-static func twang() -> PackedFloat32Array:
+func twang() -> PackedFloat32Array:
 	var n := Synth.seconds(0.6)
 	var buf := Synth.buffer(n)
 	var f := _hz(52)
@@ -1314,7 +1315,7 @@ static func twang() -> PackedFloat32Array:
 	return _mix([[Synth.declick(buf, 8, 300), 0, 1.0], [_noise(0.025, 3000.0, 1500.0, 120.0), 0, 0.5]])
 
 
-static func _line_hum() -> PackedFloat32Array:
+func _line_hum() -> PackedFloat32Array:
 	var length := 0.6
 	var n := Synth.seconds(length)
 	var buf := Synth.buffer(n)
@@ -1325,22 +1326,22 @@ static func _line_hum() -> PackedFloat32Array:
 	return buf
 
 
-static func _find_drip() -> PackedFloat32Array:
+func _find_drip() -> PackedFloat32Array:
 	var length := 1.8
 	return _mix([[Synth.buffer(Synth.seconds(length)), 0, 0.0],
 		[_tone(0.14, _hz(97), _hz(90), "sine", 38.0), 0, 1.0],
 		[_tone(0.1, _hz(94), _hz(88), "sine", 46.0), Synth.seconds(1.05), 0.6]])
 
 
-static func _find_radio() -> PackedFloat32Array:
+func _find_radio() -> PackedFloat32Array:
 	var score := [[0, 62, 16, "keys", 0.3], [0, 65, 16, "keys", 0.3], [0, 69, 16, "keys", 0.3], [0, 72, 16, "keys", 0.3],
 		[16, 55, 16, "keys", 0.3], [16, 58, 16, "keys", 0.3], [16, 62, 16, "keys", 0.3], [16, 65, 16, "keys", 0.3],
 		[0, 74, 2, "lead", 0.6], [2, 77, 2, "lead", 0.6], [4, 81, 3, "lead", 0.65], [7, 79, 1, "lead", 0.55],
 		[8, 77, 4, "lead", 0.6], [12, 76, 2, "lead", 0.55], [14, 74, 2, "lead", 0.55], [16, 72, 3, "lead", 0.6],
 		[19, 70, 1, "lead", 0.5], [20, 69, 4, "lead", 0.6], [24, 67, 2, "lead", 0.55], [26, 69, 2, "lead", 0.55],
 		[28, 62, 4, "lead", 0.5], [4, 0, 1, "brush", 0.3], [12, 0, 1, "brush", 0.3], [20, 0, 1, "brush", 0.3], [28, 0, 1, "brush", 0.3]]
-	var music := Synth.render_score(score, 0.0)
-	var n := 32 * Synth.score_step
+	var music := _score(score, 0.0)
+	var n := 32 * _step
 	var buf := Synth.buffer(n)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
@@ -1401,7 +1402,7 @@ static func _score_class_down() -> Array:
 	return [[0, 81, 2, "mallet", 0.7], [2, 77, 2, "mallet", 0.65], [4, 74, 3, "mallet", 0.7], [4, 74, 3, "bell", 0.25]]
 
 
-static func _score_synergy() -> Array:
+func _score_synergy() -> Array:
 	var head: Array = Harmony.MOTIF_HEADS[clampi(_theme, 0, 2)]
 	var run := [[0, 69], [1, 72], [2, 74], [3, 76], [4, head[0] + 12 if head[0] < 74 else head[0]], [5, head[1] + (12 if head[0] < 74 else 0)],
 		[6, head[2] + (12 if head[0] < 74 else 0)], [7, 85]]
@@ -1416,7 +1417,7 @@ static func _score_synergy() -> Array:
 	return score
 
 
-static func _ceremony_build() -> PackedFloat32Array:
+func _ceremony_build() -> PackedFloat32Array:
 	var score := []
 	for t in [[0, 45], [4, 47], [8, 50], [10, 52], [12, 53], [13, 55], [14, 57], [15, 60]]:
 		score.append([t[0], t[1], 1, "tom", 0.55 + 0.017 * t[0]])
@@ -1427,12 +1428,12 @@ static func _ceremony_build() -> PackedFloat32Array:
 	var climb := [62, 65, 67, 69, 72, 74, 77, 79]
 	for i in climb.size():
 		score.append([i * 2, climb[i], 2, "bell", 0.28 + 0.04 * i])
-	var n := Synth.score_step * 16
+	var n := _step * 16
 	var air := _noise(float(n) / RATE, 400.0, 5200.0, 0.0, 0.001)
 	for i in n:
 		var x := float(i) / n
 		air[i] *= x * x
-	return _mix([[Synth.render_score(score, 0.05), 0, 1.0], [air, 0, 0.3]])
+	return _mix([[_score(score, 0.05), 0, 1.0], [air, 0, 0.3]])
 
 
 static func _score_ceremony_resolve() -> Array:
@@ -1534,7 +1535,7 @@ static func _fm_sweep(length: float, f0: float, f1: float, index: float, decay: 
 	return Synth.declick(buf, 4, 200)
 
 
-static func _arpeggio(notes: Array, gap: float, instrument: String, tail: float) -> PackedFloat32Array:
+func _arpeggio(notes: Array, gap: float, instrument: String, tail: float) -> PackedFloat32Array:
 	var parts := []
 	for i in notes.size():
 		parts.append([_cut(_n(instrument, notes[i]), tail), Synth.seconds(gap * i), 1.0 - 0.1 * i])
@@ -1559,7 +1560,7 @@ static func _core_slam() -> PackedFloat32Array:
 		[_noise(0.09, 950.0, 280.0, 30.0, 0.006), 0, 0.22]], true)
 
 
-static func _ultimate_land() -> PackedFloat32Array:
+func _ultimate_land() -> PackedFloat32Array:
 	return _mix([[_tone(1.25, _hz(38), _hz(26), "sine", 3.2), 0, 1.0],
 		[_fm(0.12, _hz(62), 2.0, 1.6, 28.0), 0, 0.2],
 		[_fm(0.1, _hz(65), 2.0, 1.4, 30.0), 0, 0.16],
@@ -1568,7 +1569,7 @@ static func _ultimate_land() -> PackedFloat32Array:
 		[_noise(0.018, 4200.0, 1800.0, 120.0), 0, 0.18]])
 
 
-static func _kest_demo_knock() -> PackedFloat32Array:
+func _kest_demo_knock() -> PackedFloat32Array:
 	var parts := [[_fm(0.1, _hz(57), 1.41, 2.0, 45.0), 0, 0.85],
 		[_tone(0.08, _hz(53), _hz(41), "sine", 38.0), 0, 0.45],
 		[_noise(0.012, 1800.0, 900.0, 150.0), 0, 0.3]]
@@ -1580,7 +1581,7 @@ static func _kest_demo_knock() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _rivet_skid_plate() -> PackedFloat32Array:
+func _rivet_skid_plate() -> PackedFloat32Array:
 	var at := Synth.seconds(0.055)
 	return _mix([[_noise(0.065, 3600.0, 1100.0, 14.0), 0, 0.55],
 		[_fm(0.35, _hz(45), 2.76, 3.2, 14.0), at, 0.8],
@@ -1600,7 +1601,7 @@ static func _boing() -> PackedFloat32Array:
 	return _mix([[buf, 0, 0.8], [_noise(0.3, 900.0, 4200.0, 9.0, 0.03), 0, 0.6]])
 
 
-static func _special() -> PackedFloat32Array:
+func _special() -> PackedFloat32Array:
 	var parts: Array = [[_fm_sweep(0.35, 2200.0, 300.0, 6.0, 8.0), 0, 0.7]]
 	var rung := 0
 	for i in 6:
@@ -1609,7 +1610,7 @@ static func _special() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _death() -> PackedFloat32Array:
+func _death() -> PackedFloat32Array:
 	var parts := []
 	var line := [57, 53, 50]
 	for i in line.size():
@@ -1618,7 +1619,7 @@ static func _death() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-static func _hum() -> PackedFloat32Array:
+func _hum() -> PackedFloat32Array:
 	var n := Synth.seconds(0.32)
 	var buf := Synth.buffer(n)
 	var f := _hz(62)
@@ -1629,32 +1630,32 @@ static func _hum() -> PackedFloat32Array:
 	return buf
 
 
-static func _klaxon() -> PackedFloat32Array:
+func _klaxon() -> PackedFloat32Array:
 	var parts := []
-	var beat := Synth.score_step * Harmony.STEPS_PER_BEAT
+	var beat := _step * Harmony.STEPS_PER_BEAT
 	for pulse in 2:
 		parts.append([_tone(beat * 1.9 / RATE, _hz(53), _hz(50), "square_dark", 1.2), beat * 2 * pulse, 1.0])
 		parts.append([_tone(beat * 1.9 / RATE, _hz(41), _hz(38), "saw_dark", 1.2), beat * 2 * pulse, 0.6])
 	return _mix(parts, true)
 
 
-static func _unseal() -> PackedFloat32Array:
+func _unseal() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "kick", 1.0], [0, 0, 16, "crash", 0.7], [0, 74, 1, "bell", 0.5], [1, 81, 1, "bell", 0.5],
 		[2, 86, 1, "bell", 0.5], [3, 89, 1, "bell", 0.5], [4, 93, 4, "bell", 0.55], [4, 86, 10, "lead", 0.7],
 		[4, 65, 10, "keys", 0.4], [4, 69, 10, "keys", 0.4], [4, 72, 10, "keys", 0.4], [4, 76, 10, "keys", 0.4],
 		[4, 38, 10, "sub", 0.7], [8, 0, 1, "snare", 0.5], [10, 0, 1, "snare", 0.6], [12, 0, 1, "snare", 0.7],
 		[13, 0, 1, "snare", 0.8], [14, 0, 1, "snare", 0.9], [15, 0, 1, "snare", 1.0]]
-	var band := Synth.render_score(score, 1.0)
+	var band := _score(score, 1.0)
 	var release := _mix([[_fm(0.5, 150.0, 1.41, 6.0, 7.0, -5.0), 0, 1.0], [_noise(0.35, 3000.0, 300.0, 9.0), 0, 0.8]], true)
 	return _mix([[band, 0, 1.0], [release, 0, 0.6]])
 
 
-static func _clank() -> PackedFloat32Array:
+func _clank() -> PackedFloat32Array:
 	return _mix([[_fm(0.3, _hz(76), 1.41, 1.6, 11.0), 0, 1.0], [_fm(0.22, _hz(83), 2.76, 1.2, 16.0), 0, 0.55],
 		[_tone(0.03, 1800.0, 1200.0, "sine", 90.0), 0, 0.3]])
 
 
-static func _shed(plates: int) -> PackedFloat32Array:
+func _shed(plates: int) -> PackedFloat32Array:
 	var notes := [86, 81, 84, 77, 79]
 	var parts: Array = [[_noise(0.03 + 0.012 * plates, 4800.0, 2400.0, 90.0 / plates), 0, 0.35]]
 	for i in plates:
@@ -1664,12 +1665,12 @@ static func _shed(plates: int) -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _reclaim() -> PackedFloat32Array:
+func _reclaim() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 81), 0.2), 0, 0.75], [_cut(_n("bell", 86), 0.32), Synth.seconds(0.075), 0.95],
 		[_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.12]])
 
 
-static func _deflect() -> PackedFloat32Array:
+func _deflect() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 91), 0.11), 0, 0.8], [_noise(0.012, 7000.0, 5000.0, 250.0), 0, 0.15]])
 
 
@@ -1687,17 +1688,17 @@ static func _rip() -> PackedFloat32Array:
 	return _mix([[teeth, 0, 1.0], [_tone(0.4, 820.0, 180.0, "saw_dark", 5.0), 0, 0.5]], true)
 
 
-static func _core_socket() -> PackedFloat32Array:
+func _core_socket() -> PackedFloat32Array:
 	return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.5], [_tone(0.12, 140.0, 80.0, "sine", 28.0), 0, 0.8],
 		[_n("bell", 74), Synth.seconds(0.05), 0.7], [_n("bell", 81), Synth.seconds(0.05), 0.6],
 		[_cut(_n("bell", 86), 0.6), Synth.seconds(0.16), 0.45]])
 
 
-static func _warden_in() -> PackedFloat32Array:
+func _warden_in() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "kick", 1.0], [0, 38, 16, "sub", 0.7], [0, 51, 12, "brass", 0.45], [0, 55, 12, "brass", 0.45],
 		[0, 58, 12, "brass", 0.45], [4, 0, 2, "kick", 0.8], [8, 0, 2, "kick", 0.9], [12, 0, 2, "kick", 1.0],
 		[12, 0, 1, "snare", 0.7], [13, 0, 1, "snare", 0.8], [14, 0, 1, "snare", 0.9], [15, 0, 1, "snare", 1.0]]
-	var band := Synth.render_score(score, 0.8)
+	var band := _score(score, 0.8)
 	return _mix([[band, 0, 1.0], [_fm(0.9, _hz(38), 2.71, 5.0, 3.5), 0, 0.5]], true)
 
 
@@ -1712,8 +1713,8 @@ static func _womp() -> PackedFloat32Array:
 	return _mix([[buf, 0, 1.0], [_noise(0.08, 900.0, 200.0, 40.0), 0, 0.3]], true)
 
 
-static func _build_riser() -> PackedFloat32Array:
-	var n := Synth.score_step * Harmony.STEPS_PER_BAR * 2
+func _build_riser() -> PackedFloat32Array:
+	var n := _step * Harmony.STEPS_PER_BAR * 2
 	var noise := _noise(float(n) / RATE, 300.0, 6000.0, 0.0, 0.001)
 	var phase := 0.0
 	for i in n:
@@ -1723,7 +1724,7 @@ static func _build_riser() -> PackedFloat32Array:
 	return Synth.normalize(noise, 0.9)
 
 
-static func _ice() -> PackedFloat32Array:
+func _ice() -> PackedFloat32Array:
 	var parts: Array = [[_noise(0.3, 6000.0, 6000.0, 12.0, 0.002), 0, 0.35]]
 	var notes := [86, 93, 88, 98, 91]
 	for i in notes.size():
@@ -1731,7 +1732,7 @@ static func _ice() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _zap_hum() -> PackedFloat32Array:
+func _zap_hum() -> PackedFloat32Array:
 	var n := Synth.seconds(0.6)
 	var buf := Synth.buffer(n)
 	var rng := RandomNumberGenerator.new()
@@ -1747,7 +1748,7 @@ static func _zap_hum() -> PackedFloat32Array:
 	return Synth.declick(buf, 16, 600)
 
 
-static func _destructible(family: String) -> PackedFloat32Array:
+func _destructible(family: String) -> PackedFloat32Array:
 	match family:
 		"wood":
 			return _mix([[_fm(0.16, _hz(74), 1.0, 2.5, 18.0, -7.0), 0, 0.8], [_noise(0.16, 2200.0, 700.0, 20.0), 0, 0.55],
@@ -1769,16 +1770,16 @@ static func _shatter() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _brindle_in() -> PackedFloat32Array:
+func _brindle_in() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "boom", 1.0], [0, 0, 2, "anvil", 1.0], [0, 38, 16, "sub", 0.6], [2, 0, 2, "anvil", 0.8],
 		[4, 62, 2, "brass", 0.6], [6, 65, 2, "brass", 0.6], [8, 69, 2, "brass", 0.65], [8, 0, 2, "kick", 0.9],
 		[10, 75, 6, "brass", 0.7], [10, 51, 6, "brass", 0.4], [10, 55, 6, "brass", 0.4], [10, 58, 6, "brass", 0.4],
 		[10, 0, 16, "crash", 0.5], [12, 0, 1, "snare", 0.6], [13, 0, 1, "snare", 0.7], [14, 0, 1, "snare", 0.85],
 		[15, 0, 1, "snare", 1.0]]
-	return Synth.render_score(score, 0.9)
+	return _score(score, 0.9)
 
 
-static func _stage_fade() -> PackedFloat32Array:
+func _stage_fade() -> PackedFloat32Array:
 	var air := _noise(0.7, 2600.0, 400.0, 0.0, 0.08)
 	var n := air.size()
 	for i in n:
@@ -1787,20 +1788,20 @@ static func _stage_fade() -> PackedFloat32Array:
 	return _mix([[air, 0, 1.0], [_tone(0.6, _hz(50), _hz(50), "sine", 4.0), 0, 0.35]], false, 0.6)
 
 
-static func _boss_telegraph() -> PackedFloat32Array:
+func _boss_telegraph() -> PackedFloat32Array:
 	return _mix([[_tone(0.12, _hz(50), _hz(50), "square_dark", 10.0), 0, 0.9],
 		[_tone(0.18, _hz(51), _hz(52), "square_dark", 8.0), Synth.seconds(0.13), 1.0],
 		[_noise(0.35, 600.0, 3000.0, 3.0, 0.2), 0, 0.35]], true)
 
 
-static func _ratchet_cue() -> PackedFloat32Array:
+func _ratchet_cue() -> PackedFloat32Array:
 	return _mix([[_tone(0.05, _hz(62), _hz(62), "square_dark", 30.0), 0, 0.8],
 		[_tone(0.05, _hz(65), _hz(65), "square_dark", 30.0), Synth.seconds(0.11), 0.85],
 		[_tone(0.05, _hz(69), _hz(69), "square_dark", 30.0), Synth.seconds(0.22), 0.9],
 		[_cut(_n("bell", 86), 0.3), Synth.seconds(0.33), 0.7]], true)
 
 
-static func _boss_defeated() -> PackedFloat32Array:
+func _boss_defeated() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "boom", 1.0], [0, 0, 16, "crash", 0.7], [0, 62, 2, "brass", 0.6], [2, 66, 2, "brass", 0.6],
 		[4, 69, 2, "brass", 0.65], [6, 74, 2, "brass", 0.7], [8, 0, 2, "kick", 1.0], [8, 78, 4, "brass", 0.7],
 		[12, 76, 2, "brass", 0.6], [14, 73, 2, "brass", 0.65], [16, 0, 2, "kick", 1.0], [16, 0, 16, "crash", 0.6],
@@ -1809,11 +1810,11 @@ static func _boss_defeated() -> PackedFloat32Array:
 	for i in 8:
 		score.append([8 + i, 0, 1, "hat", 0.4])
 		score.append([8 + i, [74, 78, 81, 86, 90, 93, 98, 93][i], 1, "bell", 0.3])
-	return Synth.render_score(score, 1.6)
+	return _score(score, 1.6)
 
 
-static func _riser() -> PackedFloat32Array:
-	var n := Synth.score_step * Harmony.STEPS_PER_BEAT
+func _riser() -> PackedFloat32Array:
+	var n := _step * Harmony.STEPS_PER_BEAT
 	var noise := _noise(float(n) / RATE, 400.0, 5000.0, 0.0, 0.001)
 	for i in n:
 		var x := float(i) / n
@@ -1821,7 +1822,7 @@ static func _riser() -> PackedFloat32Array:
 	return Synth.normalize(noise, 0.9)
 
 
-static func _threat_tick() -> PackedFloat32Array:
+func _threat_tick() -> PackedFloat32Array:
 	var parts := []
 	var at := 0.0
 	var gap := 0.1
@@ -1835,33 +1836,33 @@ static func _threat_tick() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _threat_whoosh() -> PackedFloat32Array:
+func _threat_whoosh() -> PackedFloat32Array:
 	return _mix([[_noise(0.6, 300.0, 2800.0, 1.5, 0.35), 0, 1.0], [_tone(0.6, _hz(51), _hz(58), "saw_dark", 2.0), 0, 0.55]])
 
 
-static func _threat_whistle() -> PackedFloat32Array:
+func _threat_whistle() -> PackedFloat32Array:
 	return _mix([[_tone(0.1, 110.0, 50.0, "sine", 28.0), 0, 1.0], [_noise(0.06, 900.0, 300.0, 40.0), 0, 0.5],
 		[_tone(0.65, _hz(82), _hz(75), "sine", 1.2), Synth.seconds(0.08), 0.8], [_noise(0.65, 2200.0, 1300.0, 2.5, 0.05), Synth.seconds(0.08), 0.15]])
 
 
 const THREAT_HUM_HOLD := 3.0
 
-static func _threat_hum() -> PackedFloat32Array:
+func _threat_hum() -> PackedFloat32Array:
 	return _mix([[_tone(THREAT_HUM_HOLD, _hz(44), _hz(44), "saw_dark", 0.15), 0, 0.8],
 		[_tone(THREAT_HUM_HOLD, _hz(56), _hz(56), "square_dark", 0.2), 0, 0.5]], true)
 
 
-static func _threat_tear() -> PackedFloat32Array:
+func _threat_tear() -> PackedFloat32Array:
 	return _mix([[_noise(0.18, 1800.0, 5200.0, 10.0), 0, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), 0, 0.6]], true)
 
 
-static func _warn_burrow() -> PackedFloat32Array:
+func _warn_burrow() -> PackedFloat32Array:
 	return _mix([[_tone(0.38, _hz(39), _hz(51), "saw_dark", 3.0), 0, 0.8],
 		[_noise(0.09, 350.0, 180.0, 35.0), 0, 0.7],
 		[_noise(0.1, 500.0, 250.0, 28.0), Synth.seconds(0.14), 1.0]])
 
 
-static func _warn_bore() -> PackedFloat32Array:
+func _warn_bore() -> PackedFloat32Array:
 	var parts := []
 	for at in [0.0, 0.12, 0.2]:
 		parts.append([_noise(0.035, 1800.0, 800.0, 80.0), Synth.seconds(at), 0.7])
@@ -1870,25 +1871,25 @@ static func _warn_bore() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _breach_crack() -> PackedFloat32Array:
+func _breach_crack() -> PackedFloat32Array:
 	return _mix([[_noise(0.03, 5200.0, 2400.0, 90.0), 0, 0.9],
 		[_fm(0.08, _hz(63), 2.3, 4.0, 30.0), 0, 0.55],
 		[_noise(0.36, 1400.0, 220.0, 6.0, 0.02), Synth.seconds(0.06), 0.75],
 		[_tone(0.34, _hz(46), _hz(39), "saw_dark", 5.0), Synth.seconds(0.1), 0.8]])
 
 
-static func _warn_lure() -> PackedFloat32Array:
+func _warn_lure() -> PackedFloat32Array:
 	return _mix([[_noise(0.52, 250.0, 1400.0, 3.0, 0.18), 0, 0.9],
 		[_tone(0.52, _hz(44), _hz(44), "sine", 2.0), 0, 0.65],
 		[_tone(0.4, _hz(51), _hz(51), "sine", 3.0), Synth.seconds(0.08), 0.45]])
 
 
-static func _warn_cut() -> PackedFloat32Array:
+func _warn_cut() -> PackedFloat32Array:
 	return _mix([[_noise(0.025, 4200.0, 1800.0, 120.0), 0, 0.8],
 		[_fm(0.29, _hz(58), 2.71, 5.0, 12.0, -12.0), 0, 1.0]])
 
 
-static func _warn_winch() -> PackedFloat32Array:
+func _warn_winch() -> PackedFloat32Array:
 	var parts := [[_tone(0.43, _hz(46), _hz(46), "square_dark", 2.0), 0, 0.6]]
 	for at in [0.0, 0.13, 0.26]:
 		parts.append([_fm(0.1, _hz(46), 3.5, 4.0, 28.0), Synth.seconds(at), 1.0])
@@ -1896,25 +1897,25 @@ static func _warn_winch() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _warn_dive() -> PackedFloat32Array:
+func _warn_dive() -> PackedFloat32Array:
 	return _mix([[_noise(0.56, 1800.0, 350.0, 4.0, 0.06), 0, 0.45],
 		[_tone(0.56, _hz(58), _hz(51), "sine", 1.8), 0, 1.0]])
 
 
-static func _warn_tether() -> PackedFloat32Array:
+func _warn_tether() -> PackedFloat32Array:
 	return _mix([[_noise(0.03, 2600.0, 1200.0, 90.0), 0, 0.6],
 		[_noise(0.03, 3200.0, 1500.0, 90.0), Synth.seconds(0.12), 0.7],
 		[_fm(0.32, _hz(58), 1.5, 3.0, 7.0, 4.0), Synth.seconds(0.2), 1.0],
 		[_noise(0.2, 700.0, 300.0, 9.0, 0.03), Synth.seconds(0.2), 0.35]])
 
 
-static func _warn_flap() -> PackedFloat32Array:
+func _warn_flap() -> PackedFloat32Array:
 	return _mix([[_tone(0.42, _hz(51), _hz(56), "saw_dark", 2.5), 0, 0.7],
 		[_fm(0.42, _hz(63), 2.1, 1.5, 3.0, 5.0), 0, 0.35],
 		[_noise(0.4, 600.0, 1600.0, 3.0, 0.12), Synth.seconds(0.05), 0.6]])
 
 
-static func _warn_reel() -> PackedFloat32Array:
+func _warn_reel() -> PackedFloat32Array:
 	var parts := [[_tone(0.7, _hz(39), _hz(41), "saw_dark", 3.0), 0, 0.5]]
 	for i in 5:
 		parts.append([_noise(0.025, 1800.0 + 350.0 * i, 900.0, 90.0), Synth.seconds(0.11 * i), 0.55 + 0.05 * i])
@@ -1922,13 +1923,13 @@ static func _warn_reel() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _flank_call() -> PackedFloat32Array:
+func _flank_call() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, _hz(81), _hz(88), "sine", 4.0), 0, 0.8],
 		[_tone(0.2, _hz(88), _hz(86), "sine", 7.0), Synth.seconds(0.15), 0.85],
 		[_noise(0.3, 5200.0, 4400.0, 9.0, 0.01), 0, 0.12]])
 
 
-static func _boil_rumble() -> PackedFloat32Array:
+func _boil_rumble() -> PackedFloat32Array:
 	return _mix([[_fm(0.9, _hz(31), 1.5, 2.5, 2.0, 3.0), 0, 0.9],
 		[_noise(0.8, 300.0, 900.0, 2.5, 0.08), Synth.seconds(0.1), 0.5],
 		[_noise(0.06, 1400.0, 700.0, 40.0), Synth.seconds(0.5), 0.35],
@@ -1942,15 +1943,7 @@ static func motif_score(id: String, at: int, instrument: String, gain: float, oc
 	return score
 
 
-static func tally_recipe(id: String, midi := -1, total := false) -> PackedFloat32Array:
-	var direct := midi >= 0
-	var saved := []
-	if direct:
-		_lock.lock()
-		saved = [Synth.score_step, Synth.score_transpose, _shift]
-		Synth.score_step = Harmony.STEP
-		Synth.score_transpose = 0
-		_shift = 0
+func tally_recipe(id: String, midi := -1, total := false) -> PackedFloat32Array:
 	if midi < 0:
 		midi = 50 if id == "plate_tally" else 62
 	var score: Array = [[0, midi, 1, "keys", 0.8]]
@@ -1964,13 +1957,7 @@ static func tally_recipe(id: String, midi := -1, total := false) -> PackedFloat3
 		score.append([0, midi, 1, "bell", 0.2])
 	var punch := _mix([[_noise(0.018, 2600.0, 900.0, 180.0), 0, 0.7],
 		[_tone(0.025, _hz(midi + 12), _hz(midi), "sine", 100.0), 0, 0.25]])
-	var rendered := Synth.normalize(_mix([[Synth.render_score(score, 0.7), 0, 1.0], [punch, 0, 0.4]]), 0.9)
-	if direct:
-		Synth.score_step = int(saved[0])
-		Synth.score_transpose = int(saved[1])
-		_shift = int(saved[2])
-		_lock.unlock()
-	return rendered
+	return Synth.normalize(_mix([[_score(score, 0.7), 0, 1.0], [punch, 0, 0.4]]), 0.9)
 
 
 static func kest_score(id: String) -> Array:
@@ -1984,70 +1971,70 @@ static func kest_score(id: String) -> Array:
 	return [[0, note, 1, "tom", 0.6]]
 
 
-static func _sable_release() -> PackedFloat32Array:
+func _sable_release() -> PackedFloat32Array:
 	var score := motif_score("sable", 0, "mallet", 0.8)
 	score.append_array(motif_score("sable", 0, "bell", 0.3, 12))
 	for midi in [65, 69, 72, 76]:
 		score.append([6, midi + 12, 6, "bell", 0.3])
 	score.append_array([[6, 53, 6, "keys", 0.3], [6, 57, 6, "keys", 0.3], [6, 60, 6, "keys", 0.3], [6, 64, 6, "keys", 0.3],
 		[6, 88, 6, "bell", 0.25], [6, 0, 2, "open_hat", 0.35]])
-	return Synth.render_score(score, 0.9)
+	return _score(score, 0.9)
 
 
-static func _rivet_release() -> PackedFloat32Array:
-	var step := Synth.score_step
+func _rivet_release() -> PackedFloat32Array:
+	var step := _step
 	var score := motif_score("rivet", 0, "clav", 0.8)
 	score.append_array(motif_score("rivet", 0, "clav", 0.35, 12))
 	score.append_array([[4, 0, 8, "crash", 0.45], [4, 0, 2, "open_hat", 0.7], [4, 0, 2, "kick", 0.6]])
-	var parts: Array = [[Synth.render_score(score, 0.8), 0, 1.0]]
+	var parts: Array = [[_score(score, 0.8), 0, 1.0]]
 	var hits := [0.0, 1.0, 2.0, 2.5, 3.0, 3.25, 3.5, 3.75]
 	for i in hits.size():
 		parts.append([Synth.drum("hat"), int(hits[i] * step), 0.45 + 0.07 * i])
 	return _mix(parts)
 
 
-static func _kest_release() -> PackedFloat32Array:
+func _kest_release() -> PackedFloat32Array:
 	var score := motif_score("kest", 0, "tom", 0.85)
 	var cells: Array = Harmony.motif("kest")["cells"]
 	var last: Array = cells[cells.size() - 1]
 	score.append([int(last[0]), int(last[1]) - 12, 8, "sub808", 0.9])
 	score.append([int(last[0]), 0, 2, "kick", 0.5])
-	return Synth.render_score(score, 1.0)
+	return _score(score, 1.0)
 
 
-static func _tarn_release() -> PackedFloat32Array:
-	var step := Synth.score_step
+func _tarn_release() -> PackedFloat32Array:
+	var step := _step
 	var score := motif_score("tarn", 0, "reese", 0.8)
 	score.append_array([[4, 45, 6, "sub808", 0.7], [4, 0, 2, "kick", 0.6], [4, 0, 8, "crash", 0.45]])
-	var parts: Array = [[Synth.render_score(score, 0.9), 0, 1.0]]
+	var parts: Array = [[_score(score, 0.9), 0, 1.0]]
 	for at in [0, 2]:
 		parts.append([Synth.drum("anvil"), int(at * step), 0.7])
 	return _mix(parts)
 
 
-static func _tally_release() -> PackedFloat32Array:
-	var step := Synth.score_step
+func _tally_release() -> PackedFloat32Array:
+	var step := _step
 	var score := motif_score("tally", 0, "keys", 0.8)
 	score.append_array([[5, 86, 6, "bell", 0.4], [5, 50, 6, "sub808", 0.6], [5, 0, 2, "kick", 0.5]])
-	var parts: Array = [[Synth.render_score(score, 0.9), 0, 1.0]]
+	var parts: Array = [[_score(score, 0.9), 0, 1.0]]
 	for i in 4:
 		parts.append([Synth.drum("clap"), int(i * step), 0.4 + 0.08 * i])
 	parts.append([Synth.drum("snare"), int(5 * step), 0.8])
 	return _mix(parts)
 
 
-static func _cannon_release() -> PackedFloat32Array:
-	var step := Synth.score_step
+func _cannon_release() -> PackedFloat32Array:
+	var step := _step
 	var score := motif_score("cannon", 0, "chime", 0.7)
 	score.append_array(motif_score("cannon", 0, "talk", 0.35, -12))
 	score.append_array([[0, 0, 2, "kick", 0.6], [4, 0, 2, "kick", 0.6], [4, 0, 8, "crash", 0.45], [4, 50, 6, "sub808", 0.6]])
-	var parts: Array = [[Synth.render_score(score, 1.6), 0, 1.0]]
+	var parts: Array = [[_score(score, 1.6), 0, 1.0]]
 	parts.append([Synth.drum("snare"), int(2 * step), 0.6])
 	parts.append([Synth.drum("hat"), int(3 * step), 0.5])
 	return _mix(parts)
 
 
-static func _ready_pulse(id: String) -> PackedFloat32Array:
+func _ready_pulse(id: String) -> PackedFloat32Array:
 	var first: int = int(Harmony.motif_or_first(id)["cells"][0][1])
 	match id:
 		"rivet":
@@ -2063,33 +2050,33 @@ static func _ready_pulse(id: String) -> PackedFloat32Array:
 	return _mix([[_cut(_n("mallet", first + 12), 0.12), 0, 1.0], [_cut(_n("bell", first + 24), 0.12), 0, 0.3]])
 
 
-static func _break_free(id: String) -> PackedFloat32Array:
+func _break_free(id: String) -> PackedFloat32Array:
 	var row := Harmony.motif_or_first(id)
 	var cells: Array = row["cells"]
 	var a: int = int(cells[0][1]) + 12
 	var b: int = int(cells[cells.size() - 1][1] if id in ["rivet", "tarn", "tally"] else cells[1][1]) + 12
 	var voice: String = row["voice"]
-	var gap := Synth.score_step
+	var gap := _step
 	return _mix([[_noise(0.18, 5200.0, 2600.0, 14.0, 0.001), 0, 0.55], [_cut(_n(voice, a), 0.2), 0, 0.85],
 		[_cut(_n(voice, b), 0.35), gap, 0.9], [_cut(_n("bell", b + 12), 0.4), gap, 0.3]])
 
 
-static func _fleet_motif() -> PackedFloat32Array:
+func _fleet_motif() -> PackedFloat32Array:
 	var score := motif_score("fleet", 0, "brass", 0.6)
 	score.append_array(motif_score("fleet", 0, "brass", 0.35, 12))
 	for stamp in Harmony.motif("fleet")["stamps"]:
 		score.append([int(stamp), 0, 2, "anvil", 0.9])
 		score.append([int(stamp), 0, 2, "kick", 0.55])
-	return Synth.render_score(score, 0.9)
+	return _score(score, 0.9)
 
 
-static func _reactor_erupt() -> PackedFloat32Array:
+func _reactor_erupt() -> PackedFloat32Array:
 	var pedal: int = int(Harmony.motif("reactor")["cells"][0][1])
 	return _mix([[Synth.drum("boom"), 0, 1.0], [_noise(1.1, 3800.0, 350.0, 2.6, 0.004), 0, 0.8],
 		[_n("sub808", pedal), 0, 0.8], [Synth.drum("crash"), 0, 0.35]], true)
 
 
-static func _swarm_lock() -> PackedFloat32Array:
+func _swarm_lock() -> PackedFloat32Array:
 	var row := Harmony.motif("swarm")
 	var unison: int = int(row["cells"][0][1])
 	var snap := Synth.seconds(0.3)
@@ -2099,7 +2086,7 @@ static func _swarm_lock() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _swarm_scatter() -> PackedFloat32Array:
+func _swarm_scatter() -> PackedFloat32Array:
 	var chord: Array = Harmony.motif("swarm")["chord"]
 	var parts: Array = []
 	for i in chord.size():
@@ -2107,33 +2094,33 @@ static func _swarm_scatter() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _mind_quote(class_id: String) -> PackedFloat32Array:
+func _mind_quote(class_id: String) -> PackedFloat32Array:
 	var score: Array = []
 	for cell in Harmony.mind_quote(class_id):
 		score.append([int(cell[0]), int(cell[1]) + 12, int(cell[2]) + 2, "chime", 0.7])
-	return Synth.render_score(score, 2.4)
+	return _score(score, 2.4)
 
 
-static func _mind_wrong(class_id: String) -> PackedFloat32Array:
+func _mind_wrong(class_id: String) -> PackedFloat32Array:
 	var quote: Array = Harmony.mind_quote(class_id)
 	var wrong: int = (int(quote[-1][1]) if not quote.is_empty() else 61) + 12
 	return _mix([[_cut(_n("bell", wrong), 1.6), 0, 0.8], [_fm(1.6, _hz(wrong - 6), 1.0, 0.4, 1.6, -1.0), 0, 0.5],
 		[_tone(1.2, _hz(wrong - 18), _hz(wrong - 19), "sine", 2.0), Synth.seconds(0.1), 0.6], [Synth.drum("crash"), 0, 0.25]])
 
 
-static func _fleet_anvil() -> PackedFloat32Array:
+func _fleet_anvil() -> PackedFloat32Array:
 	var gap := Synth.seconds(0.17)
 	return _mix([[Synth.drum("anvil"), 0, 1.0], [Synth.drum("anvil"), gap, 0.8], [Synth.drum("boom"), 0, 0.6],
 		[_cut(_n("brass", 50), 0.7), gap, 0.6], [_cut(_n("brass", 57), 0.7), gap, 0.5], [_cut(_n("brass", 68), 0.7), gap, 0.4],
 		[_fm_sweep(0.6, _hz(79), _hz(91), 1.5, 5.0), gap * 2, 0.2]], true)
 
 
-static func _boiler_burst() -> PackedFloat32Array:
+func _boiler_burst() -> PackedFloat32Array:
 	var pop := Synth.seconds(0.22)
 	return _mix([[_noise(0.3, 900.0, 4200.0, 1.0, 0.25), 0, 0.5], [Synth.drum("boom"), pop, 1.0],
 		[_noise(0.9, 5000.0, 600.0, 3.0, 0.003), pop, 0.7], [_tone(0.25, 70.0, 40.0, "sine", 12.0), pop, 0.8],
 		[_tone(0.7, _hz(74), _hz(76), "sine", 3.5), pop, 0.35], [_tone(0.7, _hz(80), _hz(82), "sine", 3.5), pop, 0.25]], true)
-static func _glass_lance() -> PackedFloat32Array:
+func _glass_lance() -> PackedFloat32Array:
 	var quote: Array = Harmony.mind_quote("sable")
 	var parts: Array = [[_fm(0.06, _hz(int(quote[0][1]) + 36), 3.5, 3.0, 45.0), 0, 0.5]]
 	for i in 3:
@@ -2143,7 +2130,7 @@ static func _glass_lance() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func hold(kind: String, n: int, strain := 0.0) -> PackedFloat32Array:
+func hold(kind: String, n: int, strain := 0.0) -> PackedFloat32Array:
 	var buf := Synth.buffer(n)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = kind.hash()
@@ -2232,13 +2219,13 @@ static func hold(kind: String, n: int, strain := 0.0) -> PackedFloat32Array:
 	return Synth.declick(Synth.normalize(buf, 0.9), 64, 600)
 
 
-static func _shop_bell() -> PackedFloat32Array:
+func _shop_bell() -> PackedFloat32Array:
 	return _mix([[_fm(0.6, _hz(93), 3.5, 2.0, 5.0), 0, 0.6], [_cut(_n("beep", 86), 0.12), Synth.seconds(0.16), 0.9],
 		[_cut(_n("mallet", 86), 0.12), Synth.seconds(0.16), 0.5], [_cut(_n("beep", 86), 0.2), Synth.seconds(0.34), 0.9],
 		[_cut(_n("mallet", 86), 0.2), Synth.seconds(0.34), 0.5]])
 
 
-static func _bet_clunk() -> PackedFloat32Array:
+func _bet_clunk() -> PackedFloat32Array:
 	return _mix([[Synth.drum("anvil"), 0, db_to_linear(-6.0)], [_cut(_n("fbass", 38), 0.16), 0, 0.9],
 		[_cut(_n("fbass", 44), 0.22), Synth.seconds(0.1), 0.9]])
 
@@ -2256,17 +2243,17 @@ static func _bet_roll() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _bet_crack() -> PackedFloat32Array:
+func _bet_crack() -> PackedFloat32Array:
 	return _mix([[Synth.drum("snare"), 0, 1.0], [_cut(_n("fbass", 45), 0.24), 0, 0.9],
 		[_cut(_n("beep", 81), 0.12), Synth.seconds(0.1), 0.8], [_cut(_n("mallet", 81), 0.12), Synth.seconds(0.1), 0.45],
 		[_cut(_n("beep", 86), 0.2), Synth.seconds(0.26), 0.9], [_cut(_n("mallet", 86), 0.2), Synth.seconds(0.26), 0.5]])
 
 
-static func _bet_refusal() -> PackedFloat32Array:
+func _bet_refusal() -> PackedFloat32Array:
 	return _mix([[_noise(0.04, 3000.0, 3000.0, 150.0), 0, 0.5], [_cut(_n("fbass", 43), 0.3), 0, 0.85]])
 
 
-static func _sunken_bell() -> PackedFloat32Array:
+func _sunken_bell() -> PackedFloat32Array:
 	var bell := _mix([[_n("bell", 69), 0, 0.85], [_n("bell", 62), Synth.seconds(0.22), 1.0]])
 	var low := 0.0
 	var g := 2.0 * sin(PI * 900.0 * Synth.INV_RATE)
@@ -2276,27 +2263,27 @@ static func _sunken_bell() -> PackedFloat32Array:
 	return _cut(bell, 2.0)
 
 
-static func _ally_hum(class_id: String) -> PackedFloat32Array:
-	return Synth.render_score(motif_score(class_id, 0, "chime", 0.7, 12), 1.4)
+func _ally_hum(class_id: String) -> PackedFloat32Array:
+	return _score(motif_score(class_id, 0, "chime", 0.7, 12), 1.4)
 
 
-static func _ally_wake() -> PackedFloat32Array:
+func _ally_wake() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 86), 0.1), 0, 0.8], [_cut(_n("bell", 81), 0.12), Synth.seconds(0.04), 0.7],
 		[_cut(_n("bell", 86), 0.16), Synth.seconds(0.08), 0.9]])
 
 
-static func _fight_arm_stamp() -> PackedFloat32Array:
+func _fight_arm_stamp() -> PackedFloat32Array:
 	return _mix([[Synth.drum("anvil"), 0, 1.0], [_n("brass", 50), 0, 0.5],
 		[_n("brass", 51), Synth.seconds(0.12), 0.4]], true)
 
 
-static func _near_miss_whip(class_id: String) -> PackedFloat32Array:
+func _near_miss_whip(class_id: String) -> PackedFloat32Array:
 	var notes := whip_notes(class_id)
 	return _mix([[_noise(0.22, 700.0, 4800.0, 9.0, 0.04), 0, 0.85],
 		[_cut(_n(notes[0], notes[1]), 0.16), 0, 0.8], [_cut(_n(notes[0], notes[2]), 0.22), Synth.seconds(0.09), 0.85]])
 
 
-static func _pickup_fountain() -> PackedFloat32Array:
+func _pickup_fountain() -> PackedFloat32Array:
 	var step := Synth.seconds(0.075)
 	var parts: Array = []
 	var notes := [74, 77, 79, 81]
@@ -2307,37 +2294,37 @@ static func _pickup_fountain() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _synergy_fired() -> PackedFloat32Array:
+func _synergy_fired() -> PackedFloat32Array:
 	var score := [[0, 69, 2, "mallet", 0.72], [1, 86, 2, "bell", 0.62], [3, 77, 5, "mallet", 0.85], [3, 77, 5, "bell", 0.44],
 		[3, 77, 5, "lead", 0.34], [3, 65, 5, "keys", 0.38], [3, 62, 5, "keys", 0.34], [3, 69, 5, "keys", 0.3]]
-	return Synth.render_score(score, 0.05)
+	return _score(score, 0.05)
 
 
-static func _evolution_fired() -> PackedFloat32Array:
+func _evolution_fired() -> PackedFloat32Array:
 	var score := [[0, 69, 2, "mallet", 0.72], [2, 74, 2, "mallet", 0.82], [4, 86, 4, "mallet", 0.9], [4, 86, 4, "bell", 0.54],
 		[4, 74, 4, "lead", 0.36], [4, 62, 4, "brass", 0.28], [4, 74, 4, "keys", 0.36], [4, 62, 4, "sub808", 0.45]]
-	return Synth.render_score(score, 0.05)
+	return _score(score, 0.05)
 
 
-static func _lore_found() -> PackedFloat32Array:
+func _lore_found() -> PackedFloat32Array:
 	return _mix([[_noise(0.14, 3000.0, 1200.0, 18.0, 0.03), 0, 0.3],
 		[_cut(_n("keys", 81), 0.3), 0, 0.8], [_cut(_n("keys", 77), 0.4), Synth.seconds(0.2), 0.7],
 		[_cut(_n("bell", 74), 0.45), Synth.seconds(0.42), 0.35]])
 
 
-static func _pilot_unlocked(class_id: String) -> PackedFloat32Array:
+func _pilot_unlocked(class_id: String) -> PackedFloat32Array:
 	var row := Harmony.motif_or_first(class_id)
 	var score := motif_score(class_id, 0, row["voice"], 0.8)
 	score.append_array(motif_score(class_id, 0, "bell", 0.25, 12))
-	return _cut(Synth.render_score(score, 0.4), 0.85, Synth.seconds(0.12))
+	return _cut(_score(score, 0.4), 0.85, Synth.seconds(0.12))
 
 
-static func _kill_chain_tier() -> PackedFloat32Array:
+func _kill_chain_tier() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 74), 0.14), 0, 0.85], [_cut(_n("bell", 77), 0.14), 0, 0.7],
 		[_noise(0.03, 5500.0, 4000.0, 130.0), 0, 0.4]])
 
 
-static func _drop_landing() -> PackedFloat32Array:
+func _drop_landing() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 74), 0.3), 0, 0.85], [_tone(0.12, 260.0, 620.0, "sine", 26.0), Synth.seconds(0.02), 0.7],
 		[_noise(0.03, 5000.0, 3000.0, 120.0), 0, 0.4]])
 
@@ -2347,15 +2334,15 @@ static func _shell_spring() -> PackedFloat32Array:
 		[_noise(0.02, 4500.0, 3000.0, 200.0), 0, 0.3]])
 
 
-static func _door_tick() -> PackedFloat32Array:
+func _door_tick() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 86), 0.08), 0, 0.8], [_noise(0.015, 6500.0, 6500.0, 250.0), 0, 0.35]])
 
 
-static func _return_launch_arpeggio() -> PackedFloat32Array:
+func _return_launch_arpeggio() -> PackedFloat32Array:
 	return _arpeggio(Harmony.LAUNCH_TUNE, 0.07, "mallet", 0.5)
 
 
-static func _arena_lock_slam() -> PackedFloat32Array:
+func _arena_lock_slam() -> PackedFloat32Array:
 	return _mix([[_noise(0.5, 180.0, 60.0, 7.0), 0, 1.0],
 		[_tone(0.7, _hz(38), _hz(31), "sine", 4.0), 0, 0.9],
 		[_tone(0.18, _hz(62), 0.0, "square_dark", 9.0), Synth.seconds(0.06), 0.45],
@@ -2363,47 +2350,47 @@ static func _arena_lock_slam() -> PackedFloat32Array:
 		[_noise(0.06, 3200.0, 1800.0, 60.0), Synth.seconds(0.02), 0.35]], true)
 
 
-static func _arena_wave_whistle() -> PackedFloat32Array:
+func _arena_wave_whistle() -> PackedFloat32Array:
 	return _mix([[_tone(0.9, _hz(86), _hz(74), "sine", 2.0), 0, 0.8],
 		[_noise(0.04, 1400.0, 900.0, 60.0), 0, 0.4], [_noise(0.04, 1400.0, 900.0, 60.0), Synth.seconds(0.45), 0.4]])
 
 
-static func _arena_unlock_bells() -> PackedFloat32Array:
+func _arena_unlock_bells() -> PackedFloat32Array:
 	var score := [[0, 69, 1, "mallet", 0.62], [1, 72, 1, "mallet", 0.68], [2, 74, 4, "bell", 0.82],
 		[2, 86, 4, "bell", 0.32], [2, 62, 4, "keys", 0.28], [2, 69, 4, "keys", 0.24]]
 	return _mix([[_noise(0.04, 2800.0, 1400.0, 80.0), 0, 0.5],
-		[Synth.render_score(score, 0.05), Synth.seconds(0.04), 1.0]])
+		[_score(score, 0.05), Synth.seconds(0.04), 1.0]])
 
 
-static func _warden_gate_pip() -> PackedFloat32Array:
+func _warden_gate_pip() -> PackedFloat32Array:
 	return _mix([[_fm(0.32, _hz(74), 2.0, 1.4, 9.0), 0, 1.0], [_noise(0.03, 3600.0, 2400.0, 90.0), 0, 0.3]])
 
 
-static func _warden_gate_clunk() -> PackedFloat32Array:
+func _warden_gate_clunk() -> PackedFloat32Array:
 	return _mix([[_noise(0.12, 420.0, 260.0, 30.0), 0, 1.0], [_tone(0.14, _hz(45), _hz(43), "square_dark", 22.0), 0, 0.6]])
 
 
-static func _warden_gate_release() -> PackedFloat32Array:
+func _warden_gate_release() -> PackedFloat32Array:
 	var parts := []
 	for i in 6:
 		parts.append([_noise(0.03, 2200.0 + 300.0 * i, 1200.0, 80.0), Synth.seconds(0.05 * i), 0.5])
 	var chord := [[0, 62, 6, "keys", 0.45], [0, 66, 6, "keys", 0.4], [0, 69, 6, "keys", 0.4], [0, 76, 6, "keys", 0.3],
 		[0, 74, 6, "bell", 0.62], [0, 86, 6, "bell", 0.3], [0, 38, 6, "sub", 0.62]]
-	parts.append([Synth.render_score(chord, 0.05), Synth.seconds(0.3), 1.0])
+	parts.append([_score(chord, 0.05), Synth.seconds(0.3), 1.0])
 	return _mix(parts)
 
 
-static func _call_ink() -> PackedFloat32Array:
+func _call_ink() -> PackedFloat32Array:
 	var score := [[0, 62, 1, "brass", 0.6], [1, 69, 3, "brass", 0.75]]
 	return _mix([[_noise(0.06, 900.0, 500.0, 45.0), 0, 0.7], [_tone(0.08, _hz(38), _hz(36), "sine", 30.0), 0, 0.6],
-		[Synth.render_score(score, 0.05), Synth.seconds(0.03), 1.0]])
+		[_score(score, 0.05), Synth.seconds(0.03), 1.0]])
 
 
-static func _call_drop() -> PackedFloat32Array:
+func _call_drop() -> PackedFloat32Array:
 	return _mix([[_tone(0.34, _hz(57), _hz(52), "square_dark", 9.0), 0, 0.8], [_noise(0.05, 600.0, 300.0, 50.0), 0, 0.3]])
 
 
-static func _heat_kettle() -> PackedFloat32Array:
+func _heat_kettle() -> PackedFloat32Array:
 	var n := Synth.seconds(2.0)
 	var whistle := _tone(2.0, _hz(86), _hz(92), "sine", 0.0)
 	var breath := _noise(2.0, 5200.0, 7400.0, 0.0, 0.3)
@@ -2414,34 +2401,34 @@ static func _heat_kettle() -> PackedFloat32Array:
 	return _mix([[whistle, 0, 0.8], [breath, 0, 0.18]])
 
 
-static func _overtime_offer() -> PackedFloat32Array:
+func _overtime_offer() -> PackedFloat32Array:
 	var score := [[0, 69, 1, "mallet", 0.6], [1, 72, 1, "mallet", 0.65], [2, 76, 3, "bell", 0.55]]
-	return _mix([[Synth.render_score(score, 0.1), 0, 1.0]])
+	return _mix([[_score(score, 0.1), 0, 1.0]])
 
 
-static func _overtime_ring() -> PackedFloat32Array:
+func _overtime_ring() -> PackedFloat32Array:
 	var toll := [[0, 50, 6, "bell", 0.8], [0, 38, 6, "sub", 0.6], [3, 62, 3, "bell", 0.6], [3, 68, 3, "bell", 0.5]]
-	return _mix([[Synth.render_score(toll, 0.15), 0, 1.0], [_noise(0.5, 500.0, 3600.0, 0.0, 0.3), 0, 0.35]])
+	return _mix([[_score(toll, 0.15), 0, 1.0], [_noise(0.5, 500.0, 3600.0, 0.0, 0.3), 0, 0.35]])
 
 
-static func _overtime_pay() -> PackedFloat32Array:
+func _overtime_pay() -> PackedFloat32Array:
 	var parts := []
 	for i in 5:
 		parts.append([_noise(0.025, 3600.0 + 400.0 * i, 2400.0, 90.0), Synth.seconds(0.04 * i), 0.4])
 	var chord := [[0, 62, 5, "keys", 0.5], [0, 66, 5, "keys", 0.4], [0, 69, 5, "keys", 0.4], [0, 76, 5, "keys", 0.3],
 		[0, 78, 5, "bell", 0.55], [0, 86, 5, "bell", 0.32]]
-	parts.append([Synth.render_score(chord, 0.1), Synth.seconds(0.2), 1.0])
+	parts.append([_score(chord, 0.1), Synth.seconds(0.2), 1.0])
 	return _mix(parts)
 
 
-static func _heat_rise() -> PackedFloat32Array:
+func _heat_rise() -> PackedFloat32Array:
 	var sweep := _fm_sweep(0.5, 180.0, 900.0, 2.5, 3.0)
 	var hiss := _noise(0.5, 1200.0, 5200.0, 0.0, 0.3)
 	var n := hiss.size()
 	for i in n:
 		hiss[i] *= float(i) / n
 	var tail := [[0, 69, 2, "brass", 0.55]]
-	return _mix([[sweep, 0, 0.7], [hiss, 0, 0.25], [Synth.render_score(tail, 0.1), Synth.seconds(0.35), 0.8]])
+	return _mix([[sweep, 0, 0.7], [hiss, 0, 0.25], [_score(tail, 0.1), Synth.seconds(0.35), 0.8]])
 
 
 static func _heat_cool() -> PackedFloat32Array:
@@ -2449,7 +2436,7 @@ static func _heat_cool() -> PackedFloat32Array:
 	return _mix([[sweep, 0, 0.6], [_noise(0.5, 4200.0, 900.0, 5.0, 0.01), 0, 0.3]])
 
 
-static func _heat_hot_hit() -> PackedFloat32Array:
+func _heat_hot_hit() -> PackedFloat32Array:
 	return _mix([[_fm(0.3, _hz(60), 1.41, 5.0, 12.0), 0, 0.9], [_noise(0.3, 6200.0, 2600.0, 10.0, 0.002), 0, 0.5],
 		[_tone(0.14, _hz(40), _hz(36), "sine", 20.0), 0, 0.7]])
 
@@ -2462,18 +2449,18 @@ static func _arch(buf: PackedFloat32Array, peak := 0.5) -> PackedFloat32Array:
 	return buf
 
 
-static func _tele_open() -> PackedFloat32Array:
+func _tele_open() -> PackedFloat32Array:
 	return _mix([[_tone(0.1, _hz(50), _hz(50), "square_dark", 12.0), 0, 0.8],
 		[_tone(0.14, _hz(51), _hz(52), "square_dark", 10.0), Synth.seconds(0.11), 0.85]], true)
 
 
-static func _tele_crane_sweep() -> PackedFloat32Array:
+func _tele_crane_sweep() -> PackedFloat32Array:
 	var air := _arch(_noise(0.55, 500.0, 3200.0, 0.0, 0.05), 0.45)
 	var sweep := _arch(_tone(0.5, _hz(62), _hz(74), "saw_dark", 0.0), 0.5)
 	return _mix([[_tele_open(), 0, 0.8], [air, Synth.seconds(0.12), 0.6], [sweep, Synth.seconds(0.12), 0.25]])
 
 
-static func _tele_slag_ring() -> PackedFloat32Array:
+func _tele_slag_ring() -> PackedFloat32Array:
 	var bubble := _arch(_noise(0.5, 160.0, 420.0, 0.0, 0.1), 0.4)
 	for i in bubble.size():
 		bubble[i] *= 0.6 + 0.4 * sin(TAU * 16.0 * i * Synth.INV_RATE)
@@ -2482,7 +2469,7 @@ static func _tele_slag_ring() -> PackedFloat32Array:
 		[_cut(_n("bell", 74), 0.3), Synth.seconds(0.28), 0.5], [_cut(_n("bell", 81), 0.3), Synth.seconds(0.4), 0.45]])
 
 
-static func _tele_charge() -> PackedFloat32Array:
+func _tele_charge() -> PackedFloat32Array:
 	var parts := [[_tele_open(), 0, 0.8]]
 	var at := 0.3
 	var gap := 0.11
@@ -2494,7 +2481,7 @@ static func _tele_charge() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-static func _tele_charge_wall() -> PackedFloat32Array:
+func _tele_charge_wall() -> PackedFloat32Array:
 	var parts := [[_tele_open(), 0, 0.8]]
 	var at := 0.3
 	for i in 4:
@@ -2505,26 +2492,26 @@ static func _tele_charge_wall() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-static func _tele_eject() -> PackedFloat32Array:
+func _tele_eject() -> PackedFloat32Array:
 	return _mix([[_tele_open(), 0, 0.8], [_fm_sweep(0.4, 450.0, 1900.0, 0.6, 2.5), Synth.seconds(0.28), 0.55],
 		[_tone(0.07, _hz(86), _hz(74), "sine", 40.0), Synth.seconds(0.66), 0.7]], true)
 
 
-static func _sluice_siren_two_tone() -> PackedFloat32Array:
+func _sluice_siren_two_tone() -> PackedFloat32Array:
 	var parts := [[_arch(_noise(0.9, 300.0, 1100.0, 0.0, 0.2), 0.6), 0, 0.22]]
 	for i in 4:
 		parts.append([_fm(0.2, _hz(74 if i % 2 == 0 else 67), 1.0, 1.2, 6.0), Synth.seconds(i * 0.21), 0.8])
 	return _mix(parts)
 
 
-static func _ride_rolling_metal() -> PackedFloat32Array:
+func _ride_rolling_metal() -> PackedFloat32Array:
 	var rumble := _noise(0.5, 250.0, 900.0, 0.0, 0.05)
 	for i in rumble.size():
 		rumble[i] *= 0.55 + 0.45 * sin(TAU * 22.0 * i * Synth.INV_RATE)
 	return _mix([[_arch(rumble, 0.3), 0, 0.8], [_arch(_tone(0.5, _hz(43), _hz(43), "saw_dark", 0.0), 0.3), 0, 0.35]])
 
 
-static func _ride_bowl_carve() -> PackedFloat32Array:
+func _ride_bowl_carve() -> PackedFloat32Array:
 	return _mix([[_arch(_noise(0.55, 700.0, 1800.0, 0.0, 0.1), 0.5), 0, 0.5],
 		[_arch(_tone(0.55, _hz(55), _hz(64), "sine", 0.0), 0.5), 0, 0.8]])
 
@@ -2533,7 +2520,7 @@ static func _ride_drop_swoop() -> PackedFloat32Array:
 	return _mix([[_fm_sweep(0.45, 1500.0, 220.0, 0.8, 4.0), 0, 0.8], [_noise(0.4, 3200.0, 500.0, 5.0, 0.02), 0, 0.4]])
 
 
-static func _ride_ledge_scuff() -> PackedFloat32Array:
+func _ride_ledge_scuff() -> PackedFloat32Array:
 	return _mix([[_noise(0.2, 1800.0, 800.0, 14.0, 0.004), 0, 0.8], [_tone(0.1, _hz(45), _hz(41), "sine", 25.0), 0, 0.5]])
 
 
@@ -2541,11 +2528,11 @@ static func _ride_hop_lift() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, 330.0, 760.0, "sine", 9.0), 0, 0.8], [_noise(0.05, 3000.0, 5000.0, 40.0, 0.001), 0, 0.3]])
 
 
-static func _ride_cable_clink() -> PackedFloat32Array:
+func _ride_cable_clink() -> PackedFloat32Array:
 	return _mix([[_fm(0.16, _hz(86), 2.76, 2.0, 22.0), 0, 0.8], [_fm(0.2, _hz(91), 2.76, 2.0, 20.0), Synth.seconds(0.08), 0.7]])
 
 
-static func _ride_sheet_swell() -> PackedFloat32Array:
+func _ride_sheet_swell() -> PackedFloat32Array:
 	var water := _noise(0.7, 350.0, 1900.0, 0.0, 0.3)
 	var n := water.size()
 	for i in n:
@@ -2557,16 +2544,16 @@ static func _steam_whistle_rise() -> PackedFloat32Array:
 	return _mix([[_fm(0.7, 520.0, 1.0, 0.5, 0.0, 7.0), 0, 0.8], [_noise(0.7, 4200.0, 5500.0, 0.0, 0.2), 0, 0.2]])
 
 
-static func _cannon_bang_rail_whoosh() -> PackedFloat32Array:
+func _cannon_bang_rail_whoosh() -> PackedFloat32Array:
 	return _mix([[_noise(0.1, 2400.0, 900.0, 25.0, 0.001), 0, 0.9], [_tone(0.2, _hz(45), _hz(33), "sine", 12.0), 0, 0.9],
 		[_arch(_noise(0.5, 900.0, 3800.0, 0.0, 0.05), 0.25), Synth.seconds(0.08), 0.5]], true)
 
 
-static func _sluice_gush_roar() -> PackedFloat32Array:
+func _sluice_gush_roar() -> PackedFloat32Array:
 	return _mix([[_noise(0.95, 220.0, 1700.0, 2.2, 0.04), 0, 0.9], [_tone(0.8, _hz(40), _hz(34), "sine", 2.5), 0, 0.8]])
 
 
-static func _lounge_flip() -> PackedFloat32Array:
+func _lounge_flip() -> PackedFloat32Array:
 	var parts := [[_noise(0.9, 3000.0, 5000.0, 3.0, 0.01), 0, 0.12], [_tone(0.09, _hz(43), _hz(38), "sine", 30.0), 0, 0.8],
 		[_noise(0.03, 2000.0, 900.0, 80.0, 0.001), 0, 0.5]]
 	var tune := [[69, 0.12, 0.22], [74, 0.26, 0.22], [77, 0.4, 0.22], [76, 0.54, 0.16], [74, 0.68, 0.48]]
@@ -2577,16 +2564,16 @@ static func _lounge_flip() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _bay_bell_ring() -> PackedFloat32Array:
+func _bay_bell_ring() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 79), 1.0, 2400), 0, 0.8], [_fm(0.9, _hz(86), 2.76, 1.2, 4.5), 0, 0.35],
 		[_noise(0.01, 3000.0, 3000.0, 200.0, 0.001), 0, 0.3]])
 
 
-static func _marble_tick_ladder() -> PackedFloat32Array:
+func _marble_tick_ladder() -> PackedFloat32Array:
 	return _mix([[_fm(0.12, _hz(91), 3.5, 1.0, 26.0), 0, 0.8], [_noise(0.012, 5000.0, 4000.0, 200.0, 0.001), 0, 0.3]])
 
 
-static func _pins_crash() -> PackedFloat32Array:
+func _pins_crash() -> PackedFloat32Array:
 	var parts := [[_noise(0.12, 2600.0, 1100.0, 22.0, 0.001), 0, 0.9], [_tone(0.22, _hz(46), _hz(38), "sine", 12.0), 0, 0.6]]
 	var at := 0.06
 	for i in 4:
@@ -2595,19 +2582,19 @@ static func _pins_crash() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-static func _bay_lounge_in() -> PackedFloat32Array:
+func _bay_lounge_in() -> PackedFloat32Array:
 	return _mix([[_arch(_noise(0.5, 400.0, 1500.0, 0.0, 0.05), 0.5), 0, 0.15], [_cut(_n("keys", 67), 0.35), 0, 0.6],
 		[_cut(_n("keys", 74), 0.52, 1800), Synth.seconds(0.1), 0.68],
 		[_cut(_n("keys", 62), 0.52, 1800), Synth.seconds(0.1), 0.26],
 		[_cut(_n("keys", 69), 0.52, 1800), Synth.seconds(0.1), 0.24]])
 
 
-static func _bay_slingshot_out() -> PackedFloat32Array:
+func _bay_slingshot_out() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, _hz(62), _hz(55), "saw_dark", 6.0), 0, 0.4], [_fm_sweep(0.3, 300.0, 2500.0, 0.6, 7.0), Synth.seconds(0.16), 0.7],
 		[_noise(0.25, 800.0, 4000.0, 9.0, 0.01), Synth.seconds(0.16), 0.35]])
 
 
-static func _ultimate_ready() -> PackedFloat32Array:
+func _ultimate_ready() -> PackedFloat32Array:
 	var parts := []
 	var notes := [74, 77, 81, 86]
 	for i in notes.size():
@@ -2620,7 +2607,7 @@ static func _ultimate_ready() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _found_twinkle() -> PackedFloat32Array:
+func _found_twinkle() -> PackedFloat32Array:
 	return _mix([[_cut(_n("mallet", 86), 0.2), 0, 0.7], [_cut(_n("mallet", 89), 0.2), Synth.seconds(0.07), 0.72],
 		[_cut(_n("bell", 93), 0.5, 1800), Synth.seconds(0.14), 0.82],
 		[_cut(_n("keys", 74), 0.45, 1600), Synth.seconds(0.14), 0.24],
@@ -2628,30 +2615,30 @@ static func _found_twinkle() -> PackedFloat32Array:
 		[_noise(0.15, 6000.0, 6000.0, 22.0, 0.002), Synth.seconds(0.14), 0.15]])
 
 
-static func _drop_thud() -> PackedFloat32Array:
+func _drop_thud() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, _hz(55), _hz(41), "sine", 22.0), 0, 0.9], [_noise(0.05, 1400.0, 600.0, 60.0, 0.001), 0, 0.35],
 		[_cut(_n("mallet", 62), 0.12), Synth.seconds(0.02), 0.3]])
 
 
-static func _drop_whiff() -> PackedFloat32Array:
+func _drop_whiff() -> PackedFloat32Array:
 	return _mix([[_noise(0.22, 3200.0, 900.0, 14.0, 0.02), 0, 0.5], [_tone(0.2, _hz(67), _hz(60), "sine", 14.0), Synth.seconds(0.03), 0.5]])
 
 
-static func _guard_creak() -> PackedFloat32Array:
+func _guard_creak() -> PackedFloat32Array:
 	return _mix([[_tone(0.45, _hz(38), _hz(45), "saw_dark", 4.0), 0, 0.8], [_fm_sweep(0.4, 380.0, 1700.0, 0.7, 6.0), Synth.seconds(0.04), 0.5],
 		[_noise(0.04, 3500.0, 2500.0, 90.0, 0.001), Synth.seconds(0.3), 0.5]])
 
 
-static func _callout_warden_chime() -> PackedFloat32Array:
+func _callout_warden_chime() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 77), 0.4, 1800), 0, 0.8], [_cut(_n("bell", 74), 0.55, 1800), Synth.seconds(0.1), 0.75]])
 
 
-static func _beacon_open_chime() -> PackedFloat32Array:
+func _beacon_open_chime() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 81), 0.5, 1800), 0, 0.8], [_cut(_n("bell", 88), 0.7, 2200), Synth.seconds(0.12), 0.85],
 		[_cut(_n("bell", 93), 0.5, 2200), Synth.seconds(0.2), 0.3]])
 
 
-static func _gauge_dry_click() -> PackedFloat32Array:
+func _gauge_dry_click() -> PackedFloat32Array:
 	return _mix([[_noise(0.012, 3200.0, 2200.0, 160.0, 0.001), 0, 0.7], [_noise(0.012, 2800.0, 1800.0, 160.0, 0.001), Synth.seconds(0.07), 0.55],
 		[_tone(0.1, _hz(55), _hz(50), "sine", 30.0), Synth.seconds(0.07), 0.5]])
 
@@ -2665,7 +2652,7 @@ static func _lift_hiss() -> PackedFloat32Array:
 	return Synth.declick(Synth.normalize(hiss, 0.85), 64, 300)
 
 
-static func _pure_tone(midi: int, length: float) -> PackedFloat32Array:
+func _pure_tone(midi: int, length: float) -> PackedFloat32Array:
 	var n := Synth.seconds(length)
 	var buf := Synth.buffer(n)
 	var f := _hz(midi)
@@ -2674,7 +2661,7 @@ static func _pure_tone(midi: int, length: float) -> PackedFloat32Array:
 	return buf
 
 
-static func _world1_own(id: String) -> PackedFloat32Array:
+func _world1_own(id: String) -> PackedFloat32Array:
 	var motif_cue := _motif_cue_parts(id)
 	if not motif_cue.is_empty():
 		return _motif_cue(String(motif_cue[0]), String(motif_cue[1]))
@@ -2716,7 +2703,7 @@ static func motif_cue_notes(motif: String) -> Array:
 	return (row["cells"] as Array).map(func(cell): return int(cell[1]))
 
 
-static func _motif_cue(cue: String, motif: String) -> PackedFloat32Array:
+func _motif_cue(cue: String, motif: String) -> PackedFloat32Array:
 	var row: Dictionary = Harmony.MOTIFS.get(motif, NEUTRAL_MOTIF)
 	var voice := String(row["voice"])
 	var notes := motif_cue_notes(motif)
@@ -2745,7 +2732,7 @@ static func _motif_cue(cue: String, motif: String) -> PackedFloat32Array:
 			return _mix(parts)
 
 
-static func _world1_recipe(id: String) -> PackedFloat32Array:
+func _world1_recipe(id: String) -> PackedFloat32Array:
 	match id:
 		"flood_falling_pure":
 			return _mix([[_pure_fall(1.0, 70, 63, 1.4, 5.0, 0.25), 0, 1.0], [_noise(1.0, 250.0, 700.0, 2.0, 0.15), 0, 0.3]])
@@ -2852,7 +2839,7 @@ static func _world1_recipe(id: String) -> PackedFloat32Array:
 	return PackedFloat32Array()
 
 
-static func _pure_fall(length: float, from_midi: float, to_midi: float, decay: float, wobble_hz := 0.0, wobble := 0.0) -> PackedFloat32Array:
+func _pure_fall(length: float, from_midi: float, to_midi: float, decay: float, wobble_hz := 0.0, wobble := 0.0) -> PackedFloat32Array:
 	var n := Synth.seconds(length)
 	var buf := Synth.buffer(n)
 	var f0 := _hz(from_midi)
@@ -2866,7 +2853,7 @@ static func _pure_fall(length: float, from_midi: float, to_midi: float, decay: f
 	return Synth.declick(buf, 8, 600)
 
 
-static func _rock_grind_dust_hiss() -> PackedFloat32Array:
+func _rock_grind_dust_hiss() -> PackedFloat32Array:
 	var grind := _noise(1.3, 150.0, 380.0, 0.8, 0.15)
 	for i in grind.size():
 		var t := i * Synth.INV_RATE
@@ -2896,7 +2883,7 @@ static func _cracked_wall_crumble() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
+func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 	match id:
 		"cadence_rivet_notch_open":
 			return _mix([

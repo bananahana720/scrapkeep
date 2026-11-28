@@ -25,7 +25,7 @@ func _initialize() -> void:
 		var energy: Array = []
 		for id in ids:
 			_t.check("%s has a recipe" % id, SfxBank.has_recipe(id))
-			var buf: PackedFloat32Array = SfxBank._bake(id)
+			var buf: PackedFloat32Array = SfxBank.new()._bake(id)
 			_t.check("%s is under a second" % id, buf.size() < Synth.seconds(1.0), "%d samples" % buf.size())
 			_t.check("%s is not silent" % id, Synth.peak(buf) > 0.1)
 			var sum := 0.0

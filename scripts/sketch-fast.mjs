@@ -39,6 +39,7 @@ import {
   isBot,
   isSolo,
   judge,
+  linuxLeakLines,
   matchesGlob,
   runGodotBatch,
   scriptErrorCount,
@@ -50,7 +51,7 @@ import {
 import { acquireMachine } from "./lib/machine-lock.mjs";
 import { killGroup, runProcess } from "./lib/proc.mjs";
 import { runnerReceiptBaseName, runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
-import { readLedger } from "./known-failing.mjs";
+import { mainRedLedger, readLedger, readMainReds, runFailure } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
 import { resolveGodotBinary, withScratchGodotEnv } from "./godot-home.mjs";
 import { discoverTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
@@ -86,6 +87,9 @@ const RECEIPT_SCHEMA = "scrapkeep-fast-receipt/1";
 export const DEFAULT_ESTIMATE_MS = 180_000;
 export const UNKNOWN_BOT_NAME = /^(bot_.*|.*_sweep_.*)\.gd$/;
 export const HUB_TESTS = 25;
+const SOURCE_READER = "res://tests/support/source_scan.gd";
+const FOLDER_SCAN = /\.(?:sources|matching|captures)\s*\(/;
+const SCANNED_SCRIPT = /^(?:src|tools)\/.+\.gd$/;
 export const CANARY_COUNT = 4;
 export const ALWAYS = [
   "tests/unit_suite_test.gd",
@@ -344,11 +348,33 @@ function expand(index, globs) {
   return index.tests.filter((test) => patterns.some((pattern) => pattern.test(test)));
 }
 
+export function folderGuards(index) {
+  const queue = [...index.files.keys()].filter((rel) => {
+    if (!/^tests\/.+\.gd$/.test(rel)) return false;
+    const text = index.files.get(rel);
+    return text.includes(SOURCE_READER) && FOLDER_SCAN.test(text);
+  });
+  const reached = new Set(queue);
+  while (queue.length > 0)
+    for (const file of referrers(index, queue.shift()))
+      if (!reached.has(file)) {
+        reached.add(file);
+        queue.push(file);
+      }
+  const guards = [...reached].filter(isTopLevelTest).sort();
+  if (guards.length === 0)
+    throw new Error(
+      `no top-level test scans folders through ${SOURCE_READER}, so a changed script would run no folder guard`,
+    );
+  return guards;
+}
+
 export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
   const picked = new Map();
   const hubs = [];
   const unmapped = [];
   const shards = new Map();
+  let guards = null;
   const add = (test, tier, why) => {
     const prior = picked.get(test);
     if (!prior || prior.tier > tier) picked.set(test, { tier, why });
@@ -359,6 +385,8 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
     for (const rule of PATH_RULES)
       if (rule.match.test(rel))
         for (const test of expand(index, rule.tests)) add(test, 0, `${rule.name}: ${rel}`);
+    if (SCANNED_SCRIPT.test(rel))
+      for (const test of (guards ??= folderGuards(index))) add(test, 1, `folder guard: ${rel}`);
     for (const rule of SHARD_RULES)
       if (rule.match.test(rel))
         for (const test of expand(index, rule.tests))
@@ -782,8 +810,11 @@ async function runGodot(sketchDir, test, timeoutMs, onChild = () => {}, fixedFps
   } finally {
     if (spawned) running.delete(spawned);
   }
-  const killed = spawned?.killedByLane === true;
-  const verdict = judge({ test: "res://" + test, status: res.exit, output: res.output });
+  return godotRun(test, res, { started, killed: spawned?.killedByLane === true });
+}
+
+export function godotRun(test, res, { started, killed, platform = process.platform }) {
+  const verdict = judge({ test: "res://" + test, status: res.exit, output: res.output, platform });
   const reason =
     res.exit === null && !res.timedOut && !killed ? signalReason(res.signal) : verdict.reason;
   return {
@@ -799,6 +830,8 @@ async function runGodot(sketchDir, test, timeoutMs, onChild = () => {}, fixedFps
     killed,
     timedOut: res.timedOut,
     output: res.output,
+    linuxLeak: verdict.linuxLeak,
+    failure: verdict.ok ? null : runFailure(test, res.output, platform),
   };
 }
 
@@ -846,6 +879,7 @@ export function interpretBatchOutput(
     killed,
     outsideError: false,
     unexpectedExit: false,
+    linuxLeak: parsed.linuxLeak,
   };
 }
 
@@ -1127,6 +1161,7 @@ async function main() {
       `sketch:fast ${receipt.ok ? "pass" : "fail"} in ${Math.round(receipt.wall_ms / 1000)}s on ${receipt.head.slice(0, 8)} (merge base ${mergeBase.slice(0, 8)}). Fast lane only: the staging full gate and red team still judge the wave.${receipt.nothing_compared ? ` ${receipt.nothing_compared}` : ""}`,
     );
     log(longestStages(receipt.stages));
+    if (receipt.main_red?.line) log(receipt.main_red.line);
     process.exit(code ?? (receipt.ok ? 0 : 1));
   };
 
@@ -1521,7 +1556,12 @@ async function main() {
   const flaky = [];
   const ledgerFlaky = [];
   const flakeRows = ledgerFlakes((await readLedger(root))?.rows ?? []);
+  const mainRed = mainRedLedger(
+    options.baseCheck ? [] : readMainReds(options.base, { cwd: root, log }),
+    { log },
+  );
   const baseRed = [];
+  const linuxLeaks = [];
   let prRed = null;
   let bootFailed = false;
   const shouldStop = () => Boolean(prRed || bootFailed);
@@ -1734,12 +1774,17 @@ async function main() {
     log(
       `${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s`,
     );
+    if (result.linuxLeak) linuxLeaks.push([result.test]);
+    if (result.ok) mainRed.passed(result.test);
     if (result.ok || result.killed) return;
-    const { kind, newChecks, ledger, ledgerRuns } = await confirm(result);
+    const { kind, newChecks, ledger, ledgerRuns } = mainRed.settle(
+      result.test,
+      await confirm(result),
+    );
     log(
       `  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`,
     );
-    if (kind === "stopped") return;
+    if (kind === "stopped" || kind === "main-red") return;
     if (kind === "flaky") {
       flaky.push(result.test);
       if (ledger) ledgerFlaky.push(result.test);
@@ -1787,6 +1832,7 @@ async function main() {
     );
     receipt.batch.batches++;
     receipt.batch.tests += batch.runs.length;
+    if (batch.linuxLeak) linuxLeaks.push(tests);
     if (!batch.killed && (batch.outsideError || batch.unexpectedExit)) {
       log(
         `  warm batch hit ${batch.outsideError ? "an outside-batch error" : "an unexpected exit"}; rerunning ${batch.unfinished.length} test(s) alone`,
@@ -1867,6 +1913,7 @@ async function main() {
   receipt.flaky = flaky;
   receipt.ledger_flaky = ledgerFlaky;
   receipt.base_red = baseRed;
+  receipt.main_red = mainRed.report(prRed ? [prRed.test] : []);
   if (prRed) {
     log(prRed.tail);
     stage(
@@ -1878,8 +1925,10 @@ async function main() {
   } else {
     stage(
       "tests",
-      true,
-      { note: `${results.length} run, ${flaky.length} flaky, ${baseRed.length} base-red` },
+      !receipt.main_red.only_known_reds,
+      {
+        note: `${results.length} run, ${flaky.length} flaky, ${baseRed.length} base-red, ${receipt.main_red.known.length} known red on main`,
+      },
       Date.now() - testsStarted,
     );
   }
@@ -1887,6 +1936,8 @@ async function main() {
     log(`flaky (red then green on rerun; make deterministic, never skip): ${flaky.join(", ")}`);
   if (baseRed.length)
     log(`base-red (red on the merge base too; not this PR): ${baseRed.join(", ")}`);
+  receipt.linux_leaks = linuxLeaks;
+  for (const line of linuxLeakLines(linuxLeaks)) log(line);
   if (receipt.selection.bot_shards.length)
     log(
       `bot shards to run: ${receipt.selection.bot_shards.map((test) => path.posix.basename(test, ".gd")).join(" ")}`,

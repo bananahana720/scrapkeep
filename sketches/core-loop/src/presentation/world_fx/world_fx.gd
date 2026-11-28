@@ -47,6 +47,7 @@ var _wake_wait := 0.0
 var _last_ball := Vector3.INF
 var _splash_cool := 0.0
 var wake_sound: AudioStreamPlayer3D
+var audio = null
 var _voice_of := {}
 var _wake_heard := 0.0
 
@@ -121,7 +122,7 @@ func enter_world(world_index: int) -> void:
 
 func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	_ctx = ctx
-	WorldSound.audio = ctx.root.call("audio") if ctx.get("root") != null and ctx.root.has_method("audio") else null
+	audio = ctx.root.call("audio") if ctx.get("root") != null and ctx.root.has_method("audio") else null
 	_last_ball = Vector3.INF
 	set_run_seed(int(ctx.run.run_seed) if ctx.get("run") != null else 0)
 	enter_world(ctx.stages.world_of(stage))
@@ -274,7 +275,7 @@ func play(hook: String, at: Vector3, tint := Color.TRANSPARENT, size := 1.0) -> 
 	if row["word"] != "" and not reduced_motion:
 		Word.stamp(self, row["word"], at)
 	if WorldSound.row(hook).get("play", "") == "once" and not resting:
-		WorldSound.one_shot(hook, self, at, linear_to_db(size))
+		WorldSound.one_shot(hook, self, at, audio, linear_to_db(size))
 
 
 func _add(id: String) -> GPUParticles3D:
@@ -380,7 +381,7 @@ func _rank() -> void:
 	for ref in Anchor.live:
 		var a: Node3D = ref.get_ref()
 		if a.has_voice():
-			a.set_voiced(_voice_of.get(a.set_id) == a)
+			a.set_voiced(_voice_of.get(a.set_id) == a, audio)
 
 
 func _step_wake(delta: float) -> void:
@@ -438,7 +439,7 @@ func _steer_wake_sound(on: bool, at: Vector3, speed: float) -> void:
 		_wake_heard = 0.0
 	if _wake_heard <= 0.0:
 		_wake_heard = wake_sound.stream.get_length()
-		WorldSound.heard(WAKE_SET, wake_sound)
+		WorldSound.heard(WAKE_SET, wake_sound, audio)
 
 
 func _hush_wake() -> void:

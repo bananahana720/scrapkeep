@@ -4826,7 +4826,7 @@ func _tally_play(note: Array) -> void:
 		return
 	var key := "%s:%d:%s" % [sound, int(note[3]), bool(note[4])]
 	if not _tally_streams.has(key):
-		_tally_streams[key] = Synth.to_wav(SfxBank.tally_recipe(sound, int(note[3]), bool(note[4])))
+		_tally_streams[key] = Synth.to_wav(SfxBank.new().tally_recipe(sound, int(note[3]), bool(note[4])))
 	_start(kind, sound, _tally_streams[key], SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)], pitch, "SFX")
 
 

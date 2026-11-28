@@ -31,13 +31,11 @@ func _initialize() -> void:
 	_t.check("field self-check: a planted field filled with the profile is caught", _hits(field_re, "\t\thub.camp_store = ctx.profile\n").size() == 1, "planted field")
 	_t.check("field self-check: the context's own fields and a handed object pass", _hits(field_re, "ctx.profile = Profile.new(path)\nctx.progress = progress\nhub.camp_records = CampRecords.new(ctx.profile)\n").is_empty(), "context and handed object")
 	_t.eq("P2-4 no script fills a field with the profile layer", SourceScan.matching(_t, ["res://src"], FIELD_PATTERN), [])
-	var files := 0
-	for dir in DIRS:
-		for path in _gd_files("res://" + dir):
-			files += 1
-			var hits := _hits(re, FileAccess.get_file_as_string(path))
-			_t.check("P2-4 %s has no profile-layer reference" % path, hits.is_empty(), "hits %s" % [hits])
-	_t.check("P2-4 the scan saw files", files > 20, "%d files" % files)
+	var sources := SourceScan.sources(_t, DIRS.map(func(dir: String) -> String: return "res://" + dir))
+	for path in sources:
+		var hits := _hits(re, sources[path])
+		_t.check("P2-4 %s has no profile-layer reference" % path, hits.is_empty(), "hits %s" % [hits])
+	_t.check("P2-4 the scan saw files", sources.size() > 20, "%d files" % sources.size())
 	var pilots: Array = []
 	for def in ClassDef.all():
 		pilots.append(def.id)
@@ -53,17 +51,4 @@ func _hits(re: RegEx, text: String) -> Array:
 		n += 1
 		if re.search(line) != null:
 			out.append("%d: %s" % [n, line.strip_edges()])
-	return out
-
-
-func _gd_files(dir: String) -> Array:
-	var out: Array = []
-	var d := DirAccess.open(dir)
-	if d == null:
-		return out
-	for f in d.get_files():
-		if f.ends_with(".gd"):
-			out.append(dir.path_join(f))
-	for sub in d.get_directories():
-		out.append_array(_gd_files(dir.path_join(sub)))
 	return out

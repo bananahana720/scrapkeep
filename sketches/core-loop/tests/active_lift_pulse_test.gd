@@ -132,7 +132,7 @@ func _run() -> void:
 	_t.check("03 the bar chip is a valid slot on F", AbilitySlots.valid_slot(record) and record["id"] == "active_lift_pulse" and record["key"] == "key_f", str(record))
 	_t.check("04 a rare Highdraft Roosts active that fires on the press",
 		row["rarity"] == "rare" and row["maker"] == "highdraft_roosts" and float(row["windup"]) == 0.0, str(row))
-	_t.check("05 its launch sound has a trim row and a recipe", SfxBank.has_recipe("active_lift_pulse") and SfxBank._bake("active_lift_pulse").size() > 0)
+	_t.check("05 its launch sound has a trim row and a recipe", SfxBank.has_recipe("active_lift_pulse") and SfxBank.new()._bake("active_lift_pulse").size() > 0)
 
 	# --- The cone: in front is shoved away; behind, beside and past reach are untouched ------
 	_player.reset_to(_ground_at(FLAT_SHELF) + Vector3.UP)

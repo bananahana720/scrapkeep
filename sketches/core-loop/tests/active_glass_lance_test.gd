@@ -193,7 +193,7 @@ func _run() -> void:
 
 	# --- Its sound -------------------------------------------------------------------------
 	_t.check("17 the lance has its own sound with a trim row", SfxBank.has_recipe("active_" + ID) and SfxBank.TRIM_DB.has("active_" + ID))
-	var buf: PackedFloat32Array = SfxBank._bake("active_" + ID)
+	var buf: PackedFloat32Array = SfxBank.new()._bake("active_" + ID)
 	_t.check("18 the recipe bakes a short, non-silent tone", buf.size() > 0 and buf.size() < 48000 * 2 and _peak(buf) > 0.1, "samples %d peak %.2f" % [buf.size(), _peak(buf)])
 	quit(_t.verdict())
 

@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { coveredFiles, ROWS as MODEL_ROWS, syncCommit } from "./gate/model-receipts.mjs";
 import { isMain } from "./lib/cli.mjs";
 import { primStandIns, scan as scanPlaceholders } from "./placeholder-gate.mjs";
-import { git } from "./lib/git.mjs";
+import { git, nulSeparated } from "./lib/git.mjs";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const KNOWN_FAILING_REL = path.join("project-guide", "handoff", "KNOWN-FAILING.tsv");
@@ -82,10 +82,12 @@ export function auditFormalSync(
     let changed = [];
     if (files.length > 0) {
       try {
-        changed = git(["-C", repoRoot, "diff", "--name-only", sync, "--", ...files], { spawn })
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter(Boolean);
+        changed = nulSeparated(
+          git(["-C", repoRoot, "diff", "-z", "--name-only", sync, "--", ...files], {
+            spawn,
+            trim: false,
+          }),
+        );
       } catch (error) {
         const entry = {
           id,
@@ -95,7 +97,7 @@ export function auditFormalSync(
           covered_count: files.length,
           changed_files: [],
           status: "git_error",
-          error: (error.stderr || error.message).trim(),
+          error: String(error?.stderr ?? "").trim() || String(error?.message ?? error),
         };
         models.push(entry);
         drifted.push(entry);

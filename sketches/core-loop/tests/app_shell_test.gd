@@ -1,6 +1,7 @@
 extends SceneTree
 
 const AppShell := preload("res://src/core/app_shell.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 
 # The launch shell: the log line reads the live project settings, a headless run never calls
 # set_icon, and the configured icon loads as a texture with pixels so an export can set it.
@@ -28,30 +29,18 @@ func _initialize() -> void:
 	var img: Image = tex.get_image() if tex != null else null
 	_t.check("icon_image", img != null and not img.is_empty(), path)
 	_t.eq("headless answers the display server", AppShell.headless(), DisplayServer.get_name() == "headless")
-	var re := RegEx.create_from_string(PATTERN)
-	_t.check("scan self-check: a planted inline check is caught", re.search("\tif DisplayServer.get_name() != \"headless\":\n") != null, "planted line")
-	_t.check("scan self-check: the helper call passes", re.search("\tif not AppShell.headless():\n") == null, "the call")
-	var files := 0
+	_t.check("scan self-check: a planted inline check is caught", not SourceScan.search(_t, "\tif DisplayServer.get_name() != \"headless\":\n", PATTERN).is_empty(), "planted line")
+	_t.check("scan self-check: the helper call passes", SourceScan.search(_t, "\tif not AppShell.headless():\n", PATTERN).is_empty(), "the call")
+	var sources := SourceScan.sources(_t, ["res://src"])
 	var strays: Array = []
-	for file in _gd_files("res://src"):
-		files += 1
+	for file in sources:
 		if file == OWNER:
 			continue
 		var number := 0
-		for text in FileAccess.get_file_as_string(file).split("\n"):
+		for text in String(sources[file]).split("\n"):
 			number += 1
-			if not text.strip_edges().begins_with("#") and re.search(text) != null:
+			if not text.strip_edges().begins_with("#") and not SourceScan.search(_t, text, PATTERN).is_empty():
 				strays.append("%s:%d" % [file, number])
 	_t.check("src asks AppShell.headless(), never the display server's name", strays.is_empty(), "strays %s" % [strays])
-	_t.check("the scan saw files", files > 200, "%d files" % files)
+	_t.check("the scan saw files", sources.size() > 200, "%d files" % sources.size())
 	quit(_t.verdict())
-
-
-func _gd_files(dir: String) -> Array:
-	var out: Array = []
-	for name in DirAccess.get_files_at(dir):
-		if name.ends_with(".gd"):
-			out.append(dir.path_join(name))
-	for sub in DirAccess.get_directories_at(dir):
-		out.append_array(_gd_files(dir.path_join(sub)))
-	return out

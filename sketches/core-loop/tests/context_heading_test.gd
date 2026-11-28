@@ -2,6 +2,7 @@ extends SceneTree
 
 const Context := preload("res://src/core/context.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Context.heading() is the one call simulation code makes for the level direction the player
@@ -46,34 +47,21 @@ func _initialize() -> void:
 	get_root().remove_child(camera)
 	camera.free()
 
-	var re := RegEx.create_from_string(PATTERN)
-	_t.check("scan self-check: a planted camera read is caught", re.search("var f := -ctx.camera.yaw_basis().z\n") != null, "planted line")
-	_t.check("scan self-check: ctx.heading() passes", re.search("var f := ctx.heading()\n") == null, "the call")
-	var files := 0
+	_t.check("scan self-check: a planted camera read is caught", not SourceScan.search(_t, "var f := -ctx.camera.yaw_basis().z\n", PATTERN).is_empty(), "planted line")
+	_t.check("scan self-check: ctx.heading() passes", SourceScan.search(_t, "var f := ctx.heading()\n", PATTERN).is_empty(), "the call")
+	var sources := SourceScan.sources(_t, DIRS.map(func(dir: String) -> String: return "res://" + dir))
 	var reads: Array = []
-	for dir in DIRS:
-		for path in _gd_files("res://" + dir):
-			files += 1
-			if path in ALLOWED:
-				continue
-			var number := 0
-			for line in FileAccess.get_file_as_string(path).split("\n"):
-				number += 1
-				if not line.strip_edges().begins_with("#") and re.search(line) != null:
-					reads.append("%s:%d" % [path, number])
+	for path in sources:
+		if path in ALLOWED:
+			continue
+		var number := 0
+		for line in String(sources[path]).split("\n"):
+			number += 1
+			if not line.strip_edges().begins_with("#") and not SourceScan.search(_t, line, PATTERN).is_empty():
+				reads.append("%s:%d" % [path, number])
 	_t.check("no simulation module calls yaw_basis(); they ask ctx.heading()", reads.is_empty(), "reads %s" % [reads])
-	_t.check("the scan saw files", files > 200, "%d files" % files)
+	_t.check("the scan saw files", sources.size() > 200, "%d files" % sources.size())
 	quit(_t.verdict())
-
-
-func _gd_files(dir: String) -> Array:
-	var out: Array = []
-	for name in DirAccess.get_files_at(dir):
-		if name.ends_with(".gd"):
-			out.append(dir.path_join(name))
-	for sub in DirAccess.get_directories_at(dir):
-		out.append_array(_gd_files(dir.path_join(sub)))
-	return out
 
 
 # What snap() reads of the ball.

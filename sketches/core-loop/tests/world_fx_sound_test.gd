@@ -101,7 +101,6 @@ func _falloff() -> void:
 
 func _runtime() -> void:
 	var fake := FakeAudio.new()
-	WorldSound.audio = fake
 	var stage := Node3D.new()
 	root.add_child(stage)
 	var cam := Camera3D.new()
@@ -109,6 +108,7 @@ func _runtime() -> void:
 	cam.current = true
 	# The game installs WorldFx before audio.gd makes its buses: the wake still names Ambient.
 	var fx := WorldFx.install(stage, 1)
+	fx.audio = fake
 	fx.bind(cam, cam)
 	for bus in ["SFX", "Ambient"]:
 		if AudioServer.get_bus_index(bus) < 0:
@@ -198,7 +198,7 @@ func _runtime() -> void:
 	for i in steps:
 		house._process(step)
 	t.eq("the roof breathes once per puff over two periods", fake.count("steam_breath") - before, 2)
-	house.set_voiced(false)
+	house.set_voiced(false, fake)
 	var muted := fake.count("steam_breath")
 	for i in steps:
 		house._process(step)
@@ -225,6 +225,5 @@ func _runtime() -> void:
 	fx.steer_wake(Vector3(0, 0.5, -5), NAN, Vector3(12, 0, 0))
 	t.check("dry ground stops the churn", not fx.wake_sound.playing)
 
-	WorldSound.audio = null
 	stage.queue_free()
 	await process_frame

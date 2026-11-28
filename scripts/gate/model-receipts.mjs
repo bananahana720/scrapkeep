@@ -5,7 +5,7 @@ import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { parseReceiptArgs, writeJsonReceipt } from "./receipt-cli.mjs";
-import { git } from "../lib/git.mjs";
+import { git, nulSeparated } from "../lib/git.mjs";
 import { isMain } from "../lib/cli.mjs";
 
 const SKILL = ".agents/skills/scrapkeep-verify-formal";
@@ -517,9 +517,12 @@ export function produce(id, { root, head, java, jar, workers, minutes, log = () 
   const files =
     sync === null
       ? []
-      : git(["diff", "--name-only", sync, "--", ...coveredFiles(page)], { cwd: root })
-          .split("\n")
-          .filter(Boolean);
+      : nulSeparated(
+          git(["diff", "--name-only", "-z", sync, "--", ...coveredFiles(page)], {
+            cwd: root,
+            trim: false,
+          }),
+        );
   const check = (cfg) => {
     log(`${id}: TLC ${row.spec} ${cfg}`);
     return runTlc({ java, jar, workers, minutes, models, spec: row.spec, cfg });
