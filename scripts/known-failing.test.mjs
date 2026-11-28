@@ -384,20 +384,18 @@ const redOutput = (labels, { test = "a_test", before = "", verdict = true } = {}
   labels.map((label) => `[${label}] got 1, want 2 -> FAIL`).join("\n") +
   "\n" +
   (verdict ? `${test}: FAIL (${labels.length} of 9 checks)\n` : "");
+const PR_RED = { kind: "pr-red", newChecks: [] };
 const redRun = (output, extra = {}, test = "a_test") => ({
-  kind: "pr-red",
-  newChecks: [],
-  rerun: {
-    test: `tests/${test}.gd`,
-    ok: false,
-    exit: 1,
-    signal: null,
-    killed: false,
-    timedOut: false,
-    failure: runFailure(test, output, "linux"),
-    ...extra,
-  },
+  test: `tests/${test}.gd`,
+  ok: false,
+  exit: 1,
+  signal: null,
+  killed: false,
+  timedOut: false,
+  failure: runFailure(test, output, "linux"),
+  ...extra,
 });
+const twice = (run) => [run, { ...run }];
 
 test("runFailure reads a run's failing lines with the gate's reader and finds its FAIL verdict line", () => {
   const output = [
@@ -430,33 +428,38 @@ test("a red the ledger lists as red on main is marked only when it ended normall
   );
   const ledger = mainRedLedger(rows, { log: (line) => lines.push(line), today: TODAY });
 
-  const listed = ledger.settle("tests/a_test.gd", redRun(redOutput([COVERED])));
+  const good = redRun(redOutput([COVERED]));
+  const listed = ledger.settle("tests/a_test.gd", PR_RED, twice(good));
   assert.equal(listed.kind, "main-red");
   assert.match(
     lines.at(-1),
     /^ {2}known red on main: a_test \(.*KNOWN-FAILING\.tsv line 2; owner coordinator; check stage 1: draw matches\): red on main at 0d422144b on 2026-11-28/,
   );
   assert.equal(
-    ledger.settle("tests/a_test.gd", redRun(redOutput([COVERED]), { exit: 0 })).kind,
+    ledger.settle("tests/a_test.gd", PR_RED, twice(redRun(redOutput([COVERED]), { exit: 0 }))).kind,
     "main-red",
     "a test that prints its FAIL verdict and exits 0",
   );
 
   assert.equal(
-    ledger.settle("tests/b_test.gd", redRun(redOutput(["x"], { test: "b_test" }), {}, "b_test"))
-      .kind,
+    ledger.settle(
+      "tests/b_test.gd",
+      PR_RED,
+      twice(redRun(redOutput(["x"], { test: "b_test" }), {}, "b_test")),
+    ).kind,
     "pr-red",
     "unlisted",
   );
   assert.equal(
     ledger.settle(
       "tests/c_test.gd",
-      redRun(redOutput(["a check"], { test: "c_test" }), {}, "c_test"),
+      PR_RED,
+      twice(redRun(redOutput(["a check"], { test: "c_test" }), {}, "c_test")),
     ).kind,
     "pr-red",
     "a red row not seen on main",
   );
-  for (const [why, verdict, said] of [
+  for (const [why, bad, said] of [
     [
       "a new failing check",
       redRun(redOutput([COVERED, "a new check"])),
@@ -494,26 +497,35 @@ test("a red the ledger lists as red on main is marked only when it ended normall
       /stopped \(time-out\)/,
     ],
     ["no failing check", redRun(redOutput([])), /no failing check was printed/],
-    [
-      "no failure record",
-      { kind: "pr-red", newChecks: [], rerun: { ok: false, exit: 1 } },
-      /no failure record/,
-    ],
-    ["no rerun at all", { kind: "pr-red", newChecks: [] }, /no failure record/],
+    ["no failure record", { ok: false, exit: 1 }, /no failure record/],
+    ["no run object", undefined, /no failure record/],
   ]) {
-    assert.equal(ledger.settle("tests/a_test.gd", verdict).kind, "pr-red", why);
-    assert.match(
-      lines.at(-1),
-      /^ {2}a_test is listed as red on main, but counts as this change's red: /,
-      why,
-    );
-    assert.match(lines.at(-1), said, why);
+    for (const [shape, runs, index] of [
+      ["the first run bad and the rerun listed", [bad, good], "1 of 2"],
+      ["the first run listed and the rerun bad", [good, bad], "2 of 2"],
+      ["a batch run and an alone run listed, the rerun bad", [good, good, bad], "3 of 3"],
+    ]) {
+      assert.equal(
+        ledger.settle("tests/a_test.gd", PR_RED, runs).kind,
+        "pr-red",
+        `${why}: ${shape}`,
+      );
+      assert.ok(
+        lines
+          .at(-1)
+          .startsWith(
+            `  a_test is listed as red on main, but counts as this change's red: run ${index}: `,
+          ),
+        `${why}: ${shape}: ${lines.at(-1)}`,
+      );
+      assert.match(lines.at(-1), said, `${why}: ${shape}`);
+    }
   }
+  for (const runs of [undefined, null, [], good])
+    assert.equal(ledger.settle("tests/a_test.gd", PR_RED, runs).kind, "pr-red", String(runs));
+  assert.match(lines.at(-1), /counts as this change's red: no run of it reached the rule$/);
   for (const kind of ["flaky", "base-red", "stopped"])
-    assert.equal(
-      ledger.settle("tests/a_test.gd", { ...redRun(redOutput([COVERED])), kind }).kind,
-      kind,
-    );
+    assert.equal(ledger.settle("tests/a_test.gd", { ...PR_RED, kind }, twice(good)).kind, kind);
 
   ledger.passed("tests/a_test.gd");
   ledger.passed("tests/a_test.gd");
@@ -529,7 +541,10 @@ test("a row past its review date marks nothing and the run says so", () => {
   const lines = [];
   const { rows } = parseLedger(mainLedger(mainRow("a_test", ON_MAIN, COVERED)));
   const ledger = mainRedLedger(rows, { log: (line) => lines.push(line), today: "2026-12-06" });
-  assert.equal(ledger.settle("tests/a_test.gd", redRun(redOutput([COVERED]))).kind, "pr-red");
+  assert.equal(
+    ledger.settle("tests/a_test.gd", PR_RED, twice(redRun(redOutput([COVERED])))).kind,
+    "pr-red",
+  );
   assert.match(
     lines.at(-1),
     /a_test is listed as red on main, but counts as this change's red: its row is past its review date \(2026-12-05\)$/,
@@ -537,7 +552,8 @@ test("a row past its review date marks nothing and the run says so", () => {
   assert.equal(
     mainRedLedger(rows, { today: "2026-12-05" }).settle(
       "tests/a_test.gd",
-      redRun(redOutput([COVERED])),
+      PR_RED,
+      twice(redRun(redOutput([COVERED]))),
     ).kind,
     "main-red",
     "on its review date the row still holds",
@@ -556,6 +572,8 @@ test("the summary line says whether a failing run's only reds are known reds on 
     `\`${NEW_AND_KNOWN_REDS} (<count>): <tests>; known reds on main (<count>): <tests>\``,
     "`known`, `new_reds`, `passed`, `line` and `only_known_reds`",
     "`npm run sketch:fast -- --test <name>` without `--base-check`",
+    "when every run of the test in the invocation (its first run, in a warm batch or alone, the run alone after a batch, and the rerun) qualifies on its own",
+    "an error line anywhere in the batch counts against every red test of it",
   ])
     assert.ok(gate.includes(stated), `GATE.md states ${stated}`);
   assert.doesNotMatch(gate, /does not fail the job/);
@@ -564,10 +582,11 @@ test("the summary line says whether a failing run's only reds are known reds on 
   );
   const make = () => {
     const ledger = mainRedLedger(rows, { today: TODAY });
-    ledger.settle("tests/a_test.gd", redRun(redOutput([COVERED])));
+    ledger.settle("tests/a_test.gd", PR_RED, twice(redRun(redOutput([COVERED]))));
     ledger.settle(
       "tests/b_test.gd",
-      redRun(redOutput([COVERED], { test: "b_test" }), {}, "b_test"),
+      PR_RED,
+      twice(redRun(redOutput([COVERED], { test: "b_test" }), {}, "b_test")),
     );
     return ledger;
   };
@@ -611,8 +630,11 @@ test("a main row in a ledger with no check column covers nothing", () => {
   );
   assert.equal(rows[0].main?.commit, "0d422144b");
   assert.equal(
-    mainRedLedger(rows, { today: TODAY }).settle("tests/a_test.gd", redRun(redOutput(["any"])))
-      .kind,
+    mainRedLedger(rows, { today: TODAY }).settle(
+      "tests/a_test.gd",
+      PR_RED,
+      twice(redRun(redOutput(["any"]))),
+    ).kind,
     "pr-red",
   );
 });

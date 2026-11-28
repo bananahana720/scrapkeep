@@ -255,8 +255,18 @@ export const NEW_AND_KNOWN_REDS = "sketch:fast fail: new reds";
 
 const NORMAL_EXITS = new Set([0, 1]);
 
-function whyNotKnown(row, run, today) {
+function whyNotKnown(row, runs, today) {
   if (row.review < today) return `its row is past its review date (${row.review})`;
+  if (!Array.isArray(runs) || runs.length === 0) return "no run of it reached the rule";
+  for (const [index, run] of runs.entries()) {
+    const why = whyRunNotKnown(row, run);
+    if (why !== null)
+      return `run ${index + 1} of ${runs.length}${run?.batched === true ? " (in a warm batch)" : ""}: ${why}`;
+  }
+  return null;
+}
+
+function whyRunNotKnown(row, run) {
   const failure = run?.failure;
   if (!failure) return "the run left no failure record";
   if (run.killed === true || run.timedOut === true || (run.signal ?? null) !== null)
@@ -293,10 +303,10 @@ export function mainRedLedger(
         `  ${row.test} passed, but ${LEDGER_FILE} lists it as red on main at ${row.main.commit}: remove its row once main is green`,
       );
     },
-    settle(test, verdict) {
+    settle(test, verdict, runs) {
       const row = listed.get(testName(test));
       if (!row || verdict.kind !== "pr-red") return verdict;
-      const why = whyNotKnown(row, verdict.rerun, today);
+      const why = whyNotKnown(row, runs, today);
       if (why !== null) {
         log(`  ${row.test} is listed as red on main, but counts as this change's red: ${why}`);
         return verdict;

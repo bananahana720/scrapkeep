@@ -1927,7 +1927,8 @@ test("a red run keeps what the known-red rule needs after its log is dropped, as
     assert.equal("output" in kept, false);
     return mainRedLedger(parseLedger(ledger).rows, { today: "2026-11-30" }).settle(
       "tests/a_test.gd",
-      { kind: "pr-red", newChecks: [], rerun: kept },
+      { kind: "pr-red", newChecks: [] },
+      [kept],
     ).kind;
   };
   const red = "[stage 1: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)\n";
@@ -1953,4 +1954,101 @@ test("a red run keeps what the known-red rule needs after its log is dropped, as
     { started: Date.now(), killed: false, platform: "linux" },
   );
   assert.deepEqual([green.ok, green.failure], [true, null]);
+});
+
+test("a listed test is a known red only when every run of it qualifies, its first run in a warm batch included", () => {
+  const ledger = [
+    "test\tkind\tcause\towner\tadded\treview\tcheck",
+    "a_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
+  ].join("\n");
+  const settle = (runs) => {
+    const lines = [];
+    const kind = mainRedLedger(parseLedger(ledger).rows, {
+      log: (line) => lines.push(line),
+      today: "2026-11-30",
+    }).settle("tests/a_test.gd", { kind: "pr-red", newChecks: [] }, runs).kind;
+    return { kind, said: lines.at(-1) };
+  };
+  const alone = (output, res = {}) =>
+    godotRun(
+      "tests/a_test.gd",
+      { exit: 1, signal: null, timedOut: false, output, ...res },
+      { started: Date.now(), killed: false, platform: "linux" },
+    );
+  const listed = "[stage 1: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)\n";
+  const other = "[stage 2: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)\n";
+  const green = "[b] ok -> PASS\nb_test: PASS (1 checks)\n";
+  const batch = (...sections) =>
+    interpretBatchOutput(
+      [
+        ...sections.flatMap(([test, body, exit]) => [
+          `BATCH START ${test}`,
+          ...body.trimEnd().split("\n"),
+          `BATCH END ${test} exit=${exit} ms=10`,
+        ]),
+        `BATCH DONE ${sections.length} tests`,
+      ].join("\n"),
+      sections.map(([test]) => test),
+      { code: Math.max(...sections.map(([, , exit]) => exit)), platform: "linux" },
+    ).runs.find((run) => run.test === "tests/a_test.gd");
+
+  const both = settle([alone(listed), alone(listed)]);
+  assert.equal(both.kind, "main-red");
+  assert.match(both.said, /^ {2}known red on main: a_test /);
+  for (const [why, bad, said] of [
+    ["a check its row does not name", alone(other), /does not name: stage 2: draw matches;/],
+    ["a crash", alone(listed, { exit: null, signal: "SIGSEGV" }), /stopped \(SIGSEGV\)/],
+    ["a kill at its limit", alone(listed, { exit: null, timedOut: true }), /stopped \(time-out\)/],
+    ["an error line", alone(`SCRIPT ERROR: x\n${listed}`), /does not name: ERROR-LINE;/],
+  ]) {
+    const firstBad = settle([bad, alone(listed)]);
+    assert.equal(firstBad.kind, "pr-red", `the first run bad: ${why}`);
+    assert.match(firstBad.said, /counts as this change's red: run 1 of 2: /, why);
+    assert.match(firstBad.said, said, why);
+    const rerunBad = settle([alone(listed), bad]);
+    assert.equal(rerunBad.kind, "pr-red", `the rerun bad: ${why}`);
+    assert.match(rerunBad.said, /counts as this change's red: run 2 of 2: /, why);
+    assert.match(rerunBad.said, said, why);
+  }
+
+  const inBatch = batch(["tests/a_test.gd", listed, 1], ["tests/b_test.gd", green, 0]);
+  assert.deepEqual(inBatch.failure, {
+    labels: ["stage 1: draw matches"],
+    errorLine: false,
+    failVerdict: true,
+  });
+  assert.equal(
+    batch(["tests/a_test.gd", green.replaceAll("b_test", "a_test"), 0]).failure,
+    null,
+    "a green batch run carries no failure",
+  );
+  assert.equal(settle([inBatch, alone(listed), alone(listed)]).kind, "main-red");
+  for (const [why, first, said] of [
+    [
+      "a check its row does not name",
+      batch(["tests/a_test.gd", other, 1], ["tests/b_test.gd", green, 0]),
+      /does not name: stage 2: draw matches;/,
+    ],
+    [
+      "an error line in its own part of the batch",
+      batch(["tests/a_test.gd", `ERROR: x\n${listed}`, 1]),
+      /does not name: ERROR-LINE;/,
+    ],
+    [
+      "an error line in another test's part, which may be this test's",
+      batch(["tests/a_test.gd", listed, 1], ["tests/b_test.gd", `SCRIPT ERROR: y\n${green}`, 0]),
+      /does not name: ERROR-LINE;/,
+    ],
+    [
+      "no FAIL verdict line",
+      batch(["tests/a_test.gd", listed.replace(/a_test: FAIL.*\n/, ""), 1]),
+      /ended without its FAIL verdict line/,
+    ],
+    ["an exit code the driver gave", batch(["tests/a_test.gd", listed, 70]), /exit code 70/],
+  ]) {
+    const result = settle([first, alone(listed), alone(listed)]);
+    assert.equal(result.kind, "pr-red", why);
+    assert.match(result.said, /counts as this change's red: run 1 of 3 \(in a warm batch\): /, why);
+    assert.match(result.said, said, why);
+  }
 });

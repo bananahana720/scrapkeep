@@ -850,6 +850,9 @@ export function interpretBatchOutput(
       unexpectedExit: parsed.unexpectedExit,
     };
   }
+  const errorInBatch = parsed.done.some(
+    (row) => runFailure(row.test, row.output, platform).errorLine,
+  );
   const runs = parsed.done.map((row) => {
     const verdict = judge({
       test: "res://" + row.test,
@@ -871,6 +874,9 @@ export function interpretBatchOutput(
       timedOut: false,
       output: row.output,
       batched: true,
+      failure: verdict.ok
+        ? null
+        : { ...runFailure(row.test, row.output, platform), errorLine: errorInBatch },
     };
   });
   return {
@@ -1738,7 +1744,7 @@ async function main() {
       }
       baseRun = await basePending;
     }
-    if (rerun.killed) return { kind: "stopped", newChecks: [], rerun };
+    if (rerun.killed) return { kind: "stopped", newChecks: [], reruns: [rerun] };
     baseRun = usableBaseRun(rerun, baseRun);
     const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
     const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
@@ -1750,7 +1756,7 @@ async function main() {
       baseCached: Boolean(baseRun?.cached),
     });
     if (verdict.kind !== "pr-red" || !flakeRows.has(path.posix.basename(first.test, ".gd")))
-      return { ...verdict, rerun };
+      return { ...verdict, reruns: [rerun] };
     const more = [];
     while (more.length < LEDGER_FLAKE_RUNS && !more.some((run) => run.ok || run.killed)) {
       log(
@@ -1758,10 +1764,10 @@ async function main() {
       );
       more.push(await godot(sketchDir, first.test, timeoutMs));
     }
-    return { ...settleLedgerFlake(verdict, more), rerun };
+    return { ...settleLedgerFlake(verdict, more), reruns: [rerun, ...more] };
   }
 
-  async function handle(result) {
+  async function handle(result, earlier = []) {
     results.push({
       test: result.test,
       ok: result.ok,
@@ -1777,10 +1783,12 @@ async function main() {
     if (result.linuxLeak) linuxLeaks.push([result.test]);
     if (result.ok) mainRed.passed(result.test);
     if (result.ok || result.killed) return;
-    const { kind, newChecks, ledger, ledgerRuns } = mainRed.settle(
-      result.test,
-      await confirm(result),
-    );
+    const confirmed = await confirm(result);
+    const { kind, newChecks, ledger, ledgerRuns } = mainRed.settle(result.test, confirmed, [
+      ...earlier,
+      result,
+      ...confirmed.reruns,
+    ]);
     log(
       `  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`,
     );
@@ -1844,11 +1852,11 @@ async function main() {
         await handle(run);
         continue;
       }
-      keepRed("batch")(run);
+      const batched = keepRed("batch")(run);
       log(`  ${run.test} red in a warm batch (${run.reason}); rerunning it alone`);
       const alone = await godot(sketchDir, run.test, testTimeoutMs(sourceOf(sketchDir, run.test)));
       receipt.batch.reruns.push({ test: run.test, batch_reason: run.reason, alone_ok: alone.ok });
-      await handle(alone);
+      await handle(alone, [batched]);
     }
     if (!batch.killed && !shouldStop())
       for (const test of batch.unfinished.reverse())
