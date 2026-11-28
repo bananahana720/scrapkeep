@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import "./lib/cli.test.mjs";
-import { cwdDecidesRepository } from "./lib/git.mjs";
+import { git } from "./lib/git.mjs";
 import "./lib/game-defs.test.mjs";
 import "./lib/git.test.mjs";
 import "./lib/walk.test.mjs";
@@ -2085,15 +2085,7 @@ test("baselineGrowth matches split entries one for one in an order that does not
 test("renamesSince maps each renamed file to its old name between two commits and in the working tree, and fails on a ref git cannot read", () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-renames-"));
   try {
-    const run = (...args) => {
-      const ran = spawnSync("git", args, {
-        cwd: tmp,
-        encoding: "utf8",
-        env: cwdDecidesRepository(),
-      });
-      assert.equal(ran.status, 0, ran.stderr);
-      return ran.stdout.trim();
-    };
+    const run = (...args) => git(args, { cwd: tmp });
     const commit = (message) => {
       run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", message);
       return run("rev-parse", "HEAD");
@@ -2166,21 +2158,13 @@ test("L18 flags a script with no uid file and a uid file with no script, naming 
   }
 
   const repoRoot = path.resolve(sketchDir, "..", "..");
-  const gitDirRun = spawnSync("git", ["rev-parse", "--git-dir"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-  });
-  assert.equal(gitDirRun.status, 0, gitDirRun.stderr);
-  const gitDir = gitDirRun.stdout.trim();
+  const gitDir = git(["rev-parse", "--git-dir"], { cwd: repoRoot });
   assert.ok(gitDir.length > 0);
 
   const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-l18-"));
   const prevGitDir = process.env.GIT_DIR;
   try {
-    const run = (cwd, ...args) => {
-      const ran = spawnSync("git", args, { cwd, encoding: "utf8", env: cwdDecidesRepository() });
-      assert.equal(ran.status, 0, ran.stderr);
-    };
+    const run = (cwd, ...args) => git(args, { cwd });
     const scratchSrc = path.join(tmp, "sketches", "core-loop", "src");
     mkdirSync(scratchSrc, { recursive: true });
     writeFileSync(path.join(scratchSrc, "missing_uid.gd"), "extends RefCounted\n");
@@ -2204,11 +2188,7 @@ test("L18 flags a script with no uid file and a uid file with no script, naming 
 test("readBaselineAt throws when a blob-less clone cannot fetch the base copy, and returns {} when the commit has no baseline file", () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-partial-"));
   try {
-    const run = (cwd, ...args) => {
-      const ran = spawnSync("git", args, { cwd, encoding: "utf8" });
-      assert.equal(ran.status, 0, ran.stderr);
-      return ran.stdout.trim();
-    };
+    const run = (cwd, ...args) => git(args, { cwd });
     const source = path.join(tmp, "source");
     mkdirSync(path.join(source, "scripts"), { recursive: true });
     run(source, "init", "-q");
