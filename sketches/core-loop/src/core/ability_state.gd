@@ -2,7 +2,7 @@ extends RefCounted
 
 
 const Bindings := preload("res://src/core/bindings.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const Palette := preload("res://src/core/palette.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
 

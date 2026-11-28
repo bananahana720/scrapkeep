@@ -13,7 +13,7 @@ const GrowthSheet := preload("res://src/ui/growth_sheet.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 
 const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back. Get heavy, break the Wardens, smash their cores."
 
