@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Interact := preload("res://src/world/interact.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -596,7 +597,7 @@ static func _instantiate_with_count(path: String, fallback_color := Palette.SAND
 	var box := BoxMesh.new()
 	box.size = Vector3(0.45, 0.45, 0.45)
 	view.mesh = box
-	var mat := Palette.solid(fallback_color)
+	var mat := PaletteMaterials.solid(fallback_color)
 	mat.vertex_color_use_as_albedo = true
 	view.material_override = mat
 	fallback.add_child(view)

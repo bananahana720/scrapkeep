@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Groups := preload("res://src/core/groups.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
@@ -83,7 +84,7 @@ func setup(target_ref, terrain_ref, root_ref: Node, live_ref: Callable, from: Ve
 		_shell_mesh = SphereMesh.new()
 		_shell_mesh.radius = 0.75
 		_shell_mesh.height = 1.5
-		_shell_material = Palette.solid(Palette.HAZARD, 3.0)
+		_shell_material = PaletteMaterials.solid(Palette.HAZARD, 3.0)
 	var mesh := MeshInstance3D.new()
 	mesh.mesh = _shell_mesh
 	mesh.material_override = _shell_material
@@ -190,7 +191,7 @@ func rim_color() -> Color:
 
 
 func _build_rim() -> void:
-	_rim_material = Palette.solid(EventKinds.state_color("will_break"), 0.0, false)
+	_rim_material = PaletteMaterials.solid(EventKinds.state_color("will_break"), 0.0, false)
 	_rim_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_rim_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_rim_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED

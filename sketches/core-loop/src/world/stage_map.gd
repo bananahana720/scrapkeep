@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 
 var title := ""
@@ -96,13 +97,13 @@ static func cylinder(parent: Node3D, radius: float, height_m: float, origin: Vec
 
 
 static func grapple_post(parent: Node3D, foot: Vector3, height_m: float) -> void:
-	cylinder(parent, 0.9, height_m, foot + Vector3.UP * height_m * 0.5, Palette.solid(Palette.COPPER))
+	cylinder(parent, 0.9, height_m, foot + Vector3.UP * height_m * 0.5, PaletteMaterials.solid(Palette.COPPER))
 	var cap := MeshInstance3D.new()
 	var ball := SphereMesh.new()
 	ball.radius = 1.4
 	ball.height = 2.8
 	cap.mesh = ball
-	cap.material_override = Palette.solid(Palette.AMBER, 1.2)
+	cap.material_override = PaletteMaterials.solid(Palette.AMBER, 1.2)
 	cap.position = foot + Vector3.UP * (height_m + 0.6)
 	parent.add_child(cap)
 
@@ -138,7 +139,7 @@ static func dressed_surface(color: Color, kind := 1, size := Vector3.ZERO,
 			push_warning("gpw: missing workshop shader " + surface_shader_path + "; using original surface fallback")
 		var fallback: Material = original
 		if fallback == null:
-			fallback = Palette.solid(color) if kind == 1 else Palette.striped(color, fallback_color)
+			fallback = PaletteMaterials.solid(color) if kind == 1 else PaletteMaterials.striped(color, fallback_color)
 		_surface_materials[key] = fallback
 		return fallback
 	var mat := ShaderMaterial.new()

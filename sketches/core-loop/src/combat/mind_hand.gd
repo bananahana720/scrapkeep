@@ -255,7 +255,7 @@ func _build_crew() -> void:
 	glass.height = LENS_RADIUS * 2.0
 	_lens_glass = MeshInstance3D.new()
 	_lens_glass.mesh = glass
-	_lens_glass.material_override = Palette.solid(Roster.ANCIENT_LIGHT, 1.2)
+	_lens_glass.material_override = PaletteMaterials.solid(Roster.ANCIENT_LIGHT, 1.2)
 	_lens.add_child(_lens_glass)
 	for side in [-1.0, 1.0]:
 		var small := SphereMesh.new()
@@ -263,7 +263,7 @@ func _build_crew() -> void:
 		small.height = 0.5
 		var eye := MeshInstance3D.new()
 		eye.mesh = small
-		eye.material_override = Palette.solid(Roster.ANCIENT_LIGHT, 0.8)
+		eye.material_override = PaletteMaterials.solid(Roster.ANCIENT_LIGHT, 0.8)
 		eye.position = Vector3(side * 0.75, -0.2, 0.2)
 		_lens.add_child(eye)
 	_icon = Sprite3D.new()

@@ -78,7 +78,7 @@ static func _parts() -> Array:
 	if not _shared.is_empty():
 		return _shared
 	var scene := (load("res://assets/models/world_one/enemy_winch_drone.glb") as PackedScene).instantiate()
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D

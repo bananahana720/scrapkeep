@@ -4,7 +4,7 @@ extends RefCounted
 const AppShell := preload("res://src/core/app_shell.gd")
 const ScatterRows := preload("res://src/world/scatter_rows.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 const COIL_RADIUS := 0.38
@@ -57,7 +57,7 @@ static func build(parent: Node3D, map, ground: Callable) -> Node3D:
 		view.set_meta("instance_buffer", buffer)
 		view.set_meta("origins", origins)
 		view.set_meta("verts_per_instance", source["verts"])
-		view.material_override = Palette.slot_material(row["slot"])
+		view.material_override = PaletteMaterials.slot_material(row["slot"])
 		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		holder.add_child(view)
 	parent.add_child(holder)
@@ -301,7 +301,6 @@ class Chunked extends Node3D:
 	const ParkMapScript := preload("res://src/world/park/park_map.gd")
 	const Rows := preload("res://src/world/scatter_rows.gd")
 	const Tiles := preload("res://src/world/park/park_terrain.gd")
-	const Colours := preload("res://src/core/palette.gd")
 	const ATTACH_BUDGET_USEC := 6000
 	const CHUNKS_PER_FRAME := 8
 	const WORKERS := 4
@@ -359,7 +358,7 @@ class Chunked extends Node3D:
 					threaded_loads += 1
 			if not group.has("path"):
 				group["source"] = Self._source(spec)
-			var slot_row: Dictionary = Colours.SLOT_TABLE.row(group["slot"])
+			var slot_row: Dictionary = PaletteMaterials.SLOT_TABLE.row(group["slot"])
 			if loader and String(slot_row.get("kind", "")) == "resource" and ResourceLoader.exists(String(slot_row["path"])):
 				if ResourceLoader.load_threaded_request(String(slot_row["path"]), "Material") == OK:
 					group["material_path"] = String(slot_row["path"])
@@ -519,7 +518,7 @@ class Chunked extends Node3D:
 			view.set_meta("grounds", data["grounds"])
 			view.set_meta("bounds", data["bounds"])
 			view.set_meta("verts_per_instance", group["source"]["verts"])
-			view.material_override = group["material"] if group.get("material") != null else Colours.slot_material(group["slot"])
+			view.material_override = group["material"] if group.get("material") != null else PaletteMaterials.slot_material(group["slot"])
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			chunk.add_child(view)
 		add_child(chunk)

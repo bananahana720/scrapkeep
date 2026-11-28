@@ -136,8 +136,8 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
-	_mat_live = Palette.unshaded(Color(Palette.HAZARD, 0.55))
-	_mat_slack = Palette.unshaded(Color(Palette.SAND, 0.18))
+	_mat_live = PaletteMaterials.unshaded(Color(Palette.HAZARD, 0.55))
+	_mat_slack = PaletteMaterials.unshaded(Color(Palette.SAND, 0.18))
 	var parts := _parts()
 	if not parts.is_empty():
 		_crew.free()

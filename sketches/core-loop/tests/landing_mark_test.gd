@@ -4,6 +4,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
 const T := preload("res://tests/support/t.gd")
 const Comfort := preload("res://src/core/comfort.gd")
@@ -192,7 +193,7 @@ func _check_life() -> void:
 func _body() -> Node:
 	var e = Enemy.new()
 	e._base_color = Palette.RUST
-	e._material = Palette.solid(Palette.RUST)
+	e._material = PaletteMaterials.solid(Palette.RUST)
 	_world.add_child(e)
 	e._atk = {"instance": 1, "row": "E01", "phase": Enemy.PHASE_WINDUP, "managed": false, "tele": null, "geometry": {}, "progress": 1.0}
 	return e

@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const WarningBound := preload("res://src/combat/warning_bound.gd")
 
@@ -335,7 +336,7 @@ func _repaint() -> void:
 
 
 static func material(alpha: float, tint := Palette.HAZARD) -> StandardMaterial3D:
-	var mat := Palette.unshaded(Color(tint, alpha))
+	var mat := PaletteMaterials.unshaded(Color(tint, alpha))
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.no_depth_test = true
 	mat.render_priority = PRIORITY

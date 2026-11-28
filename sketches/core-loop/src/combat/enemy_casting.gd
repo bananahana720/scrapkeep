@@ -1,7 +1,7 @@
 class_name EnemyCasting
 extends RefCounted
 
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 static var _warned: Dictionary = {}
 
@@ -15,7 +15,7 @@ static func parts(authored: String, tag: String, bake_parents := false) -> Array
 		return []
 	var out: Array = []
 	var scene := packed.instantiate()
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D

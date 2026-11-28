@@ -3,6 +3,7 @@ extends Node3D
 const LockRows := preload("res://src/world/lock_rows.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Groups := preload("res://src/core/groups.gd")
 const Overtime := preload("res://src/world/overtime.gd")
 const WaveCross := preload("res://src/world/wave_cross.gd")
@@ -68,8 +69,8 @@ func setup(ctx_ref) -> void:
 	ctx.events.enemy_struck.connect(_on_enemy_struck)
 	ctx.events.activity_done.connect(_on_activity_done)
 	ctx.events.flow_changed.connect(_on_flow_changed)
-	_pip_lit = Palette.unshaded(Palette.BRASS)
-	_pip_dark = Palette.unshaded(Palette.CHARCOAL)
+	_pip_lit = PaletteMaterials.unshaded(Palette.BRASS)
+	_pip_dark = PaletteMaterials.unshaded(Palette.CHARCOAL)
 	overtime = Overtime.new()
 	add_child(overtime)
 	overtime.setup(ctx)
@@ -508,7 +509,7 @@ func _build_wall(radius: float) -> void:
 	band.outer_radius = radius + 0.25
 	band.rings = 96
 	rim.mesh = band
-	rim.material_override = Palette.unshaded(Color(Palette.SAND, 0.55))
+	rim.material_override = PaletteMaterials.unshaded(Color(Palette.SAND, 0.55))
 	rim.position = Vector3.UP * 1.3
 	_wall.add_child(rim)
 	_wall_rise = 0.0
@@ -516,7 +517,7 @@ func _build_wall(radius: float) -> void:
 
 
 static func _fence_material() -> StandardMaterial3D:
-	var mat := Palette.unshaded(Color(1.0, 1.0, 1.0, 0.99))
+	var mat := PaletteMaterials.unshaded(Color(1.0, 1.0, 1.0, 0.99))
 	var ramp := Gradient.new()
 	ramp.set_color(0, Color(Palette.SAND, 0.0))
 	ramp.set_color(1, Color(Palette.SAND, FENCE_ALPHA))
@@ -559,7 +560,7 @@ func _build_collar() -> void:
 	band.outer_radius = COLLAR_RADIUS + 0.35
 	band.rings = 64
 	ring.mesh = band
-	ring.material_override = Palette.unshaded(Palette.HAZARD)
+	ring.material_override = PaletteMaterials.unshaded(Palette.HAZARD)
 	ring.position = Vector3.UP * 1.0
 	_collar.add_child(ring)
 	_pips.clear()

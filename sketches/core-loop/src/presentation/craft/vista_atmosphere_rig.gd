@@ -3,6 +3,7 @@ extends Node3D
 
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 const HEAT_HAZE_SHADER := preload("res://assets/shaders/craft_heat_haze.gdshader")
@@ -256,10 +257,10 @@ static func build_environment(preset: String = "smelter_dawn") -> Environment:
 
 static func _make_sky(spec: Dictionary) -> Sky:
 	var sky := Sky.new()
-	if ResourceLoader.exists(Palette.HDRI_SKY):
-		var pano := load(Palette.HDRI_SKY) as Texture2D
+	if ResourceLoader.exists(PaletteMaterials.HDRI_SKY):
+		var pano := load(PaletteMaterials.HDRI_SKY) as Texture2D
 		if pano != null:
-			var mat := Palette.time_sky_material(pano)
+			var mat := PaletteMaterials.time_sky_material(pano)
 			mat.set_shader_parameter("top_tint", spec["sky_top"])
 			mat.set_shader_parameter("horizon_tint", spec["sky_horizon"])
 			mat.set_shader_parameter("glow", spec["sky_glow"])
@@ -508,7 +509,7 @@ func _enhance_showcase_surfaces() -> void:
 	if floor_mesh != null and floor_mesh.mesh is BoxMesh:
 		var mat := (floor_mesh.mesh as BoxMesh).material as StandardMaterial3D
 		if mat != null:
-			Palette.surface_grain(mat)
+			PaletteMaterials.surface_grain(mat)
 			mat.normal_scale = 0.25
 			mat.roughness = 0.86
 

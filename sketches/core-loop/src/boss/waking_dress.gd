@@ -3,6 +3,7 @@ extends Node3D
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
@@ -136,8 +137,8 @@ func _attach_drill_crown() -> void:
 			var src := view.mesh.surface_get_material(s)
 			var slot := String(src.resource_name) if src != null else ""
 			if slot == "ancient_light":
-				var glow := Palette.solid(Palette.ANCIENT, 2.8, false)
-				Palette.surface_grain(glow)
+				var glow := PaletteMaterials.solid(Palette.ANCIENT, 2.8, false)
+				PaletteMaterials.surface_grain(glow)
 				view.set_surface_override_material(s, glow)
 			else:
 				var enamel := EnemyBossCraft.waking_enamel_material(null, false)

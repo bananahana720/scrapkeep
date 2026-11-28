@@ -4,7 +4,7 @@ const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
 const REFUSE_NONE := "empty"
@@ -291,7 +291,7 @@ func _drop_node(id: String, at: Vector3) -> Node3D:
 	var prism := PrismMesh.new()
 	prism.size = Vector3(1.2, 1.4, 0.3)
 	star.mesh = prism
-	star.material_override = Palette.solid(tint, 2.6)
+	star.material_override = PaletteMaterials.solid(tint, 2.6)
 	node.add_child(star)
 	var label := WorldPrompt.new()
 	label.name = "Prompt"

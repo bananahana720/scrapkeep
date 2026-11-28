@@ -414,7 +414,7 @@ func _exit_tree() -> void:
 
 
 func _enamel() -> StandardMaterial3D:
-	var mat := Palette.solid(Roster.ANCIENT_ENAMEL)
+	var mat := PaletteMaterials.solid(Roster.ANCIENT_ENAMEL)
 	mat.metallic = 0.2
 	mat.roughness = 0.35
 	return mat

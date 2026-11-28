@@ -4,6 +4,7 @@ extends RefCounted
 
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 
 const GEAR_GOGGLES := &"riveted_goggles"
@@ -594,8 +595,8 @@ static func slot_material(slot: String, accent_color: Color = Palette.ARC) -> St
 	var mat := StandardMaterial3D.new()
 	mat.roughness = 0.78
 	mat.metallic = 0.18
-	Palette.surface_grain(mat)
-	var plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+	PaletteMaterials.surface_grain(mat)
+	var plate := PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true)
 	if plate != null:
 		mat.albedo_texture = plate
 		mat.uv1_triplanar = true
@@ -603,7 +604,7 @@ static func slot_material(slot: String, accent_color: Color = Palette.ARC) -> St
 	match slot:
 		"brass_trim":
 			mat.albedo_color = Palette.COPPER.lerp(Palette.BRASS, 0.35)
-			Palette.brass_finish(mat)
+			PaletteMaterials.brass_finish(mat)
 		"iron_hardware":
 			mat.albedo_color = Palette.CHARCOAL.lerp(Palette.STEEL, 0.38)
 			mat.roughness = 0.66

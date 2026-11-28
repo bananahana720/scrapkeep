@@ -107,7 +107,7 @@ func build_props(parent: Node3D, _ground: Callable) -> void:
 		var top := _cover_top(plate)
 		var c := r.get_center()
 		var cover := box(parent, Vector3(r.size.x, top - drop_to, r.size.y),
-			Vector3(c.x, (top + drop_to) * 0.5, c.y), Palette.striped(Palette.RUST, Palette.CHARCOAL))
+			Vector3(c.x, (top + drop_to) * 0.5, c.y), PaletteMaterials.striped(Palette.RUST, Palette.CHARCOAL))
 		cover.name = "BreachPlate_%s" % plate["id"]
 		cover.set_meta("home", cover.position)
 		swaps[plate["id"]] = {"before": [cover], "after": []}

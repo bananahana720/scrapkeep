@@ -8,6 +8,7 @@ const HitStopBudget := preload("res://src/core/hit_stop_budget.gd")
 const ComicPage := preload("res://src/ui/comic_page.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const DefenceBars := preload("res://tests/support/defence_bars.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
@@ -99,7 +100,7 @@ func _ink_boss_and_fade() -> void:
 	_t.check("hazard rims and weak points are never occluded by ink outlines",
 		not InkOutline.drawable(_cube("hazard_rim"), 0, _body())
 		and not InkOutline.drawable(_cube("weak_point_hatch"), 0, _body())
-		and not InkOutline.drawable(_cube("paint"), 0, Palette.hazard_stripe()))
+		and not InkOutline.drawable(_cube("paint"), 0, PaletteMaterials.hazard_stripe()))
 	var boss_view := MeshInstance3D.new()
 	boss_view.mesh = _cube("paint")
 	boss_view.material_override = _body()

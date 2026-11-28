@@ -3,6 +3,7 @@ extends Node3D
 
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
@@ -204,7 +205,7 @@ func _build_materials() -> Dictionary:
 
 
 func _apply_vista_patina(mat: StandardMaterial3D, grain_m: float, grime_m: float, normal_strength: float) -> void:
-	Palette.surface_grain(mat)
+	PaletteMaterials.surface_grain(mat)
 	mat.normal_scale = normal_strength
 	mat.uv1_scale = Vector3.ONE / grain_m
 	mat.uv2_scale = Vector3.ONE / grime_m

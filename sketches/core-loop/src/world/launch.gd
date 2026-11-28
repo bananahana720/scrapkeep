@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
@@ -51,15 +52,15 @@ static func arc_point(origin: Vector3, velocity: Vector3, g: float, t: float) ->
 
 
 func setup() -> void:
-	var mat := Palette.solid(EventKinds.color("launched"), 2.4)
+	var mat := PaletteMaterials.solid(EventKinds.color("launched"), 2.4)
 	for i in RINGS:
 		_rings.append(_ring(mat, RING_RADIUS))
-	var land_mat := Palette.solid(Palette.AMBER, 1.8)
+	var land_mat := PaletteMaterials.solid(Palette.AMBER, 1.8)
 	for i in LANDING_RINGS:
 		_landing.append(_ring(land_mat, RING_RADIUS + 0.6))
 	_pad = MeshInstance3D.new()
 	_pad.mesh = PropMeshes.launch_landing_pad(7.0)
-	_pad.material_override = Palette.unshaded(Color(Palette.AMBER.r, Palette.AMBER.g, Palette.AMBER.b, 0.5))
+	_pad.material_override = PaletteMaterials.unshaded(Color(Palette.AMBER.r, Palette.AMBER.g, Palette.AMBER.b, 0.5))
 	_pad.visible = false
 	add_child(_pad)
 

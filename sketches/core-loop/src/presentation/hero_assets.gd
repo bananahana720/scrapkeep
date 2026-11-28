@@ -3,6 +3,7 @@ extends Node
 const LineView := preload("res://src/presentation/line_view.gd")
 const CarrierBank := preload("res://src/presentation/carrier_bank.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
@@ -252,10 +253,10 @@ void fragment() {
 	mat.roughness = spec.get("rough", 0.8)
 	mat.metallic = spec.get("metal", 0.0)
 	if slot == "ancient_enamel":
-		mat.albedo_texture = Palette.painted_texture(128)
+		mat.albedo_texture = PaletteMaterials.painted_texture(128)
 		mat.uv1_triplanar = true
 		mat.uv1_scale = Vector3.ONE * 2.0
-		Palette.enamel_wear(mat)
+		PaletteMaterials.enamel_wear(mat)
 	if slot in ["paint", "pilot", "bare_metal", "fleet_paint"]:
 		var map := ""
 		var metres := 1.5
@@ -268,14 +269,14 @@ void fragment() {
 				map = "riveted-gyro-metal"
 				metres = 0.8
 		if map != "":
-			mat.albedo_texture = Palette.look_texture(map, true)
+			mat.albedo_texture = PaletteMaterials.look_texture(map, true)
 			mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 			mat.uv1_triplanar = true
 			mat.uv1_scale = Vector3.ONE / metres
 			if slot == "paint":
 				mat.albedo_color = Color(PAINT_LIFT, PAINT_LIFT, PAINT_LIFT, mat.albedo_color.a)
 		else:
-			mat.albedo_texture = Palette.painted_texture(128)
+			mat.albedo_texture = PaletteMaterials.painted_texture(128)
 			mat.uv1_triplanar = true
 			mat.uv1_scale = Vector3.ONE * 2.0
 	if spec.has("alpha"):
@@ -670,7 +671,7 @@ static func _paint_parameters(mat: ShaderMaterial, tint: Color) -> void:
 	mat.set_shader_parameter("paint_tint", Color(PAINT_LIFT * tint.r, PAINT_LIFT * tint.g, PAINT_LIFT * tint.b))
 	mat.set_shader_parameter("lift", lift)
 	mat.set_shader_parameter("paint_take", PAINT_TAKE if tint != Color.WHITE else 0.0)
-	mat.set_shader_parameter("plate_texture", Palette.look_texture("rusted-salvaged-plate", true))
+	mat.set_shader_parameter("plate_texture", PaletteMaterials.look_texture("rusted-salvaged-plate", true))
 
 
 func kest_fuse_material(bright: bool) -> ShaderMaterial:

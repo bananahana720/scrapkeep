@@ -32,7 +32,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 const POSES := [
 	[11, 2.24554, 230, 51.70, 65.46],
@@ -81,7 +81,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var tex := load(Palette.HDRI_SKY) as Texture2D
+	var tex := load(PaletteMaterials.HDRI_SKY) as Texture2D
 	_pano = tex.get_image().duplicate()
 	if _pano.is_compressed():
 		_pano.decompress()

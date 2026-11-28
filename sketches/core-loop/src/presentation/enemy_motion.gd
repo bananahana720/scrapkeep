@@ -2,6 +2,7 @@ extends Node3D
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
@@ -213,8 +214,8 @@ static func _build_tag_mesh() -> ArrayMesh:
 static func _build_tag_material() -> StandardMaterial3D:
 	if _tag_material != null:
 		return _tag_material
-	_tag_material = Palette.solid(Color.WHITE, 0.0)
-	Palette.brass_finish(_tag_material)
+	_tag_material = PaletteMaterials.solid(Color.WHITE, 0.0)
+	PaletteMaterials.brass_finish(_tag_material)
 	_tag_material.vertex_color_use_as_albedo = true
 	return _tag_material
 

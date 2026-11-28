@@ -3,6 +3,7 @@ extends Node3D
 const Activities := preload("res://src/world/activities.gd")
 const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Groups := preload("res://src/core/groups.gd")
 const LoopTally := preload("res://src/core/loop_tally.gd")
 const WaveCross := preload("res://src/world/wave_cross.gd")
@@ -298,7 +299,7 @@ func _build_props() -> void:
 	cone.bottom_radius = 1.1
 	cone.height = 1.4
 	dome.mesh = cone
-	dome.material_override = Palette.unshaded(Palette.BRASS)
+	dome.material_override = PaletteMaterials.unshaded(Palette.BRASS)
 	dome.position = Vector3.UP * 3.6
 	_bell.add_child(dome)
 	for i in MAX_RINGS:
@@ -307,7 +308,7 @@ func _build_props() -> void:
 		torus.inner_radius = 0.28
 		torus.outer_radius = 0.42
 		band.mesh = torus
-		band.material_override = Palette.unshaded(Palette.BRASS)
+		band.material_override = PaletteMaterials.unshaded(Palette.BRASS)
 		band.position = Vector3.UP * (0.8 + 0.6 * i)
 		_bell.add_child(band)
 		_bands.append(band)
@@ -318,12 +319,12 @@ func _build_props() -> void:
 	net.radius = 0.7
 	net.height = 1.4
 	_pot.mesh = net
-	_pot.material_override = Palette.unshaded(Palette.SAND)
+	_pot.material_override = PaletteMaterials.unshaded(Palette.SAND)
 	_pot.position = Vector3.UP * 3.4
 	pot_post.add_child(_pot)
 	_pot_next = MeshInstance3D.new()
 	_pot_next.mesh = net
-	var ghost := Palette.unshaded(Color(Palette.SAND, 0.25))
+	var ghost := PaletteMaterials.unshaded(Color(Palette.SAND, 0.25))
 	ghost.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_pot_next.material_override = ghost
 	_pot_next.position = _pot.position
@@ -334,7 +335,7 @@ func _build_props() -> void:
 	rim.inner_radius = 0.9
 	rim.outer_radius = 1.2
 	wheel.mesh = rim
-	wheel.material_override = Palette.unshaded(Palette.HAZARD)
+	wheel.material_override = PaletteMaterials.unshaded(Palette.HAZARD)
 	wheel.position = Vector3.UP * 3.0
 	wheel.rotation = Vector3(PI * 0.5, 0.0, 0.0)
 	_wheel.add_child(wheel)
@@ -345,7 +346,7 @@ func _build_props() -> void:
 	disc.bottom_radius = radius
 	disc.height = 0.08
 	_water.mesh = disc
-	_water_mat = Palette.unshaded(Color(Palette.water_tone(), WATER_ALPHA))
+	_water_mat = PaletteMaterials.unshaded(Color(Palette.water_tone(), WATER_ALPHA))
 	_water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_water.material_override = _water_mat
 	_water.position = centre + Vector3.UP * 0.5
@@ -365,7 +366,7 @@ func _post(id: String, at: Vector3, color: Color) -> Node3D:
 	shaft.bottom_radius = 0.25
 	shaft.height = 3.0
 	post.mesh = shaft
-	post.material_override = Palette.unshaded(color)
+	post.material_override = PaletteMaterials.unshaded(color)
 	post.position = Vector3.UP * 1.5
 	node.add_child(post)
 	return node

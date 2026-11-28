@@ -335,12 +335,12 @@ func _tunnel_turn(id: String) -> float:
 
 
 func build_props(parent: Node3D, ground: Callable) -> void:
-	var rust := Palette.solid(Palette.RUST)
-	var copper := Palette.solid(Palette.COPPER)
-	var enamel := Palette.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.15))
-	var light := Palette.solid(ANCIENT, 2.4)
-	var concrete := Palette.striped(Palette.CHARCOAL, Palette.VERDIGRIS)
-	box(parent, Vector3(18.0, 1.0, 10.0), ground.call(spawn.x, spawn.y - 6.0, -0.3), Palette.striped(Palette.AMBER, Palette.CHARCOAL))
+	var rust := PaletteMaterials.solid(Palette.RUST)
+	var copper := PaletteMaterials.solid(Palette.COPPER)
+	var enamel := PaletteMaterials.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.15))
+	var light := PaletteMaterials.solid(ANCIENT, 2.4)
+	var concrete := PaletteMaterials.striped(Palette.CHARCOAL, Palette.VERDIGRIS)
+	box(parent, Vector3(18.0, 1.0, 10.0), ground.call(spawn.x, spawn.y - 6.0, -0.3), PaletteMaterials.striped(Palette.AMBER, Palette.CHARCOAL))
 	_landmark(parent, ground, enamel, light, copper, rust)
 	_dish(parent, ground, enamel, copper)
 	_bridges(parent, concrete)
@@ -362,7 +362,7 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	var glow := BoxMesh.new()
 	glow.size = Vector3(18.4, 1.6, 12.4)
 	windows.mesh = glow
-	windows.material_override = Palette.solid(Palette.AMBER, 1.6)
+	windows.material_override = PaletteMaterials.solid(Palette.AMBER, 1.6)
 	windows.position = house + Vector3.UP * 6.5
 	parent.add_child(windows)
 	_reactor_vent(parent, ground, enamel, light)
@@ -408,7 +408,7 @@ func _seams(parent: Node3D, foot: Vector3, radius: float, height_m: float, light
 		var g := BoxMesh.new()
 		g.size = Vector3(0.9, height_m * 0.86, 0.9)
 		groove.mesh = g
-		groove.material_override = Palette.solid(Palette.CHARCOAL)
+		groove.material_override = PaletteMaterials.solid(Palette.CHARCOAL)
 		groove.position = at
 		parent.add_child(groove)
 		var seam := MeshInstance3D.new()
@@ -482,7 +482,7 @@ func _skylight_roof(parent: Node3D, ground: Callable, mat: Material) -> void:
 		var top := at.y - 0.05
 		for side in [-1.0, 1.0]:
 			box(parent, Vector3(SKYLIGHT_DEPTH + 1.0, 1.2, 12.0), Vector3(SKYLIGHT_X + side * (SKYLIGHT_DEPTH * 0.5 + 1.0), top - 0.6, z), mat)
-	var grate := Palette.striped(Palette.CHARCOAL, Palette.SAND)
+	var grate := PaletteMaterials.striped(Palette.CHARCOAL, Palette.SAND)
 	for z in SKYLIGHT_ROOFS:
 		var at: Vector3 = ground.call(SKYLIGHT_X + SKYLIGHT_DEPTH + 3.0, z, 0.0)
 		_visual_box(parent, Vector3(2.0, 0.2, 12.0), Vector3(SKYLIGHT_X, at.y - 0.3, z), grate)
@@ -526,13 +526,13 @@ func _swaps(parent: Node3D, ground: Callable) -> void:
 	var crater := LocalMesh.polar(parent, "ImpactCrater", Vector3(IMPACT.x, 0.0, IMPACT.y), 0.4, CRATER_OUT, 14, 48, crater_fn, base,
 		Palette.SANDSTONE.lerp(Palette.CHARCOAL, 0.25))
 	var chunk_at: Vector3 = ground.call(IMPACT.x - 3.0, IMPACT.y - CRATER_OUT - 3.0, 0.0)
-	var chunk := box(parent, Vector3(5.0, 4.0, 4.0), chunk_at + Vector3.UP * 1.2, Palette.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.2)), 0.5)
+	var chunk := box(parent, Vector3(5.0, 4.0, 4.0), chunk_at + Vector3.UP * 1.2, PaletteMaterials.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.2)), 0.5)
 	chunk.name = "ImpactChunk"
 	var seam := MeshInstance3D.new()
 	var sb := BoxMesh.new()
 	sb.size = Vector3(5.1, 0.25, 0.3)
 	seam.mesh = sb
-	seam.material_override = Palette.solid(ANCIENT, 2.4)
+	seam.material_override = PaletteMaterials.solid(ANCIENT, 2.4)
 	chunk.add_child(seam)
 	swaps = {
 		"cave_in": {"before": [plug], "after": [seal]},

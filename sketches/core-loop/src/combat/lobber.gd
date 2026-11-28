@@ -72,8 +72,8 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	shape.shape = box
 	add_child(shape)
 	_base_color = Palette.VERDIGRIS
-	_material = Palette.solid(BODY_PAINT)
-	_muzzle_material = Palette.solid(Palette.HAZARD, 0.2)
+	_material = PaletteMaterials.solid(BODY_PAINT)
+	_muzzle_material = PaletteMaterials.solid(Palette.HAZARD, 0.2)
 	var dressing := Node3D.new()
 	dressing.name = "LobberBody"
 	_visual_parent().add_child(dressing)
@@ -105,7 +105,7 @@ static func _parts() -> Array:
 	if not _shared.is_empty():
 		return _shared
 	var scene := (load(ModelVariants.path("res://assets/models/world_one/enemy_lobber.glb")) as PackedScene).instantiate()
-	var charcoal := Palette.solid(Palette.CHARCOAL)
+	var charcoal := PaletteMaterials.solid(Palette.CHARCOAL)
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
 		var mesh: Mesh = mi.mesh.duplicate()

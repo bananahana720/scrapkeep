@@ -70,7 +70,7 @@ func _build_tool() -> void:
 	else:
 		_crew.free()
 		_crew = null
-		Palette.surface_grain(_material)
+		PaletteMaterials.surface_grain(_material)
 		for part in parts:
 			var mi := MeshInstance3D.new()
 			mi.name = part.name

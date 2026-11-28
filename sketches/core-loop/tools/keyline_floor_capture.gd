@@ -3,7 +3,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const SIZE := Vector2i(1280, 720)
 const RING := 7.0
@@ -197,7 +197,7 @@ func _plant(where: Vector3, colour: Color) -> Vector3:
 	var mesh := PlaneMesh.new()
 	mesh.size = Vector2(1.0, 1.0)
 	plate.mesh = mesh
-	plate.material_override = Palette.unshaded(colour)
+	plate.material_override = PaletteMaterials.unshaded(colour)
 	plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	game.add_child(plate)
 	where.y = _ground.height(where.x, where.z) + 0.25

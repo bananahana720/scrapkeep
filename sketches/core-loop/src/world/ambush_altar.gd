@@ -45,8 +45,8 @@ static func _parts() -> Array:
 
 
 func _build_greybox() -> void:
-	cylinder(0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.VERDIGRIS))
-	_cap = box(Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(Palette.BRASS))
+	cylinder(0.45, 3.2, Vector3.UP * 1.6, PaletteMaterials.solid(Palette.VERDIGRIS))
+	_cap = box(Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, PaletteMaterials.solid(Palette.BRASS))
 	box(Vector3(BAND_SIZE, 0.12, BAND_SIZE), Vector3.UP * 3.22, _bone_material(false), false)
 	_ring = null
 
@@ -54,7 +54,7 @@ func _build_greybox() -> void:
 static func finish(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
-	material.albedo_texture = Palette.look_texture("rusted-salvaged-plate-worn", true)
+	material.albedo_texture = PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true)
 	material.uv1_triplanar = true
 	material.uv1_scale = Vector3.ONE / 4.0
 	material.roughness = 0.82

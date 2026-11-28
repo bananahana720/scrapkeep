@@ -3,6 +3,7 @@ extends SceneTree
 const StageMap := preload("res://src/world/stage_map.gd")
 const Bay := preload("res://src/world/bay.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 var _failures := 0
 
 
@@ -21,7 +22,7 @@ func _run() -> void:
 		scene.add_child(bay)
 		bay.setup(26.0, 14.0)
 		var barge := bay.get_node("Barge")
-		_check("deck keeps original vertex-colour ground", barge.get_node("BayDeck").get_child(1).material_override == Palette.ground_material())
+		_check("deck keeps original vertex-colour ground", barge.get_node("BayDeck").get_child(1).material_override == PaletteMaterials.ground_material())
 		# W1-23: the cabin and yard wall wear bay_kit.glb, which the surface kit never paints, so a broken shader leaves them as they are.
 		_check("cabin wears its model", barge.get_node("MossCabin").get_child(1).name == "BayCabin" and barge.get_node("MossCabin").get_child(1).material_override == null)
 		_check("yard wall wears its model", barge.get_node("YardWall").get_child(1).name == "BayYardWall" and barge.get_node("YardWall").get_child(1).material_override == null)

@@ -2,6 +2,7 @@ extends Node3D
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -88,7 +89,7 @@ func build(boss) -> void:
 	hull.position = Vector3.UP * HULL.y * 0.5
 	add_child(hull)
 	hull.body_boxes = drawn_boxes
-	_hull_prim_mat = Palette.solid(Palette.RUST)
+	_hull_prim_mat = PaletteMaterials.solid(Palette.RUST)
 	if legacy_box_seam:
 		_box(hull, HULL, _hull_prim_mat, Vector3.ZERO)
 	else:
@@ -105,17 +106,17 @@ func build(boss) -> void:
 			else:
 				_plates.append(_craft_part(hull, EnemyBossCraft.brindle_armour_plate(plate_size), plate_mat, plate_at, "BrindleArmourCraft"))
 	if legacy_box_seam:
-		_cockpit = _box(self, Vector3(3.0, 2.2, 3.0), Palette.water(Palette.ARC), Vector3(0.0, DECK + 1.1, 4.8))
-		_box(self, Vector3(1.2, 1.0, 1.0), Palette.solid(Palette.AMBER, 0.4), Vector3(0.0, DECK + 1.0, 4.8))
+		_cockpit = _box(self, Vector3(3.0, 2.2, 3.0), PaletteMaterials.water(Palette.ARC), Vector3(0.0, DECK + 1.1, 4.8))
+		_box(self, Vector3(1.2, 1.0, 1.0), PaletteMaterials.solid(Palette.AMBER, 0.4), Vector3(0.0, DECK + 1.0, 4.8))
 	else:
-		_cockpit = _craft_part(self, EnemyBossCraft.brindle_cockpit_canopy(Vector3(3.0, 2.2, 3.0)), Palette.water(Palette.ARC), Vector3(0.0, DECK + 1.1, 4.8), "BrindleCockpitCraft")
+		_cockpit = _craft_part(self, EnemyBossCraft.brindle_cockpit_canopy(Vector3(3.0, 2.2, 3.0)), PaletteMaterials.water(Palette.ARC), Vector3(0.0, DECK + 1.1, 4.8), "BrindleCockpitCraft")
 		_craft_part(self, EnemyBossCraft.brindle_cockpit_console(Vector3(1.2, 1.0, 1.0)), EnemyBossCraft.craft_shader_material("brindle_console", "plasma_conduit_core", Palette.CHARCOAL, Palette.COPPER, 0.62, 0.35, Palette.AMBER, 0.9), Vector3(0.0, DECK + 1.0, 4.8), "BrindleConsoleCraft")
 	for i in CAP_SPOTS.size():
 		var cap = Target.new()
 		cap.setup(boss, "cap", "cap_%d" % (i + 1), CAP_SIZE, Vector2(1.2, 1.2))
 		cap.position = CAP_SPOTS[i]
 		add_child(cap)
-		var mat := Palette.solid(Palette.CHARCOAL)
+		var mat := PaletteMaterials.solid(Palette.CHARCOAL)
 		cap.tint_with(mat)
 		_cap_mats.append(mat)
 		if legacy_box_seam:
@@ -125,13 +126,13 @@ func build(boss) -> void:
 		caps.append(cap)
 	for i in CRANE_PIVOTS.size():
 		if legacy_box_seam:
-			_box(self, Vector3(0.8, 3.0, 0.8), Palette.solid(Palette.COPPER), CRANE_PIVOTS[i] - Vector3.UP * 1.5)
+			_box(self, Vector3(0.8, 3.0, 0.8), PaletteMaterials.solid(Palette.COPPER), CRANE_PIVOTS[i] - Vector3.UP * 1.5)
 		else:
 			_craft_part(self, EnemyBossCraft.brindle_crane_post(Vector3(0.8, 3.0, 0.8)), EnemyBossCraft.craft_shader_material("brindle_crane_post", "oxidized_hull_plating", Palette.COPPER, Palette.RUST, 0.64, 0.40), CRANE_PIVOTS[i] - Vector3.UP * 1.5, "BrindleCranePost%d" % i)
 		var magnet = Target.new()
 		magnet.setup(boss, "magnet", "magnet_%s" % ["port", "starboard"][i], Vector3.ZERO, Vector2(1.5, 1.5))
 		add_child(magnet)
-		var mat := Palette.solid(Palette.VERDIGRIS)
+		var mat := PaletteMaterials.solid(Palette.VERDIGRIS)
 		_magnet_mats.append(mat)
 		var mag_visual: MeshInstance3D
 		if legacy_box_seam:
@@ -143,9 +144,9 @@ func build(boss) -> void:
 		var cable := MeshInstance3D.new()
 		cable.name = "CableSpan%d" % i
 		cable.mesh = _cable_mesh()
-		var cable_mat := Palette.solid(Palette.CHARCOAL)
+		var cable_mat := PaletteMaterials.solid(Palette.CHARCOAL)
 		cable_mat.vertex_color_use_as_albedo = true
-		Palette.surface_grain(cable_mat)
+		PaletteMaterials.surface_grain(cable_mat)
 		cable.material_override = cable_mat
 		add_child(cable)
 		_cables.append(cable)

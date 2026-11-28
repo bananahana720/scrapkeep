@@ -2,6 +2,7 @@ extends Node3D
 
 const Elements := preload("res://src/build/elements.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
@@ -66,11 +67,11 @@ func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	_shard_mesh = BoxMesh.new()
 	_shard_mesh.size = Vector3(0.35, 0.35, 0.9)
-	_shard_material = Palette.solid(Palette.ICE, 2.2)
+	_shard_material = PaletteMaterials.solid(Palette.ICE, 2.2)
 	_puff_mesh = SphereMesh.new()
 	_puff_mesh.radius = 0.45
 	_puff_mesh.height = 0.9
-	_puff_material = Palette.unshaded(Color(FROST.r, FROST.g, FROST.b, 0.7))
+	_puff_material = PaletteMaterials.unshaded(Color(FROST.r, FROST.g, FROST.b, 0.7))
 	if ctx != null and ctx.events != null:
 		ctx.events.enemy_struck.connect(_on_enemy_struck)
 
@@ -260,7 +261,7 @@ func _create_surface(surface: Dictionary, result: Dictionary) -> void:
 	disc.height = thickness
 	disc.radial_segments = 6
 	mesh.mesh = disc
-	var mat := Palette.solid(Palette.ICE, 0.6)
+	var mat := PaletteMaterials.solid(Palette.ICE, 0.6)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.albedo_color = Color(Palette.ICE.r, Palette.ICE.g, Palette.ICE.b, 0.85)
 	mat.roughness = 0.15
@@ -297,7 +298,7 @@ func _electrify(row: Dictionary, result: Dictionary) -> void:
 	disc.height = 0.1
 	disc.radial_segments = 12
 	node.mesh = disc
-	node.material_override = Palette.unshaded(Color(Palette.ARC.r, Palette.ARC.g, Palette.ARC.b, 0.45))
+	node.material_override = PaletteMaterials.unshaded(Color(Palette.ARC.r, Palette.ARC.g, Palette.ARC.b, 0.45))
 	add_child(node)
 	node.global_position = at + Vector3.UP * 0.08
 	var zone := {
@@ -565,7 +566,7 @@ func _unshaded_material(color: Color, double_sided := false) -> StandardMaterial
 	var cached: StandardMaterial3D = _unshaded_cache.get(key)
 	if cached != null:
 		return cached
-	var mat := Palette.unshaded(color)
+	var mat := PaletteMaterials.unshaded(color)
 	if double_sided:
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_unshaded_cache[key] = mat

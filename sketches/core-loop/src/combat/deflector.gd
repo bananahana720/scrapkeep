@@ -70,7 +70,7 @@ static func _parts() -> Dictionary:
 	if not _shared.is_empty():
 		return _shared
 	var scene := (load("res://assets/models/world_one/enemy_deflector.glb") as PackedScene).instantiate()
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	preload("res://src/presentation/craft/craft_lookdev.gd").enrich_standard_pbr(painted, 0.34, 0.35)
 	var flash := 0

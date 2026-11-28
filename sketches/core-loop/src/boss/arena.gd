@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
 const StandCrew := preload("res://src/presentation/stand_crew.gd")
@@ -119,7 +120,7 @@ static func drop_ahead() -> void:
 	_ahead_bowl = null
 	Requisition.drop_ahead()
 	BowlDress.drop_ahead()
-	Palette.drop_checkers()
+	PaletteMaterials.drop_checkers()
 	_looks_warm = false
 
 
@@ -130,11 +131,11 @@ static func reset_for_tests() -> void:
 static func warm_looks() -> bool:
 	if not _looks_warm:
 		for pair in CHECKERS:
-			Palette.checker_texture(pair[0], pair[1], 4, 64)
+			PaletteMaterials.checker_texture(pair[0], pair[1], 4, 64)
 		_looks_warm = true
 		return false
 	for id in NEUTRAL_LOOKS:
-		if not Palette.warm_look(id):
+		if not PaletteMaterials.warm_look(id):
 			return false
 	return true
 
@@ -267,7 +268,7 @@ func _show_crust(vent: int, on: bool) -> void:
 	var mid := deg_to_rad(VENT_ANGLES[vent])
 	for band in [RING_A, RING_B]:
 		_add_band(st, band, mid - VENT_SPAN, mid + VENT_SPAN, 10, 0.12)
-	var mat := Palette.unshaded(Color(0.42, 0.4, 0.38, 0.95))
+	var mat := PaletteMaterials.unshaded(Color(0.42, 0.4, 0.38, 0.95))
 	mat.no_depth_test = true
 	mat.render_priority = 38
 	_crusts[vent] = _mesh_node(st, mat, "Crust_%d" % vent)
@@ -397,7 +398,7 @@ func _bowl_wall(body: StaticBody3D) -> void:
 
 
 func _solid_part(body: StaticBody3D, st: SurfaceTool, checker: int, label: String) -> void:
-	var node := _mesh_node(st, Palette.striped(CHECKERS[checker][0], CHECKERS[checker][1]), label)
+	var node := _mesh_node(st, PaletteMaterials.striped(CHECKERS[checker][0], CHECKERS[checker][1]), label)
 	var shape := CollisionShape3D.new()
 	var trimesh: ConcavePolygonShape3D = node.mesh.create_trimesh_shape()
 	trimesh.backface_collision = true
@@ -467,7 +468,7 @@ func _wedge(body: StaticBody3D, foot: Vector3, forward: Vector3, length: float, 
 	_quad(st, points[4], points[5], points[3], points[2])
 	for p in [points[0], points[4], points[2], points[1], points[3], points[5]]:
 		st.add_vertex(p)
-	var node := _mesh_node(st, Palette.striped(CHECKERS[3][0], CHECKERS[3][1]), label)
+	var node := _mesh_node(st, PaletteMaterials.striped(CHECKERS[3][0], CHECKERS[3][1]), label)
 	node.set_meta(WEDGE_FRAME, Transform3D(Basis(Vector3.UP.cross(f), Vector3.UP, f), foot))
 
 

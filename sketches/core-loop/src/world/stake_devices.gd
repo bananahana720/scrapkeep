@@ -523,7 +523,7 @@ static func glow_material() -> StandardMaterial3D:
 
 static func bolt_material() -> StandardMaterial3D:
 	if _bolt == null:
-		_bolt = Palette.solid(Palette.BRASS, 0.0, false)
+		_bolt = PaletteMaterials.solid(Palette.BRASS, 0.0, false)
 		_bolt.resource_name = "gamble_bolt"
 	return _bolt
 

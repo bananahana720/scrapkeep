@@ -5,6 +5,7 @@ const BossModel := preload("res://src/boss/boss_model.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const QuietGun := preload("res://src/presentation/quiet_gun.gd")
@@ -250,7 +251,7 @@ static func build_takeover_panel() -> Node3D:
 	plate_mat.roughness = 0.88
 	plate_mat.metallic = 0.0
 	plate_mat.emission_enabled = false
-	Palette.surface_grain(plate_mat)
+	PaletteMaterials.surface_grain(plate_mat)
 	plate.material_override = plate_mat
 	plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	holder.add_child(plate)

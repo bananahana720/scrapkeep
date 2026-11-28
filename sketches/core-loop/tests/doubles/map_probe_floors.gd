@@ -35,7 +35,7 @@ func overlay_height(id: String, x: float, z: float, ground: float) -> float:
 
 func build_props(parent: Node3D, _ground: Callable) -> void:
 	var deck := box(parent, Vector3(2.0 * SQUARE_HALF, RAISE, 2.0 * SQUARE_HALF), Vector3(0.0, FLOOR_Y + RAISE * 0.5, 0.0),
-		Palette.solid(Palette.SANDSTONE))
+		PaletteMaterials.solid(Palette.SANDSTONE))
 	deck.name = "ProbeFloor"
 	deck.set_meta("home", deck.position)
 	swaps = {"probe_floor": {"before": [deck], "after": []}}

@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Parts := preload("res://src/build/parts.gd")
 const PartOffers := preload("res://src/build/part_offers.gd")
@@ -397,7 +398,7 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	gate.global_position = at
 	gate.global_basis = Basis.looking_at(facing, Vector3.UP)
 	var tint := rarity_color(offer["rarity"])
-	var mat := Palette.solid(tint, 1.4)
+	var mat := PaletteMaterials.solid(tint, 1.4)
 	for x in [-WIDTH * 0.5, WIDTH * 0.5]:
 		var post := MeshInstance3D.new()
 		var box := BoxMesh.new()
@@ -413,7 +414,7 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	bar.material_override = mat
 	bar.position = Vector3(0.0, HEIGHT, 0.0)
 	gate.add_child(bar)
-	var topper := _topper(offer["rarity"], Palette.solid(tint, 2.6))
+	var topper := _topper(offer["rarity"], PaletteMaterials.solid(tint, 2.6))
 	topper.name = "Topper"
 	topper.position = Vector3(0.0, HEIGHT + 1.2, 0.0)
 	gate.add_child(topper)
@@ -425,7 +426,7 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 		core.radius = 0.45
 		core.height = 0.9
 		heart.mesh = core
-		heart.material_override = Palette.solid(Palette.ARC, 3.0)
+		heart.material_override = PaletteMaterials.solid(Palette.ARC, 3.0)
 		topper.add_child(heart)
 	var ids := glyph_ids(offer)
 	for i in ids.size():
@@ -479,7 +480,7 @@ static func _stripe() -> MeshInstance3D:
 	box.size = Vector3(2.4, 0.18, 0.5)
 	band.mesh = box
 	band.rotation = Vector3(0.0, 0.0, deg_to_rad(35.0))
-	band.material_override = Palette.solid(Palette.AMBER, 3.2)
+	band.material_override = PaletteMaterials.solid(Palette.AMBER, 3.2)
 	return band
 
 

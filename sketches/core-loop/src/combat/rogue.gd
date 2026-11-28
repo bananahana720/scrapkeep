@@ -356,11 +356,11 @@ func _build_body() -> void:
 	_shape.shape = CapsuleShape3D.new()
 	add_child(_shape)
 	_base_color = Palette.BRASS
-	_material = Palette.solid(_base_color)
+	_material = PaletteMaterials.solid(_base_color)
 	_body = Node3D.new()
 	_body.name = "RogueBody"
 	_visual_parent().add_child(_body)
-	_core_material = Palette.solid(Palette.VERDIGRIS)
+	_core_material = PaletteMaterials.solid(Palette.VERDIGRIS)
 	if _build_model():
 		return
 	var plate_material := _plate_material()
@@ -371,15 +371,15 @@ func _build_body() -> void:
 			_box(Vector3(r * 1.6, 0.8, r * 1.6), Vector3(0.0, -h + 0.4, 0.0), _material)
 			_cylinder(0.45, h * 1.8, Vector3(0.0, 0.0, 0.0), _material)
 			_box(Vector3(0.7, 0.6, 7.0), Vector3(0.0, h - 0.3, -2.6), _material)
-			_hook = _box(Vector3(1.4, 1.2, 1.4), Vector3(0.0, h - 2.6, -5.6), Palette.solid(Palette.CHARCOAL))
+			_hook = _box(Vector3(1.4, 1.2, 1.4), Vector3(0.0, h - 2.6, -5.6), PaletteMaterials.solid(Palette.CHARCOAL))
 			_hook_rest = _hook.position
-			_cylinder(0.06, 1.8, Vector3(0.0, h - 1.3, -5.6), Palette.solid(Palette.CABLE))
+			_cylinder(0.06, 1.8, Vector3(0.0, h - 1.3, -5.6), PaletteMaterials.solid(Palette.CABLE))
 			_core = _sphere(0.9, Vector3(0.0, h - 0.6, 1.6))
 		"rogue_skip":
 			_box(Vector3(r * 1.7, h * 1.1, r * 1.9), Vector3(0.0, 0.1, 0.0), _material)
 			for side in [-1.0, 1.0]:
 				for end in [-1.0, 1.0]:
-					var wheel := _cylinder(0.55, 0.4, Vector3(side * r * 0.9, -h + 0.55, end * r * 0.6), Palette.solid(Palette.CHARCOAL))
+					var wheel := _cylinder(0.55, 0.4, Vector3(side * r * 0.9, -h + 0.55, end * r * 0.6), PaletteMaterials.solid(Palette.CHARCOAL))
 					wheel.rotation.z = PI * 0.5
 			_core = _sphere(0.8, Vector3(0.0, 0.3, r * 1.0))
 		_:
@@ -392,14 +392,14 @@ func _build_body() -> void:
 	for side in [-1.0, 1.0]:
 		var plate := _box(Vector3(r * 0.9, h * 0.9, 0.3), _core.position + Vector3(side * 0.7, 0.0, -0.6 if kind != "rogue_crane" else 0.6), plate_material)
 		_plates.append({"node": plate, "side": side, "rest": plate.position})
-	var brass := Palette.solid(Palette.BRASS)
+	var brass := PaletteMaterials.solid(Palette.BRASS)
 	for side in [-1.0, 1.0]:
 		var flyball := SphereMesh.new()
 		flyball.radius = 0.3
 		flyball.height = 0.6
 		_part(flyball, Vector3(side * 0.45, h + 0.5, 0.6), brass)
 	_cylinder(0.08, 0.9, Vector3(0.0, h + 0.3, 0.6), brass)
-	_cylinder(0.12, 1.4, Vector3(r * 0.6, h - 0.3, 0.9), Palette.solid(Palette.RUST))
+	_cylinder(0.12, 1.4, Vector3(r * 0.6, h - 0.3, 0.9), PaletteMaterials.solid(Palette.RUST))
 	_stamp("No. " + String(row.crew), Vector3(r * 0.9 + 0.05, 0.4, 0.0), 64)
 	_stamp("HIRED", Vector3(r * 0.9 + 0.05, -0.4, 0.0), 40)
 
@@ -410,7 +410,7 @@ func _build_model() -> bool:
 		return false
 	var model: Dictionary = MODELS[kind]
 	_base_color = Color.WHITE
-	_material = Palette.solid(Color.WHITE)
+	_material = PaletteMaterials.solid(Color.WHITE)
 	_material.vertex_color_use_as_albedo = true
 	var plate_material := _plate_material(mask_texture([Color.BLACK], 1))
 	_body.add_child(scene)
@@ -590,7 +590,7 @@ var _cue: StandardMaterial3D
 
 func _cue_material() -> StandardMaterial3D:
 	if _cue == null:
-		_cue = Palette.solid(Palette.BRASS, 1.0)
+		_cue = PaletteMaterials.solid(Palette.BRASS, 1.0)
 	_cue.emission_energy_multiplier = FlashGuard.spike(1.2, 4.0)
 	return _cue
 
@@ -601,6 +601,6 @@ func cue_showing() -> bool:
 
 func _weak_material() -> StandardMaterial3D:
 	if _weak == null:
-		_weak = Palette.solid(Palette.live(), 1.0)
+		_weak = PaletteMaterials.solid(Palette.live(), 1.0)
 	_weak.emission_energy_multiplier = FlashGuard.spike(1.2, 4.0)
 	return _weak

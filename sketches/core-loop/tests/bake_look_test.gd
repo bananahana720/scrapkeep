@@ -7,6 +7,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
@@ -44,12 +45,12 @@ func _run() -> void:
 	t.near("glTF V 1 is the crease: the bake's wear multiplier", _shade(ramp, 1.0, 1.0), 1.0 - BakeLook.EDGE, 0.02)
 	t.near("glTF V 0 is the worn convex edge: a multiply stops at neutral", _shade(ramp, 1.0, 0.0), 1.0, 0.02)
 
-	var flash := Palette.solid(Color.WHITE)
-	var paint := Palette.solid(Color.WHITE)
+	var flash := PaletteMaterials.solid(Color.WHITE)
+	var paint := PaletteMaterials.solid(Color.WHITE)
 	paint.vertex_color_use_as_albedo = true
-	var rubber := Palette.solid(Palette.CHARCOAL)
-	var both := Palette.solid(Palette.BRASS)
-	var stripe := Palette.hazard_stripe()
+	var rubber := PaletteMaterials.solid(Palette.CHARCOAL)
+	var both := PaletteMaterials.solid(Palette.BRASS)
+	var stripe := PaletteMaterials.hazard_stripe()
 	var grain := rubber.normal_texture
 	var body := ArrayMesh.new()
 	_surface(body, "fleet_paint", true, paint)
@@ -127,7 +128,7 @@ func _run() -> void:
 	t.eq("dressing again changes nothing", BakeLook.dress(root, [flash, both]), 0)
 	t.check("twins are shared between instances", BakeLook.twin(rubber) == twin)
 
-	var ungrained := Palette.solid(Palette.BRASS, 0.0, false)
+	var ungrained := PaletteMaterials.solid(Palette.BRASS, 0.0, false)
 	t.check("solid without grain keeps plain UV1 for its own mask", not ungrained.uv1_triplanar and ungrained.normal_texture == null
 		and not ungrained.detail_enabled and ungrained.get_meta("palette_solid", false))
 	var enemy := Enemy.new()

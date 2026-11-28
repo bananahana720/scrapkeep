@@ -21,6 +21,7 @@ const T := preload("res://tests/support/t.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const BakeWarm := preload("res://src/presentation/bake_warm.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
@@ -202,7 +203,7 @@ func _filter() -> void:
 	var cut := _shader("shader_type spatial;\nvoid fragment() { if (UV.x > 0.5) { discard; } ALBEDO = vec3(1.0); }")
 	var live := _shader("shader_type spatial;\nuniform vec4 tint : source_color;\nvoid fragment() { ALBEDO = tint.rgb; }")
 	var cases := [[body, "paint", true], [glass, "paint", false], [flat, "paint", false], [glow, "paint", false],
-		[dark_emit, "paint", true], [add, "paint", false], [tagged, "paint", false], [Palette.hazard_stripe(), "paint", false],
+		[dark_emit, "paint", true], [add, "paint", false], [tagged, "paint", false], [PaletteMaterials.hazard_stripe(), "paint", false],
 		[_body(), "ancient_lens", false], [_body(), "slag_glow", false], [_body(), "glass", false], [_body(), "class_accent", false],
 		[see, "paint", false], [cut, "paint", false], [live, "paint", true]]
 	var right := 0

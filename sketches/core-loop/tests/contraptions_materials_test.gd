@@ -3,6 +3,7 @@ extends SceneTree
 const Contraptions := preload("res://src/world/contraptions.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const VARIANTS := [[Palette.SAND, 0.0], [Palette.CHARCOAL, 0.0], [Palette.RUST, 0.0],
 	[Palette.COPPER, 0.0], [Palette.AMBER, 0.6], [Palette.AMBER, 0.8], [Palette.AMBER, 1.2]]
@@ -52,8 +53,8 @@ func _run() -> void:
 		shared = shared and ids.size() == 1
 	_check(shared, "matching immutable solids share one resource per owner")
 	_check(a._gauge_mat != b._gauge_mat and a._needle_mat != b._needle_mat, "owners have independent materials")
-	var fresh := Palette.solid(Palette.SAND)
-	var other := Palette.solid(Palette.SAND)
+	var fresh := PaletteMaterials.solid(Palette.SAND)
+	var other := PaletteMaterials.solid(Palette.SAND)
 	fresh.albedo_color = Palette.HAZARD
 	fresh.emission_enabled = true
 	fresh.emission_energy_multiplier = 9.0

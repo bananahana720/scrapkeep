@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Groups := preload("res://src/core/groups.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
@@ -63,14 +64,14 @@ func setup(ctx_ref) -> void:
 	events.stage_content_cleared.connect(func(_reason: String): clear())
 	_lines = MeshInstance3D.new()
 	_lines.mesh = ImmediateMesh.new()
-	var line_material := Palette.unshaded(Palette.HAZARD)
+	var line_material := PaletteMaterials.unshaded(Palette.HAZARD)
 	line_material.no_depth_test = true
 	line_material.render_priority = DRAW_PRIORITY
 	_lines.material_override = line_material
 	add_child(_lines)
 	_bracket = MeshInstance3D.new()
 	_bracket.mesh = ImmediateMesh.new()
-	_bracket_material = Palette.unshaded(Palette.ARC)
+	_bracket_material = PaletteMaterials.unshaded(Palette.ARC)
 	_bracket_material.no_depth_test = true
 	_bracket_material.render_priority = DRAW_PRIORITY
 	_bracket.material_override = _bracket_material

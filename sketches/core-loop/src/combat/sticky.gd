@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
@@ -234,7 +235,7 @@ func _add(charge: Dictionary) -> Dictionary:
 	ball.radius = 0.28 if charge["mini"] else 0.4
 	ball.height = ball.radius * 2.0
 	node.mesh = ball
-	node.material_override = Palette.solid(ClassDef.KEST_COLOR, 2.2)
+	node.material_override = PaletteMaterials.solid(ClassDef.KEST_COLOR, 2.2)
 	add_child(node)
 	node.global_position = charge["pos"]
 	charge["node"] = node

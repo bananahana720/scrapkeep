@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Slots := preload("res://src/presentation/material_slots.gd")
 const ROLES := ["nosing", "ground", "rock", "dam", "clutter", "dressing", "air", "hazard_stripe", "concrete", "stone", "steel", "enamel", "cable"]
 var failed := false
@@ -20,8 +21,8 @@ func _initialize() -> void:
 	var resolved := 0
 	for role in Slots.SLOTS:
 		var row: Dictionary = Slots.SLOTS[role]
-		var material := Palette.slot_material(role)
-		var ok := material != null and material.resource_name != "" and material == Palette.slot_material(role)
+		var material := PaletteMaterials.slot_material(role)
+		var ok := material != null and material.resource_name != "" and material == PaletteMaterials.slot_material(role)
 		match row.kind:
 			"shader", "resource":
 				if material is ShaderMaterial:
@@ -37,20 +38,20 @@ func _initialize() -> void:
 		check(ok, "role " + role + " resolves to one shared, compiled material")
 		resolved += 1 if ok else 0
 	check(resolved == Slots.SLOTS.size() and resolved >= 13, "every role resolved (%d)" % resolved)
-	var stripe := Palette.hazard_stripe()
+	var stripe := PaletteMaterials.hazard_stripe()
 	var image := stripe.albedo_texture.get_image()
 	var one := image.get_pixel(0, 0)
 	var two := image.get_pixel(image.get_width() / 4, 0)
-	check(stripe == Palette.slot_material("hazard_stripe") and stripe.get_meta("greybox_checker", false) and one != two and one.is_equal_approx(Palette.HAZARD) and two.is_equal_approx(Palette.CHARCOAL), "hazard stripe is one cached material with the greybox_checker meta and two sampleable colours")
+	check(stripe == PaletteMaterials.slot_material("hazard_stripe") and stripe.get_meta("greybox_checker", false) and one != two and one.is_equal_approx(Palette.HAZARD) and two.is_equal_approx(Palette.CHARCOAL), "hazard stripe is one cached material with the greybox_checker meta and two sampleable colours")
 	check(Palette.ANCIENT.to_html(false) == "9dff3c", "ANCIENT is uranium-glass green #9dff3c")
 	var ancient_ok := not Slots.ancient_roles().is_empty()
 	for role in Slots.ancient_roles():
 		ancient_ok = ancient_ok and String(Slots.SLOTS[role].get("pattern", "")) != ""
 	check(ancient_ok, "every ancient slot has a pattern cue")
-	var code := (Palette.slot_material("ancient_lens") as ShaderMaterial).shader.code
+	var code := (PaletteMaterials.slot_material("ancient_lens") as ShaderMaterial).shader.code
 	check(code.contains("float chevron") and code.contains("glow = lens * (1.0 - chevron"), "the ancient lens shader carries the chevron term the pattern field names")
-	var ground := Palette.ground_material()
-	var rock := Palette.rock_material()
+	var ground := PaletteMaterials.ground_material()
+	var rock := PaletteMaterials.rock_material()
 	check(ground != rock and ground.get_shader_parameter("cliff_only") == false and rock.get_shader_parameter("cliff_only") == true and ground.shader == rock.shader, "ground and rock share the sandstone shader and differ by the cliff flag")
 	var floor_map := ground.get_shader_parameter("floor_map") as Texture2D
 	var probe := floor_map.get_image()

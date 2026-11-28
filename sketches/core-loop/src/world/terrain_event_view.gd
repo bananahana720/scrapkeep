@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 
@@ -41,8 +42,8 @@ func _build(model) -> Dictionary:
 	var r: float = model.footprint[0]["radius"]
 	var at := Vector3(c.x, float(_height.call(c.x, c.y)) + 0.15, c.y)
 	root.position = at
-	var keyline := _flat_ring(root, r + 0.25, 0.5, Palette.solid(Palette.CHARCOAL), 0.02)
-	var edge := _flat_ring(root, r, 0.25, Palette.unshaded(Palette.HAZARD), 0.06)
+	var keyline := _flat_ring(root, r + 0.25, 0.5, PaletteMaterials.solid(Palette.CHARCOAL), 0.02)
+	var edge := _flat_ring(root, r, 0.25, PaletteMaterials.unshaded(Palette.HAZARD), 0.06)
 	var fill := MeshInstance3D.new()
 	var tm := TorusMesh.new()
 	tm.outer_radius = r
@@ -63,14 +64,14 @@ func _build(model) -> Dictionary:
 			s.radius = 0.5
 			s.height = 1.0
 			dot.mesh = s
-			dot.material_override = Palette.unshaded(Palette.HAZARD)
+			dot.material_override = PaletteMaterials.unshaded(Palette.HAZARD)
 			add_child(dot)
 			entry["dots"].append(dot)
 		var chunk := MeshInstance3D.new()
 		var bm := BoxMesh.new()
 		bm.size = Vector3(4.0, 3.0, 3.0)
 		chunk.mesh = bm
-		chunk.material_override = Palette.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.2))
+		chunk.material_override = PaletteMaterials.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.2))
 		add_child(chunk)
 		entry["chunk"] = chunk
 	else:
@@ -79,7 +80,7 @@ func _build(model) -> Dictionary:
 			var gm := BoxMesh.new()
 			gm.size = Vector3(0.5, 0.5, 0.5)
 			grit.mesh = gm
-			grit.material_override = Palette.solid(Palette.SANDSTONE)
+			grit.material_override = PaletteMaterials.solid(Palette.SANDSTONE)
 			root.add_child(grit)
 			entry["grit"].append(grit)
 	_show(entry, false)
@@ -107,7 +108,7 @@ func _draw(e: Dictionary, delta: float) -> void:
 	var f: float = 1.0 if flashing else model.fill()
 	var tm: TorusMesh = e["torus"]
 	tm.inner_radius = clampf(r * (1.0 - f), 0.05, r - 0.05)
-	(e["fill"] as MeshInstance3D).material_override = Palette.unshaded(Color(Palette.HAZARD, FlashGuard.info(1.0))) if flashing else _stripe
+	(e["fill"] as MeshInstance3D).material_override = PaletteMaterials.unshaded(Color(Palette.HAZARD, FlashGuard.info(1.0))) if flashing else _stripe
 	if model.id == "impact":
 		_draw_impact(e, f)
 	else:
@@ -179,14 +180,14 @@ static func _bracket(parent: Node3D) -> Node3D:
 		var um := BoxMesh.new()
 		um.size = Vector3(0.5, 0.1, 0.5) + side * 2.0
 		under.mesh = um
-		under.material_override = Palette.solid(Palette.CHARCOAL)
+		under.material_override = PaletteMaterials.solid(Palette.CHARCOAL)
 		under.position = side
 		node.add_child(under)
 		var bar := MeshInstance3D.new()
 		var bm := BoxMesh.new()
 		bm.size = Vector3(0.3, 0.14, 0.3) + side * 2.0
 		bar.mesh = bm
-		bar.material_override = Palette.unshaded(Palette.HAZARD)
+		bar.material_override = PaletteMaterials.unshaded(Palette.HAZARD)
 		bar.position = side + Vector3.UP * 0.04
 		node.add_child(bar)
 	node.rotation.y = 0.0

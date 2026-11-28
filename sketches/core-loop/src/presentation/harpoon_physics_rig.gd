@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
@@ -259,7 +260,7 @@ class HarpoonHead extends MeshInstance3D:
 		core_node = MeshInstance3D.new()
 		core_node.name = "LiveCore"
 		core_node.mesh = c_mesh
-		_core_mat = Palette.solid(Palette.ARC, 1.35)
+		_core_mat = PaletteMaterials.solid(Palette.ARC, 1.35)
 		_core_mat.roughness = 0.25
 		_core_mat.metallic = 0.2
 		core_node.material_override = _core_mat
@@ -392,7 +393,7 @@ static func make_spool() -> FairleadSpool:
 
 static func metal_material() -> StandardMaterial3D:
 	if _metal_mat == null:
-		_metal_mat = Palette.solid(Color.WHITE, 0.0)
+		_metal_mat = PaletteMaterials.solid(Color.WHITE, 0.0)
 		_metal_mat.vertex_color_use_as_albedo = true
 		_metal_mat.roughness = 0.42
 		_metal_mat.metallic = 0.58
@@ -404,7 +405,7 @@ static func metal_material() -> StandardMaterial3D:
 
 static func spool_material() -> StandardMaterial3D:
 	if _spool_mat == null:
-		_spool_mat = Palette.solid(Color.WHITE, 0.0)
+		_spool_mat = PaletteMaterials.solid(Color.WHITE, 0.0)
 		_spool_mat.vertex_color_use_as_albedo = true
 		_spool_mat.roughness = 0.46
 		_spool_mat.metallic = 0.52

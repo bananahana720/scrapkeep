@@ -3,6 +3,7 @@ extends Node3D
 const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const MathUtil := preload("res://src/core/math_util.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
@@ -52,10 +53,10 @@ static var _part_meshes := {}
 func setup() -> void:
 	name = "Accretion"
 	_chunk_mesh = CraftedGear.chunk_mesh(0)
-	_chunk_material = Palette.solid(Palette.ARC.lerp(Palette.RUST, 0.45), 0.16)
+	_chunk_material = PaletteMaterials.solid(Palette.ARC.lerp(Palette.RUST, 0.45), 0.16)
 	_chunk_material.metallic = 0.34
 	_chunk_material.roughness = 0.62
-	_chunk_material.albedo_texture = Palette.painted_texture(128)
+	_chunk_material.albedo_texture = PaletteMaterials.painted_texture(128)
 	_chunk_material.uv1_triplanar = true
 	_chunk_material.uv1_scale = Vector3.ONE * 3.0
 	_chunk_material.vertex_color_use_as_albedo = true
@@ -278,10 +279,10 @@ func _piece(part_id: String) -> Node3D:
 	if rarity == "":
 		rarity = "common"
 	var color: Color = RARITY_COLORS.get(rarity, Palette.COPPER)
-	var mat := Palette.solid(color, 1.4 if rarity != "common" else 0.4)
+	var mat := PaletteMaterials.solid(color, 1.4 if rarity != "common" else 0.4)
 	mat.metallic = 0.36
 	mat.roughness = 0.60
-	mat.albedo_texture = Palette.painted_texture(128)
+	mat.albedo_texture = PaletteMaterials.painted_texture(128)
 	mat.uv1_triplanar = true
 	mat.uv1_scale = Vector3.ONE * 3.0
 	mat.vertex_color_use_as_albedo = true
@@ -299,10 +300,10 @@ func _piece(part_id: String) -> Node3D:
 	crafted.mesh = CraftedGear.part_mesh(part_id, family)
 	var piece_mat := mat
 	if part_id not in ["cross_split", "spiral_wave", "chain_arc"] and family in ["class", "milestone"]:
-		piece_mat = Palette.solid(color, 3.0)
+		piece_mat = PaletteMaterials.solid(color, 3.0)
 		piece_mat.metallic = 0.38
 		piece_mat.roughness = 0.54
-		piece_mat.albedo_texture = Palette.painted_texture(128)
+		piece_mat.albedo_texture = PaletteMaterials.painted_texture(128)
 		piece_mat.uv1_triplanar = true
 		piece_mat.uv1_scale = Vector3.ONE * 3.0
 		piece_mat.vertex_color_use_as_albedo = true
@@ -344,14 +345,14 @@ func _build_halo(synergy_id: String) -> Node3D:
 	halo.name = "Halo_" + synergy_id
 	var index: int = Synergies.ROWS.keys().find(synergy_id)
 	var tag: String = Synergies.ROWS[synergy_id]["tags"][0]
-	var mat := Palette.unshaded(TAG_COLORS.get(tag, Palette.SAND))
+	var mat := PaletteMaterials.unshaded(TAG_COLORS.get(tag, Palette.SAND))
 	var rings: Array = [Vector3(0.35 * index, 0.9 * index, 0.25)]
 	var inner := 1.3 + 0.05 * index
 	var outer := inner + 0.07
 	if synergy_id == "storm_lattice":
 		rings = [Vector3.ZERO, Vector3(PI * 0.5, 0.0, 0.0), Vector3(0.0, 0.0, PI * 0.5)]
 	elif synergy_id == "thermal_shock":
-		mat = Palette.solid(Palette.ICE, 2.0)
+		mat = PaletteMaterials.solid(Palette.ICE, 2.0)
 		inner = 1.1
 		outer = 1.28
 	var ring_mesh := CraftedGear.synergy_ring_mesh(inner, outer)

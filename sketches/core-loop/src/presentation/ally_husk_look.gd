@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 
 const CLIP_PATH := "res://assets/models/ally_husk/ally_husk_clip.glb"
@@ -168,7 +169,7 @@ static func build_wreck_marker(parent: Node3D, at: Vector3, radius := 1.0, elite
 		body.mesh = box
 		body.position = Vector3(0.0, 0.28 * s, 0.0)
 		body.rotation = Vector3(deg_to_rad(14.0), deg_to_rad(25.0), deg_to_rad(-18.0))
-		body.material_override = Palette.solid(Palette.RUST)
+		body.material_override = PaletteMaterials.solid(Palette.RUST)
 		root.add_child(body)
 
 	var ring := _build_ring_mesh(maxf(1.2, radius * 1.35), 0.10, Palette.COPPER, 0.85, 34)
@@ -205,15 +206,15 @@ static func _build_chassis(kind: String, body_radius: float, half_height: float)
 	cyl.bottom_radius = body_radius * 0.95
 	cyl.height = half_height * 1.8
 	mi.mesh = cyl
-	mi.material_override = Palette.solid(Palette.RUST)
+	mi.material_override = PaletteMaterials.solid(Palette.RUST)
 	fallback.add_child(mi)
 	return fallback
 
 
 static func _dress_husk_chassis(root: Node) -> void:
-	var oxide := Palette.solid(Palette.RUST)
-	var charcoal := Palette.solid(Palette.CHARCOAL)
-	var steel := Palette.solid(Palette.STEEL)
+	var oxide := PaletteMaterials.solid(Palette.RUST)
+	var charcoal := PaletteMaterials.solid(Palette.CHARCOAL)
+	var steel := PaletteMaterials.solid(Palette.STEEL)
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
 		if mi.mesh == null:
@@ -321,7 +322,7 @@ static func _build_tick_pips(tag: Node3D) -> Array:
 		var box := BoxMesh.new()
 		box.size = Vector3(0.085, 0.095, 0.085)
 		pip.mesh = box
-		pip.material_override = Palette.solid(Palette.AMBER, 2.2, false)
+		pip.material_override = PaletteMaterials.solid(Palette.AMBER, 2.2, false)
 		pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		sock.add_child(pip)
 		pips.append(pip)

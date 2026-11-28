@@ -267,7 +267,7 @@ func _build_model() -> void:
 	_model = (load(MODEL) as PackedScene).instantiate()
 	_model.name = "LinkerModel"
 	_visual_parent().add_child(_model)
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	for found in _model.find_children("*", "MeshInstance3D", true, false):
 		var mesh := found as MeshInstance3D
@@ -279,7 +279,7 @@ func _build_model() -> void:
 			if slot == "fleet_paint":
 				mesh.set_surface_override_material(i, _material)
 			elif slot == "requisition_tag" and mesh.name == "LinkerCable":
-				_cable_material = Palette.solid(Palette.BRASS)
+				_cable_material = PaletteMaterials.solid(Palette.BRASS)
 				mesh.set_surface_override_material(i, _cable_material)
 			else:
 				mesh.set_surface_override_material(i, painted)

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
@@ -538,8 +539,8 @@ static func _dam_detail(parent: Node3D) -> void:
 			material.albedo_color = DAM_TINT.get(slot, Color.WHITE)
 			material.roughness = DAM_ROUGHNESS.get(slot, 1.0)
 			material.vertex_color_use_as_albedo = true
-			Palette.surface_grain(material)
-			var dam_plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+			PaletteMaterials.surface_grain(material)
+			var dam_plate := PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true)
 			if dam_plate != null:
 				material.albedo_texture = dam_plate
 				material.uv1_triplanar = true
@@ -608,7 +609,7 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	material.albedo_color = tint
 	material.roughness = 1.0
 	material.vertex_color_use_as_albedo = true
-	material.albedo_texture = Palette.look_texture("sandstone-strata")
+	material.albedo_texture = PaletteMaterials.look_texture("sandstone-strata")
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	material.uv1_triplanar = true
 	material.uv1_scale = Vector3.ONE / 6.0
@@ -650,7 +651,7 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	view.mesh = importer.get_mesh()
 	view.material_override = material
 	if label == "SandstoneShoulders":
-		view.material_override = Palette.rock_material()
+		view.material_override = PaletteMaterials.rock_material()
 	elif label in ["SpillSheets", "Tailrace"]:
 		var flowing := ShaderMaterial.new()
 		flowing.shader = preload("res://src/presentation/spill_water.gdshader")

@@ -1,7 +1,7 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const ENEMIES := ["anchor_crew", "bola_thrower", "burrower", "catch_trap", "chaser", "deflector", "drill_crew", "gyro_jammer", "hooker", "kite_drone", "lamp_swarm", "line_cutter", "lobber", "mag_trapper", "netcaster", "plated_brute", "ramp_flipper", "reactor_relic", "swatter", "winch_drone"]
 var fixtures: Array[PackedScene] = []
 
@@ -28,7 +28,7 @@ func _initialize() -> void:
 			var node = script.new()
 			node._crew = MeshInstance3D.new()
 			node.add_child(node._crew)
-			node._material = Palette.solid(Color.WHITE)
+			node._material = PaletteMaterials.solid(Color.WHITE)
 			node._build_tool()
 			t.eq("lamp swarm builds without surface materials", node.lamps.size(), node.LAMP_COUNT)
 			node.free()

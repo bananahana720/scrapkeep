@@ -2,6 +2,7 @@ extends Node3D
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const PresentationRows := preload("res://src/presentation/rows.gd")
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
@@ -144,21 +145,21 @@ static func _veil(color: Color, alpha: float) -> Color:
 static func _solid(color: Color, emit: float) -> StandardMaterial3D:
 	var key := "solid:%s:%s" % [color.to_html(), emit]
 	if not _shared.has(key):
-		_shared[key] = Palette.solid(color, emit)
+		_shared[key] = PaletteMaterials.solid(color, emit)
 	return _shared[key]
 
 
 static func _unshaded(color: Color) -> StandardMaterial3D:
 	var key := "unshaded:%s" % color.to_html()
 	if not _shared.has(key):
-		_shared[key] = Palette.unshaded(color)
+		_shared[key] = PaletteMaterials.unshaded(color)
 	return _shared[key]
 
 
 static func _column_material(color: Color) -> StandardMaterial3D:
 	var key := "column:%s" % color.to_html()
 	if not _shared.has(key):
-		var mat := Palette.unshaded(_veil(color, COLUMN_ALPHA))
+		var mat := PaletteMaterials.unshaded(_veil(color, COLUMN_ALPHA))
 		mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
 		mat.distance_fade_min_distance = COLUMN_FADE.x
 		mat.distance_fade_max_distance = COLUMN_FADE.y

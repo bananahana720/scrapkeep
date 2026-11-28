@@ -583,7 +583,7 @@ func _add_bank(body: StaticBody3D) -> void:
 	material.albedo_color = BANK_COLOR
 	material.roughness = 0.64
 	material.metallic = 0.22
-	Palette.surface_grain(material)
+	PaletteMaterials.surface_grain(material)
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	surface.set_material(material)
 	var mesh := MeshInstance3D.new()

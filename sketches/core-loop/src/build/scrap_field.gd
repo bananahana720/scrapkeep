@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Panels := preload("res://src/build/panels.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
@@ -94,15 +95,15 @@ var _spin := 0.0
 
 
 func setup() -> void:
-	_material = Palette.solid(Palette.ARC, 1.6)
+	_material = PaletteMaterials.solid(Palette.ARC, 1.6)
 	_mesh = BoxMesh.new()
 	_mesh.size = Vector3(0.8, 0.8, 0.8)
-	_cluster_material = Palette.solid(Palette.AMBER, 2.2)
+	_cluster_material = PaletteMaterials.solid(Palette.AMBER, 2.2)
 	_cluster_mesh = PropMeshes.bevel_prop_box(Vector3(1.4, 1.4, 1.4))
-	_cog_material = Palette.solid(Palette.STEEL, 1.8)
+	_cog_material = PaletteMaterials.solid(Palette.STEEL, 1.8)
 	_cog_mesh = PropMeshes.lore_plate_face(0.45, 0.18)
 	_panel_mesh = PropMeshes.bevel_prop_box(Vector3(0.9, 0.16, 0.7))
-	_panel_material = Palette.solid(Palette.SLATE, 0.9)
+	_panel_material = PaletteMaterials.solid(Palette.SLATE, 0.9)
 	_panel_column = PropMeshes.scrap_beacon_column(0.16, 0.06, PANEL_COLUMN)
 	_panel_column_material = _beacon_material()
 	_cache_column = PropMeshes.scrap_beacon_column(0.20, 0.03, CACHE_COLUMN)

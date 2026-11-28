@@ -3,6 +3,7 @@ extends RefCounted
 
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 
 static var _mesh_cache: Dictionary = {}
@@ -26,9 +27,9 @@ static func weathered_material(color: Color, roughness := 0.74, metallic := 0.24
 	mat.albedo_color = color
 	mat.roughness = roughness
 	mat.metallic = metallic
-	Palette.surface_grain(mat)
+	PaletteMaterials.surface_grain(mat)
 	if use_plate:
-		var plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+		var plate := PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true)
 		if plate != null:
 			mat.albedo_texture = plate
 			mat.uv1_triplanar = true
@@ -741,7 +742,7 @@ static func salvage_wear_material(base_color: Color, edge_color: Color, emit_col
 	mat.set_shader_parameter("base_metallic", metallic)
 	mat.set_shader_parameter("emit_energy", emit_energy)
 	mat.set_shader_parameter("tile_scale", 1.0 / maxf(0.25, tile_m))
-	var plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+	var plate := PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true)
 	if plate != null:
 		mat.set_shader_parameter("plate_tex", plate)
 		mat.set_shader_parameter("has_plate", 1.0)
@@ -1174,9 +1175,9 @@ static func weather_existing_material(mat: Material, tile_m := 3.4) -> Material:
 	var sm := mat as StandardMaterial3D
 	if sm.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED:
 		return sm
-	Palette.surface_grain(sm)
+	PaletteMaterials.surface_grain(sm)
 	if sm.albedo_texture == null:
-		var plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+		var plate := PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true)
 		if plate != null:
 			sm.albedo_texture = plate
 			sm.uv1_triplanar = true

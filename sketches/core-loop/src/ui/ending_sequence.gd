@@ -6,6 +6,7 @@ const AppShell := preload("res://src/core/app_shell.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
@@ -138,7 +139,7 @@ func _build_view() -> void:
 	_environment = Environment.new()
 	_environment.background_mode = Environment.BG_SKY
 	_environment.sky = Sky.new()
-	_environment.sky.sky_material = Palette.workshop_sky()
+	_environment.sky.sky_material = PaletteMaterials.workshop_sky()
 	_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	_environment.ambient_light_energy = WorldLook.ENDING.energy
 	_environment.fog_enabled = true
@@ -419,7 +420,7 @@ func _build_uncached(holder: Node3D, stage: int, world: int) -> void:
 	surface.generate_normals()
 	var mesh := MeshInstance3D.new()
 	mesh.mesh = surface.commit()
-	mesh.material_override = Palette.ground_material()
+	mesh.material_override = PaletteMaterials.ground_material()
 	ground.add_child(mesh)
 	_dress_world(holder, stage, world)
 
@@ -518,7 +519,7 @@ func _build_park_ground(holder: Node3D, stage: int, world: int, map_id: String) 
 	holder.add_child(ground)
 	var mesh := MeshInstance3D.new()
 	mesh.mesh = surface.commit()
-	mesh.material_override = Palette.ground_material()
+	mesh.material_override = PaletteMaterials.ground_material()
 	ground.add_child(mesh)
 
 
@@ -708,7 +709,7 @@ func _enter_world(index: int) -> void:
 		return
 	_environment.ambient_light_color = Palette.SAND
 	_environment.fog_light_color = Palette.SAND
-	_environment.sky.sky_material = Palette.workshop_sky()
+	_environment.sky.sky_material = PaletteMaterials.workshop_sky()
 	_sun.light_color = Color(1.0, 0.95, 0.80)
 	_sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)
 
@@ -717,7 +718,7 @@ func _highdraft_light(stage: int) -> void:
 	var look := WorldLook.stage_look(stage, 3) if stage > 0 else WorldLook.row(3).merged(WorldLook.TIME_ROWS.dusk, true)
 	var time: String = look.get("time", "dusk")
 	if not _highdraft_skies.has(time):
-		var material := Palette.time_sky_material(HighdraftScenery._sky_material().panorama)
+		var material := PaletteMaterials.time_sky_material(HighdraftScenery._sky_material().panorama)
 		var graded := WorldLook.grade(look)
 		for key in graded:
 			material.set(key, graded[key])

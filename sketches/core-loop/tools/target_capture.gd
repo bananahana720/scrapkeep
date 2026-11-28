@@ -180,7 +180,7 @@ static func _pair(text: String) -> Vector2:
 
 func _hashes() -> Dictionary:
 	var result := {}
-	for path in ["src/world/terrain.gd", "src/core/palette.gd", "src/presentation/hero_assets.gd",
+	for path in ["src/world/terrain.gd", "src/core/palette.gd", "src/presentation/palette_materials.gd", "src/presentation/hero_assets.gd",
 		"src/presentation/spillway_scenery.gd", "src/presentation/graphics_preset.gd",
 		"tools/capture_cameras.gd", "tools/target_capture.gd", "project.godot",
 		"assets/shaders/target_dam.gdshader", "assets/shaders/target_surface.gdshaderinc",

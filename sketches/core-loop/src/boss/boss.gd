@@ -11,6 +11,7 @@ const CHARGE_MIN_LANE := 4.0
 const PICKUP_HULL_MARGIN := 0.25
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const BossPosture := preload("res://src/core/boss_posture.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
@@ -746,7 +747,7 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 	band_mesh.height = 0.12
 	band_mesh.radial_segments = 12
 	band.mesh = band_mesh
-	band.material_override = Palette.solid(Palette.SAND)
+	band.material_override = PaletteMaterials.solid(Palette.SAND)
 	band.position.y = 0.12
 	canister.add_child(band)
 	arena.add_child(node)
@@ -1328,7 +1329,7 @@ func _begin_eject() -> void:
 		var box := BoxMesh.new()
 		box.size = Vector3(2.0, 1.0, 2.8)
 		body.mesh = box
-		body.material_override = Palette.solid(Palette.BRASS, 0.8)
+		body.material_override = PaletteMaterials.solid(Palette.BRASS, 0.8)
 	else:
 		body.name = "ScooterHullCraft"
 		body.mesh = EnemyBossCraft.brindle_scooter_hull(Vector3(2.0, 1.0, 2.8))

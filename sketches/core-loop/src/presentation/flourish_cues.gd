@@ -4,6 +4,7 @@ const FlourishRows := preload("res://src/presentation/flourish_rows.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
 
@@ -415,7 +416,7 @@ func _eject(at: float, seconds: float) -> void:
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(2.0, 1.0, 2.8)
 		box.mesh = mesh
-		box.material_override = Palette.solid(Palette.BRASS, 0.8)
+		box.material_override = PaletteMaterials.solid(Palette.BRASS, 0.8)
 		prop.add_child(box)
 	prop.global_position = from
 	prop.visible = false

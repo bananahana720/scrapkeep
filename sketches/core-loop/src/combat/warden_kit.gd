@@ -1,6 +1,6 @@
 extends Node3D
 
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
 
@@ -20,7 +20,7 @@ func build(owner_warden, fam: String) -> void:
 	warden = owner_warden
 	family = fam
 	name = "WardenKit"
-	_seam_material = Palette.solid(Roster.ANCIENT_LIGHT, SEAM_DIM)
+	_seam_material = PaletteMaterials.solid(Roster.ANCIENT_LIGHT, SEAM_DIM)
 	match family:
 		Roster.REACTOR:
 			_build_reactor()
@@ -31,7 +31,7 @@ func build(owner_warden, fam: String) -> void:
 
 
 func _enamel() -> StandardMaterial3D:
-	var mat := Palette.solid(Roster.ANCIENT_ENAMEL)
+	var mat := PaletteMaterials.solid(Roster.ANCIENT_ENAMEL)
 	mat.roughness = 0.35
 	return mat
 

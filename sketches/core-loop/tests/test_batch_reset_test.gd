@@ -43,7 +43,7 @@ const StageLocks := preload("res://src/world/stage_locks.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Footings := preload("res://src/world/park/footings.gd")
 const RescueSite := preload("res://src/world/rescue_site.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
@@ -229,8 +229,8 @@ func _run() -> void:
 	var stray_tween := stray_node.create_tween()
 	stray_tween.tween_property(stray_node, "position", Vector3.UP, 10.0)
 	t.check("stray tween registered before reset", get_processed_tweens().size() >= 1)
-	Palette.workshop_sky_later()
-	t.check("Palette sky paint active or cached before reset", Palette._sky_task >= 0 or Palette._sky_texture != null)
+	PaletteMaterials.workshop_sky_later()
+	t.check("Palette sky paint active or cached before reset", PaletteMaterials._sky_task >= 0 or PaletteMaterials._sky_texture != null)
 	var test_dir := "user://test-%d" % OS.get_process_id()
 	DirAccess.make_dir_recursive_absolute(test_dir)
 	var marker_path := test_dir.path_join("leaked_profile.json")
@@ -318,8 +318,8 @@ func _run() -> void:
 		and ScrapField._ground_plates.is_empty())
 	t.check("ModelVariants resets _on, _rejected and _stamp", ModelVariants._on == -1
 		and ModelVariants._rejected == ModelVariants.REJECTED and ModelVariants._stamp == 0)
-	t.check("Palette sky cache and task reset cleanly", Palette._sky_task == -1 and Palette._sky_texture == null
-		and Palette._sky_waiting.is_empty() and Palette._sky_out.is_empty() and Palette._hdri_sky == null)
+	t.check("Palette sky cache and task reset cleanly", PaletteMaterials._sky_task == -1 and PaletteMaterials._sky_texture == null
+		and PaletteMaterials._sky_waiting.is_empty() and PaletteMaterials._sky_out.is_empty() and PaletteMaterials._hdri_sky == null)
 	t.check("processed tweens are killed on reset", get_processed_tweens().all(func(tw): return not tw.is_valid()))
 	t.check("user://test-<pid> is cleared on reset", not FileAccess.file_exists(marker_path))
 

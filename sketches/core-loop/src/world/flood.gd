@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const SIREN_MAST := preload("res://assets/models/world_one/poi_siren_mast.glb")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
@@ -30,7 +31,7 @@ func setup() -> void:
 	_quad = PlaneMesh.new()
 	_plane.name = "WaterSurface"
 	_plane.mesh = _quad
-	_plane.material_override = Palette.water(Palette.water_tone())
+	_plane.material_override = PaletteMaterials.water(Palette.water_tone())
 	add_child(_plane)
 
 	_mast = Node3D.new()
@@ -44,11 +45,11 @@ func setup() -> void:
 		cyl.bottom_radius = 0.7 / (16.0 / 6.0)
 		cyl.height = 6.0
 		fallback.mesh = cyl
-		fallback.material_override = Palette.solid(Palette.RUST)
+		fallback.material_override = PaletteMaterials.solid(Palette.RUST)
 		fallback.position = Vector3.UP * 3.0
 		_mast.add_child(fallback)
 
-	_lamp_material = Palette.solid(Palette.AMBER, 1.0)
+	_lamp_material = PaletteMaterials.solid(Palette.AMBER, 1.0)
 	_lamp_mesh = MeshInstance3D.new()
 	_lamp_mesh.name = "KlaxonBulb"
 	var bulb := SphereMesh.new()

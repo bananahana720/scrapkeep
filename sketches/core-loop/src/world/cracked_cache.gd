@@ -107,8 +107,8 @@ static func lane_clear(rect: Rect2, at: Vector3, height: Callable) -> bool:
 
 
 func _build_greybox() -> void:
-	var concrete := Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
-	var groove := Palette.solid(Palette.CHARCOAL)
+	var concrete := PaletteMaterials.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
+	var groove := PaletteMaterials.solid(Palette.CHARCOAL)
 	var tall := HEIGHT + SINK
 	var mid := tall * 0.5 - SINK
 	box(Vector3(HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -HALF_D - 0.5), concrete, true)
@@ -116,15 +116,15 @@ func _build_greybox() -> void:
 		box(Vector3(1.0, tall, HALF_D * 2.0 + 2.0), Vector3(s * (HALF_W + 0.5), mid, 0.0), concrete, true)
 	_roof = box(Vector3(HALF_W * 2.0 + 2.0, 1.0, HALF_D * 2.0 + 2.0), Vector3(0.0, HEIGHT + 0.5, 0.0), concrete, true).get_child(1)
 	box(Vector3(HALF_W * 2.0 + 2.2, 0.35, 0.3), Vector3(0.0, HEIGHT * 0.55, HALF_D + 1.05), groove)
-	_wall = box(Vector3(HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, HALF_D + 0.5), Palette.striped(Palette.SANDSTONE, Palette.VERDIGRIS), true)
+	_wall = box(Vector3(HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, HALF_D + 0.5), PaletteMaterials.striped(Palette.SANDSTONE, Palette.VERDIGRIS), true)
 	for k in 3:
 		var crack := box(Vector3(HALF_W * 1.3, 0.2, 1.1), Vector3(0.0, -1.2 + k * 1.6, 0.0), groove, false, _wall)
 		crack.rotation.z = 0.5 - k * 0.45
 	var chest := Vector3(0.0, 0.0, -HALF_D + 1.2)
 	chest.y = ground_y(chest)
-	box(Vector3(2.0, 1.2, 1.4), chest + Vector3.UP * 0.6, Palette.solid(Palette.VERDIGRIS))
+	box(Vector3(2.0, 1.2, 1.4), chest + Vector3.UP * 0.6, PaletteMaterials.solid(Palette.VERDIGRIS))
 	box(Vector3(2.05, 0.18, 1.45), chest + Vector3.UP * 0.8, groove)
-	_lid = box(Vector3(2.1, 0.3, 1.5), chest + Vector3.UP * 1.35, Palette.solid(Palette.VERDIGRIS))
+	_lid = box(Vector3(2.1, 0.3, 1.5), chest + Vector3.UP * 1.35, PaletteMaterials.solid(Palette.VERDIGRIS))
 
 
 func _build_pedestals(parts: Array) -> void:
@@ -135,7 +135,7 @@ func _build_pedestals(parts: Array) -> void:
 		pedestal.visible = false
 		add_child(pedestal)
 		if parts.is_empty():
-			cylinder(0.8, 0.6, Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL), pedestal)
+			cylinder(0.8, 0.6, Vector3.UP * 0.3, PaletteMaterials.solid(Palette.CHARCOAL), pedestal)
 		else:
 			ModelKit.attach_part(parts, "CachePedestal", pedestal)
 		var gem := Node3D.new()
@@ -271,7 +271,7 @@ static func _set_gem(holder: Node3D, rarity: String) -> void:
 	for child in holder.get_children():
 		holder.remove_child(child)
 		child.queue_free()
-	var mark := TierMark.mark(rarity, Palette.solid(gem_color(rarity), 2.0))
+	var mark := TierMark.mark(rarity, PaletteMaterials.solid(gem_color(rarity), 2.0))
 	# Device surfaces take colour from the mesh (device_props_asset_test); primitives read white.
 	for m: MeshInstance3D in mark.find_children("*", "MeshInstance3D", true, false):
 		m.material_override.vertex_color_use_as_albedo = true

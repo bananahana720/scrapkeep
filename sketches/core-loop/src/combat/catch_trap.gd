@@ -32,7 +32,7 @@ func _build_tool() -> void:
 		mesh.bottom_radius = 0.7
 		mesh.height = 0.8
 		_cup.mesh = mesh
-		_cup.material_override = Palette.solid(Palette.CHARCOAL.lightened(0.1), 0.0)
+		_cup.material_override = PaletteMaterials.solid(Palette.CHARCOAL.lightened(0.1), 0.0)
 		_visual_parent().add_child(_cup)
 		_cylinder(1.25, 0.1, Palette.HAZARD, Vector3(0.0, 0.42, 0.0), 0.7, _cup)
 	else:

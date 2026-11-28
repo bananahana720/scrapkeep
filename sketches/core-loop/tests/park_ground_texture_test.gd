@@ -6,7 +6,7 @@ extends SceneTree
 
 const Terrain := preload("res://src/world/terrain.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const T := preload("res://tests/support/t.gd")
 
 class Table:
@@ -29,7 +29,7 @@ func _run() -> void:
 	var terrain := Terrain.new(Table)
 	terrain.build(w)
 	var row: Dictionary = MaterialSlots.row("ground")
-	var want := [Palette.look_texture(row.textures.floor_map).resource_path, Palette.look_texture(row.textures.strata_map).resource_path]
+	var want := [PaletteMaterials.look_texture(row.textures.floor_map).resource_path, PaletteMaterials.look_texture(row.textures.strata_map).resource_path]
 	# The floor's tile size is the non-park floor's: sandstone.gdshader's own floor_metres default.
 	var shader_text := FileAccess.get_file_as_string("res://src/presentation/sandstone.gdshader")
 	var found := RegEx.create_from_string("uniform float floor_metres = ([0-9.]+);").search(shader_text)

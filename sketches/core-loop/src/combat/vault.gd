@@ -28,7 +28,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	shape.shape = box
 	add_child(shape)
 	_base_color = Palette.COPPER
-	_material = Palette.solid(_base_color, 0.2)
+	_material = PaletteMaterials.solid(_base_color, 0.2)
 	_build_visual()
 
 
@@ -50,7 +50,7 @@ func _build_visual() -> void:
 			elif part.name == "VaultPlating":
 				mi.material_override = band_mat
 			elif part.name == "VaultLamp":
-				_lamp_material = Palette.solid(Palette.AMBER, 1.4)
+				_lamp_material = PaletteMaterials.solid(Palette.AMBER, 1.4)
 				mi.material_override = _lamp_material
 			_visual_parent().add_child(mi)
 		_add_hatches()
@@ -113,7 +113,7 @@ func _add_hatches() -> void:
 	_hatch_model = MeshInstance3D.new()
 	_hatch_model.name = "VaultHatches"
 	_hatch_model.mesh = surface.commit()
-	_hatch_model.material_override = Palette.solid(Palette.CHARCOAL)
+	_hatch_model.material_override = PaletteMaterials.solid(Palette.CHARCOAL)
 	_visual_parent().add_child(_hatch_model)
 
 
@@ -152,7 +152,7 @@ static func _parts() -> Array:
 				valid = false
 				continue
 			var mesh: Mesh = mi.mesh.duplicate()
-			var mat := Palette.solid(Palette.SAND, 0.35) if mi.name == "VaultLamp" else Palette.solid(Color.WHITE)
+			var mat := PaletteMaterials.solid(Palette.SAND, 0.35) if mi.name == "VaultLamp" else PaletteMaterials.solid(Color.WHITE)
 			mat.vertex_color_use_as_albedo = mi.name == "VaultBody"
 			mesh.surface_set_material(0, mat)
 			var xform := mi.transform

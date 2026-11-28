@@ -62,10 +62,10 @@ static func _parts() -> Dictionary:
 	if not _shared.is_empty():
 		return _shared
 	var scene := (load("res://assets/models/world_one/enemy_bola_thrower.glb") as PackedScene).instantiate()
-	var charcoal := Palette.solid(Palette.CHARCOAL)
-	var painted := Palette.solid(Color.WHITE)
+	var charcoal := PaletteMaterials.solid(Palette.CHARCOAL)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
-	var hazard := Palette.solid(Palette.HAZARD, 0.6)
+	var hazard := PaletteMaterials.solid(Palette.HAZARD, 0.6)
 	var flash := 0
 	var meshes := {}
 	for node in scene.find_children("*", "MeshInstance3D", true, false):

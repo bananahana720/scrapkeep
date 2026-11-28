@@ -102,7 +102,7 @@ static func _parts() -> Array:
 	if packed == null:
 		return _shared
 	var scene := packed.instantiate()
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D

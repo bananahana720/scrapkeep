@@ -18,6 +18,7 @@ const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const PylonBite := preload("res://src/world/pylon_bite.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 
 const PARKS := ["park_pit", "park_sinkhole", "park_test"]
@@ -125,7 +126,7 @@ func _pin_strata_mean() -> void:
 	var row: Dictionary = MaterialSlots.row("ground")
 	# A copy: headless, get_image() hands back the texture's own image, and the decompress and
 	# convert below would change the format Terrain3D later reads from it.
-	var img: Image = Palette.look_texture(row.textures.strata_map).get_image().duplicate()
+	var img: Image = PaletteMaterials.look_texture(row.textures.strata_map).get_image().duplicate()
 	if img.is_compressed():
 		img.decompress()
 	img.clear_mipmaps()

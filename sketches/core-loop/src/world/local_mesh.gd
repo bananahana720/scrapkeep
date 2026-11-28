@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 
 static func polar(parent: Node3D, name: String, centre: Vector3, r0: float, r1: float, rings: int, segments: int,
@@ -76,7 +76,7 @@ static func _body(parent: Node3D, name: String, origin: Vector3, verts: PackedVe
 	body.position = origin
 	var view := MeshInstance3D.new()
 	view.mesh = mesh
-	view.material_override = Palette.ground_material()
+	view.material_override = PaletteMaterials.ground_material()
 	var shape := CollisionShape3D.new()
 	shape.shape = mesh.create_trimesh_shape()
 	body.add_child(shape)

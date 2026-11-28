@@ -5,6 +5,7 @@ extends Node3D
 const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
 const DECK_LOOK := {"bottom_grime": 0.58, "side_wear": 0.42}
 const ANNULUS_LOOK := {
@@ -100,7 +101,7 @@ static func bind_surface_materials(mi: MeshInstance3D) -> int:
 
 static func get_material(slot: String) -> Material:
 	if slot == "hazard_stripe":
-		return Palette.hazard_stripe()
+		return PaletteMaterials.hazard_stripe()
 	if _mat_cache.has(slot):
 		var cached := _mat_cache[slot] as ShaderMaterial
 		if cached != null and cached.shader != null and (cached.shader.resource_path == Lookdev.MASTER_SHADER_PATH or slot == "slag_molten"):

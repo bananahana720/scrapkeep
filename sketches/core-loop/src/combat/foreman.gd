@@ -86,7 +86,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	shape.position = BODY_CENTER
 	add_child(shape)
 	_base_color = Color.WHITE
-	_material = Palette.solid(_base_color)
+	_material = PaletteMaterials.solid(_base_color)
 	_material.vertex_color_use_as_albedo = true
 	_build_body()
 	_build_tethers()
@@ -97,7 +97,7 @@ func _build_body() -> void:
 	if parts.is_empty():
 		_fallback_body()
 		return
-	_signal_material = Palette.solid(Palette.BRASS, 0.0)
+	_signal_material = PaletteMaterials.solid(Palette.BRASS, 0.0)
 	_signal_material.vertex_color_use_as_albedo = true
 	var model := SpecialRig.seat(self, _visual_parent(), MODEL, "foreman")
 	for part in parts:
@@ -131,7 +131,7 @@ func _fallback_body() -> void:
 		var mesh := BoxMesh.new()
 		mesh.size = item[0]
 		mi.mesh = mesh
-		mi.material_override = _material if item[1] == Palette.RUST else Palette.solid(item[1])
+		mi.material_override = _material if item[1] == Palette.RUST else PaletteMaterials.solid(item[1])
 		mi.position = item[2]
 		pivot.add_child(mi)
 	var horn := MeshInstance3D.new()
@@ -140,7 +140,7 @@ func _fallback_body() -> void:
 	bell.bottom_radius = 0.6
 	bell.height = 1.0
 	horn.mesh = bell
-	_signal_material = Palette.solid(Palette.BRASS, 0.0)
+	_signal_material = PaletteMaterials.solid(Palette.BRASS, 0.0)
 	horn.material_override = _signal_material
 	horn.position = Vector3(0.0, 4.4, -0.4)
 	horn.rotation.x = PI * 0.5
@@ -211,7 +211,7 @@ static func _ring_mesh() -> ArrayMesh:
 
 static func _ring_material() -> StandardMaterial3D:
 	if _sync_ring_material == null:
-		_sync_ring_material = Palette.unshaded(Palette.BRASS)
+		_sync_ring_material = PaletteMaterials.unshaded(Palette.BRASS)
 	return _sync_ring_material
 
 
@@ -222,7 +222,7 @@ func _build_tethers() -> void:
 	_tethers.mesh = _tether_mesh
 	_tethers.top_level = true
 	_tethers.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_tether_material = Palette.solid(Palette.CABLE, 0.0, false)
+	_tether_material = PaletteMaterials.solid(Palette.CABLE, 0.0, false)
 	_tether_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_tethers.material_override = _tether_material
 	add_child(_tethers)

@@ -6,6 +6,7 @@ const Accretion := preload("res://src/build/accretion.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Parts := preload("res://src/build/parts.gd")
 
 
@@ -46,7 +47,7 @@ func _initialize() -> void:
 	for i in ItemGen.RARITIES.size():
 		var rarity: String = ItemGen.RARITIES[i]
 		var x := (i - 1.5) * COLUMN_M
-		var gem := TierMark.mark(rarity, Palette.solid(CrackedCache.gem_color(rarity), 2.0))
+		var gem := TierMark.mark(rarity, PaletteMaterials.solid(CrackedCache.gem_color(rarity), 2.0))
 		gem.position = Vector3(x, 2.4, 0.0)
 		world.add_child(gem)
 		var ball := MeshInstance3D.new()
@@ -54,7 +55,7 @@ func _initialize() -> void:
 		ball.mesh = sphere
 		sphere.radius = 0.9
 		sphere.height = 1.8
-		ball.material_override = Palette.solid(Palette.VERDIGRIS)
+		ball.material_override = PaletteMaterials.solid(Palette.VERDIGRIS)
 		ball.position = Vector3(x, -0.4, 0.0)
 		world.add_child(ball)
 		var piece: Node3D = acc._piece(PIECES[i])

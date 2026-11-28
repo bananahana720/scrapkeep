@@ -34,9 +34,7 @@ const Wordmark := preload("res://src/ui/wordmark.gd")
 const WORDMARK_H := 132.0
 const GAME_SCENE := "res://main.tscn"
 const FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
-# Palette.CHARCOAL and Palette.AMBER, copied: palette.gd pulls the material table with it.
-const CHARCOAL := Color("242a28")
-const AMBER := Color("e5a044")
+const Palette := preload("res://src/core/palette.gd")
 const FADE_S := 0.7
 # The fade waits for stage 1's ground behind the menu, at most this long, so the 3D park title is
 # what the card fades onto.
@@ -312,7 +310,7 @@ func _build_card() -> void:
 	_card.set_anchors_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(_card)
 	var back := ColorRect.new()
-	back.color = CHARCOAL
+	back.color = Palette.CHARCOAL
 	back.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_card.add_child(back)
 	var box := VBoxContainer.new()
@@ -336,7 +334,7 @@ func _build_card() -> void:
 	title.text = "SCRAPKEEP"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 64)
-	title.add_theme_color_override("font_color", AMBER)
+	title.add_theme_color_override("font_color", Palette.AMBER)
 	# The drawn name (W1-47) when it loads; the plain word stays only as its fallback.
 	if Wordmark.texture() != null:
 		title.add_theme_color_override("font_color", Color.TRANSPARENT)
@@ -348,7 +346,7 @@ func _build_card() -> void:
 	_play.add_theme_font_size_override("font_size", 28)
 	_status = Label.new()
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.add_theme_color_override("font_color", AMBER)
+	_status.add_theme_color_override("font_color", Palette.AMBER)
 	if font != null:
 		title.add_theme_font_override("font", font)
 		_play.add_theme_font_override("font", font)
@@ -359,7 +357,7 @@ func _build_card() -> void:
 	stamp.name = "BuildStamp"
 	stamp.text = BuildStamp.label()
 	stamp.add_theme_font_size_override("font_size", 14)
-	stamp.add_theme_color_override("font_color", Color(AMBER, 0.6))
+	stamp.add_theme_color_override("font_color", Color(Palette.AMBER, 0.6))
 	stamp.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
 	stamp.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	stamp.grow_vertical = Control.GROW_DIRECTION_BEGIN

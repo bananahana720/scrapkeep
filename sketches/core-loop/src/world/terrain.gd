@@ -3,6 +3,7 @@ extends RefCounted
 const EventGround := preload("res://src/world/events/event_ground.gd")
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const PylonBite := preload("res://src/world/pylon_bite.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
@@ -964,7 +965,7 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	var relief: Dictionary = scatter.get("relief", {})
 	var view := MeshInstance3D.new()
 	view.mesh = _relief_mesh(relief, heights, colors) if not relief.is_empty() else mesh
-	view.material_override = Palette.ground_material()
+	view.material_override = PaletteMaterials.ground_material()
 	preload("res://src/presentation/graphics_preset.gd").register_ground(view)
 	var body := StaticBody3D.new()
 	body.name = "Ground"
@@ -1045,7 +1046,7 @@ static func _relief_mesh(row: Dictionary, heights: PackedFloat32Array, coarse: P
 
 
 func _build_sky(parent: Node3D) -> void:
-	var sky_material := Palette.workshop_sky_later()
+	var sky_material := PaletteMaterials.workshop_sky_later()
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	environment = Environment.new()
@@ -1059,7 +1060,7 @@ func _build_sky(parent: Node3D) -> void:
 	var world_env := WorldEnvironment.new()
 	world_env.environment = environment
 	parent.add_child(world_env)
-	Palette.settle_sky_on_exit(world_env)
+	PaletteMaterials.settle_sky_on_exit(world_env)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)

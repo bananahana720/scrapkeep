@@ -2,6 +2,7 @@ extends SceneTree
 
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
@@ -465,7 +466,7 @@ static func build_stage(world_id: int) -> Node3D:
 	var rbox := BoxMesh.new()
 	rbox.size = Vector3(1.0, 0.04, 0.08)
 	ruler.mesh = rbox
-	ruler.material_override = Palette.solid(Palette.CHARCOAL, 0.9)
+	ruler.material_override = PaletteMaterials.solid(Palette.CHARCOAL, 0.9)
 	ruler.position = Vector3(0.0, 0.02, 2.8)
 	stage.add_child(ruler)
 	return stage

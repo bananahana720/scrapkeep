@@ -3,6 +3,7 @@ extends Node3D
 
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Groups := preload("res://src/core/groups.gd")
 const EventGround := preload("res://src/world/events/event_ground.gd")
 const CaveIns := preload("res://src/world/events/cave_ins.gd")
@@ -80,7 +81,7 @@ func _vessel(row: Dictionary) -> Node3D:
 	var mesh := MeshInstance3D.new()
 	mesh.name = "Vessel"
 	mesh.mesh = _lowered(surface.mesh, base)
-	mesh.material_override = Palette.unshaded(Palette.HAZARD)
+	mesh.material_override = PaletteMaterials.unshaded(Palette.HAZARD)
 	mark.add_child(mesh)
 	add_child(mark)
 	return mark
@@ -90,7 +91,7 @@ func _set_down(row: Dictionary) -> void:
 	var state: Dictionary = active[row.id]
 	var mesh: MeshInstance3D = state.mark.get_node("Vessel")
 	mesh.mesh = _hull(mesh.mesh)
-	mesh.material_override = Palette.unshaded(Palette.SLATE)
+	mesh.material_override = PaletteMaterials.unshaded(Palette.SLATE)
 
 
 func _hull(floor_mesh: ArrayMesh) -> ArrayMesh:
@@ -147,7 +148,7 @@ func _lift(action: String, row: Dictionary, _ctx: Dictionary) -> void:
 			var state: Dictionary = active[row.id]
 			state.landed = true
 			state.cage.position = Vector3.ZERO
-			state.mark.get_node("Vessel").material_override = Palette.unshaded(Palette.SLATE)
+			state.mark.get_node("Vessel").material_override = PaletteMaterials.unshaded(Palette.SLATE)
 			world.director.activate_home(row.effect.home)
 			FoleyAudio.one_shot("lift_cage_arrive", self, state.mark.global_position if state.mark.is_inside_tree() else Vector3.ZERO)
 		"end":
@@ -166,7 +167,7 @@ func _cage(row: Dictionary) -> Node3D:
 	holder.position = Vector3(at.x, 0.0, at.y)
 	holder.rotation.y = deg_to_rad(float(site.yaw_deg))
 	cage.add_child(holder)
-	var steel := Palette.solid(Palette.CHARCOAL.lightened(0.15))
+	var steel := PaletteMaterials.solid(Palette.CHARCOAL.lightened(0.15))
 	for sx in [-1.0, 1.0]:
 		for sz in [-1.0, 1.0]:
 			_bar(holder, Vector3(0.35, CAGE_HEIGHT_M, 0.35), Vector3(sx * half.x, CAGE_HEIGHT_M * 0.5, sz * half.y), steel)
@@ -175,7 +176,7 @@ func _cage(row: Dictionary) -> Node3D:
 		_bar(holder, Vector3(half.x * 2.0, 0.2, 0.3), Vector3(0.0, y, half.y), steel)
 		_bar(holder, Vector3(0.3, 0.2, half.y * 2.0), Vector3(-half.x, y, 0.0), steel)
 		_bar(holder, Vector3(0.3, 0.2, half.y * 2.0), Vector3(half.x, y, 0.0), steel)
-	_bar(holder, Vector3(half.x * 1.6, 0.12, half.y * 1.6), Vector3(0.0, 0.05, 0.0), Palette.solid(Palette.HAZARD, 0.4))
+	_bar(holder, Vector3(half.x * 1.6, 0.12, half.y * 1.6), Vector3(0.0, 0.05, 0.0), PaletteMaterials.solid(Palette.HAZARD, 0.4))
 	return cage
 
 
@@ -253,7 +254,7 @@ func _zipline(action: String, row: Dictionary, _ctx: Dictionary) -> void:
 				return
 			state.line.get_node("Trolley").position = state.to - Vector3.UP * state.mark.position.y
 			FoleyAudio.one_shot("zipline_snap", self, state.to)
-			state.mark.get_node("Vessel").material_override = Palette.unshaded(Palette.SLATE)
+			state.mark.get_node("Vessel").material_override = PaletteMaterials.unshaded(Palette.SLATE)
 			world.director.activate_home(row.effect.home)
 			state.knocked = _impact(row, state.to)
 		"end":
@@ -280,7 +281,7 @@ func _cable(from: Vector3, to: Vector3, base: float) -> Node3D:
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(0.12, 0.12, span.length())
 	cable.mesh = mesh
-	cable.material_override = Palette.unshaded(Palette.HAZARD)
+	cable.material_override = PaletteMaterials.unshaded(Palette.HAZARD)
 	cable.position = (from + to) * 0.5 - Vector3.UP * base
 	cable.basis = Basis.looking_at(span.normalized(), Vector3.UP if absf(span.normalized().y) < 0.99 else Vector3.RIGHT)
 	line.add_child(cable)
@@ -289,7 +290,7 @@ func _cable(from: Vector3, to: Vector3, base: float) -> Node3D:
 	var box := BoxMesh.new()
 	box.size = Vector3(2.4, 1.6, 2.4)
 	trolley.mesh = box
-	trolley.material_override = Palette.solid(Palette.RUST)
+	trolley.material_override = PaletteMaterials.solid(Palette.RUST)
 	trolley.position = from - Vector3.UP * base
 	line.add_child(trolley)
 	return line

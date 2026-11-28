@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
@@ -386,7 +387,7 @@ static func roof_body(owner: Node, surface: Surface, single_collider := true) ->
 	var body := StaticBody3D.new()
 	var view := MeshInstance3D.new()
 	view.mesh = surface.mesh
-	view.material_override = Palette.ground_material()
+	view.material_override = PaletteMaterials.ground_material()
 	body.add_child(view)
 	if single_collider:
 		var collider := CollisionShape3D.new()
@@ -512,7 +513,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	body.name = "Natural_" + row.id
 	var view := MeshInstance3D.new()
 	view.mesh = surface.mesh
-	view.material_override = Palette.ground_material()
+	view.material_override = PaletteMaterials.ground_material()
 	var collider := CollisionShape3D.new()
 	collider.shape = prepared.get("shape", null) if prepared.has("shape") else trimesh(surface)
 	if not prepared.is_empty():

@@ -6,7 +6,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
 # VX-WIRE (wave 12-C): the shipped high carries set dressing and air motes while low carries none,
@@ -88,8 +88,8 @@ func _run() -> void:
 	# 2026-10-17 (one day per run): the HDRI sky's material is the time-of-day sky shader over the panorama.
 	var material := env.sky.sky_material as ShaderMaterial if env.sky != null else null
 	var panorama: Texture2D = material.get_shader_parameter("panorama") if material != null else null
-	_t.check("stage 1 draws the cached HDRI sky", env.sky == Palette.hdri_sky() and panorama != null and panorama.resource_path.ends_with(".hdr"))
-	_t.check("the HDRI sky is cached once", Palette.hdri_sky() == Palette.hdri_sky())
+	_t.check("stage 1 draws the cached HDRI sky", env.sky == PaletteMaterials.hdri_sky() and panorama != null and panorama.resource_path.ends_with(".hdr"))
+	_t.check("the HDRI sky is cached once", PaletteMaterials.hdri_sky() == PaletteMaterials.hdri_sky())
 
 	# 2. fog: the Spillway's, then the Dig's.
 	_fog_matches("Spillway", WorldLook.ROWS[1], 1)
@@ -112,7 +112,7 @@ func _run() -> void:
 		await _frames(30)
 		_t.near("Highdraft exposure is the row's", env.tonemap_exposure, WorldLook.ROWS[3].exposure)
 		_t.near("Highdraft saturation is the row's", env.adjustment_saturation, WorldLook.ROWS[3].saturation)
-		_t.check("Highdraft draws the HDRI sky", env.sky == Palette.hdri_sky())
+		_t.check("Highdraft draws the HDRI sky", env.sky == PaletteMaterials.hdri_sky())
 
 	# 5. the capture switch.
 	var anchor := Node3D.new()
