@@ -155,7 +155,8 @@ export const NODE_PATH_RULES = [
   },
   {
     name: "asset budget audit",
-    match: /^(tools\/budget_audit\.mjs|assets\/asset_budgets\.json|assets\/registry\.json)$/,
+    match:
+      /^(tools\/budget_audit\.mjs|assets\/asset_budgets\.json|assets\/registry\.json)$|^assets\/models\//,
     tests: ["scripts/budget-audit.test.mjs"],
   },
   {

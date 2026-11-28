@@ -1120,6 +1120,7 @@ test("splitBatch gives each test its own output and names a cut-off test", () =>
 
 test("nodeTestsForPaths: a park prop recipe or file faces the far-mesh fault check, other sketch paths do not", () => {
   assert.deepEqual(nodeTestsForPaths(["assets/models/park/props/dam/cable_drum_a_lod2.glb"]), [
+    "scripts/budget-audit.test.mjs",
     "scripts/far-faults.test.mjs",
   ]);
   assert.deepEqual(nodeTestsForPaths(["tools/blender/park/props/kit.py", "src/game.gd"]), [
@@ -1138,8 +1139,9 @@ test("nodeTestsForPaths: a park prop recipe or file faces the far-mesh fault che
   );
   assert.deepEqual(
     nodeTestsForPaths(["src/world/park/park_dam.json", "assets/models/world_one/ambush_altar.glb"]),
-    [],
+    ["scripts/budget-audit.test.mjs"],
   );
+  assert.deepEqual(nodeTestsForPaths(["src/world/park/park_dam.json", "src/game.gd"]), []);
 });
 
 test("nodeTestsForPaths: the budget audit tool, the budgets and the registry face the budget audit test", () => {
@@ -1147,6 +1149,8 @@ test("nodeTestsForPaths: the budget audit tool, the budgets and the registry fac
     "tools/budget_audit.mjs",
     "assets/asset_budgets.json",
     "assets/registry.json",
+    "assets/models/pilot_patch_anim.glb",
+    "assets/models/world_one/ambush_altar.glb.import",
   ])
     assert.deepEqual(nodeTestsForPaths([file]), ["scripts/budget-audit.test.mjs"]);
   assert.deepEqual(nodeTestsForPaths(["assets/registry.json.bak", "tools/budget_audit.py"]), []);
@@ -1509,6 +1513,7 @@ test("selectStage1NodeTests keeps unbundled NODE_PATH_RULES and script tests und
   };
   assert.deepEqual(selectStage1NodeTests({ ...args, ciGodotOnly: false }), [
     "scripts/audio-gate.test.mjs",
+    "scripts/budget-audit.test.mjs",
     "scripts/far-faults.test.mjs",
     "scripts/palette-gd.test.mjs",
     "scripts/sketch-lint.test.mjs",
@@ -1516,6 +1521,7 @@ test("selectStage1NodeTests keeps unbundled NODE_PATH_RULES and script tests und
   ]);
   assert.deepEqual(selectStage1NodeTests({ ...args, ciGodotOnly: true, isPrimaryShard: true }), [
     "scripts/audio-gate.test.mjs",
+    "scripts/budget-audit.test.mjs",
     "scripts/far-faults.test.mjs",
     "scripts/palette-gd.test.mjs",
   ]);

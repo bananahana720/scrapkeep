@@ -200,7 +200,7 @@ test("budget-audit stays out of node-tests and is what sketch-fast --ci-godot-on
   );
 });
 
-test("far-faults stays out of node-tests and is what sketch-fast --ci-godot-only runs for a park prop change", () => {
+test("far-faults stays out of node-tests and sketch-fast --ci-godot-only runs it, with the budget audit, for a park prop change", () => {
   const discovered = discoverTestFiles(repoRoot);
   assert.ok(!discovered.includes("scripts/far-faults.test.mjs"));
   assert.deepEqual(
@@ -213,6 +213,6 @@ test("far-faults stays out of node-tests and is what sketch-fast --ci-godot-only
       coveredByCi: discovered,
       isPrimaryShard: true,
     }),
-    ["scripts/far-faults.test.mjs"],
+    ["scripts/budget-audit.test.mjs", "scripts/far-faults.test.mjs"],
   );
 });
