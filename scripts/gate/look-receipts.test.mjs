@@ -7,9 +7,9 @@ import {
   mkdtempSync,
   openSync,
   read,
-  readFileSync,
   rmSync,
   writeFileSync,
+  writeSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -20,6 +20,7 @@ import * as render from "./model-render-receipt.mjs";
 import * as census from "./stand-ins-receipt.mjs";
 import * as display from "./display-run.mjs";
 import { git as runGit } from "../lib/git.mjs";
+import { testGroups } from "../lib/test-groups.mjs";
 
 const HEAD = "abc1234";
 const KINDS = render.KINDS;
@@ -36,12 +37,15 @@ function heldPipe(file) {
   const reader = openSync(file, constants.O_RDONLY);
   closeSync(probe);
   let reading = Promise.resolve("");
+  let closed = false;
   const chunk = () =>
-    new Promise((resolve, reject) =>
-      read(reader, Buffer.alloc(4096), 0, 4096, null, (error, n, buffer) =>
-        error ? reject(error) : resolve(buffer.toString("utf8", 0, n)),
-      ),
-    );
+    closed
+      ? ""
+      : new Promise((resolve, reject) =>
+          read(reader, Buffer.alloc(4096), 0, 4096, null, (error, n, buffer) =>
+            error ? reject(error) : resolve(buffer.toString("utf8", 0, n)),
+          ),
+        );
   const next = () => (reading = reading.then(chunk, chunk));
   const drained = async () => {
     if (keep !== null) closeSync(keep);
@@ -50,23 +54,25 @@ function heldPipe(file) {
     for (let part = await next(); part; part = await next()) text += part;
     return text;
   };
-  let closed = false;
   const close = async () => {
     if (closed) return;
     closed = true;
-    await drained();
-    closeSync(reader);
+    let poke = keep;
+    try {
+      poke ??= openSync(file, constants.O_WRONLY | constants.O_NONBLOCK);
+      writeSync(poke, "\n");
+    } catch {}
+    for (let last = null; last !== reading;) {
+      last = reading;
+      await last.catch(() => {});
+    }
+    for (const fd of new Set([poke, keep, reader]))
+      try {
+        if (fd !== null) closeSync(fd);
+      } catch {}
+    keep = null;
   };
   return { file, next, drained, close };
-}
-
-function killGroupIn(file) {
-  if (!existsSync(file)) return;
-  try {
-    process.kill(-Number(readFileSync(file, "utf8")), "SIGKILL");
-  } catch (error) {
-    if (error.code !== "ESRCH") throw error;
-  }
 }
 
 after(() => {
@@ -407,20 +413,19 @@ test("display-run: releases the slot when the launch throws", async () => {
 describe("display-run timeouts and signals", GUARDED, () => {
   test("display-run: the timeout kills the whole run's group, a forked child or an exec", async (t) => {
     const { dir } = repo();
+    const groups = testGroups(t);
     await Promise.all(
-      [`sleep ${LATE_S} &\nwait\n`, `exec sleep ${LATE_S}\n`].map(async (body) => {
+      [
+        `sleep ${LATE_S} &\necho started "$@"\nwait\n`,
+        `echo started "$@"\nexec sleep ${LATE_S}\n`,
+      ].map(async (body) => {
         const fake = path.join(dir, `fake-${body.length}.sh`);
-        const group = path.join(dir, `group-${body.length}`);
         const pipe = heldPipe(path.join(dir, `held-${body.length}`));
-        t.after(async () => {
-          killGroupIn(group);
-          await pipe.close();
+        t.after(() => pipe.close());
+        const shell = pipe.next().then((line) => groups.add(line.trim()));
+        writeFileSync(fake, `#!/bin/sh\nexec 3<> "${pipe.file}"\necho $$ >&3\n${body}`, {
+          mode: 0o755,
         });
-        writeFileSync(
-          fake,
-          `#!/bin/sh\necho $$ > "${group}"\nexec 3> "${pipe.file}"\necho started "$@"\n${body}`,
-          { mode: 0o755 },
-        );
         const events = [];
         const r = await display.runWindowed({
           platform: "linux",
@@ -434,7 +439,9 @@ describe("display-run timeouts and signals", GUARDED, () => {
         assert.equal(r.timedOut, true);
         assert.equal(r.exit, null);
         assert.match(r.output, /^started --path .* --script res:\/\/x\.gd --/);
+        assert.ok((await shell) !== null, "the fake reported its shell");
         assert.equal(await pipe.drained(), "", `${body.trim()}: the shell and its child are gone`);
+        groups.gone(await shell);
         assert.deepEqual(events, ["acquire", "release"]);
       }),
     );
@@ -442,12 +449,13 @@ describe("display-run timeouts and signals", GUARDED, () => {
 
   test("display-run: SIGTERM to the node process kills the run's group", async (t) => {
     const { dir } = repo();
-    const group = path.join(dir, "group");
+    const groups = testGroups(t);
     const pipe = heldPipe(path.join(dir, "held"));
+    t.after(() => pipe.close());
     const fake = path.join(dir, "fake-group.sh");
     writeFileSync(
       fake,
-      `#!/bin/sh\necho $$ > "${group}"\nexec 3> "${pipe.file}"\nsleep ${LATE_S} &\necho $$ $! >&3\nwait\n`,
+      `#!/bin/sh\nexec 3<> "${pipe.file}"\nsleep ${LATE_S} &\necho $$ $! >&3\nwait\n`,
       { mode: 0o755 },
     );
     const runner = path.join(dir, "runner.mjs");
@@ -463,20 +471,20 @@ process.exit(1); // An interrupted receipt producer must never reach its next st
       node.once("exit", (code) => resolve(code));
       node.once("error", reject);
     });
-    t.after(async () => {
+    t.after(() => {
       if (node.exitCode === null && node.signalCode === null) node.kill("SIGKILL");
-      killGroupIn(group);
-      await pipe.close();
     });
     const ready = await Promise.race([
       pipe.next(),
       exited.then((code) => assert.fail(`the runner exited (${code}) before the fake started`)),
     ]);
-    const [shell, sleeper] = ready.trim().split(" ").map(Number);
-    assert.ok(shell > 0 && sleeper > 0, "the fake started its shell and its child");
+    const [shell, sleeper] = ready.trim().split(" ");
+    assert.equal(groups.add(shell), Number(shell), "the fake reported its shell");
+    assert.ok(Number(sleeper) > 1, "the fake reported its child");
     node.kill("SIGTERM");
     assert.equal(await exited, 143);
     assert.equal(await pipe.drained(), "", "the shell and its child are gone");
+    groups.gone(shell);
   });
 });
 

@@ -1,20 +1,13 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test, { after } from "node:test";
 
 import { acquireDrawnSlot, launch, measureFrame, runCapture, runWindowed } from "./display-run.mjs";
 import { watchDrawnRun, windowCounts } from "./window-watch.mjs";
+import { testGroups } from "../lib/test-groups.mjs";
 
 const script = "res://tools/offscreen_probe.gd";
 const version = () => "4.7.2.stable.official.ed1daf0bf";
@@ -147,12 +140,16 @@ test("the Gate reference needs a visible sample for its own process and the pinn
 test(
   "two drawn runs wait for one lock across worktrees and have disjoint start/end times",
   GUARD,
-  async () => {
+  async (t) => {
     const directory = scratch();
     const notices = [];
     const events = [];
     let contend;
     const contended = new Promise((resolve) => (contend = resolve));
+    t.after(() => {
+      contend();
+      rmSync(directory, { recursive: true, force: true });
+    });
     const acquire = () =>
       acquireDrawnSlot({
         directory,
@@ -190,17 +187,12 @@ test(
   async (t) => {
     const row = JSON.stringify(sample(Date.now()));
     const runPid = path.join(scratch(), "run.pid");
+    const groups = testGroups(t, { from: runPid });
     let samplerChild;
     let samplerPid;
     t.after(() => {
       if (samplerChild && samplerChild.exitCode === null && samplerChild.signalCode === null)
         samplerChild.kill("SIGKILL");
-      if (!existsSync(runPid)) return;
-      try {
-        process.kill(-Number(readFileSync(runPid, "utf8")), "SIGKILL");
-      } catch (error) {
-        if (error.code !== "ESRCH") throw error;
-      }
     });
     const sampler = () => {
       const child = spawn(
@@ -220,7 +212,7 @@ test(
     await assert.rejects(
       watchDrawnRun(async (signal) => {
         const running =
-          'require("fs").writeFileSync(process.argv[2],String(process.pid));process.kill(Number(process.argv[1]));setInterval(()=>{},1000)';
+          'require("fs").writeFileSync(process.argv[2],process.pid+"\\n");process.kill(Number(process.argv[1]));setInterval(()=>{},1000)';
         result = await launch(process.execPath, ["-e", running, String(samplerPid), runPid], {
           cwd: scratch(),
           env: {},
@@ -231,6 +223,7 @@ test(
       }, sampler),
       /watcher stopped/,
     );
+    groups.sweep();
     assert.equal(result.timedOut, false);
     assert.equal(result.signal, "SIGKILL");
   },

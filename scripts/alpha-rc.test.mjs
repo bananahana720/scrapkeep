@@ -36,6 +36,7 @@ import {
   verdict,
 } from "./alpha-rc.mjs";
 import { git as runGit } from "./lib/git.mjs";
+import { testGroups } from "./lib/test-groups.mjs";
 
 const createdTempDirs = [];
 const tmp = () => {
@@ -354,19 +355,7 @@ function fake(dir, name, body) {
   return file;
 }
 
-function reapFakes(t, dir) {
-  t.after(() => {
-    const groups = path.join(dir, "groups");
-    if (!existsSync(groups)) return;
-    for (const pgid of readFileSync(groups, "utf8").split("\n").filter(Boolean)) {
-      try {
-        process.kill(-Number(pgid), "SIGKILL");
-      } catch (error) {
-        if (error.code !== "ESRCH") throw error;
-      }
-    }
-  });
-}
+const fakeGroups = (t, dir) => testGroups(t, { from: path.join(dir, "groups") });
 
 const alive = processAlive;
 const GUARD_S = 30;
@@ -388,7 +377,7 @@ test(
   { timeout: GUARD_S * 1000 },
   async (t) => {
     const dir = tmp();
-    reapFakes(t, dir);
+    const groups = fakeGroups(t, dir);
     const pidFile = path.join(dir, "pid");
     const before = readdirSync(os.tmpdir()).filter((n) =>
       n.startsWith("scrapkeep-rc-home-"),
@@ -402,6 +391,7 @@ test(
       seconds: GUARD_S,
       env: { ...process.env, GODOT_BIN: "/opt/godot" },
     });
+    groups.sweep();
     assert.equal(result.status, "pass");
     assert.match(
       result.note,
@@ -425,7 +415,7 @@ test(
 describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD_S * 1000 }, () => {
   test("cold launch fails on an early exit, on silence, and outlasts a game that ignores SIGTERM", async (t) => {
     const dir = tmp();
-    reapFakes(t, dir);
+    const groups = fakeGroups(t, dir);
     const [crash, silent, noMenu, late, stubborn] = await Promise.all([
       launchAppImage(fake(dir, "crash.sh", "exit 3"), { seconds: GUARD_S }),
       launchAppImage(fake(dir, "silent.sh", `exec sleep ${LATE_S}`), { seconds: 0.5 }),
@@ -448,6 +438,7 @@ describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD
         seconds: 0.3,
       }),
     ]);
+    groups.sweep();
     assert.match(crash.note, /exited \(3\)/);
     assert.match(silent.note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.5 s/);
     assert.equal(noMenu.status, "fail");
@@ -462,7 +453,7 @@ describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD
 
   test("cold launch: a build that says it did not load fails at once, with the boot's reason, and does not wait out the menu", async (t) => {
     const dir = tmp();
-    reapFakes(t, dir);
+    const groups = fakeGroups(t, dir);
     const [card, headless, held, quoted] = await Promise.all([
       launchAppImage(
         fake(
@@ -493,6 +484,7 @@ describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD
         { seconds: GUARD_S },
       ),
     ]);
+    groups.sweep();
     assert.equal(card.status, "fail");
     assert.equal(
       card.note,
@@ -511,9 +503,30 @@ describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD
     assert.equal(quoted.status, "pass");
   });
 
+  test("cold launch: a title card that comes after its budget fails as too late", async (t) => {
+    const dir = tmp();
+    const groups = fakeGroups(t, dir);
+    let reads = 0;
+    const clock = () => (reads++ === 0 ? 0 : 3_600_000);
+    const result = await launchAppImage(
+      fake(
+        dir,
+        "slow.sh",
+        `echo "${TITLE_INTERACTIVE} ms=800"; echo "${MENU_READY} ms=900"; exec sleep ${LATE_S}`,
+      ),
+      { seconds: GUARD_S, clock },
+    );
+    groups.sweep();
+    assert.equal(result.status, "fail");
+    assert.match(
+      result.note,
+      /^title card too late: interactive title in 3600\.0 s \(budget 30 s\), 3D title in 3600\.0 s/,
+    );
+  });
+
   test("runProcess returns the exit, and a timeout kills the group and reads as killed", async (t) => {
     const dir = tmp();
-    reapFakes(t, dir);
+    const groups = fakeGroups(t, dir);
     const pidFile = path.join(dir, "pid");
     const [ok, hung] = await Promise.all([
       runProcess({ command: fake(dir, "ok.sh", "echo hi; exit 4"), args: [] }),
@@ -522,6 +535,7 @@ describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD
         300,
       ),
     ]);
+    groups.sweep();
     assert.equal(ok.exit, 4);
     assert.equal(hung.exit, null);
     assert.equal(judgeCommand({ id: "smoke" }, hung).note, "timed out or killed");
