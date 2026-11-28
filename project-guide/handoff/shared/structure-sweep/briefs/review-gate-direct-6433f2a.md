@@ -1,0 +1,56 @@
+You are the independent reviewer of eight small commits in the Scrapkeep repository (GitHub `bananahana720/scrapkeep`). Scrapkeep is a Godot 4.7.2 GDScript game under `sketches/core-loop` with a Node toolchain under `scripts/`. You did not write these changes and you have not seen the writer's reasoning. The coordinating session wrote all eight directly on the integration branch `entropy/gate` on 27 November 2026, most of them to answer a note from the review of some other pull request. None of the eight has had a review of its own. All are already on the branch, so this review decides whether each stays as it is, gets a follow-up fix, or is reverted.
+
+## Hard limits
+
+- Write nothing. Use read-only git only (`git fetch`, `git show`, `git diff`, `git log`, `git grep <pattern> <commit> -- <path>`, `git ls-tree`). Do not check out, switch, stash, commit, push, edit a file, comment on a pull request or start a sub-agent. Other sessions share this checkout.
+- Do not run any test. Read the code.
+- On this Mac `git grep -E` does not honour `\b`; write patterns without it.
+
+## What to review
+
+Run `git fetch origin`. Every commit below is an ancestor of `origin/entropy/gate` (check each with `git merge-base --is-ancestor <commit> origin/entropy/gate`; if a check fails, stop and report that as the only finding). The branch tip when this brief was written is `6433f2af7adcd347a1e55fb4c72f05093cf7d453`. Later units changed some of the same files, so for each commit read two things: the commit itself (`git show <commit>`) and the same code at the branch tip (`git show 6433f2af7adcd347a1e55fb4c72f05093cf7d453:<path>`). A fault in the commit that a later commit already removed is a note, not a blocking issue; say which later commit removed it. A fault still present at the tip is what blocks.
+
+The project allows no code comment except a line a tool reads or a note on an engine, OS or hardware quirk. For every commit say whether it adds a comment that breaks that rule.
+
+**Commit A, `8313d1c9d0a84a75fdb821ff6193c336dead4c42`: "sketch-lint: --base with no ref, or a flag the tool does not know, stops the run".** Files: `scripts/sketch-lint.mjs`, `scripts/sketch-lint.test.mjs`. `parseLintArgs` used to ignore `--base` with nothing after it and any flag it did not know, so the run reported a pass without the shrink-only comparison against the base.
+
+1. Read `parseLintArgs` and the code that calls it. List every argument form the tool is started with anywhere in the repository at the tip (`git grep -n -E "sketch-lint|sketch:lint" 6433f2af7adcd347a1e55fb4c72f05093cf7d453 -- package.json scripts .github .agents project-guide/handoff/GATE.md CONTRIBUTING.md`) and say whether any real caller passes a form that now exits 2: `--base=ref`, a positional argument, `--`, a flag such as `--json` or `--quiet`. A real caller that now fails is a blocking issue.
+2. Say whether a ref that starts with `-` can be a real ref here, whether an argument that is not a flag and not after a known flag is still silently ignored (and whether that can hide a typo such as `base origin/main`), and whether exit code 2 is distinct from the code the tool uses for lint findings.
+3. Read the new test. Say whether each assertion would fail on the parser before the commit (`git show 8313d1c9d0a84a75fdb821ff6193c336dead4c42^:scripts/sketch-lint.mjs`), and whether the test covers the exit code of the command itself or only the parser.
+
+**Commit B, `737a8d06d09358876aa325aa307341379b3796c5`: "no-caller: a search that cannot run exits 2; a name that starts with two dots is inside the repository".** Files: `scripts/no-caller.mjs`, `scripts/no-caller.test.mjs`. The script answers "does anything in the repository still mention this file" before a delete: exit 0 means no caller, 1 means it has one, 2 means the question could not be answered.
+
+4. Walk every way the script can end at the tip and give its exit code: no caller, a caller, a path outside the repository, a path that does not exist, git missing, not inside a repository, `git grep` failing for a reason other than "no match", an exception thrown after the search while results are printed. Any path where a failure exits 0 or 1 is a blocking issue, because exit 0 is what approves a delete.
+5. `outside(rel)`: say whether it is right for `..`, `../x`, `..x/y`, `...`, an absolute path, an empty string, and on a path that `path.relative` returns with a trailing separator. Say whether a file named `..hidden.gd` at the repository root is now searched and was wrongly refused before.
+6. Read the two tests. For each say whether it fails on the script before the commit, whether the scratch folder is removed on a pass and on a throw, and whether `GIT_CEILING_DIRECTORIES` really stops git from finding the enclosing repository when the temp folder is reached through a link (on macOS `os.tmpdir()` is under `/var`, a link to `/private/var`); if it does not, say what the test would then do.
+
+**Commit C, `a1670eb5eda8bec170bec7ba520fcf20cdc21d72`: "audio_bake_cancel_test runs alone: it needs a cold sound bank".** File: `sketches/core-loop/tests/audio_bake_cancel_test.gd`, one line `# smoke: solo (...)`.
+
+7. Find how the runner reads that marker (`git grep -n -E "smoke: *solo" 6433f2af7adcd347a1e55fb4c72f05093cf7d453 -- scripts sketches/core-loop/tools`) and say whether the line's exact form, position in the file and text in brackets are accepted, so the test really runs in its own engine process. Say whether the stated reason is true by reading the test and the bank it checks: does the test assert that the bank is not full, and can an earlier test in the same process have filled it. Say whether the better fix is a reset in `_reset()` of `sketches/core-loop/tools/test_batch_driver.gd` (a note, with what the reset would have to clear).
+
+**Commit D, `a812a04003d43b9ee1648f0de003085fec9cc055`: "Harden safety-gate scratch save check on %20-encoded live paths".** Files: `.agents/hooks/safety-gate.mjs`, `tests/antigravity-hooks.test.js`. This hook stops an agent's shell command or file write from touching the player's real save folder (`app_userdata/core-loop` under `~/.local/share/godot` on Linux or `~/Library/Application Support/godot` on macOS) while allowing scratch copies under `artifacts/local/`. It is a safety control, so read it most carefully. The commit changes two lines: `unwrapScratchPart` now also turns `%20` into a space, and `isAllowedScratchSavePath` now returns `false`, not `true`, when the cleaned path has no live-save segment.
+
+8. Read `isAllowedScratchSavePath` and each caller at the tip. Say exactly when it is called (only for a part already known to mention the live save folder, or for every path), and so what the changed `return false` means in practice: which commands or paths that were allowed are now refused, and which that were refused are now allowed. A scratch path with no live-save segment that an agent legitimately writes (for example `artifacts/local/test-home/x.json`) and that is now refused is a blocking issue; a live save path that is now allowed is a blocking issue of the highest weight.
+9. Say whether the `%20` change is applied in every place that compares against the live path (`normalizeForLiveSaveMatch` and any other normaliser), or whether the two functions can now disagree about the same string: one sees the live segment, the other does not. Try by reading: `%2520`, `%20` mixed with a backslash-escaped space, `Application%20Support` inside quotes, a `file://` URL, upper and lower case hex of other encoded characters in the folder name (`%2F`, `%2E`).
+10. Read the two added test lines and the test around them. Say whether they fail on the hook before the commit, and whether the test names a real person's home folder in a way the repository's own docs check forbids (the docs check bans `/home/andrew/` in Markdown; this is a `.js` test, so a note at most).
+11. The commit message has no body. Say whether the change is explained anywhere a later reader would find it.
+
+**Commit E, `8951bb4b3a1e37874088cd3a54b80dff809f4bc4`: "Track the Godot id files for wav_io.gd and its test".** Two new one-line files, `sketches/core-loop/src/presentation/wav_io.gd.uid` and `sketches/core-loop/tests/wav_io_test.gd.uid`.
+
+12. Say whether each id is unique in the tree at the tip (`git grep -n "<the id>" 6433f2af7adcd347a1e55fb4c72f05093cf7d453 -- sketches/core-loop`), whether any `.tscn`, `.tres` or script refers to either file by a different id, and whether the lint rule that checks tracked id files (`lintTrackedUids` in `scripts/sketch-lint.mjs`) would now pass for both.
+
+**Commit F, `44ee0f36c22f5a35e64e3432fe9991399bd2849c`: "Test that combat wires enemy heft and strike damage into the ball".** File: `sketches/core-loop/tests/world_one_mass_s_test.gd`, four lines.
+
+13. Read the check and the code it guards (`setup` in `sketches/core-loop/src/combat/combat.gd` and the two members on the player at the tip; find them with `git grep -n -E "enemy_heft_of|strike_damage" 6433f2af7adcd347a1e55fb4c72f05093cf7d453 -- sketches/core-loop/src`). Say whether the check fails if either wiring line is removed, or whether the player's defaults already satisfy it (a default `strike_damage` that has `slam` with two entries and `stomp`, or a default callable that is valid). A check that passes with the wiring removed is a blocking issue. Say whether it reads a private member.
+
+**Commit G, `df97cdbf308cb15b78c32f1cca0f3aad5be792f0`: "difficulty-plan: point the pack pressure presets at their new home".** File: `project-guide/handoff/shared/world1/difficulty-plan.md`, one line.
+
+14. Say whether the new path and name are right at the tip (the preset table should be in `sketches/core-loop/src/core/challenge_dials.gd`), whether the page is a live page or a dated record of past work (a dated record must not be edited; say what in the page tells you which it is), and whether the same line keeps other file-and-line citations that are now wrong (a note).
+
+**Commit H, `d7bf403cf04d108e97b75db04c77bcf4cb2edfa6`: "sweep:deep: compare the merge base with the resolved commit, not the name passed in".** Files: `scripts/deep-sweep.mjs`, `scripts/deep-sweep.test.mjs`.
+
+15. Read `defaultBase` at the tip. Say what `parents[0]` holds for a normal commit, a merge commit, a root commit and a ref that does not resolve, and whether the function returns the right base in each case: head is on the default branch itself, head is ahead of it, head is behind it, the merge base cannot be found. Say whether the one added assertion fails on the function before the commit.
+
+## Report
+
+Lead with `VERDICT: PASS` or `VERDICT: FAIL`, one verdict for the set, then one line per commit, A to H, saying whether it passes on its own. Then, apart from each other: blocking issues (each with the commit letter, the file, the function or a `git grep` pattern that finds it, and what is wrong), and notes (things that do not block). For each note that is a small fix, say whether the coordinator can apply it without another review. End with a receipt: your model and effort, the commits you checked, your method, and what you did not do. Write for a reader who has not seen this brief: plain words, full file paths, no shorthand.
