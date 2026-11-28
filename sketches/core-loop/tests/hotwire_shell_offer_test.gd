@@ -6,7 +6,7 @@ const Parts := preload("res://src/build/parts.gd")
 const Build := preload("res://src/build/build.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Icons := preload("res://src/ui/icons.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 # Unit V, first half: Riveted Shell's catalogue entry and its gated offer (BUILD-SYSTEMS.md, Two
 # hot-wired parts). Since the pass D fold the Warden break puts it at the gates as a rare part

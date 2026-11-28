@@ -8,7 +8,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const Bindings := preload("res://src/core/bindings.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 # Maker tricks (synergies.gd; systems audit pass D fold, 11 Nov 2026): the build's one set rule
 # is the maker. Checks: every trick names a known maker and changes behaviour rather than a

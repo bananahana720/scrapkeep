@@ -17,7 +17,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const CombatCodex := preload("res://src/combat/codex_entries.gd")
 const BossCodex := preload("res://src/boss/codex_entries.gd")
 const WorldCodex := preload("res://src/world/codex_world.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("w50_story_arcs_test")

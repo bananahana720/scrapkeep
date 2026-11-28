@@ -76,8 +76,8 @@ func toggle_override(code_id: String) -> bool:
 	if _profile == null or not MetaOptions.OVERRIDE_CODES.has(code_id):
 		return false
 	var ok := MetaOptions.toggle_override(_profile, code_id, _sitting)
-	if ok and _profile.can_save:
-		_profile.save()
+	if ok:
+		_profile.save_if_allowed()
 	refresh(_profile, _sitting)
 	if override_rows.has(code_id) and is_instance_valid(override_rows[code_id]):
 		(override_rows[code_id] as Control).grab_focus()

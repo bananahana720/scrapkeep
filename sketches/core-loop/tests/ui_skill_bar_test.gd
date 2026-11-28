@@ -9,7 +9,7 @@ const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
 const Palette := preload("res://src/core/palette.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 

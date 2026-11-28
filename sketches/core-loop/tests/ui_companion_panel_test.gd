@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Companion := preload("res://src/core/companion.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const T := preload("res://tests/support/t.gd")
 

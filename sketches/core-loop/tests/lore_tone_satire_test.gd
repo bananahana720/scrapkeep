@@ -10,7 +10,7 @@ const Panels := preload("res://src/build/panels.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Profile := preload("res://src/core/profile.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const ContentRegistry := preload("res://tests/support/content_registry.gd")
 const T := preload("res://tests/support/t.gd")
 

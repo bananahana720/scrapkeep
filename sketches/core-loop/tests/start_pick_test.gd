@@ -12,7 +12,7 @@ const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Parts := preload("res://src/build/parts.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 
 const STARTS := 200

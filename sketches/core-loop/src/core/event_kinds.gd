@@ -141,10 +141,11 @@ const ROWS := {
 	"maker_set_completed": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"overflow_cashed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"trade_taken": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"consumable_used": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 }
 
 const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window", "slot_selected", "slot_cast", "line_skill_expired",
-	"special_broken", "radio_take_found", "relay_stake_paid", "maker_set_completed", "overflow_cashed", "trade_taken"]
+	"special_broken", "radio_take_found", "relay_stake_paid", "maker_set_completed", "overflow_cashed", "trade_taken", "consumable_used"]
 
 const JUICE := {
 	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0,
@@ -283,6 +284,7 @@ const WEIGHT_EXEMPT := {
 	"cause_armed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"cause_fired": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"cogs_collected": "Reward and economy ladders own the cue; rewards never stop time.",
+	"consumable_used": "Consumable slots own their cue; the bus signal carries item hooks only.",
 	"core_gained": "Reward and economy ladders own the cue; rewards never stop time.",
 	"dashed": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
 	"dismounted": "Ball motion preserves momentum; its existing camera and cue profile owns it.",

@@ -274,7 +274,7 @@ func save() -> void:
 	_dirty = false
 	var profile = game.ctx.profile
 	profile.set_radio(radio.to_dict())
-	if profile.can_save and not profile.save():
+	if not profile.save_if_allowed():
 		push_warning("radio: not saved: %s" % profile.last_error)
 
 

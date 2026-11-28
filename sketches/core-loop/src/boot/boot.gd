@@ -28,6 +28,7 @@ extends Node
 # nothing, so the card stays as light as the note above asks.
 const AppShell := preload("res://src/core/app_shell.gd")
 const BuildStamp := preload("res://src/core/build_stamp.gd")
+const CliFlags := preload("res://src/core/cli_flags.gd")
 # The drawn name (src/ui/wordmark.gd preloads nothing), so the card stamps the same name as the title.
 const Wordmark := preload("res://src/ui/wordmark.gd")
 const WORDMARK_H := 132.0
@@ -97,7 +98,7 @@ func _use_card() -> bool:
 
 
 static func _flag(flag: String) -> bool:
-	return flag in OS.get_cmdline_args() or flag in OS.get_cmdline_user_args()
+	return CliFlags.has_flag(flag, true)
 
 
 # The synchronous path: the old main scene, built in place, /root/Game, the boot scene gone.
