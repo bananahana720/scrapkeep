@@ -2,21 +2,10 @@ extends SceneTree
 
 const Driver := preload("res://tools/test_batch_driver.gd")
 const Game := preload("res://src/game.gd")
-const AbilityBar := preload("res://src/ui/ability_bar.gd")
-const AimReticle := preload("res://src/ui/aim_reticle.gd")
-const BossPlate := preload("res://src/ui/boss_plate.gd")
-const CallerTile := preload("res://src/ui/caller_tile.gd")
-const ClassCard := preload("res://src/ui/class_card.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
-const MossBubble := preload("res://src/ui/moss_bubble.gd")
-const RewardView := preload("res://src/ui/reward_view.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
-const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
-const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
-const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
-const WorldFxKit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const WorldFxWord := preload("res://src/presentation/world_fx/world_fx_word.gd")
 const WorldFxGrain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldFxSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
@@ -78,6 +67,14 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const BotProfile := preload("res://tools/bot_profile.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
+const TraversalLine := preload("res://tools/traversal_line.gd")
+const BotFairness := preload("res://tools/bot_fairness.gd")
+const RampFlipper := preload("res://src/combat/ramp_flipper.gd")
+const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
+const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
+const ContentRegistry := preload("res://tests/support/content_registry.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -107,15 +104,8 @@ func _run() -> void:
 	var t := T.new("test_batch_reset_test")
 	var driver := Driver.new(self, [])
 
-	# Game.set_motion_statics(true) flips every reduced-motion static, including CallerTile and EnemyMotion.
 	Game.set_motion_statics(true)
-	t.check("Game.set_motion_statics(true) sets every reduced-motion static",
-		is_zero_approx(EnemyMotion.motion_scale)
-		and HighdraftFx.preferred and WorldFx.preferred and WorldFxKit.reduced_motion
-		and AbilityBar.reduced_motion and UiTokens.reduced_motion and AimReticle.reduced_motion
-		and RewardView.reduced_motion and MossBubble.reduced_motion and CallerTile.reduced_motion
-		and ClassCard.reduced_motion and PilotAntics.reduced_motion and ClassPreview.reduced_motion
-		and BossPlate.reduced_motion and FlourishPlayer.reduced_motion)
+	t.check("Game.set_motion_statics(true) sets Comfort", Comfort.reduced_motion and is_zero_approx(Comfort.motion_scale()))
 
 	# Dirty other single-field process-wide statics that tests in the repo flip.
 	FlashGuard.on = true
@@ -343,21 +333,9 @@ func _run() -> void:
 	t.check("processed tweens are killed on reset", get_processed_tweens().all(func(tw): return not tw.is_valid()))
 	t.check("user://test-<pid> is cleared on reset", not FileAccess.file_exists(marker_path))
 
-	t.near("EnemyMotion.motion_scale resets to 1.0", EnemyMotion.motion_scale, 1.0)
-	t.check("HighdraftFx.preferred resets to false", not HighdraftFx.preferred)
-	t.check("WorldFx.preferred resets to false", not WorldFx.preferred)
-	t.check("WorldFxKit.reduced_motion resets to false", not WorldFxKit.reduced_motion)
-	t.check("AbilityBar.reduced_motion resets to false", not AbilityBar.reduced_motion)
-	t.check("UiTokens.reduced_motion resets to false", not UiTokens.reduced_motion)
-	t.check("AimReticle.reduced_motion resets to false", not AimReticle.reduced_motion)
-	t.check("RewardView.reduced_motion resets to false", not RewardView.reduced_motion)
-	t.check("MossBubble.reduced_motion resets to false", not MossBubble.reduced_motion)
-	t.check("CallerTile.reduced_motion resets to false", not CallerTile.reduced_motion)
-	t.check("ClassCard.reduced_motion resets to false", not ClassCard.reduced_motion)
-	t.check("PilotAntics.reduced_motion resets to false", not PilotAntics.reduced_motion)
-	t.check("ClassPreview.reduced_motion resets to false", not ClassPreview.reduced_motion)
-	t.check("BossPlate.reduced_motion resets to false", not BossPlate.reduced_motion)
-	t.check("FlourishPlayer.reduced_motion resets to false", not FlourishPlayer.reduced_motion)
+	t.check("Comfort.reduced_motion resets to false", not Comfort.reduced_motion)
+	t.near("Comfort.motion_scale() resets to 1.0", Comfort.motion_scale(), 1.0)
+	t.near("SpillwayScenery.flow_scale resets to 1.0", SpillwayScenery.flow_scale, 1.0)
 
 	t.check("FlashGuard.on resets to false", not FlashGuard.on)
 	t.eq("GraphicsPreset.current resets to high", GraphicsPreset.current, "high")
@@ -492,6 +470,66 @@ func _run() -> void:
 	driver._reset()
 	t.check("BossModel.reset_for_tests clears _scenes and _coloured", BossModel._scenes.is_empty() and BossModel._coloured.is_empty())
 	t.check("CampCraftMeshes.reset_for_tests clears cached meshes", CampCraftMeshes._mesh_cache.is_empty())
+
+	BotProfile.enabled = true
+	BotProfile._stack.append({"children": 1})
+	BotProfile._totals["probe"] = 1
+	BotProfile._samples["probe"] = {"ticks": [1], "usec": [1]}
+	BotProfile._tick_start = 10
+	BotProfile._tick_count = 2
+	BotProfile._physics_end = 5
+	BotProfile._pending = true
+	BotProfile._monitors["probe"] = [1.0]
+	SkillBand.quiet = true
+	SkillBand.last_refusal = "probe"
+	TraversalLine.graph_notes = 3
+	TraversalLine._graphs["__probe__"] = true
+	var stage1_map_before := TraversalLine.map_of(1)
+	t.check("TraversalLine.use_fixture swaps park defs in memory before reset",
+		stage1_map_before != TraversalLine.FIXTURE_MAP
+		and TraversalLine.use_fixture()
+		and TraversalLine._park_defs_source != ""
+		and TraversalLine.map_of(1) == TraversalLine.FIXTURE_MAP)
+	var fairness_before := BotFairness.config()
+	t.check("BotFairness.config loads before reset", not fairness_before.is_empty())
+	driver._reset()
+	t.check("BotProfile.reset_for_tests clears profiler statics",
+		not BotProfile.enabled and BotProfile._stack.is_empty() and BotProfile._totals.is_empty()
+		and BotProfile._samples.is_empty() and BotProfile._tick_start == 0 and BotProfile._tick_count == 0
+		and BotProfile._physics_end == 0 and not BotProfile._pending and BotProfile._monitors.is_empty())
+	t.check("SkillBand.reset_for_tests clears quiet and last_refusal",
+		not SkillBand.quiet and SkillBand.last_refusal == "")
+	t.check("TraversalLine.reset_for_tests restores park defs and clears graph_notes, _park_defs_source, and _graphs",
+		TraversalLine.graph_notes == 0 and TraversalLine._park_defs_source == "" and TraversalLine._graphs.is_empty()
+		and TraversalLine.map_of(1) == stage1_map_before)
+	var fairness_after := BotFairness.config()
+	t.check("BotFairness.reset_for_tests reloads config cleanly",
+		not fairness_after.is_empty() and not is_same(fairness_before, fairness_after))
+
+	t.check("RampFlipper._parts populates _shared before reset", not RampFlipper._parts().is_empty())
+	RampFlipper._warned_asset = true
+	driver._reset()
+	t.check("RampFlipper cache and warning reset cleanly",
+		RampFlipper._shared.is_empty() and not RampFlipper._warned_asset)
+
+	var shipping_before := CosmeticArt.shipping_ids()
+	t.check("CosmeticArt.shipping_ids populates _shipping before reset", not shipping_before.is_empty())
+	TeardownNoise.is_noise("ERROR: 1 resources still in use at exit")
+	t.check("TeardownNoise compiles _line before reset", TeardownNoise._line != null)
+	ContentRegistry._pass_depth = 2
+	ContentRegistry._pass["__probe__"] = true
+	driver._reset()
+	t.check("CosmeticArt.reset_for_tests clears _shipping", CosmeticArt._shipping.is_empty())
+	var shipping_after := CosmeticArt.shipping_ids()
+	t.check("CosmeticArt.shipping_ids refills cleanly after reset",
+		shipping_after == shipping_before and not is_same(shipping_before, shipping_after))
+	t.check("TeardownNoise.reset_for_tests clears _line", TeardownNoise._line == null)
+	var noise_line := "ERROR: 1 resources still in use at exit"
+	t.eq("TeardownNoise.is_noise recompiles after reset",
+		TeardownNoise.is_noise(noise_line), OS.get_name() == "macOS")
+	t.check("TeardownNoise._line is compiled again after use", TeardownNoise._line != null)
+	t.check("ContentRegistry.reset_for_tests clears _pass_depth and _pass",
+		ContentRegistry._pass_depth == 0 and ContentRegistry._pass.is_empty())
 
 	quit(t.verdict())
 

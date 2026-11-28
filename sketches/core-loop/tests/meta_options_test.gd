@@ -9,7 +9,6 @@ extends SceneTree
 # round-trips the opened nodes. Five simulated runs on the real bus and the shipped rows.
 
 const MetaOptions := preload("res://src/core/meta_options.gd")
-const MetaPage := preload("res://src/ui/meta_page.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -45,7 +44,6 @@ func _initialize() -> void:
 	_five_runs()
 	_no_stat_moves()
 	_round_trip()
-	_page()
 	quit(_t.verdict())
 
 
@@ -248,19 +246,3 @@ func _round_trip() -> void:
 	f.close()
 	var bad := Profile.new(bad_path)
 	_t.check("an options value that is not a list is refused", not bad.load_profile(), bad.last_error)
-
-
-func _page() -> void:
-	var store := _fresh()
-	store.open_option("pocket_key")
-	var page := MetaPage.new()
-	root.add_child(page)
-	page.refresh(store)
-	_t.eq("the page has one row per node", page.rows.keys(), MetaOptions.ids())
-	_t.eq("the page names the level", page.level_text(), "Head starts: 1 of %d" % MetaOptions.ids().size())
-	var open := MetaPage.reading("pocket_key", store)
-	var shut := MetaPage.reading("spare_reroll", store)
-	_t.check("an opened node shows its name and what it gives", open["open"] and open["name"] == MetaOptions.row("pocket_key")["name"] and open["text"] == MetaOptions.row("pocket_key")["text"], str(open))
-	_t.eq("a closed node shows its grant's condition", shut["note"], Achievements.row(String(MetaOptions.row("spare_reroll")["grant"]))["text"])
-	_t.check("a closed node is not open", not shut["open"], str(shut))
-	page.free()

@@ -4,9 +4,9 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const VistaMegas := preload("res://src/presentation/craft/vista_megastructures.gd")
 const AtmoRig := preload("res://src/presentation/craft/vista_atmosphere_rig.gd")
-const AudioCues := preload("res://src/presentation/craft/craft_audio_cues.gd")
 
 const SCENE_PATH := "res://src/presentation/craft/craft_showcase_arena.tscn"
 const HEAT_HAZE_SHADER_PATH := "res://assets/shaders/craft_heat_haze.gdshader"
@@ -22,7 +22,8 @@ func _run() -> void:
 	_check_environment_presets()
 	_check_heat_haze_shader()
 	await _check_showcase_scene_and_rig()
-	_check_audio_manifest()
+	await _check_showcase_built_calm()
+	Comfort.reduced_motion = false
 	quit(_t.verdict())
 
 
@@ -113,13 +114,13 @@ func _check_showcase_scene_and_rig() -> void:
 		_t.check("salvage crane rotors turn slowly when reduced_motion is off",
 			vistas.get_rotor_count() >= 4 and not is_equal_approx(rot_before, rot_after),
 			"rotors=%d delta=%.3f" % [vistas.get_rotor_count(), rot_after - rot_before])
-		vistas.set_reduced_motion(true)
+		Comfort.reduced_motion = true
 		var rot_frozen_before := first_rotor.rotation.z if first_rotor != null else 0.0
 		vistas.step_animation(1.0)
 		var rot_frozen_after := first_rotor.rotation.z if first_rotor != null else 0.0
 		_t.check("salvage crane rotors freeze when reduced_motion is on",
 			is_equal_approx(rot_frozen_before, rot_frozen_after))
-		vistas.set_reduced_motion(false)
+		Comfort.reduced_motion = false
 
 	var rig := arena.get_node_or_null("VistaAtmosphereRig") as AtmoRig
 	_t.check("VistaAtmosphereRig attached and initialized", rig != null)
@@ -168,7 +169,8 @@ func _check_showcase_scene_and_rig() -> void:
 			bounces.size() >= 4 and has_warm and has_cool_arc and no_hazard_bounce,
 			"count=%d warm=%s arc=%s" % [bounces.size(), has_warm, has_cool_arc])
 
-		rig.set_reduced_motion(true)
+		Comfort.reduced_motion = true
+		rig.apply_accessibility()
 		rig.step_atmosphere(0.8)
 		var embers := rig.find_child("EmberParticles", true, false) as GPUParticles3D
 		_t.check("reduced_motion freezes particle speed_scale and disables cosmetic embers",
@@ -177,12 +179,12 @@ func _check_showcase_scene_and_rig() -> void:
 		rig.step_atmosphere(0.9)
 		_t.check("reduced_motion holds catenary cables steady", cable_rest.is_equal_approx(cables[0].position))
 
-		rig.set_reduced_motion(false)
+		Comfort.reduced_motion = false
 		FlashGuard.on = true
-		rig.apply_accessibility(false)
+		rig.apply_accessibility()
 		var fg_energy := bounces[0].light_energy
 		FlashGuard.on = false
-		rig.apply_accessibility(false)
+		rig.apply_accessibility()
 		var normal_energy := bounces[0].light_energy
 		_t.check("FlashGuard attenuates bounce light peak energy cleanly",
 			fg_energy < normal_energy, "flash_guard=%.3f normal=%.3f" % [fg_energy, normal_energy])
@@ -194,14 +196,22 @@ func _check_showcase_scene_and_rig() -> void:
 		instance_from_id(arena_id) == null)
 
 
-func _check_audio_manifest() -> void:
-	var report := AudioCues.audit_manifest()
-	_t.check("CraftAudioCues resolves all 4 experimental audio stems (1 ambience + 3 callouts)",
-		int(report["total"]) == 4 and int(report["resolved"]) == 4 and (report["missing"] as Array).is_empty(),
-		str(report["missing"]))
-	for cue_id in AudioCues.cue_ids():
-		var player := AudioCues.create_player(cue_id)
-		_t.check("audio cue %s builds valid AudioStreamPlayer safely headless" % cue_id,
-			player != null and player.stream != null and player.stream.get_length() > 0.0)
-		if player != null:
-			player.free()
+func _check_showcase_built_calm() -> void:
+	Comfort.reduced_motion = true
+	var arena := (load(SCENE_PATH) as PackedScene).instantiate() as Node3D
+	root.add_child(arena)
+	await process_frame
+	var rig := arena.get_node_or_null("VistaAtmosphereRig") as AtmoRig
+	var embers := rig.find_child("EmberParticles", true, false) as GPUParticles3D if rig != null else null
+	_t.check("a showcase built with reduced motion on starts with frozen particles and no cosmetic embers",
+		embers != null and is_zero_approx(embers.speed_scale) and not embers.emitting)
+	var vistas := arena.get_node_or_null("VistaMegastructures") as VistaMegas
+	var rotor := vistas.find_child("SlowRotor", true, false) as Node3D if vistas != null else null
+	var turned_from := rotor.rotation.z if rotor != null else NAN
+	if vistas != null:
+		vistas.step_animation(1.0)
+	_t.check("a showcase built with reduced motion on keeps its crane rotors still",
+		rotor != null and is_equal_approx(turned_from, rotor.rotation.z))
+	Comfort.reduced_motion = false
+	arena.free()
+	await process_frame

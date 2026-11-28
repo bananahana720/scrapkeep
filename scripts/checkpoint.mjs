@@ -1,20 +1,14 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { requireGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 import { pool, runProcess as runChild } from "./lib/proc.mjs";
+import { gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, "..");
@@ -445,11 +439,6 @@ export function formatSitting(runs, verdicts) {
   return out.join("\n");
 }
 
-function git(args) {
-  const r = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  return r.status === 0 ? r.stdout.trim() : null;
-}
-
 async function runProcess(command, args, options = {}) {
   const res = await runChild(command, args, options);
   if (res.error) return { code: -1, output: String(res.error) };
@@ -630,7 +619,7 @@ async function before(options) {
   rows.push(
     evaluateSweep(existsSync(sweepFile) ? readFileSync(sweepFile, "utf8") : "", sliceCell(defs)),
   );
-  const head = git(["rev-parse", "HEAD"]);
+  const head = gitOptional(["rev-parse", "HEAD"], { cwd: root });
   rows.push(evaluateReceipt(readReceipts(), head));
   rows.push(...BY_HAND);
 
@@ -679,7 +668,7 @@ function recorded(options) {
       {
         mode: "recorded",
         file: options.file,
-        head: git(["rev-parse", "HEAD"]),
+        head: gitOptional(["rev-parse", "HEAD"], { cwd: root }),
         ok,
         rows,
         bots: grouped,
@@ -762,4 +751,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

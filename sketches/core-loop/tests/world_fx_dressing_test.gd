@@ -10,6 +10,8 @@ const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 const T := preload("res://tests/support/t.gd")
@@ -79,9 +81,15 @@ func _rows_and_readers() -> void:
 
 
 func _one_store() -> void:
-	var was := Kit.reduced_motion
-	HighdraftFx.preferred = true
-	_t.check("Highdraft's setting is the kit's", Kit.reduced_motion and WorldFx.preferred)
-	WorldFx.preferred = false
-	_t.check("WorldFx's setting is the kit's", not Kit.reduced_motion and not HighdraftFx.preferred)
-	Kit.reduced_motion = was
+	var was := Comfort.reduced_motion
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var events := GameEvents.new()
+	for on in [true, false]:
+		Comfort.reduced_motion = on
+		var fx: Node3D = WorldFx.hook({"root": holder, "events": events})
+		_t.check("WorldFx takes its setting from Comfort (%s)" % on, fx.reduced_motion == on)
+		fx.free()
+	Comfort.reduced_motion = was
+	events.free()
+	holder.free()

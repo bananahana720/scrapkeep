@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const HOOPS := 4
 const HOOP_SEGMENTS := 16
@@ -114,7 +115,6 @@ void fragment() {
 }
 """
 
-var reduced_motion := false
 var fill := 0.0
 var _state := "idle"
 var _spin := 0.0
@@ -245,10 +245,6 @@ func hoops_shown() -> int:
 	return n if _state != "idle" else 0
 
 
-func hoop_alpha(k: int) -> float:
-	return _hoop_alpha[k]
-
-
 func hoop_radius() -> float:
 	return lerpf(RADIUS_START, RADIUS_FULL, fill) * (1.0 - _collapse)
 
@@ -310,7 +306,7 @@ func _step_halo(delta: float) -> void:
 			for k in HOOPS:
 				var target := 1.0 if fill >= float(k) / HOOPS else 0.0
 				_hoop_alpha[k] = move_toward(_hoop_alpha[k], target, delta / HOOP_FADE_S)
-			if not reduced_motion:
+			if not Comfort.reduced_motion:
 				_spin = fmod(_spin + deg_to_rad(SPIN_DEG_S) * (1.0 + fill) * delta, TAU)
 			var swell := 0.0
 			if fill >= 0.999 and not _pulsed:
@@ -321,7 +317,7 @@ func _step_halo(delta: float) -> void:
 				_pulse_t += delta
 				var u := clampf(_pulse_t / PULSE_S, 0.0, 1.0)
 				swell = sin(PI * u)
-				_close = 1.0 if reduced_motion else smoothstep(0.0, 1.0, u)
+				_close = 1.0 if Comfort.reduced_motion else smoothstep(0.0, 1.0, u)
 				if u >= 1.0:
 					_pulse_t = -1.0
 			var base := lerpf(GLOW_LOW, GLOW_HIGH, fill)
@@ -332,7 +328,7 @@ func _step_halo(delta: float) -> void:
 				_end_halo()
 	var on := _state != "idle"
 	_mesh.visible = on
-	var emit := _state == "charging" and not reduced_motion
+	var emit := _state == "charging" and not Comfort.reduced_motion
 	_sparks.amount_ratio = clampf(SPARK_RATE * SPARK_LIFE / SPARKS * fill, 0.0, 1.0)
 	if _sparks.emitting != emit:
 		_sparks.emitting = emit
@@ -367,7 +363,7 @@ static func _ring_size(age: float) -> float:
 
 func _draw_ring(i: int) -> void:
 	var u := clampf(_ring_age[i] / RING_LIFE, 0.0, 1.0)
-	var travel := 0.0 if reduced_motion else RING_TRAVEL * (1.0 - (1.0 - u) * (1.0 - u))
+	var travel := 0.0 if Comfort.reduced_motion else RING_TRAVEL * (1.0 - (1.0 - u) * (1.0 - u))
 	var aim: Vector3 = _ring_aim[i]
 	var at: Vector3 = _ring_from[i] + aim * travel
 	var basis := Basis.looking_at(aim, Vector3.UP).scaled(Vector3.ONE * _ring_size(_ring_age[i]))

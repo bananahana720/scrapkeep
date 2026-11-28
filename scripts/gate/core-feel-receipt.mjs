@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { LEDGER_FILE, parseLedger } from "../known-failing.mjs";
 import { cleanHead, parseReceiptArgs, root, runReceiptCli } from "./receipt-cli.mjs";
 import { QUIET_FACTOR, QUIET_POLLS, QUIET_POLL_MS } from "./shard.mjs";
 import { runAlone } from "./solo-run.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const TESTS = [
   ["hit_stop_ticks_test", "hit-stop: a stop slows exactly its ticks and hands the time scale back"],
@@ -122,5 +122,4 @@ function main(argv) {
   });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exitCode = await main(process.argv.slice(2));
+if (isMain(import.meta.url)) process.exitCode = await main(process.argv.slice(2));

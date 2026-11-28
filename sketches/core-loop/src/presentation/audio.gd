@@ -4739,7 +4739,6 @@ func _on_rivet_line_drive(id: String, _target: Node3D, _at: Vector3, on: String)
 	if _admit("line_skill_fired", RIVET_LINE["arrive"], pitch):
 		_start("line_skill_fired", RIVET_LINE["arrive"], Synth.to_wav(Synth.normalize(samples)),
 			SfxBank.trim_db(RIVET_LINE["arrive"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
-const TALLY_SOUNDS := {"plate": "plate_tally", "clip": "clip_tally", "stroke": "stroke_tally", "settle": "settle_tally"}
 const TALLY_CUES := {
 	"tally_plate": {"kind": "special_used", "sound": "plate_tally", "steps": [-12]},
 	"tally_clip": {"kind": "line_skill_fired", "sound": "clip_tally", "steps": [0, 2, 3]},
@@ -4841,7 +4840,6 @@ var _set_overtime := false
 var _set_incoming_at := -1.0
 var _set_answer := ""
 var _set_answer_at := -1
-const SET_ANSWER_YIELDS := ["open", "drop", "break"]
 
 
 func set_director_on() -> bool:

@@ -413,8 +413,8 @@ static func fire_w50(cid: String, ctx, combat, at: Vector3) -> Dictionary:
 		DUPLICATOR_SPOOL:
 			st["duplicator_armed"] = true
 			st["duplicator_left"] = DUPLICATOR_WINDOW_S
-			if combat != null and combat.has_method("post_consumable_buff"):
-				combat.post_consumable_buff("consumable_duplicator_spool", icon_of(cid), row["color"], DUPLICATOR_WINDOW_S)
+			if combat != null and combat.get("consumables") != null:
+				combat.consumables.post_consumable_buff("consumable_duplicator_spool", icon_of(cid), row["color"], DUPLICATOR_WINDOW_S)
 			if combat != null and combat.get("effects") != null:
 				combat.effects.ring(at, 4.0, row.get("color", Palette.AMBER))
 			return {"duration_s": DUPLICATOR_WINDOW_S, "armed": true}
@@ -435,42 +435,14 @@ static func _audit_reroll_gates(ctx) -> int:
 		return 0
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([ctx.run.run_seed, ctx.run.stage, "scrap_dice_gates", offers.size()])
-	if gates.has_method("reroll_offers"):
-		var changed: int = gates.reroll_offers(rng, ctx.run.class_id(), ctx.run.parts)
-		if changed > 0:
-			if ctx.build.has_method("note_offered"):
-				for o in gates.offers:
-					if o is Dictionary and o.has("part_id"):
-						ctx.build.note_offered(String(o["part_id"]))
-			if ctx.events != null and ctx.events.has_signal("reward_offered"):
-				ctx.events.reward_offered.emit(gates.offers)
-		return changed
-	var PartsScript = load("res://src/build/parts.gd")
-	var changed := 0
-	var used: Array = []
-	for o in offers:
-		if o is Dictionary and o.has("part_id"):
-			used.append(String(o["part_id"]))
-	for o in offers:
-		if not (o is Dictionary) or not o.has("part_id"):
-			continue
-		var pid := String(o["part_id"])
-		var d: Resource = PartsScript.def(pid)
-		if d == null:
-			continue
-		var min_tier := int(d.tier)
-		var rarities: Array = ["rare", "relic"] if min_tier >= 2 else ["common", "rare"]
-		var pool: Array = PartsScript.offer_pool(ctx.run.class_id(), rarities).filter(func(id):
-			var pd: Resource = PartsScript.def(id)
-			return pd != null and int(pd.tier) >= min_tier and not (id in used) and not PartsScript.maxed(id, ctx.run.parts))
-		if not pool.is_empty():
-			pool.sort()
-			var picked := String(pool[rng.randi_range(0, pool.size() - 1)])
-			o["part_id"] = picked
-			o["name"] = PartsScript.display_name(picked)
-			o["tier"] = int(PartsScript.def(picked).tier)
-			used.append(picked)
-			changed += 1
+	var changed: int = gates.reroll_offers(rng, ctx.run.class_id(), ctx.run.parts)
+	if changed > 0:
+		if ctx.build.has_method("note_offered"):
+			for o in gates.offers:
+				if o is Dictionary and o.has("part_id"):
+					ctx.build.note_offered(String(o["part_id"]))
+		if ctx.events != null and ctx.events.has_signal("reward_offered"):
+			ctx.events.reward_offered.emit(gates.offers)
 	return changed
 
 
@@ -500,8 +472,8 @@ static func try_clone_pickup(ctx, combat, kind: String, payload, at := Vector3.Z
 	match kind:
 		"consumable":
 			var cid := String(payload)
-			if not ctx.run.add_consumable(cid) and combat != null and combat.has_method("drop_consumable"):
-				combat.drop_consumable(cid, at + Vector3(3.2, 0.0, 0.0))
+			if not ctx.run.add_consumable(cid) and combat != null and combat.get("consumables") != null:
+				combat.consumables.drop_consumable(cid, at + Vector3(3.2, 0.0, 0.0))
 		"core":
 			ctx.run.add_core("duplicator_spool", at)
 		"part":

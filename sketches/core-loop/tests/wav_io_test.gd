@@ -1,7 +1,6 @@
 extends SceneTree
 
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
-const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const WavIo := preload("res://src/presentation/wav_io.gd")
@@ -59,10 +58,8 @@ func _shipped_raw_digests() -> void:
 	}
 	for p in expected:
 		var bytes := FileAccess.get_file_as_bytes(p)
-		t.eq("foley raw wav " + p, _stream_summary(FoleyAudio.wav(p, true)), expected[p])
 		t.eq("wav_io load_wav raw " + p, _stream_summary(WavIo.load_wav(p, true)), expected[p])
 		t.eq("wav_io from_riff " + p, _stream_summary(WavIo.from_riff(bytes)), expected[p])
-	t.eq("foley missing path returns null", FoleyAudio.wav("res://assets/audio/foley/__missing__.wav", true), null)
 	t.eq("wav_io missing path returns null", WavIo.load_wav("res://assets/audio/foley/__missing__.wav", true), null)
 
 
@@ -73,7 +70,7 @@ func _shipped_stream_digests() -> void:
 	}
 	for id in foley_loops:
 		var s := FoleyAudio.stream(id)
-		var p := FoleyAudio.path(id)
+		var p := SfxBank.file_path(id)
 		var is_loop: bool = foley_loops[id][0]
 		if ResourceLoader.exists(p):
 			var imported := load(p) as AudioStreamWAV
@@ -98,8 +95,8 @@ func _shipped_stream_digests() -> void:
 		"tell": [false, [1, false, 44100, 0, 0, 0, 88200, "beb2d5116a0c5dc8"]],
 	}
 	for part in jolt_loops:
-		var s := JoltAudio.stream(part)
-		var p := JoltAudio.path(part)
+		var s := FoleyAudio.stream("jolt_layer_" + part)
+		var p := SfxBank.file_path("jolt_layer_" + part)
 		var is_loop: bool = jolt_loops[part][0]
 		if ResourceLoader.exists(p):
 			var imported := load(p) as AudioStreamWAV
@@ -117,7 +114,7 @@ func _shipped_stream_digests() -> void:
 			t.eq("jolt stream " + part, _stream_summary(s), want)
 		else:
 			t.eq("jolt stream " + part, _stream_summary(s), jolt_loops[part][1])
-		t.check("jolt stream cache " + part, JoltAudio.stream(part) == s)
+		t.check("jolt stream cache " + part, FoleyAudio.stream("jolt_layer_" + part) == s)
 
 
 func _shipped_file_samples_digests() -> void:
@@ -283,7 +280,6 @@ func _malformed_inputs() -> void:
 		var info := VoiceSynth._read_wav_info(p)
 		var voice := VoiceSynth.load_voice_wav(p)
 		t.eq("voice malformed " + name, [int(info.get("frames", 0)), voice.size()], expected_voice[name])
-		t.eq("foley wav disk malformed " + name, _stream_summary(FoleyAudio.wav(p, true)), expected_riff[name])
 		t.eq("wav_io disk malformed " + name, _stream_summary(WavIo.load_wav(p, true)), expected_riff[name])
 
 	var trunc_fmt_path := tmp_dir.path_join("trunc_fmt.wav")

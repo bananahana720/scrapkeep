@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-import { realpathSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 
 import { cleanHead, parseReceiptArgs, root, runReceiptCli } from "./receipt-cli.mjs";
@@ -23,6 +22,7 @@ import {
   readManifests,
   resolveJobs,
 } from "../audio-gate.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const LEVEL_KINDS = ["loudness", "peak", "seam", "stale"];
 export const PLANT_RATE = 48000;
@@ -356,9 +356,4 @@ if (!isMainThread && workerData?.[PLANT_WORKER_FLAG] === true && parentPort) {
   });
 }
 
-if (
-  isMainThread &&
-  process.argv[1] &&
-  realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
-)
-  process.exit(await main(process.argv.slice(2)));
+if (isMainThread && isMain(import.meta.url)) process.exit(await main(process.argv.slice(2)));

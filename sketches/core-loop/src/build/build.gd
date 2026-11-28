@@ -1241,8 +1241,8 @@ func _on_gate_chosen(part_id: String) -> void:
 				ctx.run.expand_consumable_belt()
 			else:
 				var cid := Consumables.offer_consumable_id(part_id)
-				if cid != "" and not ctx.run.add_consumable(cid) and ctx.spawner != null and ctx.spawner.has_method("drop_consumable"):
-					ctx.spawner.drop_consumable(cid, ctx.player.ball_position())
+				if cid != "" and not ctx.run.add_consumable(cid) and ctx.spawner != null and ctx.spawner.get("consumables") != null:
+					ctx.spawner.consumables.drop_consumable(cid, ctx.player.ball_position())
 	elif not scrapless():
 		ctx.run.add_part(part_id, "gate")
 	ctx.events.reward_chosen.emit(part_id)
@@ -1488,10 +1488,6 @@ func _grant_evolutions() -> void:
 	for part_id in Synergies.evolutions_ready(ctx.run.parts):
 		ctx.events.evolution_fired.emit(part_id)
 		ctx.run.add_part(part_id, "evolution")
-
-
-func synergy_read() -> Array:
-	return sheet.synergies.map(func(key): return {"id": key, "name": Synergies.ROWS[key]["name"], "maker": Synergies.ROWS[key]["maker"]})
 
 
 func _step_synergies(ball: Vector3, delta: float) -> void:

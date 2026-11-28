@@ -484,7 +484,7 @@ func _check_faultline_props() -> void:
 	_game.events.slammed.emit(at, 1.0, 1.0)
 	var cracks: Array = spy.blasts.filter(func(b): return b["source"] == "faultline_cap")
 	_t.eq("three blasts down the crack", cracks.size(), 3)
-	var ground: Vector3 = _combat._ground_under(at)
+	var ground: Vector3 = _combat.ground_under(at)
 	var spots: Array = cracks.map(func(b): return snappedf(Vector2(b["at"].x - ground.x, b["at"].z - ground.z).length(), 0.001))
 	_t.eq("at 2.0, 4.5 and 7.0 m ahead", spots, [2.0, 4.5, 7.0])
 	_t.check("each 2.5 m round at a +1 bonus", cracks.all(func(b): return is_equal_approx(float(b["radius"]), 2.5) and int(b["bonus"]) == 1), str(cracks))

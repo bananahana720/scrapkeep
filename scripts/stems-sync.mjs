@@ -1,10 +1,10 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./lib/cli.mjs";
+import { git } from "./lib/git.mjs";
 
 const HASHES = "STEMS.sha256";
 const MUSIC = path.join("sketches", "core-loop", "assets", "music_ace");
@@ -67,9 +67,7 @@ export function sync(to, sources) {
 }
 
 export function defaultSources(repo, home = os.homedir()) {
-  const common = execFileSync("git", ["-C", repo, "rev-parse", "--git-common-dir"], {
-    encoding: "utf8",
-  }).trim();
+  const common = git(["rev-parse", "--git-common-dir"], { cwd: repo });
   const main = path.resolve(repo, common, "..");
   const scratch = path.join(home, "scratch");
   return [

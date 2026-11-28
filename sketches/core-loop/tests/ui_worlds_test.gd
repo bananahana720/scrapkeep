@@ -180,12 +180,12 @@ func _dead_checks() -> void:
 
 func _victory_checks() -> void:
 	_t.eq("W6-4 victory title is the row that ran", _game.screens._title.text, String(STAND_IN["title"]))
-	_t.eq("W6-4 victory body is that row's victory line", _game.screens._body.text, String(STAND_IN["victory"]))
+	_t.eq("W6-4 victory body is that row's victory line", _game.screens.said_body(), String(STAND_IN["victory"]))
 
 
 func _summary_checks() -> void:
 	var epitaph := String(STAND_IN["epitaph"])
-	_t.check("W6-4 the won summary shows the epitaph", _game.screens._body.text.contains(epitaph), _game.screens._body.text)
+	_t.check("W6-4 the won summary shows the epitaph", _game.screens.said_body().contains(epitaph), _game.screens.said_body())
 	_game.screens._victory_boss = STAND_IN
 	_game.events.run_started.emit("runner_gunner")
 	_t.check("W6-4 a new run forgets the last run's beaten boss", _game.screens._victory_boss.is_empty(), "%s" % [_game.screens._victory_boss])
@@ -258,7 +258,7 @@ func _three_step() -> bool:
 		flow._on_boss_defeated()
 		_three_boss_done = true
 		_t.eq("three: world %d victory heading" % _three_world, _game.screens._title.text, String(row["title"]))
-		_t.eq("three: world %d victory body" % _three_world, _game.screens._body.text, String(row["victory"]))
+		_t.eq("three: world %d victory body" % _three_world, _game.screens.said_body(), String(row["victory"]))
 		return false
 	if _three_world == 2:
 		_three_world = 3
@@ -267,7 +267,7 @@ func _three_step() -> bool:
 		return false
 	if flow.state_name() == "summary":
 		_t.check("three: the won summary reads RUN COMPLETE", _game.screens._title.text.contains("RUN COMPLETE"), _game.screens._title.text)
-		_t.check("three: the summary body holds the Mind's epitaph", _game.screens._body.text.contains(String(row["epitaph"])), _game.screens._body.text)
+		_t.check("three: the summary body holds the Mind's epitaph", _game.screens.said_body().contains(String(row["epitaph"])), _game.screens.said_body())
 		_game.free()
 		_phase = "slice"
 		var g = GameScript.new()

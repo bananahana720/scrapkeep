@@ -2,8 +2,8 @@ extends RefCounted
 
 const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
-const Game := preload("res://src/game.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Density := preload("res://src/presentation/density.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
@@ -25,6 +25,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const WorldFxGrain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldFxSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
+const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const ThreadGuard := preload("res://src/core/thread_guard.gd")
@@ -87,6 +88,14 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
+const BotProfile := preload("res://tools/bot_profile.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
+const TraversalLine := preload("res://tools/traversal_line.gd")
+const BotFairness := preload("res://tools/bot_fairness.gd")
+const RampFlipper := preload("res://src/combat/ramp_flipper.gd")
+const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
+const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
+const ContentRegistry := preload("res://tests/support/content_registry.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -182,7 +191,7 @@ func _reset() -> void:
 	Engine.max_fps = max_fps
 	ChallengeDials.reset()
 	BuffLedger.reset_for_tests()
-	Game.set_motion_statics(false)
+	Comfort.reduced_motion = false
 	FlashGuard.on = false
 	GraphicsPreset.reset_for_tests()
 	Density.reset_for_tests()
@@ -205,6 +214,7 @@ func _reset() -> void:
 	MechaMotion.reset_for_tests()
 	WorldFxGrain.reset_for_tests()
 	WorldFxSound.reset_for_tests()
+	FoleyAudio.reset_for_tests()
 	WorldFxAnchor.reset_for_tests()
 	ClassPreview.reset_for_tests()
 	ThreadGuard.reset_for_tests()
@@ -253,6 +263,14 @@ func _reset() -> void:
 	World23ChunkCraft._reset()
 	CraftShowcaseAssembly.reset_for_tests()
 	CraftLookdev.reset_for_tests()
+	BotProfile.reset_for_tests()
+	SkillBand.reset_for_tests()
+	TraversalLine.reset_for_tests()
+	BotFairness.reset_for_tests()
+	RampFlipper.reset_for_tests()
+	CosmeticArt.reset_for_tests()
+	TeardownNoise.reset_for_tests()
+	ContentRegistry.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	SimClock.threaded_in_bot_runs = false

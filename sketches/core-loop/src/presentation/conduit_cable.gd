@@ -1,7 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const RADIUS := 0.12
@@ -63,8 +63,8 @@ func setup(ctx_ref, markers = null) -> void:
 	_dead.vertex_color_use_as_albedo = true
 	_dead.vertex_color_is_srgb = true
 	_dead.roughness = 0.85
-	_still = not UiTokens.reduced_motion
-	_hold_still(UiTokens.reduced_motion)
+	_still = not Comfort.reduced_motion
+	_hold_still(Comfort.reduced_motion)
 	var events = ctx.get("events") if ctx != null else null
 	if events != null:
 		events.stage_entered.connect(_on_stage_entered)
@@ -176,7 +176,7 @@ func _hold_still(still: bool) -> void:
 
 
 func _process(_delta: float) -> void:
-	_hold_still(UiTokens.reduced_motion)
+	_hold_still(Comfort.reduced_motion)
 	if not _cables.is_empty():
 		refresh()
 

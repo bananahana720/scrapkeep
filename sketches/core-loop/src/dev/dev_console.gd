@@ -29,7 +29,6 @@ const HAND := UiTokens.Hand.OLD_WORKS
 const TABS := ["Look", "Paint", "Print", "Lens", "Fight", "Debug", "Bake"]
 const OVERLAY_WORDS := ["off", "all", "bounds", "telegraphs", "vel", "perf", "+bounds", "+telegraphs", "+vel", "+perf",
 	"-bounds", "-telegraphs", "-vel", "-perf"]
-const MODULE_HEADS := ["stage", "warp", "give", "panel", "inspect", "events", "assert", "tune"]
 const LIGHT_KEYS := ["exposure", "saturation", "contrast", "brightness", "ambient", "sun", "sun_pitch", "sun_yaw", "shadow",
 	"sun_size", "fog", "fog_sky", "air", "glow", "bloom", "ssao", "white", "ink_width"]
 const TONEMAPS := ["Linear", "Reinhard", "Filmic", "ACES", "AgX"]
@@ -801,15 +800,6 @@ func _set_quality(id: String) -> void:
 	_say("quality %s" % id if GraphicsPreset.apply(id) else "!no quality '%s'" % id, "ok")
 
 
-func _module_pool(head: String) -> Array:
-	for module in [fight, inspect, agent]:
-		if module != null and is_instance_valid(module) and module.has_method("complete_args"):
-			var found: Array = module.complete_args(head)
-			if not found.is_empty():
-				return found
-	return []
-
-
 func _sync_lens_rows() -> void:
 	for key in ["fov", "size", "cut"]:
 		if not _rows.has(key) or not is_instance_valid(_rows[key].slider):
@@ -1034,9 +1024,6 @@ func _line_keys(event: InputEvent) -> void:
 						pool = GraphicsPreset.PRESETS.keys()
 					"help":
 						pool = commands.names() + ["json"]
-					_:
-						if head in MODULE_HEADS:
-							pool = _module_pool(head)
 				var hits := pool.filter(func(p: String): return p.begins_with(tail))
 				if hits.size() == 1:
 					_line.text = "%s %s " % [head, hits[0]]

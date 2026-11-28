@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -18,6 +27,7 @@ import { stateEnv } from "./challenge/proc.mjs";
 import { REPO_ROOT as DEV_REPO_ROOT, scratchEnv as devScratchEnv } from "./dev-console.mjs";
 import { selfPlayXdg } from "./frametime-check.mjs";
 import { scratchEnv as displayScratchEnv } from "./gate/display-run.mjs";
+import { git } from "./lib/git.mjs";
 import { stepEnv as pcStepEnv } from "./gate/pc.mjs";
 import { isolatedXdgEnv, winProofEnv } from "./sketch-export.mjs";
 
@@ -63,6 +73,39 @@ const XDG_WRITE_ALLOWLIST = {
 };
 const DIRECT_XDG_WRITE =
   /\bXDG_(?:DATA|CONFIG|CACHE)_HOME\s*:|(?:\.XDG_(?:DATA|CONFIG|CACHE)_HOME|\[\s*["'`]XDG_(?:DATA|CONFIG|CACHE)_HOME["'`]\s*\]|\[\s*`XDG_\$\{[^}]+\}_HOME`\s*\])\s*=(?!=)/;
+
+const GODOT_PATH_SPELLING = String.raw`Godot_v?([0-9]+\.[0-9]|\$?\{|\$[A-Za-z_])|org\.godotengine\.Godot`;
+const SPELLS_GODOT_PATH = {
+  "scripts/godot-home.mjs": "the owner: resolveGodotBinary lists every place Godot is looked for",
+  "scripts/godot-home.test.mjs": "tests the owner with made-up homes",
+  "scripts/dev-console.test.mjs": "a made-up macOS home in a resolver test",
+  "scripts/gate/gate.test.mjs": "made-up Godot names and a made-up binary in gate tests",
+  "scripts/import-stamp.test.mjs": "made-up Godot identity strings",
+  "tests/fixtures/crash-harvest/jobs/speedrunner-tally-35010/log.txt":
+    "a crash log kept verbatim as a fixture",
+  "tools/cloud/setup.sh": "the cloud installer puts Godot at this path",
+  ".claude/hooks/session-start.sh": "runs the cloud installer and exports its path as GODOT_BIN",
+  ".github/actions/setup-godot/action.yml": "the CI installer downloads Godot to this path",
+  ".agents/skills/scrapkeep-verify-build/scripts/build.sh":
+    "a message that says where the cloud installs Godot",
+  ".agents/skills/scrapkeep-verify-game/scripts/doctor.sh":
+    "a message that says where to install Godot",
+  "sketches/core-loop/tests/run_tier_test.gd": "a dated re-pin note records the command it ran",
+  "project-guide/handoff/shared/structure-sweep/pool.tsv":
+    "the sweep's task pool quotes the search that found the copies",
+};
+
+function filesSpellingGodotPath(root, pattern = GODOT_PATH_SPELLING) {
+  const tracked = git(["ls-files"], { cwd: root });
+  assert.notEqual(tracked, "", `git ls-files listed no tracked file in ${root}`);
+  let listed = "";
+  try {
+    listed = git(["grep", "-l", "-E", pattern, "--", ".", ":!*.md"], { cwd: root });
+  } catch (error) {
+    if (error.status !== 1) throw error;
+  }
+  return listed ? listed.split("\n").sort() : [];
+}
 
 function nonTestScriptFiles(dir) {
   const files = [];
@@ -196,37 +239,130 @@ test("unset GODOT_BIN on cloud image resolves /opt/scrapkeep-toolchain before ho
   );
 });
 
-test("optional which probe runs after macOS app bundle and before Linux static fallbacks", () => {
-  assert.equal(
-    resolveGodotBinary({
-      env: {},
+test("every caller gets one order: GODOT_BIN, the version-named places, godot on PATH, then /usr/bin/godot", () => {
+  const OTHER_ON_PATH = "/usr/local/bin/godot";
+  const ELSEWHERE_ON_PATH = path.join(PC_HOME, "bin", "godot");
+  const shapes = [
+    {
+      shape: "the Mac Studio with the app and a Homebrew godot on PATH",
       platform: "darwin",
       homeDir: MAC_HOME,
-      exists: (p) => p === MAC_APP_BIN || p === "/opt/homebrew/bin/godot",
-      which: () => "/opt/homebrew/bin/godot",
-    }),
-    MAC_APP_BIN,
-  );
-  assert.equal(
-    resolveGodotBinary({
-      env: {},
+      present: [MAC_APP_BIN, "/opt/homebrew/bin/godot"],
+      onPath: "/opt/homebrew/bin/godot",
+      expected: MAC_APP_BIN,
+    },
+    {
+      shape: "a Linux machine with only /usr/bin/godot",
       platform: "linux",
       homeDir: PC_HOME,
-      exists: (p) => p === "/usr/bin/godot" || p === CLOUD_BIN,
-      which: () => "/usr/bin/godot",
-    }),
-    "/usr/bin/godot",
-  );
-  assert.equal(
-    resolveGodotBinary({
-      env: {},
+      present: ["/usr/bin/godot"],
+      onPath: "/usr/bin/godot",
+      expected: "/usr/bin/godot",
+    },
+    {
+      shape: "a Linux machine with the toolchain binary and a different godot on PATH",
       platform: "linux",
       homeDir: PC_HOME,
-      exists: (p) => p === CLOUD_BIN,
-      which: () => "/missing/godot",
-    }),
-    CLOUD_BIN,
-  );
+      present: [CLOUD_BIN, OTHER_ON_PATH, "/usr/bin/godot"],
+      onPath: OTHER_ON_PATH,
+      expected: CLOUD_BIN,
+    },
+    {
+      shape: "a Linux machine with the home-folder binary and a different godot on PATH",
+      platform: "linux",
+      homeDir: PC_HOME,
+      present: [PC_LOCAL_BIN, OTHER_ON_PATH],
+      onPath: OTHER_ON_PATH,
+      expected: PC_LOCAL_BIN,
+    },
+    {
+      shape: "a Linux machine with godot only at some other place on PATH",
+      platform: "linux",
+      homeDir: PC_HOME,
+      present: [ELSEWHERE_ON_PATH],
+      onPath: ELSEWHERE_ON_PATH,
+      expected: ELSEWHERE_ON_PATH,
+    },
+    {
+      shape: "a Linux machine with godot on PATH and a different /usr/bin/godot",
+      platform: "linux",
+      homeDir: PC_HOME,
+      present: [OTHER_ON_PATH, "/usr/bin/godot"],
+      onPath: OTHER_ON_PATH,
+      expected: OTHER_ON_PATH,
+    },
+    {
+      shape: "a Mac with no app and a Homebrew godot on PATH",
+      platform: "darwin",
+      homeDir: MAC_HOME,
+      present: ["/opt/homebrew/bin/godot"],
+      onPath: "/opt/homebrew/bin/godot",
+      expected: "/opt/homebrew/bin/godot",
+    },
+    {
+      shape: "a machine with nothing",
+      platform: "linux",
+      homeDir: PC_HOME,
+      present: [],
+      onPath: null,
+      expected: null,
+    },
+    {
+      shape: "a machine whose PATH names a godot that does not exist",
+      platform: "linux",
+      homeDir: PC_HOME,
+      present: [],
+      onPath: "/missing/godot",
+      expected: null,
+    },
+  ];
+  for (const { shape, platform, homeDir, present, onPath, expected } of shapes) {
+    const asked = [];
+    assert.equal(
+      resolveGodotBinary({
+        env: {},
+        platform,
+        homeDir,
+        exists: (p) => present.includes(p),
+        which: (name) => {
+          asked.push(name);
+          return onPath;
+        },
+      }),
+      expected,
+      shape,
+    );
+    assert.ok(
+      asked.every((name) => name === "godot"),
+      shape,
+    );
+  }
+});
+
+test("a caller that passes no which option still finds godot on the PATH of the env it passes", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-godot-path-"));
+  try {
+    const onPath = path.join(dir, "godot");
+    writeFileSync(onPath, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    const found = resolveGodotBinary({
+      env: { PATH: [dir, "/usr/bin", "/bin"].join(path.delimiter) },
+      platform: "linux",
+      homeDir: PC_HOME,
+      exists: (p) => p === onPath,
+    });
+    assert.equal(found, onPath);
+    assert.equal(
+      resolveGodotBinary({
+        env: { PATH: [path.join(dir, "missing"), "/usr/bin", "/bin"].join(path.delimiter) },
+        platform: "linux",
+        homeDir: PC_HOME,
+        exists: (p) => p === onPath,
+      }),
+      null,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("requireExplicit refuses fallback binaries on every machine when GODOT_BIN is unset", () => {
@@ -586,4 +722,76 @@ test("non-test scripts contain no unapproved /home/andrew/ literals, direct GODO
     [],
     "stale XDG_WRITE_ALLOWLIST entries must be removed",
   );
+});
+
+test("node scripts/godot-home.mjs --bin prints the resolved binary or fails with the owner's message", () => {
+  const owner = path.join(SCRIPTS_DIR, "godot-home.mjs");
+  const run = (args, env) =>
+    spawnSync(process.execPath, [owner, ...args], {
+      encoding: "utf8",
+      env: { ...process.env, ...env },
+    });
+  const found = run(["--bin"], { GODOT_BIN: process.execPath });
+  assert.equal(found.status, 0, found.stderr);
+  assert.equal(found.stdout, `${process.execPath}\n`);
+  const missing = run(["--bin"], { GODOT_BIN: "/missing/godot" });
+  assert.equal(missing.status, 1);
+  assert.equal(missing.stdout, "");
+  assert.equal(
+    missing.stderr,
+    "godot-home: Godot binary not found at /missing/godot; set GODOT_BIN\n",
+  );
+  for (const args of [[], ["--bogus"], ["--bin", "extra"]]) {
+    const refused = run(args, { GODOT_BIN: process.execPath });
+    assert.equal(refused.status, 1, `expected a refusal for ${JSON.stringify(args)}`);
+    assert.equal(refused.stdout, "");
+    assert.match(refused.stderr, /^godot-home: (usage|unknown argument)/);
+  }
+});
+
+test("only the owner and the files listed with a reason spell a Godot binary path", () => {
+  const found = filesSpellingGodotPath(REPO_ROOT);
+  assert.ok(found.length > 0, "the search for Godot binary paths listed no file");
+  assert.deepEqual(
+    found,
+    Object.keys(SPELLS_GODOT_PATH).sort(),
+    "a file spells a Godot binary path the owner already knows; ask `node scripts/godot-home.mjs --bin` (an explicit GODOT_BIN still wins), or list the file here with its reason",
+  );
+});
+
+test("the search for Godot binary paths sees every spelling and fails when it reads nothing", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-godot-spelling-"));
+  try {
+    assert.throws(() => filesSpellingGodotPath(dir), /git ls-files failed/);
+    git(["init", "-q"], { cwd: dir });
+    assert.throws(() => filesSpellingGodotPath(dir), /listed no tracked file/);
+    const spellings = {
+      "linux.sh": 'godot="$HOME/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64"\n',
+      "mac.sh": 'godot="$HOME/Applications/Godot_4.7.2.app/Contents/MacOS/Godot"\n',
+      "template.mjs": "const bin = `Godot_v${GODOT_VERSION}-stable_linux.x86_64`;\n",
+      "format.py": 'GODOT = f"Godot_v{VERSION}-stable_linux.x86_64"\n',
+      "shell-var.sh": "godot=/opt/Godot_v$GODOT_VERSION\n",
+      "flatpak.sh": "flatpak run org.godotengine.Godot --headless\n",
+      "flatpak-id.txt": "org.godotengine.GodotSharp\n",
+      "clean.sh": 'godot="$(node scripts/godot-home.mjs --bin)"\n',
+      "notes.md": "Godot_v4.7.2-stable_linux.x86_64\n",
+      "untracked.sh": "Godot_v4.7.2-stable_linux.x86_64\n",
+    };
+    for (const [rel, text] of Object.entries(spellings)) writeFileSync(path.join(dir, rel), text);
+    git(["add", "--", ...Object.keys(spellings).filter((rel) => rel !== "untracked.sh")], {
+      cwd: dir,
+    });
+    assert.deepEqual(filesSpellingGodotPath(dir), [
+      "flatpak-id.txt",
+      "flatpak.sh",
+      "format.py",
+      "linux.sh",
+      "mac.sh",
+      "shell-var.sh",
+      "template.mjs",
+    ]);
+    assert.throws(() => filesSpellingGodotPath(dir, "Godot_v("), /git grep .* failed/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

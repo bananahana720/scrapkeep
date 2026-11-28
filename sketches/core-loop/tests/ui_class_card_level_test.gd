@@ -69,8 +69,8 @@ func _process(_delta: float) -> bool:
 					_t.check("prologue: its Next button is on the screen (pilot select hides the action row, the prologue shows it)",
 						next != null and next.is_visible_in_tree(), "next %s" % (next != null))
 					_game.screens.end_prologue()
-				_t.check("%s: the screen shows the pilot line it was measured with" % WAYS[_way], _game.screens._body.text == LINE and _game.screens.PILOT_LINE == LINE,
-					"body \"%s\"" % _game.screens._body.text)
+				_t.check("%s: the screen shows the pilot line it was measured with" % WAYS[_way], _game.screens.said_body() == LINE and _game.screens.PILOT_LINE == LINE,
+					"body \"%s\"" % _game.screens.said_body())
 				_mark = _frame
 				_step = 2
 		2:

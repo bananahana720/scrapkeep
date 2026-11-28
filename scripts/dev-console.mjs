@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import {
   closeSync,
@@ -9,14 +9,12 @@ import {
   openSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   renameSync,
   rmSync,
   unlinkSync,
   watch as watchFs,
   writeFileSync,
 } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
@@ -25,11 +23,13 @@ import {
   GODOT_VERSION,
   resolveGodotBinary as resolveSharedGodotBinary,
   scratchGodotEnv,
+  whichTool,
 } from "./godot-home.mjs";
 import { formatLedgerAudit, runLedgerAudit } from "./ledger-audit.mjs";
 import { runProcess as runChild } from "./lib/proc.mjs";
 import { buildVisualQaPack } from "./visual-qa-pack.mjs";
 import { materializeSandbox, releaseSlotLock, validateSlotName } from "./worktree-sandbox.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SKETCH_DIR = path.join(REPO_ROOT, "sketches", "core-loop");
@@ -169,29 +169,8 @@ export function parseSize(sizeText = "1280x720") {
   return { width, height, text: `${width}x${height}` };
 }
 
-export function whichTool(toolName, env = process.env) {
-  const found = spawnSync("which", [toolName], { env, encoding: "utf8" });
-  if (found.status === 0) {
-    const resolved = found.stdout.trim().split(/\r?\n/)[0];
-    if (resolved) return resolved;
-  }
-  return null;
-}
-
-export function resolveGodotBinary({
-  env = process.env,
-  platform = process.platform,
-  homeDir = os.homedir(),
-  existsFn = existsSync,
-  whichFn = (name) => whichTool(name, env),
-} = {}) {
-  const found = resolveSharedGodotBinary({
-    env,
-    platform,
-    homeDir,
-    exists: existsFn,
-    which: whichFn,
-  });
+export function resolveGodotBinary(options = {}) {
+  const found = resolveSharedGodotBinary(options);
   if (!found) {
     throw new Error(
       `Could not locate Godot binary. Set GODOT_BIN or install Godot ${GODOT_VERSION} before running dev-console.`,
@@ -1716,16 +1695,7 @@ export async function main(argv = process.argv.slice(2)) {
   return 2;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   main()
     .then((code) => {
       process.exitCode = code;

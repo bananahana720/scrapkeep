@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Reduced motion (EV-0248): a saved setting on the settings page that holds the camera still,
@@ -75,15 +75,14 @@ func _run() -> void:
 	_t.near("RM-4 kick is 0", cam._kick.length(), 0.0)
 	edge.flash(Vector2.LEFT, Color.RED, 0.8, 0.4)
 	_t.check("RM-4 flash alpha is at most a quarter of normal", edge.alpha <= full_flash * 0.25 + 0.0001 and edge.alpha > 0.0, "%f vs %f" % [edge.alpha, full_flash])
-	_t.near("RM-4 enemy idle motion is off", EnemyMotion.motion_scale, 0.0)
+	_t.near("RM-4 enemy idle motion is off", Comfort.motion_scale(), 0.0)
 
 	# RM-5: boot applies the saved value; turning it off restores everything.
-	EnemyMotion.motion_scale = 1.0
-	cam.reduced_motion = false
+	Comfort.reduced_motion = false
 	_game.apply_saved_display(["--preset=high"])
-	_t.check("RM-5 launch applies the saved setting", cam.reduced_motion and EnemyMotion.motion_scale == 0.0, "camera and enemy motion")
+	_t.check("RM-5 launch applies the saved setting", Comfort.reduced_motion and cam._comfort_scale() == 0.0 and Comfort.motion_scale() == 0.0, "camera and enemy motion")
 	page.press("reduced_motion")
-	_t.check("RM-5 off again", not cam.reduced_motion and EnemyMotion.motion_scale == 1.0 and edge.flash_scale == 1.0, "restored")
+	_t.check("RM-5 off again", not Comfort.reduced_motion and Comfort.motion_scale() == 1.0 and edge.flash_scale == 1.0, "restored")
 	cam._shake = 0.0
 	cam.shake(0.8, 0.4)
 	_t.near("RM-5 the shake is back", cam.shake_amplitude(), 0.8)

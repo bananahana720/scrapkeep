@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import {
   cleanHead,
@@ -12,6 +11,7 @@ import {
   root,
   runReceiptCliSync,
 } from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export { cleanHead };
 
@@ -104,5 +104,4 @@ function main(argv) {
   return runReceiptCliSync(() => ({ receipt: produce(), out: args.out }));
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

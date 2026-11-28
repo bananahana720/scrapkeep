@@ -11,9 +11,9 @@ const TitleIntros := preload("res://src/presentation/title_intros.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const T := preload("res://tests/support/t.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var _t := T.new("pilot_antics_test")
 var _capture := ""
@@ -382,11 +382,11 @@ func _deck(game, display) -> void:
 	_t.check("a deck stopped mid-move puts its pilot back in", not antics[turn].out)
 	display.active = true
 	display._sync_dressing()
-	HighdraftFx.preferred = true
+	Comfort.reduced_motion = true
 	display._clock = mid
 	display._step_antics()
 	_t.check("reduced motion keeps the deck pilots seated", antics.all(func(a): return not a.out))
-	HighdraftFx.preferred = false
+	Comfort.reduced_motion = false
 	display.cast_hero("pylon_engineer")
 	var deck_at: Vector3 = display.camera.global_position
 	display.look_begin()
@@ -458,10 +458,10 @@ func _cards() -> void:
 	preview._time = 2.0 * preview.ANTIC_PERIOD - phase - PilotAntics.LENGTH * 0.5
 	preview._step_antic()
 	_t.check("a card's pilot climbs out at rest", preview.antic.out)
-	HighdraftFx.preferred = true
+	Comfort.reduced_motion = true
 	preview._step_antic()
 	_t.check("reduced motion seats a card's pilot", not preview.antic.out)
-	HighdraftFx.preferred = false
+	Comfort.reduced_motion = false
 	preview._step_antic()
 	preview.antic.calm = true
 	preview.antic.apply(0.5)

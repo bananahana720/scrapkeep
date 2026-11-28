@@ -563,8 +563,8 @@ static func on_yard_cleared(run, combat = null, at := Vector3.ZERO, rng: RandomN
 	var stored_in_belt := false
 	if run.has_method("add_consumable") and run.add_consumable(cid):
 		stored_in_belt = true
-	elif combat != null and combat.has_method("drop_consumable"):
-		combat.drop_consumable(cid, at + Vector3(2.8, 0.0, 0.0))
+	elif combat != null and combat.get("consumables") != null:
+		combat.consumables.drop_consumable(cid, at + Vector3(2.8, 0.0, 0.0))
 	return {
 		"printed": true,
 		"consumable_id": cid,

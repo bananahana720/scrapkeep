@@ -10,7 +10,6 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const Shop := preload("res://src/build/shop.gd")
 const Workshop := preload("res://src/ui/workshop.gd")
-const Callouts := preload("res://src/ui/callouts.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 
@@ -23,7 +22,6 @@ const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 #   - The shop bell rings on a purchase; the reroll is the bench clank.
 #   - Ancients never growl like the Fleet; each faction's pack arrives on its own cue.
 #   - Moss's lines babble, non-silent, cached per line and key.
-#   - A callout chimes as it appears.
 # The cue log, not speakers.
 
 const RELEASE := {"sable": "sable_arpeggio", "rivet": "rivet_hihat_roll", "kest": "kest_low_thump",
@@ -49,14 +47,6 @@ class FakeFlow:
 class FakeRun:
 	extends RefCounted
 	var run_time := 0.0
-
-class FakeProfile:
-	extends RefCounted
-	var marks: Array = []
-	func seen(id: String) -> bool:
-		return id in marks
-	func mark_seen(id: String) -> void:
-		marks.append(id)
 
 class FakePresentation:
 	extends RefCounted
@@ -99,7 +89,6 @@ func _initialize() -> void:
 	_shop()
 	_arrivals()
 	_babble()
-	_callout()
 
 	print("audio_cue_resolution_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
@@ -215,17 +204,6 @@ func _babble() -> void:
 		and beats == [1, 6, VoiceSynth.BABBLE_LEVEL, VoiceSynth.BABBLE_RELENT],
 		"'%s' babbles %.2f s at peak %.2f; the workshop speaks it as %s; baked lines %d, %d on a repeat, %d in Eb; beats ask, send-off, restart, relent -> %s"
 			% [line, seconds, peak, spoken, cached, again, keyed, beats])
-
-
-func _callout() -> void:
-	var callouts := Callouts.new()
-	callouts.game = _game
-	callouts.profile = FakeProfile.new()
-	root.add_child(callouts)
-	callouts._show("callout_scrap")
-	var cue := _last("callout_scrap")
-	callouts.free()
-	_check("a callout chimes as it appears", cue == ["callout_chime", "now"], "callout_scrap plays %s" % [cue])
 
 
 # The last cue logged for a kind, as [sound, decision].

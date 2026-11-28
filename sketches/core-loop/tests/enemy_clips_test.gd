@@ -3,9 +3,9 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # The field crew's baked clips (field_motion.py, enemy_clips.gd): every world 1 kind has its six
 # clips, its wind-up is its attack's lead within one 30 fps frame and is sampled by the attack's
@@ -278,14 +278,14 @@ func _hits() -> void:
 
 # Reduced motion drops idle and move: every joint holds identity while idle.
 func _reduced_motion() -> void:
-	EnemyMotion.motion_scale = 0.0
+	Comfort.reduced_motion = true
 	var enemy = _spawn("lobber")
 	await _frames(20)
 	var still := true
 	for joint in enemy.reaction_pivot.find_children(EnemyClips.JOINT_PREFIX + "*", "Node3D", true, false):
 		still = still and (joint as Node3D).transform.is_equal_approx(Transform3D.IDENTITY)
 	_t.check("reduced motion idles still", enemy._clips.clip == "idle" and still)
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	enemy.free()
 
 

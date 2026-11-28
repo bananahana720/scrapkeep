@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import { isMain } from "./lib/cli.mjs";
+import { git } from "./lib/git.mjs";
 
-function git(cwd, args) {
-  const r = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
-  if (r.error || r.status === null || r.status > 1) {
-    throw new Error(`git ${args.join(" ")} failed: ${r.error?.message ?? r.stderr}`);
+const BUFFER = 256 * 1024 * 1024;
+
+function grep(top, args) {
+  try {
+    return git(args, { cwd: top, trim: false, maxBuffer: BUFFER });
+  } catch (error) {
+    if (error.status === 1) return error.stdout;
+    throw error;
   }
-  return r.stdout;
 }
 
 function needles(top, rel) {
@@ -43,7 +46,11 @@ export function badPaths(files, cwd = process.cwd()) {
   const inside = rels.filter((r) => !outside(r));
   const tracked = new Set(
     inside.length
-      ? git(top, ["--literal-pathspecs", "ls-files", "-z", "--", ...inside]).split("\0")
+      ? git(["--literal-pathspecs", "ls-files", "-z", "--", ...inside], {
+          cwd: top,
+          trim: false,
+          maxBuffer: BUFFER,
+        }).split("\0")
       : [],
   );
   return files.flatMap((f, i) => {
@@ -55,7 +62,7 @@ export function badPaths(files, cwd = process.cwd()) {
 }
 
 function resolve(files, cwd) {
-  const top = realpathSync(git(cwd, ["rev-parse", "--show-toplevel"]).trim());
+  const top = realpathSync(git(["rev-parse", "--show-toplevel"], { cwd }));
   const base = realpathSync(cwd);
   const rels = files.map((f) =>
     path.relative(top, path.resolve(base, f)).split(path.sep).join("/"),
@@ -73,7 +80,7 @@ export function findMentions(files, cwd = process.cwd()) {
     const hits = new Set();
     for (const n of needles(top, rel)) {
       const args = ["grep", "-n", "-I", "-F", ...(n.word ? ["-w"] : []), "-e", n.text];
-      for (const line of git(top, args).split("\n")) {
+      for (const line of grep(top, args).split("\n")) {
         const m = line.match(/^([^:]+):(\d+):(.*)$/);
         if (m && !skip.has(m[1])) hits.add(`${m[1]}:${m[2]}: ${m[3].trim().slice(0, 160)}`);
       }
@@ -83,29 +90,40 @@ export function findMentions(files, cwd = process.cwd()) {
   return result;
 }
 
-if (isMain(import.meta.url)) {
-  const files = process.argv.slice(2);
+const unknown = (err) =>
+  `the search could not run, so nothing is known about callers: ${err?.message ?? err}`;
+
+export function main(
+  files,
+  { cwd = process.cwd(), log = console.log, error = console.error } = {},
+) {
   if (files.length === 0) {
-    console.error("usage: node scripts/no-caller.mjs <file>...");
-    process.exit(2);
+    error("usage: node scripts/no-caller.mjs <file>...");
+    return 2;
   }
-  let found;
   try {
-    const bad = badPaths(files);
+    const bad = badPaths(files, cwd);
     if (bad.length) {
-      for (const line of bad) console.error(line);
-      process.exit(2);
+      for (const line of bad) error(line);
+      return 2;
     }
-    found = findMentions(files);
+    let mentioned = false;
+    for (const [rel, hits] of findMentions(files, cwd)) {
+      log(`${rel}: ${hits.length} mention${hits.length === 1 ? "" : "s"}`);
+      for (const h of hits) log(`  ${h}`);
+      if (hits.length) mentioned = true;
+    }
+    return mentioned ? 1 : 0;
   } catch (err) {
-    console.error(`the search could not run, so nothing is known about callers: ${err.message}`);
+    error(unknown(err));
+    return 2;
+  }
+}
+
+if (isMain(import.meta.url)) {
+  process.on("uncaughtException", (err) => {
+    console.error(unknown(err));
     process.exit(2);
-  }
-  let mentioned = false;
-  for (const [rel, hits] of found) {
-    console.log(`${rel}: ${hits.length} mention${hits.length === 1 ? "" : "s"}`);
-    for (const h of hits) console.log(`  ${h}`);
-    if (hits.length) mentioned = true;
-  }
-  process.exit(mentioned ? 1 : 0);
+  });
+  process.exitCode = main(process.argv.slice(2));
 }

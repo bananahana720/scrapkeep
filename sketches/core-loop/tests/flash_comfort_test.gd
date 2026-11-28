@@ -8,7 +8,7 @@ const Pod := preload("res://src/combat/splitter_pod.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const GapNet := preload("res://src/combat/gap_net.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Wave 20 FLASH-COMFORT: the new effects read the Reduce flashes and Reduced motion settings.
@@ -44,34 +44,25 @@ const SITES := [
 	["presentation/highdraft_fx.gd", "FlashGuard.spike(0.0, 1.0 - first if first < 1.0 else 0.0)"],
 	["presentation/highdraft_fx.gd", "FlashGuard.spike(0.0, 1.0 - second if second < 1.0 else 0.0)"],
 	["ui/ability_bar.gd", "FlashGuard.info(clampf(_refusals.get(slot, 0.0) / SHAKE_TIME, 0.0, 1.0))"],
-	["ui/ability_bar.gd", "if reduced_motion or _refusals.get(slot, 0.0) <= 0.0:"],
-	["ui/aim_reticle.gd", "if reduced_motion or _shake_left <= 0.0:"],
+	["ui/ability_bar.gd", "if Comfort.reduced_motion or _refusals.get(slot, 0.0) <= 0.0:"],
+	["ui/aim_reticle.gd", "if Comfort.reduced_motion or _shake_left <= 0.0:"],
 	["ui/heft_dial.gd", "FlashGuard.info(_flash / FLASH_SECONDS)"],
-	["game.gd", "AbilityBar.reduced_motion = on"],
-	["game.gd", "AimReticle.reduced_motion = on"],
+	["game.gd", "Comfort.reduced_motion = on"],
 	["combat/gap_net.gd", "FlashGuard.rate(CRACKLE_RATE + CRACKLE_RATE_GAIN * t)"],
-	["combat/gap_net.gd", "* CRACKLE_SHAKE * t * EnemyMotion.motion_scale"],
+	["combat/gap_net.gd", "* CRACKLE_SHAKE * t * Comfort.motion_scale()"],
 	["world/event_view.gd", "FlashGuard.spike(0.4, 0.4 + (pulse * 2.4 if armed else 0.0))"],
 	["world/event_view.gd", "FlashGuard.spike(0.3 + model.progress() * 2.4, 0.3 + model.progress() * 4.0 * (0.6 + 0.4 * pulse))"],
 	["world/event_view.gd", "FlashGuard.spike(1.2, 1.2 + pulse * 2.0)"],
 	["world/radio_cache.gd", "_lamp.visible = FlashGuard.blink(fmod(_age, BLINK) < BLINK * 0.5)"],
-	["ui/reward_view.gd", "var amp := (1.5 + 11.0 * p * p) * (0.0 if reduced_motion else 1.0)"],
-	["ui/reward_view.gd", "sin(t * w * 0.8) * 0.06 * p * (0.0 if reduced_motion else 1.0)"],
-	["ui/moss_bubble.gd", "if reduced_motion:\n\t\tshake = Vector2.ZERO"],
-	["ui/moss_bubble.gd", "var wag := 0.0 if reduced_motion else"],
-	["ui/class_card.gd", "rotation = 0.0 if reduced_motion else sin(_shake * 70.0)"],
-	["presentation/pilot_antics.gd", "* 0.035 * growl * (0.0 if reduced_motion else 1.0)"],
-	["ui/class_preview.gd", "(0.0 if reduced_motion else 0.25 * sin(t * 40.0))"],
-	["ui/class_preview.gd", "if thrown >= 1.0 and not reduced_motion else 0.0"],
-	["game.gd", "RewardView.reduced_motion = on"],
-	["game.gd", "MossBubble.reduced_motion = on"],
-	["game.gd", "ClassCard.reduced_motion = on"],
-	["game.gd", "PilotAntics.reduced_motion = on"],
-	["game.gd", "ClassPreview.reduced_motion = on"],
+	["ui/reward_view.gd", "var amp := (1.5 + 11.0 * p * p) * (0.0 if Comfort.reduced_motion else 1.0)"],
+	["ui/reward_view.gd", "sin(t * w * 0.8) * 0.06 * p * (0.0 if Comfort.reduced_motion else 1.0)"],
+	["ui/moss_bubble.gd", "if Comfort.reduced_motion:\n\t\tshake = Vector2.ZERO"],
+	["ui/moss_bubble.gd", "var wag := 0.0 if Comfort.reduced_motion else"],
+	["ui/class_card.gd", "rotation = 0.0 if Comfort.reduced_motion else sin(_shake * 70.0)"],
+	["presentation/pilot_antics.gd", "* 0.035 * growl * (0.0 if Comfort.reduced_motion else 1.0)"],
+	["ui/class_preview.gd", "(0.0 if Comfort.reduced_motion else 0.25 * sin(t * 40.0))"],
+	["ui/class_preview.gd", "if thrown >= 1.0 and not Comfort.reduced_motion else 0.0"],
 ]
-
-# Scripts whose static `reduced_motion` Game.set_reduced_motion must reach (check 12b).
-const MOTION_STATICS := ["ui/reward_view.gd", "ui/moss_bubble.gd", "ui/class_card.gd", "presentation/pilot_antics.gd", "ui/class_preview.gd"]
 
 # "file:symbol" -> [line that must still exist, file holding the guard it leans on ("" if none),
 # guard snippet that must still exist there, reason]. A changed line or a lost guard fails.
@@ -246,7 +237,7 @@ func _run() -> void:
 	_t.check("06b the gap net has a live net to sample", gap_mats[false].size() == 480, str(gap_mats[false].size()))
 	_t.check("06c off: the crackle strobes faster than 3 Hz (%d cycles)" % _cycles(gap_mats[false]), _cycles(gap_mats[false]) >= 9)
 	_t.check("06d on: the crackle beats at 3 Hz or slower (%d cycles)" % _cycles(gap_mats[true]), _cycles(gap_mats[true]) <= 3)
-	EnemyMotion.motion_scale = 0.0
+	Comfort.reduced_motion = true
 	var still := true
 	for i in 20:
 		gap._t = 999.0 + i * 0.013
@@ -254,7 +245,7 @@ func _run() -> void:
 		for net in gap.nets:
 			if net["live"] and is_instance_valid(net["mesh"]) and not (net["mesh"].global_position as Vector3).is_equal_approx(net["origin"]):
 				still = false
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	_t.check("06e Reduced motion: the net holds still through the wind-up", still)
 
 	# The Kest fuse: loaded and not ready, so it blinks; sampled over a second of clock.
@@ -279,40 +270,34 @@ func _run() -> void:
 	var reticle := AimReticle.new()
 	reticle._shake_left = 0.2
 	reticle._shake_clock = 0.01
-	AbilityBar.reduced_motion = false
-	AimReticle.reduced_motion = false
+	Comfort.reduced_motion = false
 	_t.check("09 off: a refusal and a dry fire shake", bar.shake_offset("line") != Vector2.ZERO and reticle.shake_offset() != Vector2.ZERO)
-	AbilityBar.reduced_motion = true
-	AimReticle.reduced_motion = true
+	Comfort.reduced_motion = true
 	_t.check("10 Reduced motion: neither shakes", bar.shake_offset("line") == Vector2.ZERO and reticle.shake_offset() == Vector2.ZERO)
-	AbilityBar.reduced_motion = false
-	AimReticle.reduced_motion = false
+	Comfort.reduced_motion = false
 	var full_alpha := bar.flash_color("line").a
 	FlashGuard.on = true
 	var dim_alpha := bar.flash_color("line").a
 	FlashGuard.on = false
 	_t.check("11 Reduce flashes: the refusal wash keeps INFO_SHARE of its alpha", full_alpha > 0.0 and is_equal_approx(dim_alpha, full_alpha * FlashGuard.INFO_SHARE),
 		"%s -> %s" % [full_alpha, dim_alpha])
-	_t.check("12 Game.set_reduced_motion reaches both", _set_reaches_ui())
-	_t.check("12b Game.set_reduced_motion reaches every new reduced_motion static", _set_reaches_statics())
+	_t.check("12 Game.set_reduced_motion stills both", _set_reaches_ui(bar, reticle))
+	_t.check("12b Game.set_reduced_motion sets the one owner, Comfort", _set_reaches_owner())
 	bar.free()
 	reticle.free()
 	quit(_t.verdict())
 
 
-func _set_reaches_ui() -> bool:
-	var saved: bool = AbilityBar.reduced_motion
+func _set_reaches_ui(bar, reticle) -> bool:
+	var saved: bool = Comfort.reduced_motion
 	_game.set_reduced_motion(true)
-	var ok: bool = AbilityBar.reduced_motion and AimReticle.reduced_motion
+	var still: bool = bar.shake_offset("line") == Vector2.ZERO and reticle.shake_offset() == Vector2.ZERO
 	_game.set_reduced_motion(saved)
-	return ok and not AbilityBar.reduced_motion and not AimReticle.reduced_motion
+	return still and not Comfort.reduced_motion and bar.shake_offset("line") != Vector2.ZERO and reticle.shake_offset() != Vector2.ZERO
 
 
-func _set_reaches_statics() -> bool:
-	var scripts := []
-	for file in MOTION_STATICS:
-		scripts.append(load(SRC + file))
+func _set_reaches_owner() -> bool:
 	_game.set_reduced_motion(true)
-	var on_all: bool = scripts.all(func(sc): return sc.reduced_motion)
+	var on: bool = Comfort.reduced_motion and Comfort.motion_scale() == 0.0
 	_game.set_reduced_motion(false)
-	return on_all and scripts.all(func(sc): return not sc.reduced_motion)
+	return on and not Comfort.reduced_motion and Comfort.motion_scale() == 1.0

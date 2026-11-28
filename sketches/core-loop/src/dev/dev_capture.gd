@@ -149,11 +149,6 @@ func qa_pack_detailed(id := "", close_menu := false) -> Dictionary:
 	return _answer(true, "qa_pack -> %s%s" % [data.path, ("  dead frame: " + dead) if dead != "" else ""], data)
 
 
-func contact_sheet(close_menu := false) -> String:
-	var result: Dictionary = await sheet_detailed("presets", "", close_menu)
-	return String(result.text)
-
-
 func sheet_detailed(axis := "presets", id := "", close_menu := false) -> Dictionary:
 	if _busy:
 		return _answer(false, "!a still or sheet is already running")

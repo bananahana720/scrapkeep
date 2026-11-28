@@ -64,6 +64,7 @@ const BOUNDS_SETPIECE := {
 	"strip_source_id": true,
 }
 
+const MIN_TELL_S := 0.6
 const MAX_CASCADE_DEPTH := 2
 const MAX_REACTIONS_PER_PASS := 12
 const MAX_ACTIVE_ZONES := 64
@@ -259,10 +260,6 @@ var _stats := {
 	"reentrant_queued": 0,
 	"max_depth_seen": 0,
 }
-
-
-static func reset() -> void:
-	pass
 
 
 static func is_canonical_tag(tag: StringName) -> bool:

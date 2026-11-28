@@ -49,7 +49,7 @@ func _physics_process(_delta: float) -> bool:
 	match _phase:
 		"boot":
 			if _wait == 3:
-				_s["title"] = _game.screens._body.text
+				_s["title"] = _game.screens.said_body()
 				_game.player.source = Intent.Scripted.new()
 				_game.flow.press_start()
 				_game.flow.choose_class(0)

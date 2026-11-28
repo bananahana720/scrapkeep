@@ -6,10 +6,9 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const Consumables := preload("res://src/build/consumables.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const BREAK_SPEED := 18.0
@@ -221,7 +220,7 @@ func crumble() -> void:
 func fire() -> bool:
 	state = PICKING
 	var lid_target := _lid.position + Vector3(0.0, 0.6, -0.4)
-	var animate := EnemyMotion.motion_scale > 0.0 and is_inside_tree()
+	var animate := not Comfort.reduced_motion and is_inside_tree()
 	if animate:
 		_lid.rotation.x = -0.06
 		var tw := _lid.create_tween()
@@ -411,7 +410,7 @@ func _on_world_fact(kind: String, at: Vector3) -> void:
 	_drop_consumable()
 	if flag != null:
 		return
-	flag = raise_flag(self, to_global(Vector3(-HALF_W + 1.2, HEIGHT + 1.0, HALF_D - 0.6)), UiTokens.reduced_motion)
+	flag = raise_flag(self, to_global(Vector3(-HALF_W + 1.2, HEIGHT + 1.0, HALF_D - 0.6)), Comfort.reduced_motion)
 
 
 func _on_interact_fired(fam: String, device_id: String, _at: Vector3) -> void:
@@ -423,9 +422,9 @@ func _drop_consumable() -> void:
 	if consumable_dropped != "" or system == null:
 		return
 	consumable_dropped = Consumables.roll_id(system.luck(id + ":consumable"))
-	if consumable_dropped != "" and ctx != null and ctx.spawner != null and ctx.spawner.has_method("drop_consumable"):
+	if consumable_dropped != "" and ctx != null and ctx.spawner != null and ctx.spawner.get("consumables") != null:
 		var drop_local := Vector3(0.0, ground_y(Vector3(0.0, 0.0, 0.5)), 0.5)
-		ctx.spawner.drop_consumable(consumable_dropped, to_global(drop_local))
+		ctx.spawner.consumables.drop_consumable(consumable_dropped, to_global(drop_local))
 
 
 func _exit_tree() -> void:

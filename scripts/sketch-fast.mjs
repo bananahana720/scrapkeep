@@ -6,7 +6,6 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -56,6 +55,8 @@ import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stam
 import { resolveGodotBinary, withScratchGodotEnv } from "./godot-home.mjs";
 import { discoverTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
 import { packDurationShards } from "./ci/shard-plan.mjs";
+import { git, gitOptional } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
 
 const binary = resolveGodotBinary();
 
@@ -583,13 +584,6 @@ export function selectStage1NodeTests({
   return combined.filter((file) => !covered.has(file));
 }
 
-function git(args, cwd = root) {
-  const result = spawnSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
-  if (result.status !== 0 || result.error)
-    throw new Error(`git ${args.join(" ")}: ${(result.stderr || "").trim()}`);
-  return result.stdout.trim();
-}
-
 function readTimings() {
   try {
     return JSON.parse(readFileSync(TIMINGS_FILE, "utf8")).tests ?? {};
@@ -621,6 +615,7 @@ async function spawnText(command, args, { cwd = root, timeoutMs = 120_000 } = {}
     status: res.exit,
     stdout: res.stdout,
     stderr: res.error ? res.stderr + String(res.error.message ?? res.error) : res.stderr,
+    ms: res.ms,
   };
 }
 
@@ -701,6 +696,43 @@ export function failedRunLogName(test, where, attempt) {
     .replace(/^tests\//, "")
     .replace(/\.gd$/, "")
     .replaceAll("/", "__")}.${where}-${attempt}.log`;
+}
+
+const TESTS_STAGE_PARTS = new Set(["parallel lanes", "solo tests"]);
+
+export function longestStages(stages, count = 3) {
+  if (!Array.isArray(stages) || stages.length === 0)
+    throw new TypeError("longestStages needs the receipt's stage rows; got none");
+  for (const row of stages)
+    if (typeof row?.name !== "string" || !Number.isFinite(row.stage_ms))
+      throw new TypeError(
+        `longestStages: a stage row has no name or no stage_ms: ${JSON.stringify(row)}`,
+      );
+  const split = stages.some((row) => TESTS_STAGE_PARTS.has(row.name));
+  return `longest stages: ${stages
+    .filter((row) => !(split && row.name === "tests"))
+    .sort((a, b) => b.stage_ms - a.stage_ms)
+    .slice(0, count)
+    .map((row) => `${row.name} ${(row.stage_ms / 1000).toFixed(1)}s`)
+    .join(", ")}`;
+}
+
+const SHA = /^[0-9a-f]{40}$/;
+
+export function nothingCompared({ head, comparedTo, base, pre = [], namedMode, baseCheck }) {
+  if (!SHA.test(head ?? "") || !SHA.test(comparedTo ?? ""))
+    throw new TypeError(
+      `nothingCompared needs the full SHA of the head and of the commit it compares against; got "${head}" and "${comparedTo}"`,
+    );
+  if (typeof base !== "string" || base === "")
+    throw new TypeError("nothingCompared needs the --base ref");
+  if (typeof namedMode !== "boolean" || typeof baseCheck !== "boolean")
+    throw new TypeError("nothingCompared needs namedMode and baseCheck as true or false");
+  if (namedMode && !baseCheck)
+    return `Nothing compared: --test without --base-check runs the named tests on the head ${head.slice(0, 8)} alone and checks out no base, so a test red on the head gets no base verdict.`;
+  if (comparedTo !== head) return null;
+  const plus = pre.length ? ` plus ${pre.map((pr) => "#" + pr).join(", ")}` : "";
+  return `Nothing compared: ${base}${plus} already contains the head ${head.slice(0, 8)}, so the commit it compares against is the head itself: no file counts as changed and a test red on the head is red on that base too.`;
 }
 
 export function receiptBaseName(label, head, startedAt) {
@@ -882,7 +914,7 @@ export async function runBootTask({ inLane, shouldStop, run, onStop, stage }) {
     if (shouldStop()) return { ok: true, killed: true };
     const boot = await run();
     if (boot.killed) return { ok: true, killed: true };
-    const ok = stage("boot", boot.ok, { note: boot.reason ?? "300 frames" });
+    const ok = stage("boot", boot.ok, { note: boot.reason ?? "300 frames" }, boot.ms);
     if (!ok) onStop();
     return { ok, killed: false };
   });
@@ -988,10 +1020,7 @@ async function main() {
     namedMode && !options.baseCheck ? headSha : git(["merge-base", options.base, "HEAD"]);
   for (const pr of options.pre) {
     git(["fetch", "-q", "origin", `+refs/pull/${pr}/head:refs/remotes/pr/${pr}`]);
-    if (
-      spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", `refs/remotes/pr/${pr}`, "HEAD"])
-        .status !== 0
-    ) {
+    if (gitOptional(["merge-base", "--is-ancestor", `refs/remotes/pr/${pr}`, "HEAD"]) === null) {
       console.error(
         `--pre ${pr}: the head does not contain PR #${pr} at its current head. Merge it first: git merge --no-edit refs/remotes/pr/${pr}`,
       );
@@ -1011,15 +1040,36 @@ async function main() {
   const receiptDirectory = path.join(root, "artifacts", "local", "receipts");
   const receiptName = receiptBaseName(options.receipt, receipt.head, startedAt);
   const log = (line) => console.log(line);
-  const stage = (name, ok, detail = {}) => {
-    receipt.stages.push({ name, ok, ms: Date.now() - started, ...detail });
+  let mark = started;
+  const timing = (name, ok, detail, stageMs) => {
+    receipt.stages.push({ name, ok, ms: Date.now() - started, stage_ms: stageMs, ...detail });
+    mark = Date.now();
+  };
+  const stage = (name, ok, detail = {}, stageMs = Date.now() - mark) => {
+    timing(name, ok, detail, stageMs);
     log(`${ok ? "PASS" : "FAIL"} ${name}${detail.note ? ` (${detail.note})` : ""}`);
     if (!ok) receipt.ok = false;
     return ok;
   };
   let baseTree = null;
+  const removeBaseTree = () => {
+    const target = baseTree;
+    baseTree = null;
+    if (target) gitOptional(["worktree", "remove", "--force", target]);
+  };
+  process.once("exit", removeBaseTree);
+  for (const signal of ["SIGINT", "SIGTERM"]) {
+    const onSignal = () => {
+      stopRunning();
+      removeBaseTree();
+      process.removeListener(signal, onSignal);
+      process.kill(process.pid, signal);
+    };
+    process.on(signal, onSignal);
+  }
   const baseDir = () => {
     if (baseTree) return baseTree;
+    const checkoutStarted = Date.now();
     baseTree = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-base-"));
     rmSync(baseTree, { recursive: true, force: true });
     git(["worktree", "add", "--detach", baseTree, mergeBase]);
@@ -1035,16 +1085,32 @@ async function main() {
           "--no-edit",
           `refs/remotes/pr/${pr}`,
         ],
-        baseTree,
+        { cwd: baseTree },
       );
+    timing(
+      "base checkout",
+      true,
+      { note: `git worktree add of ${mergeBase.slice(0, 8)}` },
+      Date.now() - checkoutStarted,
+    );
     return baseTree;
   };
-  const diffBase = options.pre.length > 0 ? git(["rev-parse", "HEAD"], baseDir()) : mergeBase;
+  const diffBase =
+    options.pre.length > 0 ? git(["rev-parse", "HEAD"], { cwd: baseDir() }) : mergeBase;
   const changedPaths = namedMode
     ? []
     : git(["diff", "--name-only", diffBase, "HEAD"]).split("\n").filter(Boolean);
   const changed = classify(changedPaths);
   receipt.diff_base = diffBase;
+  receipt.nothing_compared = nothingCompared({
+    head: headSha,
+    comparedTo: diffBase,
+    base: options.base,
+    pre: options.pre,
+    namedMode,
+    baseCheck: options.baseCheck,
+  });
+  if (receipt.nothing_compared) log(`sketch:fast: ${receipt.nothing_compared}`);
   receipt.pre = options.pre;
   receipt.changed = changedPaths.length;
   if (options.ciGodotOnly) receipt.ci_godot_only = true;
@@ -1052,15 +1118,15 @@ async function main() {
   if (namedMode) receipt.named_tests = options.tests;
   const finish = (code) => {
     receipt.wall_ms = Date.now() - started;
-    if (baseTree) spawnSync("git", ["-C", root, "worktree", "remove", "--force", baseTree]);
     const file = writeJsonReceipt(
       runnerReceiptPath(root, options.receipt, receipt.head, startedAt),
       receipt,
     );
     log(`receipt ${file}`);
     log(
-      `sketch:fast ${receipt.ok ? "pass" : "fail"} in ${Math.round(receipt.wall_ms / 1000)}s on ${receipt.head.slice(0, 8)} (merge base ${mergeBase.slice(0, 8)}). Fast lane only: the staging full gate and red team still judge the wave.`,
+      `sketch:fast ${receipt.ok ? "pass" : "fail"} in ${Math.round(receipt.wall_ms / 1000)}s on ${receipt.head.slice(0, 8)} (merge base ${mergeBase.slice(0, 8)}). Fast lane only: the staging full gate and red team still judge the wave.${receipt.nothing_compared ? ` ${receipt.nothing_compared}` : ""}`,
     );
+    log(longestStages(receipt.stages));
     process.exit(code ?? (receipt.ok ? 0 : 1));
   };
 
@@ -1078,9 +1144,7 @@ async function main() {
         baseTop,
       ),
       ...bridgeFindings(
-        spawnSync("git", ["-C", root, "show", "HEAD:sketches/core-loop/project.godot"], {
-          encoding: "utf8",
-        }).stdout ?? "",
+        gitOptional(["show", "HEAD:sketches/core-loop/project.godot"], { trim: false }) ?? "",
       ),
     ];
     if (
@@ -1093,13 +1157,7 @@ async function main() {
       !options.dryRun
     )
       finish();
-    const show = (ref, file) => {
-      const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], {
-        encoding: "utf8",
-        maxBuffer: 64 * 1024 * 1024,
-      });
-      return r.status === 0 ? r.stdout : null;
-    };
+    const show = (ref, file) => gitOptional(["show", `${ref}:${file}`], { trim: false });
     receipt.checks_removed = checksRemoved(
       git(["diff", "--name-status", "-M", diffBase, "HEAD"]).split("\n"),
       show,
@@ -1131,9 +1189,7 @@ async function main() {
       .map((line) => line.split(" "))
       .filter(
         ([, , second]) =>
-          second &&
-          spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", second, mergeBase])
-            .status !== 0,
+          second && gitOptional(["merge-base", "--is-ancestor", second, mergeBase]) === null,
       )
       .map(([merge, , carried]) => ({
         merge,
@@ -1163,22 +1219,18 @@ async function main() {
     };
     if (merges.length > 0) {
       const heads = { prHeads: new Map(), branchHeads: new Map() };
-      const remote = spawnSync(
-        "git",
-        ["-C", root, "ls-remote", "origin", "refs/pull/*/head", "refs/heads/*"],
-        { encoding: "utf8", timeout: 60_000 },
-      );
-      for (const line of (remote.stdout || "").split("\n")) {
+      const remote = gitOptional(["ls-remote", "origin", "refs/pull/*/head", "refs/heads/*"], {
+        timeout: 60_000,
+      });
+      for (const line of (remote ?? "").split("\n")) {
         const pull = /^([0-9a-f]{40})\trefs\/pull\/(\d+)\/head$/.exec(line);
         if (pull) heads.prHeads.set(pull[2], pull[1]);
         const branch = /^([0-9a-f]{40})\trefs\/heads\/(.+)$/.exec(line);
         if (branch) heads.branchHeads.set(branch[2], branch[1]);
       }
       const isAncestor = (sha) => {
-        spawnSync("git", ["-C", root, "fetch", "-q", "origin", sha]);
-        return (
-          spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", sha, "HEAD"]).status === 0
-        );
+        gitOptional(["fetch", "-q", "origin", sha]);
+        return gitOptional(["merge-base", "--is-ancestor", sha, "HEAD"]) !== null;
       };
       const carried = carriedPrs(merges, heads, isAncestor);
       receipt.carried = carried;
@@ -1322,6 +1374,7 @@ async function main() {
       changed.godot.length > 0 && (!options.ciGodotOnly || isPrimaryShard)
         ? path.join(baseDir(), SKETCH)
         : null;
+    const checksStarted = Date.now();
     [lint, placeholderPair, docs, node] = await Promise.all([
       options.ciGodotOnly
         ? Promise.resolve(null)
@@ -1336,7 +1389,7 @@ async function main() {
         ? Promise.all([
             placeholderRowsAsync(baseSketchForPlaceholders),
             placeholderRowsAsync(sketchDir),
-          ])
+          ]).then((rows) => ({ rows, ms: Date.now() - checksStarted }))
         : Promise.resolve(null),
       !options.ciGodotOnly && changed.docs.length > 0
         ? spawnText(process.execPath, [path.join(root, "scripts", "check-docs.mjs")])
@@ -1348,31 +1401,50 @@ async function main() {
   }
   if (
     lint &&
-    !stage("sketch-lint", lint.status === 0, { note: (lint.stdout || "").trim().split("\n").pop() })
+    !stage(
+      "sketch-lint",
+      lint.status === 0,
+      { note: (lint.stdout || "").trim().split("\n").pop() },
+      lint.ms,
+    )
   ) {
     log(lint.stdout + lint.stderr);
     finish();
   }
   if (placeholderPair) {
-    const grew = placeholderIncrease(placeholderPair[0], placeholderPair[1]);
+    const grew = placeholderIncrease(placeholderPair.rows[0], placeholderPair.rows[1]);
     if (
-      !stage("placeholders no higher than base", grew.length === 0, {
-        note: grew.length ? grew.slice(0, 5).join("; ") : "no group grew",
-        grew,
-      })
+      !stage(
+        "placeholders no higher than base",
+        grew.length === 0,
+        { note: grew.length ? grew.slice(0, 5).join("; ") : "no group grew", grew },
+        placeholderPair.ms,
+      )
     )
       finish();
   }
   if (docs) {
     if (
-      !stage("check:docs", docs.status === 0, { note: (docs.stdout || "").trim().split("\n")[0] })
+      !stage(
+        "check:docs",
+        docs.status === 0,
+        { note: (docs.stdout || "").trim().split("\n")[0] },
+        docs.ms,
+      )
     ) {
       log(docs.stdout + docs.stderr);
       finish();
     }
   }
   if (node) {
-    if (!stage("node tests", node.status === 0, { note: nodeTests.join(" "), tests: nodeTests })) {
+    if (
+      !stage(
+        "node tests",
+        node.status === 0,
+        { note: nodeTests.join(" "), tests: nodeTests },
+        node.ms,
+      )
+    ) {
       log(
         (node.stdout || "")
           .split("\n")
@@ -1406,7 +1478,8 @@ async function main() {
     stage("godot", false, { note: "no Godot binary, so no test ran" });
     finish(2);
   }
-  await acquireMachine();
+  const slotWaitMs = await acquireMachine();
+  timing("machine slot", true, { note: "wait for a free machine slot" }, slotWaitMs);
   const base = ["--headless", "--path", sketchDir];
   const stampOk =
     process.env.SMOKE_FORCE_IMPORT !== "1" &&
@@ -1546,18 +1619,29 @@ async function main() {
     const baseSketch = path.join(baseDir(), SKETCH);
     if (!existsSync(path.join(baseSketch, test))) return null;
     if (cancel.cancelled || shouldStop()) return null;
-    baseImport ??= inLane(async () => {
-      if (shouldStop()) return false;
-      seedBaseGodot(sketchDir, baseSketch);
-      const args = ["--headless", "--path", baseSketch];
-      for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
+    if (!baseImport) {
+      const importStarted = Date.now();
+      baseImport = inLane(async () => {
         if (shouldStop()) return false;
-        if ((await importAsync(args)) === 0) return true;
-        if (attempt < IMPORT_TRIES)
-          log(`${SKETCH} (base) import try ${attempt} of ${IMPORT_TRIES} failed; trying again`);
-      }
-      return false;
-    });
+        seedBaseGodot(sketchDir, baseSketch);
+        const args = ["--headless", "--path", baseSketch];
+        for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
+          if (shouldStop()) return false;
+          if ((await importAsync(args)) === 0) return true;
+          if (attempt < IMPORT_TRIES)
+            log(`${SKETCH} (base) import try ${attempt} of ${IMPORT_TRIES} failed; trying again`);
+        }
+        return false;
+      }).then((imported) => {
+        timing(
+          "base import",
+          imported,
+          { note: "a free lane, then the merge base's Godot import" },
+          Date.now() - importStarted,
+        );
+        return imported;
+      });
+    }
     if (!(await baseImport)) {
       log(`  ${test} on the merge base: no verdict (the base import failed ${IMPORT_TRIES} times)`);
       return null;
@@ -1752,10 +1836,18 @@ async function main() {
         stage,
       })
     : Promise.resolve({ ok: true, killed: false });
+  const testsStarted = Date.now();
   await Promise.all([
     bootPromise,
     ...Array.from({ length: Math.min(width, queue.length) }, worker),
   ]);
+  const lanesEnded = Date.now();
+  timing(
+    "parallel lanes",
+    !prRed && !bootFailed,
+    { note: `${width} lanes: the boot and the parallel tests with their reruns and base runs` },
+    lanesEnded - testsStarted,
+  );
   if (bootFailed) finish();
   for (const row of lanePlan.solo) {
     if (shouldStop()) break;
@@ -1765,20 +1857,31 @@ async function main() {
       ),
     );
   }
+  timing(
+    "solo tests",
+    !prRed,
+    { note: `${lanePlan.solo.length} tests one at a time, each with its reruns and base run` },
+    Date.now() - lanesEnded,
+  );
   receipt.results = results;
   receipt.flaky = flaky;
   receipt.ledger_flaky = ledgerFlaky;
   receipt.base_red = baseRed;
   if (prRed) {
     log(prRed.tail);
-    stage("tests", false, {
-      note: `${prRed.test} is the PR's red: ${prRed.reason}`,
-      pr_red: prRed.test,
-    });
+    stage(
+      "tests",
+      false,
+      { note: `${prRed.test} is the PR's red: ${prRed.reason}`, pr_red: prRed.test },
+      Date.now() - testsStarted,
+    );
   } else {
-    stage("tests", true, {
-      note: `${results.length} run, ${flaky.length} flaky, ${baseRed.length} base-red`,
-    });
+    stage(
+      "tests",
+      true,
+      { note: `${results.length} run, ${flaky.length} flaky, ${baseRed.length} base-red` },
+      Date.now() - testsStarted,
+    );
   }
   if (flaky.length)
     log(`flaky (red then green on rerun; make deterministic, never skip): ${flaky.join(", ")}`);
@@ -1793,7 +1896,7 @@ async function main() {
   finish();
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   if (process.argv[2] === "--fold-timings") {
     const files = process.argv.slice(3);
     if (files.length === 0)

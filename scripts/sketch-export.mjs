@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
 import { isMain } from "./lib/cli.mjs";
+import { git, gitOptional } from "./lib/git.mjs";
 import {
   GODOT_VERSION,
   TOOLCHAIN,
@@ -572,6 +573,13 @@ export async function runLinuxExport({
     );
   }
   const outputOf = (result) => (result.stdout ?? "") + (result.stderr ?? "");
+  const gitOrFail = (args, problem) => {
+    try {
+      return git(args, { spawn: runCmd });
+    } catch (error) {
+      failFn(problem + "\n" + (error.stderr ?? error.message));
+    }
+  };
   const checkHeadlessStep = (label, result, extra = []) => {
     const text = outputOf(result);
     const problems = [...extra];
@@ -615,15 +623,11 @@ export async function runLinuxExport({
       manifests[track] = JSON.parse(
         await readFileFn(path.join(stemDir, track, "manifest.json"), "utf8"),
       );
-    const common = runCmd("git", [
-      "-C",
-      repoRoot,
-      "rev-parse",
-      "--path-format=absolute",
-      "--git-common-dir",
-    ]);
-    if (common.status !== 0) failFn("git common dir not found\n" + common.stderr);
-    const fallback = defaultStemsFrom(common.stdout.trim());
+    const common = gitOrFail(
+      ["-C", repoRoot, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+      "git common dir not found",
+    );
+    const fallback = defaultStemsFrom(common);
     stemsFrom = path.resolve(stemsFromArg ?? fallback);
     for (const track of tracks) {
       const missing = missingStems(manifests[track], path.join(stemsFrom, track), exists);
@@ -816,8 +820,7 @@ export async function runLinuxExport({
 
   if (headless) {
     const proofLine = runProof ? await winProof(outDir, proofOptions) : null;
-    const head = runCmd("git", ["-C", repoRoot, "rev-parse", "HEAD"]);
-    const sha = outputOf(head).trim();
+    const sha = gitOptional(["-C", repoRoot, "rev-parse", "HEAD"], { spawn: runCmd }) ?? "";
     await writeFileFn(
       path.join(outDir, "BUILD.txt"),
       buildStamp({
@@ -832,13 +835,13 @@ export async function runLinuxExport({
     return { exe, outDir, sha, proofLine };
   }
 
-  const head = runCmd("git", ["-C", repoRoot, "rev-parse", "HEAD"]);
-  if (head.status !== 0) failFn("git HEAD not found\n" + head.stderr);
-  const sha = head.stdout.trim();
+  const sha = gitOrFail(["-C", repoRoot, "rev-parse", "HEAD"], "git HEAD not found");
   const sha7 = sha.slice(0, 7);
-  const status = runCmd("git", ["-C", repoRoot, "status", "--porcelain", "--untracked-files=no"]);
-  if (status.status !== 0) failFn("git status failed\n" + status.stderr);
-  const dirty = status.stdout.trim() !== "";
+  const dirty =
+    gitOrFail(
+      ["-C", repoRoot, "status", "--porcelain", "--untracked-files=no"],
+      "git status failed",
+    ) !== "";
   const version = sha7 + (dirty ? "-dirty" : "");
   const proofLine = runProof ? await winProof(outDir, proofOptions) : null;
   await writeFileFn(

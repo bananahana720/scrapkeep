@@ -329,7 +329,6 @@ func play_fusion(key: String, at: Vector3, radius := 4.5) -> Dictionary:
 	var scale_m := clampf(radius * 0.72, 2.4, 5.2) * (1.0 + MIGHT_GLYPH * might)
 	var governed := Density.live().apply("P4", 1.0, 1.0, 1.0)
 	if kill_mark != null:
-		kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
 		kill_mark.fusion_burst(at + Vector3.UP * 0.9, scale_m, primary, accent, int(sig["style"]), governed)
 	glyph("fusion_glyph", at + Vector3.UP * 0.7, 0.8, maxf(2.4, radius * 0.7), life, Vector3.ZERO, String(shapes[0]), primary, "P4")
 	glyph("fusion_glyph", at + Vector3.UP * 0.22, 0.9, maxf(2.8, radius), life * 0.92, Vector3.UP, String(shapes[1]), accent, "P4")
@@ -351,7 +350,6 @@ func impact_shockwave(at: Vector3, speed: float, normal := Vector3.UP, tint := C
 	var radius := lerpf(2.8, 5.4, intensity) * (1.0 + MIGHT_GLYPH * might)
 	var governed := Density.live().apply(Density.class_of_kind("slammed"), 1.0, 1.0, 1.0)
 	if kill_mark != null:
-		kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
 		kill_mark.shockwave(at + axis * 0.25, radius, primary, accent, governed)
 	glyph("shockwave_glyph", at + axis * 0.14, 0.9, radius * 1.15, lerpf(0.24, 0.36, intensity), axis, "ring", primary)
 	glyph("shockwave_glyph", at + axis * 0.65, 0.5, radius * 0.65, lerpf(0.18, 0.28, intensity), Vector3.ZERO, "star", accent)
@@ -971,7 +969,6 @@ func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
 	var tint := (pilot if pilot.a > 0.0 else kill_tint()).lerp(HEAT_GLYPH, heat)
 	var cap := float(maxi(1, int(row.get("chain_cap", 7))))
 	var punch := clampf(float(_chain_rung) / cap, 0.0, 1.0)
-	kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
 	kill_mark.fire(at + Vector3.UP * 0.8, KILL_MARK_M * scale, tint,
 		Density.live().apply(Density.class_of_kind("enemy_killed"), 1.0, 1.0, 1.0), punch)
 	var fx := FxLibrary.effects("enemy_killed")
@@ -987,7 +984,6 @@ func shift_over_kill(at: Vector3, scale := 1.0, pilot := Color.TRANSPARENT) -> v
 	if root == null or not root.is_inside_tree():
 		return
 	var tint := (pilot if pilot.a > 0.0 else kill_tint()).lerp(HEAT_GLYPH, heat)
-	kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
 	kill_mark.shift_over(at + Vector3.UP * 0.85, KILL_MARK_M * scale, tint,
 		Density.live().apply(Density.class_of_kind("enemy_killed"), 1.0, 1.0, 1.0))
 	var fx := FxLibrary.effects("enemy_killed")

@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -7,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { defaultSources, parseHashes, sync } from "./stems-sync.mjs";
+import { git } from "./lib/git.mjs";
 
 const sha = (text) => createHash("sha256").update(text).digest("hex");
 
@@ -106,9 +106,7 @@ test("parseHashes reads sha256sum lines and skips the rest", () => {
 
 test("defaultSources checks the main checkout first, then w46/music_ace-v2 before older scratch copies and repage/music_ace last", () => {
   const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const common = execFileSync("git", ["-C", repo, "rev-parse", "--git-common-dir"], {
-    encoding: "utf8",
-  }).trim();
+  const common = git(["rev-parse", "--git-common-dir"], { cwd: repo });
   const mainMusic = path.resolve(
     repo,
     common,

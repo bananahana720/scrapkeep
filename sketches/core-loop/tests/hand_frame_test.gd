@@ -5,6 +5,7 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # The four hands (LEGIBILITY.md section 14.3, ruling ek), drawn by ScrapFrame from UiTokens.HANDS:
 #   - every hand builds a plate and a tag and draws them;
@@ -35,7 +36,7 @@ var _t := T.new("hand_frame_test")
 
 
 func _initialize() -> void:
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	_every_hand_draws()
 	_old_works_has_no_fasteners()
 	_colour_law()
@@ -43,7 +44,7 @@ func _initialize() -> void:
 	_keeper_compat()
 	_reduced_motion()
 	_fonts()
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	quit(_t.verdict())
 
 
@@ -233,13 +234,13 @@ func _reduced_motion() -> void:
 	level.tilt = 0.0
 	_t.check("a Keeper hand plate leans a little", leaning.tilt != 0.0 and absf(leaning.tilt) <= UiTokens.HANDS[UiTokens.Hand.KEEPER].tilt, "%.4f" % leaning.tilt)
 	_t.check("the lean moves the drawn frame", _points(leaning) != _points(level))
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	_t.eq("with less motion the Keeper plate draws level", _points(leaning), _points(level))
 	for hand in HANDS:
 		var row := UiTokens.hand(hand)
 		_t.check("with less motion %s neither leans nor overshoots" % NAMES[hand], row.tilt == 0.0 and row.trans == Tween.TRANS_LINEAR)
 	_t.check("the token rows themselves are untouched", UiTokens.HANDS[UiTokens.Hand.KEEPER].tilt > 0.0)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	_t.eq("Keeper overshoots again with motion on", UiTokens.hand(UiTokens.Hand.KEEPER).trans, Tween.TRANS_BACK)
 	for hand in [UiTokens.Hand.FLEET, UiTokens.Hand.OLD_WORKS, UiTokens.Hand.ROGUE]:
 		_t.eq("%s never leans" % NAMES[hand], UiTokens.HANDS[hand].tilt, 0.0)

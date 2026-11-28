@@ -12,6 +12,7 @@ const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const SCENE_KINDS := ["chaser", "mag_trapper", "winch_drone"]
 # Coordinator call 2026-10-18: the death range below (3 to 8 parts, 0.4 to 0.7 s) is for
 # full enemy bodies. These kinds are sub-parts of another enemy, so their death is checked
@@ -242,7 +243,7 @@ func _death(kind: String, index: int, label: String) -> void:
 
 
 func _reduced() -> void:
-	EnemyMotion.motion_scale = 0.0
+	Comfort.reduced_motion = true
 	var enemy = _spawn("winch_drone", 5)
 	var still := true
 	for i in 120:
@@ -251,7 +252,7 @@ func _reduced() -> void:
 	_t.check("GP6-4 reduced motion", still, "120 frames with zero idle offset")
 	enemy.free()
 	await _death("winch_drone", 6, "GP6-4")
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 
 
 func _run() -> void:

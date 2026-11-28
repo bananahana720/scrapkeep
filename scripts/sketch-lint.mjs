@@ -845,13 +845,17 @@ const gdFuncDecl = /^(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(/;
 const resetFuncName = /^_?reset/i;
 
 export function parseBatchDriverRefs(text) {
-  return new Set([...text.matchAll(/res:\/\/(src\/[^"']+\.gd)/g)].map((match) => match[1]));
+  return new Set(
+    [...text.matchAll(/res:\/\/((?:src|tools|tests\/support)\/[^"']+\.gd)/g)].map(
+      (match) => match[1],
+    ),
+  );
 }
 
 export function parseBatchDriverVars(text) {
   const aliases = new Map();
   for (const match of text.matchAll(
-    /\bconst\s+([A-Za-z_]\w*)\s*:?=\s*preload\(\s*"res:\/\/(src\/[^"']+\.gd)"\s*\)/g,
+    /\bconst\s+([A-Za-z_]\w*)\s*:?=\s*preload\(\s*"res:\/\/((?:src|tools|tests\/support)\/[^"']+\.gd)"\s*\)/g,
   )) {
     aliases.set(match[1], match[2]);
   }
@@ -862,6 +866,72 @@ export function parseBatchDriverVars(text) {
     }
   }
   return direct;
+}
+
+const testSupportLoad =
+  /(?:preload|load)\(\s*["']res:\/\/((?:tools|tests\/support)\/[^"']+\.gd)["']\s*\)|^extends\s+["']res:\/\/((?:tools|tests\/support)\/[^"']+\.gd)["']/g;
+
+export function preloadedTestSupportFiles(testFiles, toolFiles, relative) {
+  const prefix = `${relative}/`;
+  const relOf = (file) =>
+    file.path.startsWith(prefix) ? file.path.slice(prefix.length) : file.path;
+  const byRel = new Map();
+  for (const file of [...testFiles, ...toolFiles]) {
+    if (!file.path.endsWith(".gd")) continue;
+    const rel = relOf(file);
+    if (rel.startsWith("tools/") || rel.startsWith("tests/support/")) {
+      byRel.set(rel, { ...file, rel });
+    }
+  }
+  const seen = new Set();
+  const queue = [];
+  const collect = (text) => {
+    if (!text.includes("res://tools/") && !text.includes("res://tests/support/")) return;
+    for (const line of codeLines(text)) {
+      for (const match of line.code.matchAll(testSupportLoad)) {
+        const rel = match[1] ?? match[2];
+        if (byRel.has(rel) && !seen.has(rel)) {
+          seen.add(rel);
+          queue.push(rel);
+        }
+      }
+    }
+  };
+  for (const file of testFiles) {
+    if (!relOf(file).startsWith("tests/support/")) collect(file.text);
+  }
+  while (queue.length > 0) {
+    collect(byRel.get(queue.shift()).text);
+  }
+  return [...seen].sort().map((rel) => byRel.get(rel));
+}
+
+export function lintPreloadedTestSupport(
+  testFiles,
+  toolFiles,
+  relative,
+  driverRefs,
+  driverVars = new Set(),
+) {
+  const reached = preloadedTestSupportFiles(testFiles, toolFiles, relative);
+  const findings = [];
+  for (const folder of ["tools", "tests/support"]) {
+    const prefix = `${folder}/`;
+    if (!reached.some((file) => file.rel.startsWith(prefix))) {
+      findings.push(
+        finding(
+          "L14",
+          `${relative}/${folder}`,
+          1,
+          `no preloaded .gd script reached under ${relative}/${folder}; check the L14 test-support walker`,
+        ),
+      );
+    }
+  }
+  for (const file of reached) {
+    findings.push(...lintL14(file.path, file.rel, file.text, driverRefs, null, driverVars));
+  }
+  return findings;
 }
 
 function resetMethodText(text) {
@@ -1136,9 +1206,20 @@ export function lintL17(file, text) {
   return findings;
 }
 
-export function lintL18(paths) {
+export function lintL18(paths, folders = UID_FOLDERS) {
   const tracked = new Set(paths);
   const findings = [];
+  if (!paths.some((file) => file.endsWith(".gd"))) {
+    const list = folders.join(", ");
+    return [
+      finding(
+        "L18",
+        folders[0] ?? "sketches",
+        1,
+        `git ls-files returned no tracked .gd scripts under ${list}; check the repository root and git environment`,
+      ),
+    ];
+  }
   for (const file of paths) {
     if (file.endsWith(".gd") && !tracked.has(`${file}.uid`))
       findings.push(
@@ -1284,6 +1365,14 @@ export function lintL19(files, relative) {
   );
 }
 
+export function lintTrackedUids(relative, repoRoot = root) {
+  const folders = UID_FOLDERS.map((folder) => `${relative}/${folder}`);
+  const paths = git(["ls-files", "--", ...folders], { cwd: repoRoot })
+    .split("\n")
+    .filter(Boolean);
+  return lintL18(paths, folders);
+}
+
 function walk(directory) {
   return walkSync(directory, { includeDirs: true });
 }
@@ -1365,6 +1454,11 @@ export function lintSketch(sketch) {
       findings.push(...lintL13(file.path, file.path.slice(relative.length + 1), file.text));
     }
   }
+  if (sketch === "core-loop") {
+    findings.push(
+      ...lintPreloadedTestSupport(testFiles, toolFiles, relative, driverRefs, driverVars),
+    );
+  }
   const flagFiles = [
     ...testFiles,
     ...toolFiles,
@@ -1375,14 +1469,7 @@ export function lintSketch(sketch) {
   findings.push(...lintL3(flagFiles, tuning));
   const tests = walk(path.join(directory, "tests"));
   findings.push(...lintL4(tests, `${relative}/tests`));
-  findings.push(
-    ...lintL18(
-      git(["ls-files", "--", ...UID_FOLDERS], { cwd: directory })
-        .split("\n")
-        .filter(Boolean)
-        .map((file) => `${relative}/${file}`),
-    ),
-  );
+  findings.push(...lintTrackedUids(relative));
   const quarantine = path.join(directory, "tests", "QUARANTINE.tsv");
   if (existsSync(quarantine)) {
     const names = new Set(

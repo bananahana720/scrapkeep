@@ -10,9 +10,9 @@ const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const TitleIntros := preload("res://src/presentation/title_intros.gd")
 const TitleIntroPlayer := preload("res://src/presentation/title_intro_player.gd")
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const PILOTS := [
 	{"id": "pylon_engineer", "name": "SableShell", "color": ClassDef.SABLE_COLOR, "at": Vector3(-3.5, 1.04, 0.0)},
@@ -214,7 +214,7 @@ func play_intro(id := "") -> bool:
 			var def = ClassDef.by_id(pilot)
 			return def != null and root != null and root.has_method("pilot_unlocked") and root.pilot_unlocked(def)
 		id = TitleIntros.pick(TitleIntros.facts_from(profile, flyable))
-	intro.reduced_motion = HighdraftFx.preferred
+	intro.reduced_motion = Comfort.reduced_motion
 	_seat_deck()
 	look_weight = 0.0
 	_look_idle = LOOK_HOLD
@@ -322,7 +322,7 @@ func _hang_sun(row: Dictionary) -> void:
 
 
 func thump() -> float:
-	if HighdraftFx.preferred or not active or _flow_state != "title" or intro_playing():
+	if Comfort.reduced_motion or not active or _flow_state != "title" or intro_playing():
 		return 0.0
 	var audio = get_parent().get("audio") if get_parent() != null else null
 	if audio == null or not audio.has_method("bar_since_s"):
@@ -332,7 +332,7 @@ func thump() -> float:
 
 
 func launch_push(seconds: float) -> void:
-	if not active or HighdraftFx.preferred:
+	if not active or Comfort.reduced_motion:
 		return
 	if _push_tween != null:
 		_push_tween.kill()
@@ -351,7 +351,7 @@ func _set_push(value: float) -> void:
 
 
 func _step_antics() -> void:
-	if HighdraftFx.preferred:
+	if Comfort.reduced_motion:
 		_seat_deck()
 		return
 	var slot := int(_clock / ANTIC_PERIOD)
@@ -621,15 +621,6 @@ func _place(model: Node3D, at: Vector3, yaw: float, size: Vector3) -> void:
 	model.position = at
 	model.rotation.y = yaw
 	model.scale = size
-
-
-func use_poster(id: String) -> void:
-	if not POSTERS.has(id):
-		return
-	poster = id
-	cast_hero(hero_id)
-	_sync_dressing()
-	_frame()
 
 
 func _build_skyline() -> void:

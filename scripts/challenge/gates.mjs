@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
   existsSync,
@@ -28,6 +27,7 @@ import {
 } from "./gates-lib.mjs";
 import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
 import { pool, runProcess, stateEnv } from "./proc.mjs";
+import { gitOptional } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = resolveGodotBinary({ requireExplicit: true });
@@ -140,9 +140,7 @@ async function runGates() {
   const label = opts.label ?? "gates-" + stamp;
   const outDir = path.join(outRoot, label);
   const runsFile = path.join(outDir, "runs.ndjson");
-  const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], {
-    encoding: "utf8",
-  }).stdout.trim();
+  const commit = gitOptional(["rev-parse", "HEAD"], { cwd: root }) ?? "";
   const plan = hashString(
     JSON.stringify([arms, opts.stages, opts.seeds, opts.runs, opts.tune, opts.stageLimit]),
   );

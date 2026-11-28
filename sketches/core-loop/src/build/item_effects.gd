@@ -207,10 +207,6 @@ func grapple_mutation(mut_id: String) -> Dictionary:
 	return (grapple_mutation_ids.get(mid, {}) as Dictionary).duplicate(true)
 
 
-func grapple_mutation_for_slot(slot: String) -> Dictionary:
-	return (grapple_mutations.get(slot, {}) as Dictionary).duplicate(true)
-
-
 static func part_synergy_info(part_id: String) -> Dictionary:
 	var d: Resource = Parts.def(part_id)
 	if d == null:
@@ -218,16 +214,8 @@ static func part_synergy_info(part_id: String) -> Dictionary:
 	return {"tags": d.tags, "bits": d.bits}
 
 
-func cross_synergies(context := {}) -> Array:
-	return Synergies.cross_system_active(_held_parts, Callable(self, "part_synergy_info"), context)
-
-
 func has_cross_synergy(id: String, context := {}) -> bool:
 	return Synergies.cross_system_awake(id, _held_parts, Callable(self, "part_synergy_info"), context)
-
-
-func cross_synergy_row(id: String) -> Dictionary:
-	return Synergies.cross_system_row(id)
 
 
 func part_copies(part_id: String) -> int:

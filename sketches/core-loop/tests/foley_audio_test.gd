@@ -11,7 +11,10 @@ extends SceneTree
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const RubbleFall := preload("res://src/world/events/rubble_fall.gd")
 const WarningGap := preload("res://src/world/events/warning_gap.gd")
+const Cues := preload("res://src/presentation/positional_cue_rows.gd")
 const T := preload("res://tests/support/t.gd")
+const IDS := ["lift_cage_arrive", "zipline_whine", "zipline_snap", "cave_in_rumble", "cave_in_debris", "prop_crew_presence",
+	"prop_crew_strain", "prop_crew_collapse"]
 
 var t := T.new("foley_audio_test")
 
@@ -22,17 +25,17 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var present := 0
-	for id in FoleyAudio.TRIM_DB:
-		var has_file := ResourceLoader.exists(FoleyAudio.path(id)) or FileAccess.file_exists(FoleyAudio.path(id))
+	for id in IDS:
+		var has_file := ResourceLoader.exists(Cues.DIR + Cues.ROWS[id]["file"]) or FileAccess.file_exists(Cues.DIR + Cues.ROWS[id]["file"])
 		var s := FoleyAudio.stream(id)
 		if has_file:
 			present += 1
 			t.check(id + " loads", s != null and s.data.size() > 0)
-			if id in FoleyAudio.LOOPS and s != null:
+			if Cues.ROWS[id].get("loop", false) and s != null:
 				t.check(id + " loops", s.loop_mode == AudioStreamWAV.LOOP_FORWARD)
 		else:
 			t.check(id + " is silent with no file", s == null)
-	print("foley files present: %d of %d" % [present, FoleyAudio.TRIM_DB.size()])
+	print("foley files present: %d of %d" % [present, IDS.size()])
 
 	var host := Node3D.new()
 	root.add_child(host)
@@ -65,7 +68,7 @@ func _run() -> void:
 	# holds a foley stream (the cache's own reference and this loop's are all that remain).
 	for frame in 20000:
 		var held := false
-		for id in FoleyAudio.TRIM_DB:
+		for id in IDS:
 			var s := FoleyAudio.stream(id)
 			if s != null and s.get_reference_count() > 2:
 				held = true

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -10,15 +10,17 @@ import {
   isDocsPath,
   isPackagePath,
   isSkillPath,
+  treeFiles,
 } from "../ci/affected.mjs";
 import { filterFormatTargets } from "../ci/format-changed.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
-import { REPO_ROOT, git } from "../lib/git.mjs";
+import { REPO_ROOT, cwdDecidesRepository, git } from "../lib/git.mjs";
 import { BASELINE_PATH, baselineGrowth, formatFinding, readBaselineAt } from "../sketch-lint.mjs";
 
 const root = REPO_ROOT;
-const ZERO_SHA = "0000000000000000000000000000000000000000";
+const SHA = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
+const ZERO_SHA = /^0+$/;
 export const HOOK_BUDGET_S = 9;
 export const HIGH_LOAD_RATIO = 0.5;
 
@@ -34,13 +36,18 @@ export function isHighLoad({ loadStart, loadEnd, cpus }) {
 const BRIEFS_TRIGGER = /(?:^|\/)sound\/briefs\/|^scripts\/brief-check\.mjs$/;
 
 export function parsePushStdin(text) {
+  if (typeof text !== "string")
+    throw new Error("no push on standard input: pipe in git's ref lines, or pass --base <ref>");
   const ranges = [];
-  for (const raw of (text || "").split("\n")) {
+  for (const raw of text.split("\n")) {
     const line = raw.trim();
     if (!line) continue;
-    const [, localSha, , remoteSha] = line.split(/\s+/);
-    if (!localSha || localSha === ZERO_SHA) continue;
-    ranges.push({ localSha, remoteSha: remoteSha && remoteSha !== ZERO_SHA ? remoteSha : null });
+    const fields = line.split(/\s+/);
+    const [, localSha, , remoteSha] = fields;
+    if (fields.length !== 4 || !SHA.test(localSha) || !SHA.test(remoteSha))
+      throw new Error(`cannot read the push line "${line}"`);
+    if (ZERO_SHA.test(localSha)) continue;
+    ranges.push({ localSha, remoteSha: ZERO_SHA.test(remoteSha) ? null : remoteSha });
   }
   return ranges;
 }
@@ -62,15 +69,9 @@ export function changedFilesForRange(
         "--not",
         "--remotes",
       ];
-  const ran = spawn("git", args, { cwd, encoding: "utf8" });
-  if (ran.error || ran.status !== 0) {
-    throw new Error(
-      `git ${args[0]} failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
-    );
-  }
   return [
     ...new Set(
-      ran.stdout
+      git(args, { cwd, spawn })
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean),
@@ -80,25 +81,91 @@ export function changedFilesForRange(
 
 export function rangeBase({ localSha, remoteSha }, { cwd = root, spawn = spawnSync } = {}) {
   if (remoteSha) return remoteSha;
-  const ran = spawn("git", ["rev-list", "--first-parent", localSha, "--not", "--remotes"], {
+  const oldest = git(["rev-list", "--first-parent", localSha, "--not", "--remotes"], {
     cwd,
-    encoding: "utf8",
-  });
-  if (ran.error || ran.status !== 0) {
-    throw new Error(
-      `git rev-list failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
-    );
-  }
-  const oldest = ran.stdout.trim().split("\n").filter(Boolean).pop();
+    spawn,
+  })
+    .split("\n")
+    .filter(Boolean)
+    .pop();
   return oldest ? `${oldest}^` : localSha;
 }
 
-export function planHookChecks(changedFiles, exists = (f) => existsSync(path.join(root, f))) {
+export function pushedChanges(ranges, { cwd = root, spawn = spawnSync } = {}) {
+  return ranges.map((range) => {
+    const tree = treeFiles(range.localSha, { cwd, spawn, env: cwdDecidesRepository() });
+    const files = changedFilesForRange(range, { cwd, spawn });
+    const exists = (file) => tree.has(file);
+    return {
+      ...planHookChecks(files, exists),
+      base: rangeBase(range, { cwd, spawn }),
+      head: range.localSha,
+      files,
+      exists,
+      modes: tree,
+    };
+  });
+}
+
+export function workingTreeDrift(pushed, { cwd = root, spawn = spawnSync } = {}) {
+  const differs = new Set();
+  for (const { head, files, exists } of pushed) {
+    const tracked = git(["diff", "--no-renames", "--name-only", head], { cwd, spawn }).split("\n");
+    const restored = files.filter((file) => !exists(file) && existsSync(path.join(cwd, file)));
+    for (const file of [...tracked, ...restored]) if (file) differs.add(file);
+  }
+  return [...differs].sort();
+}
+
+const REGULAR_FILE = new Set(["100644", "100755"]);
+const MODE_NAMES = { 120000: "a symbolic link", 160000: "a submodule" };
+
+export function readPushedFiles(head, files, { modes, cwd = root, spawn = spawnSync } = {}) {
+  if (!(modes instanceof Map))
+    throw new Error("readPushedFiles needs the pushed tree's file modes");
+  for (const file of files) {
+    if (/[\n\r]/.test(file))
+      throw new Error(`cannot ask git for ${JSON.stringify(file)}: the path holds a line break`);
+    const mode = modes.get(file);
+    if (mode === undefined) throw new Error(`${head}:${file} is not in the pushed tree`);
+    if (!REGULAR_FILE.has(mode))
+      throw new Error(
+        `${head}:${file} has mode ${mode}${MODE_NAMES[mode] ? ` (${MODE_NAMES[mode]})` : ""}; the hook checks only regular files (100644, 100755)`,
+      );
+  }
+  const input = Buffer.from(files.map((file) => `${head}:${file}\n`).join(""));
+  const out = git(["cat-file", "--batch"], {
+    cwd,
+    trim: false,
+    spawn: (cmd, args, options) => {
+      const ran = spawn(cmd, args, { ...options, input, encoding: "buffer" });
+      return { ...ran, stderr: ran.stderr ? String(ran.stderr) : "" };
+    },
+  });
+  if (!Buffer.isBuffer(out)) throw new Error(`git cat-file --batch for ${head} gave no output`);
+  let at = 0;
+  const contents = files.map((file) => {
+    const end = out.indexOf(10, at);
+    const header = end < 0 ? "" : out.toString("utf8", at, end);
+    const [, type, size] = header.match(/^[0-9a-f]+ (\S+) (\d+)$/) ?? [];
+    if (type !== "blob")
+      throw new Error(`git cat-file cannot show ${head}:${file}: ${header || "no reply"}`);
+    const from = end + 1;
+    at = from + Number(size) + 1;
+    if (out[at - 1] !== 10) throw new Error(`git cat-file cut ${head}:${file} short`);
+    return out.subarray(from, at - 1);
+  });
+  if (at !== out.length)
+    throw new Error(`git cat-file --batch for ${head} gave more than was asked`);
+  return contents;
+}
+
+export function planHookChecks(changedFiles, exists) {
+  if (typeof exists !== "function")
+    throw new Error("planHookChecks needs the pushed tree's file test");
   const jsFiles = filterFormatTargets(changedFiles, exists);
   const hasSketch = changedFiles.some(isGodotPath);
-  const hasDocsOrPkg = changedFiles.some(
-    (f) => isDocsPath(f, exists) || isPackagePath(f) || isSkillPath(f),
-  );
+  const hasDocsOrPkg = changedFiles.some((f) => isDocsPath(f, exists) || isPackagePath(f));
   const hasSkills = changedFiles.some((f) => isSkillPath(f) || f === "scripts/check-skills.mjs");
   const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
   const hasKnownFailing = changedFiles.includes(KNOWN_FAILING_LEDGER);
@@ -127,115 +194,84 @@ function binPath(name, cwd = root) {
 }
 
 export function executeHookPlan(
-  plan,
+  plans,
   {
     cwd = root,
     exists = existsSync,
     spawn = spawnSync,
     ensureModules = ensureNodeModules,
     errLog = console.error,
-    ranges = [],
+    readPushed = (head, files, modes) => readPushedFiles(head, files, { modes, cwd, spawn }),
     readBaseline = (ref) => readBaselineAt(ref, { cwd }),
+    drift = () => [],
   } = {},
 ) {
   let ok = true;
   const ranLabels = [];
+  const any = (key) => plans.some((plan) => plan[key]);
+  const scripted = plans.filter((plan) => plan.jsFiles.length > 0);
 
-  if (plan.jsFiles.length > 0) {
+  if (scripted.length > 0) {
     ensureModules(cwd);
     const oxfmt = binPath("oxfmt", cwd);
     const oxlint = binPath("oxlint", cwd);
+    const count = scripted.reduce((sum, plan) => sum + plan.jsFiles.length, 0);
     if (!exists(oxfmt) || !exists(oxlint)) {
       ok = false;
       ranLabels.push("oxfmt/oxlint(missing)");
       errLog("pre-push: node_modules/.bin/{oxfmt,oxlint} missing; run npm ci to enable JS checks");
     } else {
-      ranLabels.push(`oxfmt(${plan.jsFiles.length})`);
-      const r1 = runStep(
-        "oxfmt",
-        oxfmt,
-        ["-c", path.join(cwd, "scripts/ci/oxfmt.json"), "--check", ...plan.jsFiles],
-        { cwd, spawn },
-      );
-      if (!r1.ok) ok = false;
-
-      ranLabels.push(`oxlint(${plan.jsFiles.length})`);
-      const r2 = runStep(
-        "oxlint",
-        oxlint,
-        ["-c", path.join(cwd, "scripts/ci/oxlint.json"), ...plan.jsFiles],
-        { cwd, spawn },
-      );
-      if (!r2.ok) ok = false;
+      ranLabels.push(`oxfmt(${count})`, `oxlint(${count})`);
+      for (const plan of scripted) {
+        const copy = mkdtempSync(path.join(os.tmpdir(), "pre-push-"));
+        try {
+          const contents = readPushed(plan.head, plan.jsFiles, plan.modes);
+          plan.jsFiles.forEach((file, i) => {
+            mkdirSync(path.dirname(path.join(copy, file)), { recursive: true });
+            writeFileSync(path.join(copy, file), contents[i]);
+          });
+          const steps = [
+            ["oxfmt", oxfmt, ["-c", path.join(cwd, "scripts/ci/oxfmt.json"), "--check"]],
+            ["oxlint", oxlint, ["-c", path.join(cwd, "scripts/ci/oxlint.json")]],
+          ];
+          for (const [label, bin, args] of steps)
+            if (!runStep(label, bin, [...args, ...plan.jsFiles], { cwd: copy, spawn }).ok)
+              ok = false;
+        } finally {
+          rmSync(copy, { recursive: true, force: true });
+        }
+      }
     }
   }
-  if (plan.hasSketch) {
-    ranLabels.push("sketch:lint");
-    const r = runStep(
-      "sketch:lint",
-      process.execPath,
-      [path.join(cwd, "scripts/sketch-lint.mjs"), "--sketch", "core-loop"],
-      { cwd, spawn },
-    );
-    if (!r.ok) ok = false;
+  const onDisk = [];
+  const step = (label, ...argv) => {
+    ranLabels.push(label);
+    onDisk.push(label);
+    if (!runStep(label, process.execPath, argv, { cwd, spawn }).ok) ok = false;
+  };
+  const script = (file) => path.join(cwd, "scripts", file);
+  if (any("hasSketch")) step("sketch:lint", script("sketch-lint.mjs"), "--sketch", "core-loop");
+  if (any("hasDocsOrPkg")) {
+    step("check:project", script("check-project.mjs"));
+    step("check:docs", script("check-docs.mjs"));
   }
-  if (plan.hasDocsOrPkg) {
-    ranLabels.push("check:project");
-    const r1 = runStep(
-      "check:project",
-      process.execPath,
-      [path.join(cwd, "scripts/check-project.mjs")],
-      {
-        cwd,
-        spawn,
-      },
-    );
-    if (!r1.ok) ok = false;
-
-    ranLabels.push("check:docs");
-    const r2 = runStep("check:docs", process.execPath, [path.join(cwd, "scripts/check-docs.mjs")], {
-      cwd,
-      spawn,
-    });
-    if (!r2.ok) ok = false;
-  }
-  if (plan.hasSkills) {
-    ranLabels.push("check:skills");
-    const r = runStep(
-      "check:skills",
-      process.execPath,
-      [path.join(cwd, "scripts/check-skills.mjs")],
-      { cwd, spawn },
-    );
-    if (!r.ok) ok = false;
-  }
-  if (plan.hasBriefs) {
-    ranLabels.push("check:briefs");
-    const r = runStep(
-      "check:briefs",
-      process.execPath,
-      [path.join(cwd, "scripts/brief-check.mjs")],
-      { cwd, spawn },
-    );
-    if (!r.ok) ok = false;
-  }
-  if (plan.hasBaseline) {
+  if (any("hasSkills")) step("check:skills", script("check-skills.mjs"));
+  if (any("hasBriefs")) step("check:briefs", script("brief-check.mjs"));
+  if (any("hasBaseline")) {
     ranLabels.push("baseline");
-    for (const { base, head } of ranges) {
+    for (const { base, head } of plans.filter((plan) => plan.hasBaseline)) {
       const grew = baselineGrowth(readBaseline(base), readBaseline(head));
       for (const item of grew) errLog(formatFinding(item));
       if (grew.length > 0) ok = false;
     }
   }
-  if (plan.hasKnownFailing) {
-    ranLabels.push("known-failing");
-    const r = runStep(
-      "known-failing",
-      process.execPath,
-      ["--test", path.join(cwd, "scripts/known-failing.test.mjs")],
-      { cwd, spawn },
-    );
-    if (!r.ok) ok = false;
+  if (any("hasKnownFailing")) step("known-failing", "--test", script("known-failing.test.mjs"));
+  if (onDisk.length > 0) {
+    const differs = drift();
+    if (differs.length > 0)
+      errLog(
+        `pre-push: ${onDisk.join(", ")} read the files on disk, which differ from what this push holds in ${differs.length} file(s): ${differs.slice(0, 8).join(", ")}${differs.length > 8 ? ", ..." : ""}`,
+      );
   }
 
   return { ok, ranLabels };
@@ -308,30 +344,16 @@ if (isMain(import.meta.url)) {
   const cpus = os.cpus().length;
   try {
     const opts = parseHookArgs(process.argv.slice(2));
-    let files = [];
-    let ranges = [];
-    if (opts.base) {
-      ranges = [{ base: git(["merge-base", opts.base, "HEAD"]), head: "HEAD" }];
-      const ran = spawnSync("git", ["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`], {
-        cwd: root,
-        encoding: "utf8",
-      });
-      if (ran.error || ran.status !== 0) {
-        throw new Error(`git diff failed: ${ran.error?.message || (ran.stderr || "").trim()}`);
-      }
-      files = ran.stdout
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean);
-    } else {
-      const stdin = process.stdin.isTTY ? "" : readFileSync(0, "utf8");
-      const pushed = parsePushStdin(stdin);
-      files = [...new Set(pushed.flatMap((range) => changedFilesForRange(range)))];
-      ranges = pushed.map((range) => ({ base: rangeBase(range), head: range.localSha }));
-    }
-
-    const plan = planHookChecks(files);
-    const { ok, ranLabels } = executeHookPlan(plan, { ranges });
+    const ranges = opts.base
+      ? [
+          {
+            localSha: git(["rev-parse", "HEAD"]),
+            remoteSha: git(["merge-base", opts.base, "HEAD"]),
+          },
+        ]
+      : parsePushStdin(process.stdin.isTTY ? null : readFileSync(0, "utf8"));
+    const pushed = pushedChanges(ranges);
+    const { ok, ranLabels } = executeHookPlan(pushed, { drift: () => workingTreeDrift(pushed) });
     const loadEnd = os.loadavg()[0];
     const elapsedS = (performance.now() - started) / 1000;
     const outcome = evaluateHookOutcome({

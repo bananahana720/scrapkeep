@@ -2,6 +2,7 @@ extends StyleBox
 
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 enum Kind { PLATE, TAG }
@@ -159,7 +160,7 @@ func parts(rect: Rect2) -> Array:
 	if fade < 1.0 and hand != Hand.KEEPER:
 		for part in out:
 			part.color = Color(part.color, part.color.a * fade)
-	var lean := 0.0 if UiTokens.reduced_motion or hand != Hand.KEEPER else tilt
+	var lean := 0.0 if Comfort.reduced_motion or hand != Hand.KEEPER else tilt
 	if lean != 0.0:
 		var centre := rect.get_center()
 		for part in out:

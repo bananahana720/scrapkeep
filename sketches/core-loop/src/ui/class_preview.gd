@@ -7,10 +7,10 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const YARD_KIT := "res://assets/models/world_one/bay_kit.glb"
 const WorldGrade := preload("res://src/presentation/world_grade.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const LOOP := 3.6
@@ -32,7 +32,6 @@ const WALL_X := -2.8
 const ANCHOR := Vector3(-2.45, 3.4, 0.0)
 const TETHER := 2.7
 
-static var reduced_motion := false
 
 var def: Resource
 var open := 0.0
@@ -438,7 +437,7 @@ func _step_antic() -> void:
 		return
 	var was_out: bool = antic.out
 	var t := -1.0
-	if not playing() and _time >= ANTIC_PERIOD and not HighdraftFx.preferred:
+	if not playing() and _time >= ANTIC_PERIOD and not Comfort.reduced_motion:
 		var phase := fmod(_time + float(hash(String(def.id)) % 1000) / 1000.0 * ANTIC_PERIOD, ANTIC_PERIOD)
 		t = (phase - (ANTIC_PERIOD - PilotAntics.LENGTH)) / PilotAntics.LENGTH
 	antic.apply(t)
@@ -496,7 +495,7 @@ func _sable(t: float) -> void:
 	var plant := _span(t, 0.18, 0.24)
 	if plant > 0.0:
 		_show("post", ANCHOR - Vector3(0.1, 0.0, 0.0), Vector3(1.0, maxf(plant, 0.01), 1.0), 1.0, Vector3(0.0, 0.0, PI * 0.5))
-		_show("cap", ANCHOR + Vector3(0.35 * plant, 0.0, 0.0), Vector3.ONE * (1.0 + (0.0 if reduced_motion else 0.25 * sin(t * 40.0))), 1.0, Vector3(0.0, 0.0, PI * 0.5))
+		_show("cap", ANCHOR + Vector3(0.35 * plant, 0.0, 0.0), Vector3.ONE * (1.0 + (0.0 if Comfort.reduced_motion else 0.25 * sin(t * 40.0))), 1.0, Vector3(0.0, 0.0, PI * 0.5))
 	var burst := _span(t, 0.2, 0.34)
 	if burst > 0.0 and burst < 1.0:
 		_show("discharge", ANCHOR + Vector3(0.1, 0.0, 0.0), Vector3.ONE * lerpf(0.5, 4.0, burst), 1.0 - burst, Vector3(0.0, 0.0, PI * 0.5))
@@ -571,7 +570,7 @@ func _kest(t: float) -> void:
 		var thrown := _span(t, 0.03 + 0.07 * i, 0.1 + 0.07 * i)
 		var fired := _span(t, 0.56 + 0.05 * i, 0.68 + 0.05 * i)
 		if thrown > 0.0 and fired <= 0.0:
-			var ready := 0.25 * sin(t * 50.0) if thrown >= 1.0 and not reduced_motion else 0.0
+			var ready := 0.25 * sin(t * 50.0) if thrown >= 1.0 and not Comfort.reduced_motion else 0.0
 			_show("charge%d" % i, _arc(start, spots[i], 2.2, thrown), Vector3.ONE * (1.0 + ready))
 		if fired > 0.0 and fired < 1.0:
 			_show("boom%d" % i, spots[i] + Vector3(0.0, 0.5, 0.0), Vector3.ONE * lerpf(0.4, 2.6, fired), 1.0 - fired,

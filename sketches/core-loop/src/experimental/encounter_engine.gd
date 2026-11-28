@@ -3,15 +3,13 @@ extends RefCounted
 
 const EnvTags := preload("res://src/experimental/env_tags.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
+const StageLocks := preload("res://src/world/stage_locks.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const DEFAULT_CATALOG_PATH := "res://src/experimental/resources/director/spillway_encounter_catalog.tres"
 const DIG_CATALOG_PATH := "res://src/experimental/resources/director/dig_encounter_catalog.tres"
 const HIGHDRAFT_CATALOG_PATH := "res://src/experimental/resources/director/highdraft_encounter_catalog.tres"
-const MIN_TELL_S := 0.6
 const BEACON_WAVE_GAP_S := 1.8
-const WALL_SPRING := 60.0
-const WALL_DAMP := 8.0
-const WALL_ACCEL_CAP := 120.0
 
 signal fact_emitted(fact: Dictionary)
 signal env_tag_emitted(payload: Dictionary)
@@ -201,7 +199,7 @@ func activate_triggered(id: String, run_ctx: Dictionary) -> Dictionary:
 	return result
 
 
-func report_encounter_kill(ball_speed_mps: float = 14.0, cruise_mps: float = 14.0) -> Dictionary:
+func report_encounter_kill(ball_speed_mps: float = Tuning.CRUISE_MPS, cruise_mps: float = Tuning.CRUISE_MPS) -> Dictionary:
 	var out := {"facts": [], "payout": {}, "unlocked": false}
 	if active_triggered_id == "" or not triggered_volumes.has(active_triggered_id):
 		return out
@@ -363,7 +361,7 @@ func advance(delta: float, run_ctx: Dictionary) -> Dictionary:
 
 	var ball_pos: Vector3 = run_ctx.get("ball_pos", Vector3.ZERO)
 	var ball_vel: Vector3 = run_ctx.get("ball_vel", Vector3.ZERO)
-	var cruise_mps: float = float(run_ctx.get("cruise_mps", 14.0))
+	var cruise_mps: float = float(run_ctx.get("cruise_mps", Tuning.CRUISE_MPS))
 	var warden_awake: bool = bool(run_ctx.get("warden_awake", false))
 
 	if active_triggered_id == "" and not warden_awake:
@@ -676,7 +674,7 @@ func _start_random_encounter(kind: StringName, run_ctx: Dictionary, result: Dict
 		var vol_pos: Vector3 = triggered_volumes[id]["origin"]
 		if Vector2(spot.x - vol_pos.x, spot.z - vol_pos.z).length() < min_gap:
 			spot += Vector3(-forward.z, 0.0, forward.x) * min_gap
-	var tell_s := maxf(MIN_TELL_S, float(spec["tell_s"]))
+	var tell_s := maxf(EnvTags.MIN_TELL_S, float(spec["tell_s"]))
 	var enc_id := "%s_%d" % [String(kind), _serial]
 	active_random = {
 		"id": enc_id,
@@ -728,4 +726,4 @@ static func _perimeter_spring_accel(
 		return Vector3.ZERO
 	var n := out / dist
 	var outward := maxf(0.0, ball_vel.dot(n))
-	return -n * minf(WALL_ACCEL_CAP, WALL_SPRING * (dist - radius) + WALL_DAMP * outward)
+	return -n * minf(StageLocks.WALL_ACCEL_CAP, StageLocks.WALL_SPRING * (dist - radius) + StageLocks.WALL_DAMP * outward)

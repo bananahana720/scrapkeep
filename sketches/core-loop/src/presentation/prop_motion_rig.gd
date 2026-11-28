@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const CYCLE_NONE := ""
@@ -8,7 +8,6 @@ const CYCLE_PISTON := "piston"
 const CYCLE_TURBINE := "turbine"
 const CYCLE_BREATHE := "breathe"
 
-var reduced_motion := false
 var clock := 0.0
 var _parts: Array[PartState] = []
 
@@ -121,7 +120,7 @@ func part(label: String) -> PartState:
 
 
 func _calm() -> bool:
-	return reduced_motion or EnemyMotion.motion_scale <= 0.0
+	return Comfort.reduced_motion
 
 
 func apply_impulse(direction_world: Vector3, strength := 1.0, target_label := "") -> void:

@@ -21,10 +21,6 @@ func _initialize() -> void:
 	_test_role_based_enemy_fsm_reactions()
 	_test_qa_regressions_linear_reentrancy_telegraph()
 	_test_clean_reset_and_repeatability()
-	EnvTags.reset()
-	PartResource.reset()
-	JuryRig.reset()
-	Ecology.reset()
 	quit(_t.verdict())
 
 

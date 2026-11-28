@@ -14,6 +14,7 @@ const Pattern := preload("res://src/combat/pattern.gd")
 const ImpactFrame := preload("res://src/presentation/impact_frame.gd")
 const PauseGuard := preload("res://src/presentation/pause_guard.gd")
 const Particles := preload("res://src/presentation/player_fx_particles.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const SOFT_CAP_MPS := 60.0
@@ -109,7 +110,6 @@ var camera
 var vfx
 var root: Node3D
 var _word_root: Node3D
-var reduced_motion := false
 var spawned := {}
 
 var might := 0.0
@@ -1009,7 +1009,7 @@ func _draw_word(slot: Dictionary) -> void:
 	var scale := 1.0
 	var slide := 0.0
 	var alpha := 1.0
-	if not reduced_motion:
+	if not Comfort.reduced_motion:
 		if t < WORD_STAMP_S * 0.5:
 			scale = lerpf(1.7, 0.9, t / (WORD_STAMP_S * 0.5))
 		elif t < WORD_STAMP_S:
@@ -1018,7 +1018,7 @@ func _draw_word(slot: Dictionary) -> void:
 	if t > exit_from:
 		var u := (t - exit_from) / WORD_EXIT_S
 		alpha = 1.0 - u
-		slide = 0.0 if reduced_motion else u * u * 1.4
+		slide = 0.0 if Comfort.reduced_motion else u * u * 1.4
 	var basis := Basis.IDENTITY
 	var at: Vector3 = slot["at"]
 	var metres := size
@@ -1039,7 +1039,7 @@ func _draw_word(slot: Dictionary) -> void:
 
 
 func impact_frame(at: Vector3, strength: float) -> bool:
-	if reduced_motion or _frame == null or _clock - _last_frame < FRAME_GAP_S:
+	if Comfort.reduced_motion or _frame == null or _clock - _last_frame < FRAME_GAP_S:
 		return false
 	if camera == null or camera.cam == null or camera.cam.is_position_behind(at):
 		return false
@@ -1596,7 +1596,6 @@ func _draw_weapon_fx(delta: float) -> void:
 	elif _halo != null and _halo.charging():
 		_halo.cancel()
 	if _halo != null:
-		_halo.reduced_motion = reduced_motion
 		_halo.step(delta)
 	_step_flashes(delta)
 	_step_casings(delta)
@@ -1618,7 +1617,7 @@ func _rivet_shot(from: Vector3, dir: Vector3) -> void:
 		frame = Basis.looking_at(ahead, Vector3.UP if absf(ahead.y) < 0.95 else Vector3.RIGHT)
 		at = from + frame.x * outboard * SIDE_M
 	_flash(side, at)
-	if on_side % CASING_EVERY == 0 and not reduced_motion:
+	if on_side % CASING_EVERY == 0 and not Comfort.reduced_motion:
 		_eject(at + frame * Vector3(DRUM_GAP.x * outboard, DRUM_GAP.y, DRUM_GAP.z), frame, outboard)
 
 

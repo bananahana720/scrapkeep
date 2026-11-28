@@ -1,7 +1,14 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+
+const helpers = {};
+try {
+  Object.assign(helpers, await import("../../scripts/lib/cli.mjs"));
+  Object.assign(helpers, await import("../../scripts/lib/git.mjs"));
+} catch (error) {
+  helpers.loadError = error;
+}
 
 const LIVE_SAVE_SEGMENT =
   /(?:\.local\/share\/godot\/app_userdata\/core-loop|Library\/Application Support\/godot\/app_userdata\/core-loop)(?:\b|\/|$)/i;
@@ -10,6 +17,7 @@ const LIVE_SAVE_SEGMENT_GLOBAL =
 const SCRATCH_ARTIFACTS_PREFIX = /(?:^|\/)artifacts\/local\//;
 const PARENT_TRAVERSAL = /(?:^|\/)\.\.(?:\/|$)/;
 const SHELL_EXPANSION = /[{}*$?[\]`\\'"]/;
+const PERCENT_CODE = /%([0-9a-f]{2})/gi;
 const NPM_PUBLISH = /\bnpm\s+publish\b/;
 const GH_REPO_DELETE = /\bgh\s+repo\s+delete\b/;
 const NPM_PKG_MUTATE = /\bnpm\s+(?:install|i|uninstall)(?:\s|$)/;
@@ -67,8 +75,17 @@ function splitShellWords(text) {
   return String(text).match(/(?:"(?:\\.|[^"])*"|'[^']*'|\\.|[^\s"'])+/g) ?? [];
 }
 
-function normalizeForLiveSaveMatch(text) {
-  return String(text).replace(/\\ /g, " ").replace(/%20/gi, " ").replace(/["']/g, "");
+function decodePercentCodes(text, decode = (hex) => String.fromCharCode(Number.parseInt(hex, 16))) {
+  return text.replace(PERCENT_CODE, (_, hex) => decode(hex));
+}
+
+const PATH_READINGS = [
+  (text) => decodePercentCodes(text, (hex) => (hex === "20" ? " " : `%${hex}`)),
+  decodePercentCodes,
+];
+
+function normalizeForLiveSaveMatch(text, decode) {
+  return decode(String(text).replace(/\\ /g, " ")).replace(/["']/g, "");
 }
 
 function unwrapScratchPart(part) {
@@ -80,12 +97,13 @@ function unwrapScratchPart(part) {
   ) {
     cleaned = cleaned.slice(1, -1);
   }
-  return cleaned.replace(/\\ /g, " ").replace(/%20/gi, " ");
+  return cleaned.replace(/\\ /g, " ");
 }
 
-function isAllowedScratchSavePath(part) {
-  const cleaned = unwrapScratchPart(part);
-  if (PARENT_TRAVERSAL.test(cleaned) || SHELL_EXPANSION.test(cleaned) || cleaned.startsWith("~")) {
+function isAllowedScratchSavePath(part, decode) {
+  const written = unwrapScratchPart(part);
+  const cleaned = decode(written);
+  if (PARENT_TRAVERSAL.test(cleaned) || SHELL_EXPANSION.test(written) || written.startsWith("~")) {
     return false;
   }
   const scratchMatch = SCRATCH_ARTIFACTS_PREFIX.exec(cleaned);
@@ -95,25 +113,28 @@ function isAllowedScratchSavePath(part) {
   return scratchMatch.index < liveMatch.index;
 }
 
-function touchesLiveSavePath(text, { isFilePath = false } = {}) {
-  const str = String(text);
-  const normalizedFull = normalizeForLiveSaveMatch(str);
+function touchesLiveSavePathAs(str, decode, isFilePath) {
+  const normalizedFull = normalizeForLiveSaveMatch(str, decode);
   const totalMatches = normalizedFull.match(LIVE_SAVE_SEGMENT_GLOBAL)?.length ?? 0;
   if (totalMatches === 0) return false;
   if (isFilePath) {
-    return !isAllowedScratchSavePath(str);
+    return !isAllowedScratchSavePath(str, decode);
   }
   let allowedMatches = 0;
   for (const word of splitShellWords(str)) {
     for (const part of word.split(/[=<>|;&()]+/).filter(Boolean)) {
       const partMatches =
-        normalizeForLiveSaveMatch(part).match(LIVE_SAVE_SEGMENT_GLOBAL)?.length ?? 0;
+        normalizeForLiveSaveMatch(part, decode).match(LIVE_SAVE_SEGMENT_GLOBAL)?.length ?? 0;
       if (partMatches === 0) continue;
-      if (!isAllowedScratchSavePath(part)) return true;
+      if (!isAllowedScratchSavePath(part, decode)) return true;
       allowedMatches += partMatches;
     }
   }
   return allowedMatches < totalMatches;
+}
+
+function touchesLiveSavePath(text, { isFilePath = false } = {}) {
+  return PATH_READINGS.some((decode) => touchesLiveSavePathAs(String(text), decode, isFilePath));
 }
 
 function parseGitInvocation(segment) {
@@ -242,11 +263,11 @@ export function defaultInspectProjectGodot(
   if (!repoDir) return false;
   let repoRoot = findRepoRoot(repoDir);
   if (!repoRoot) {
-    const top = spawn("git", ["-C", repoDir, "rev-parse", "--show-toplevel"], {
-      encoding: "utf8",
-      timeout: GIT_TIMEOUT_MS,
-    });
-    repoRoot = top.status === 0 && top.stdout.trim() ? top.stdout.trim() : repoDir;
+    repoRoot =
+      helpers.gitOptional(["-C", repoDir, "rev-parse", "--show-toplevel"], {
+        spawn,
+        timeout: GIT_TIMEOUT_MS,
+      }) || repoDir;
   }
   const wtPath = path.join(repoRoot, "sketches/core-loop/project.godot");
   if (existsSync(wtPath)) {
@@ -254,17 +275,19 @@ export function defaultInspectProjectGodot(
     if (!wtText.includes("McpBridge")) return false;
     if (checkWorkingTree) return true;
   }
-  const diff = spawn(
-    "git",
+  const staged = helpers.gitOptional(
     ["-C", repoRoot, "diff", "--cached", "--name-only", "--", "sketches/core-loop/project.godot"],
-    { encoding: "utf8", timeout: GIT_TIMEOUT_MS },
+    { spawn, timeout: GIT_TIMEOUT_MS },
   );
-  if (diff.status === 0 && diff.stdout.trim()) {
-    const show = spawn("git", ["-C", repoRoot, "show", ":sketches/core-loop/project.godot"], {
-      encoding: "utf8",
-      timeout: GIT_TIMEOUT_MS,
-    });
-    if (show.status === 0 && show.stdout.includes("McpBridge")) return true;
+  if (staged) {
+    const show = helpers.gitOptional(
+      ["-C", repoRoot, "show", ":sketches/core-loop/project.godot"],
+      {
+        spawn,
+        timeout: GIT_TIMEOUT_MS,
+      },
+    );
+    if (show?.includes("McpBridge")) return true;
   }
   return false;
 }
@@ -459,25 +482,37 @@ export function evaluateHook(payload, { inspectProjectGodot = defaultInspectProj
   return allow();
 }
 
-function main() {
-  const raw = readFileSync(0, "utf8");
+function decide(raw) {
   let payload;
   try {
     payload = JSON.parse(raw);
   } catch {
-    process.stdout.write(
-      JSON.stringify(ask("PreToolUse safety hook could not parse JSON stdin; confirm manually.")) +
-        "\n",
-    );
-    return;
+    return ask("PreToolUse safety hook could not parse JSON stdin; confirm manually.");
   }
-  const result = evaluateHook(payload);
+  return evaluateHook(payload);
+}
+
+function briefError(error) {
+  try {
+    return String(error?.message ?? error)
+      .split("\n")[0]
+      .slice(0, 160);
+  } catch {
+    return "an error that cannot be printed";
+  }
+}
+
+function main() {
+  let result;
+  try {
+    if ("loadError" in helpers) throw helpers.loadError;
+    result = decide(readFileSync(0, "utf8"));
+  } catch (error) {
+    result = ask(`PreToolUse safety hook could not run (${briefError(error)}); confirm manually.`);
+  }
   process.stdout.write(JSON.stringify(result) + "\n");
 }
 
-if (
-  process.argv[1] &&
-  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
-) {
+if (helpers.isMain?.(import.meta.url) ?? true) {
   main();
 }

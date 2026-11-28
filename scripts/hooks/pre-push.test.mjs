@@ -1,5 +1,19 @@
-import test from "node:test";
+import test, { after } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { treeFiles } from "../ci/affected.mjs";
+import { REPO_ROOT, git } from "../lib/git.mjs";
 import {
   HIGH_LOAD_RATIO,
   HOOK_BUDGET_S,
@@ -10,7 +24,10 @@ import {
   parseHookArgs,
   parsePushStdin,
   planHookChecks,
+  pushedChanges,
   rangeBase,
+  readPushedFiles,
+  workingTreeDrift,
 } from "./pre-push.mjs";
 
 test("parsePushStdin skips branch deletions and keeps updates and new branches", () => {
@@ -188,18 +205,21 @@ test("evaluateHookOutcome waives OVER_BUDGET with PASS_UNDER_LOAD only when ok a
 test("executeHookPlan runs all planned checks strictly with zero skipped checks and fails on missing bins", () => {
   const ran = [];
   const resAll = executeHookPlan(
-    {
-      jsFiles: ["scripts/a.mjs"],
-      hasSketch: true,
-      hasDocsOrPkg: true,
-      hasSkills: true,
-      hasBriefs: true,
-      hasKnownFailing: true,
-    },
+    [
+      {
+        jsFiles: ["scripts/a.mjs"],
+        hasSketch: true,
+        hasDocsOrPkg: true,
+        hasSkills: true,
+        hasBriefs: true,
+        hasKnownFailing: true,
+      },
+    ],
     {
       cwd: "/repo",
       exists: () => true,
       ensureModules: () => ({ ok: true }),
+      readPushed: (_head, files) => files.map(() => ""),
       spawn: (cmd, args) => {
         ran.push([cmd, ...args]);
         return { status: ran.length === 1 ? 1 : 0 };
@@ -220,12 +240,14 @@ test("executeHookPlan runs all planned checks strictly with zero skipped checks 
   assert.equal(ran.length, 8);
 
   const missingBins = executeHookPlan(
-    {
-      jsFiles: ["scripts/a.mjs"],
-      hasSketch: true,
-      hasDocsOrPkg: false,
-      hasKnownFailing: false,
-    },
+    [
+      {
+        jsFiles: ["scripts/a.mjs"],
+        hasSketch: true,
+        hasDocsOrPkg: false,
+        hasKnownFailing: false,
+      },
+    ],
     {
       cwd: "/repo",
       exists: () => false,
@@ -272,18 +294,295 @@ test("executeHookPlan fails a push whose lint baseline list grew and passes one 
     hasBaseline: true,
   };
   const errors = [];
-  const grown = executeHookPlan(plan, {
-    ranges: [{ base: "base", head: "grown" }],
+  const grown = executeHookPlan([{ ...plan, base: "base", head: "grown" }], {
     readBaseline: (ref) => lists[ref],
     errLog: (line) => errors.push(line),
   });
   assert.equal(grown.ok, false);
   assert.deepEqual(grown.ranLabels, ["baseline"]);
   assert.match(errors.join("\n"), /L1 list grew from 2 to 3 entries \(new: d\.gd\)/);
-  const shrunk = executeHookPlan(plan, {
-    ranges: [{ base: "base", head: "shrunk" }],
+  const shrunk = executeHookPlan([{ ...plan, base: "base", head: "shrunk" }], {
     readBaseline: (ref) => lists[ref],
     errLog: () => assert.fail("no growth to report"),
   });
   assert.equal(shrunk.ok, true);
+});
+
+const scratchDirs = [];
+after(() => {
+  for (const dir of scratchDirs) rmSync(dir, { recursive: true, force: true });
+});
+
+function pushRepo() {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "pre-push-push-"));
+  scratchDirs.push(dir);
+  const work = path.join(dir, "work");
+  git(["init", "-q", "--bare", path.join(dir, "remote.git")], { cwd: dir });
+  git(["init", "-q", work], { cwd: dir });
+  const g = (...args) =>
+    git(["-c", "user.name=t", "-c", "user.email=t@example.invalid", ...args], { cwd: work });
+  const write = (file, text) => {
+    mkdirSync(path.dirname(path.join(work, file)), { recursive: true });
+    writeFileSync(path.join(work, file), text);
+  };
+  write("README.md", "[tool](tools/run.sh)\n");
+  write("tools/run.sh", "echo\n");
+  write("scripts/kept.mjs", "export const kept = 1;\n");
+  for (const config of ["scripts/ci/oxfmt.json", "scripts/ci/oxlint.json"])
+    write(config, readFileSync(path.join(REPO_ROOT, config), "utf8"));
+  symlinkSync(path.join(REPO_ROOT, "node_modules"), path.join(work, "node_modules"));
+  writeFileSync(path.join(work, ".git/info/exclude"), "node_modules\n");
+  g("add", "README.md", "tools", "scripts");
+  g("commit", "-qm", "base");
+  g("remote", "add", "origin", path.join(dir, "remote.git"));
+  g("push", "-q", "origin", "HEAD:refs/heads/main");
+  const base = g("rev-parse", "HEAD");
+  const commit = (message) => {
+    g("commit", "-qam", message);
+    return g("rev-parse", "HEAD");
+  };
+  return { work, g, write, base, commit };
+}
+
+const BADLY_FORMATTED = "export const   kept=1\n";
+const quiet = (cmd, args, options) => spawnSync(cmd, args, { ...options, stdio: "pipe" });
+const runPushed = (work, pushed, options = {}) =>
+  executeHookPlan(pushed, {
+    cwd: work,
+    spawn: quiet,
+    ensureModules: () => {},
+    errLog: () => {},
+    ...options,
+  });
+
+test("a push that deletes a file selects the docs check even when the file is back on disk", () => {
+  const { work, g, write, base, commit } = pushRepo();
+  g("rm", "-q", "tools/run.sh");
+  const head = commit("delete the tool the readme links to");
+  write("tools/run.sh", "echo\n");
+  for (const remoteSha of [base, null]) {
+    const [pushed] = pushedChanges([{ localSha: head, remoteSha }], { cwd: work });
+    assert.deepEqual(pushed.files, ["tools/run.sh"]);
+    assert.equal(pushed.hasDocsOrPkg, true, remoteSha ?? "new branch");
+    assert.deepEqual(workingTreeDrift([pushed], { cwd: work }), ["tools/run.sh"]);
+  }
+});
+
+test("a push that changes a page selects the docs check even when the page is changed back on disk", () => {
+  const { work, write, base, commit } = pushRepo();
+  write("README.md", "[tool](tools/run.sh) and more\n");
+  const head = commit("edit the readme");
+  write("README.md", "[tool](tools/run.sh)\n");
+  const [pushed] = pushedChanges([{ localSha: head, remoteSha: base }], { cwd: work });
+  assert.deepEqual(pushed.files, ["README.md"]);
+  assert.equal(pushed.hasDocsOrPkg, true);
+  assert.deepEqual(workingTreeDrift([pushed], { cwd: work }), ["README.md"]);
+  const notes = [];
+  const ran = runPushed(work, [pushed], {
+    spawn: () => ({ status: 0 }),
+    errLog: (line) => notes.push(line),
+    drift: () => workingTreeDrift([pushed], { cwd: work }),
+  });
+  assert.deepEqual(ran.ranLabels, ["check:project", "check:docs"]);
+  assert.deepEqual(notes, [
+    "pre-push: check:project, check:docs read the files on disk, which differ from what this push holds in 1 file(s): README.md",
+  ]);
+});
+
+test("the formatter and the linter read the pushed script, not the working tree", () => {
+  const { work, g, write, base, commit } = pushRepo();
+  write("scripts/kept.mjs", BADLY_FORMATTED);
+  const bad = commit("push a badly formatted script");
+  write("scripts/kept.mjs", "export const kept = 1;\n");
+  const [badPush] = pushedChanges([{ localSha: bad, remoteSha: base }], { cwd: work });
+  assert.deepEqual(badPush.jsFiles, ["scripts/kept.mjs"]);
+  assert.equal(runPushed(work, [badPush]).ok, false, "fixed on disk, bad in the push");
+
+  g("checkout", "-q", "scripts/kept.mjs");
+  write("scripts/kept.mjs", "export const kept = 2;\n");
+  const good = commit("push a well formatted script");
+  write("scripts/kept.mjs", BADLY_FORMATTED);
+  const [goodPush] = pushedChanges([{ localSha: good, remoteSha: bad }], { cwd: work });
+  assert.equal(runPushed(work, [goodPush]).ok, true, "bad on disk, good in the push");
+
+  rmSync(path.join(work, "scripts/kept.mjs"));
+  const [gone] = pushedChanges([{ localSha: bad, remoteSha: base }], { cwd: work });
+  assert.deepEqual(gone.jsFiles, ["scripts/kept.mjs"], "deleted on disk, held by the push");
+  assert.equal(gone.hasDocsOrPkg, false);
+  assert.equal(runPushed(work, [gone]).ok, false);
+
+  g("checkout", "-q", "--detach", base);
+  assert.equal(
+    runPushed(work, pushedChanges([{ localSha: bad, remoteSha: base }], { cwd: work })).ok,
+    false,
+    "another commit checked out",
+  );
+});
+
+test("a new branch lists the files of its commits that no remote holds, and several refs keep their own trees", () => {
+  const { work, g, write, base, commit } = pushRepo();
+  write("scripts/kept.mjs", BADLY_FORMATTED);
+  const scriptHead = commit("script");
+  g("checkout", "-q", "-b", "other", base);
+  g("rm", "-q", "tools/run.sh");
+  const deleteHead = commit("delete");
+  const pushed = pushedChanges(
+    parsePushStdin(
+      [
+        `refs/heads/script ${scriptHead} refs/heads/script ${"0".repeat(40)}`,
+        `refs/heads/other ${deleteHead} refs/heads/other ${"0".repeat(40)}`,
+      ].join("\n"),
+    ),
+    { cwd: work },
+  );
+  assert.deepEqual(
+    pushed.map(({ base: from, head, files, jsFiles, hasDocsOrPkg }) => ({
+      from,
+      head,
+      files,
+      jsFiles,
+      hasDocsOrPkg,
+    })),
+    [
+      {
+        from: `${scriptHead}^`,
+        head: scriptHead,
+        files: ["scripts/kept.mjs"],
+        jsFiles: ["scripts/kept.mjs"],
+        hasDocsOrPkg: false,
+      },
+      {
+        from: `${deleteHead}^`,
+        head: deleteHead,
+        files: ["tools/run.sh"],
+        jsFiles: [],
+        hasDocsOrPkg: true,
+      },
+    ],
+  );
+  const ran = runPushed(work, pushed, { spawn: (cmd, args, options) => quiet(cmd, args, options) });
+  assert.equal(ran.ok, false, "the script ref is read at its own head");
+  assert.deepEqual(ran.ranLabels, ["oxfmt(1)", "oxlint(1)", "check:project", "check:docs"]);
+});
+
+test("the push reader fails when it cannot read the push", () => {
+  assert.throws(() => parsePushStdin(null), /no push on standard input/);
+  assert.deepEqual(parsePushStdin(""), [], "git sends nothing for a push that is up to date");
+  assert.throws(
+    () => parsePushStdin("refs/heads/a abc refs/heads/a def"),
+    /cannot read the push line/,
+  );
+  assert.throws(
+    () => parsePushStdin(`refs/heads/a ${"a".repeat(40)}`),
+    /cannot read the push line/,
+  );
+  assert.throws(() => planHookChecks(["README.md"]), /needs the pushed tree's file test/);
+  const { work, g, base } = pushRepo();
+  assert.throws(() => treeFiles(undefined, { cwd: work }), /needs a commit/);
+  assert.throws(
+    () => pushedChanges([{ localSha: "f".repeat(40), remoteSha: base }], { cwd: work }),
+    /git ls-tree f+ failed/,
+  );
+  g("commit", "-q", "--allow-empty", "-m", "empty");
+  g("rm", "-q", "-r", ".");
+  g("commit", "-q", "-m", "nothing left");
+  const empty = g("rev-parse", "HEAD");
+  assert.throws(
+    () => pushedChanges([{ localSha: empty, remoteSha: base }], { cwd: work }),
+    /git ls-tree [0-9a-f]+ lists no files/,
+  );
+  assert.throws(
+    () =>
+      runPushed(work, [
+        { jsFiles: ["scripts/absent.mjs"], head: base, modes: treeFiles(base, { cwd: work }) },
+      ]),
+    /[0-9a-f]+:scripts\/absent\.mjs is not in the pushed tree/,
+  );
+  assert.throws(
+    () =>
+      workingTreeDrift([{ head: "f".repeat(40), files: [], exists: () => true }], { cwd: work }),
+    /git diff/,
+  );
+});
+
+test("readPushedFiles reads every pushed file with one git process and stops on a reply it cannot read", () => {
+  const { work, g, write } = pushRepo();
+  write("scripts/a.mjs", "export const a = 1;\n");
+  write("scripts/b.mjs", "no newline at the end");
+  chmodSync(path.join(work, "scripts/b.mjs"), 0o755);
+  g("add", "scripts");
+  g("commit", "-qm", "two scripts");
+  const head = g("rev-parse", "HEAD");
+  assert.match(head, /^[0-9a-f]{40}$/);
+  let gits = 0;
+  const counted = (cmd, args, options) => {
+    gits += 1;
+    return spawnSync(cmd, args, options);
+  };
+  const files = ["scripts/a.mjs", "scripts/b.mjs", "scripts/kept.mjs"];
+  const modes = treeFiles(head, { cwd: work });
+  assert.equal(modes.get("scripts/b.mjs"), "100755");
+  assert.deepEqual(readPushedFiles(head, files, { modes, cwd: work, spawn: counted }).map(String), [
+    "export const a = 1;\n",
+    "no newline at the end",
+    "export const kept = 1;\n",
+  ]);
+  assert.equal(gits, 1);
+  assert.throws(
+    () => readPushedFiles(head, files, { cwd: work }),
+    /readPushedFiles needs the pushed tree's file modes/,
+  );
+  assert.throws(
+    () => readPushedFiles(head, ["scripts"], { modes, cwd: work }),
+    /[0-9a-f]+:scripts is not in the pushed tree/,
+  );
+  const unasked = () => assert.fail("git was asked");
+  for (const file of ["scripts/a\nb.mjs", "scripts/a\rb.mjs"])
+    assert.throws(
+      () => readPushedFiles(head, [file], { modes: new Map([[file, "100644"]]), spawn: unasked }),
+      /cannot ask git for "scripts\/a\\[nr]b\.mjs": the path holds a line break/,
+    );
+  assert.throws(
+    () =>
+      readPushedFiles(head, ["scripts/sub.mjs"], {
+        modes: new Map([["scripts/sub.mjs", "160000"]]),
+        spawn: unasked,
+      }),
+    /scripts\/sub\.mjs has mode 160000 \(a submodule\); the hook checks only regular files/,
+  );
+  const reply = (stdout) => () => ({
+    status: 0,
+    stdout: stdout === null ? null : Buffer.from(stdout),
+    stderr: null,
+  });
+  const cases = [
+    [null, /gave no output/],
+    ["", /cannot show h:x: no reply/],
+    ["h:x missing\n", /cannot show h:x: h:x missing/],
+    ["abc tree 3\nabc\n", /cannot show h:x: abc tree 3/],
+    ["abc blob 10\nshort\n", /cut h:x short/],
+    ["abc blob 2\nhi\nextra", /gave more than was asked/],
+  ];
+  for (const [stdout, error] of cases)
+    assert.throws(
+      () =>
+        readPushedFiles("h", ["x"], { modes: new Map([["x", "100644"]]), spawn: reply(stdout) }),
+      error,
+    );
+});
+
+test("a pushed link at a script path stops the hook, naming the path and its mode", () => {
+  const { work, g, base } = pushRepo();
+  symlinkSync("kept.mjs", path.join(work, "scripts/alias.mjs"));
+  g("add", "scripts/alias.mjs");
+  g("commit", "-qm", "a link where a script goes");
+  const head = g("rev-parse", "HEAD");
+  const pushed = pushedChanges([{ localSha: head, remoteSha: base }], { cwd: work });
+  assert.deepEqual(pushed[0].jsFiles, ["scripts/alias.mjs"]);
+  assert.throws(
+    () => runPushed(work, pushed),
+    new RegExp(
+      `^Error: ${head}:scripts/alias\\.mjs has mode 120000 \\(a symbolic link\\); the hook checks only regular files`,
+    ),
+  );
 });

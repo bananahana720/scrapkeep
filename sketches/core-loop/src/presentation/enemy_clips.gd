@@ -2,6 +2,7 @@ extends Node
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const DIR := "res://assets/models/world_one/clips/"
@@ -244,7 +245,7 @@ func _physics_process(delta: float) -> void:
 	var choice := _choose()
 	_set_clip(String(choice[0]))
 	clip_time = float(choice[1])
-	var weight := 1.0 if clip in HARD else EnemyMotion.motion_scale
+	var weight := 1.0 if clip in HARD else Comfort.motion_scale()
 	_sample(clip, clip_time, weight)
 	if _strike_age >= 0.0:
 		_strike_age += delta

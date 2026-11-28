@@ -116,10 +116,7 @@ func _physics_process(delta: float) -> bool:
 func _start_run() -> void:
 	_driver = BotDriver.new(_game, _policy, _seed)
 	_driver.tree_policy = ""
-	for child in _game.get_children():
-		var script = child.get_script()
-		if script != null and String(script.resource_path).ends_with("ui/workshop.gd"):
-			child.armed = true
+	_game.workshop().armed = true
 	var events = _game.events
 	events.tree_offered.connect(func(_c: String, depth: int, _choices: Array):
 		_pending.append({"at": _clock + 0.7, "name": "pick-depth%d" % depth, "then": func(): _press(KEY_1)}))

@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -11,13 +10,12 @@ import {
   isCleanImportPass,
   writeImportStamp,
 } from "./import-stamp.mjs";
+import { git as runGit } from "./lib/git.mjs";
 
 function repo() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "import-stamp-"));
   const git = (...args) =>
-    execFileSync("git", ["-C", dir, "-c", "user.name=t", "-c", "user.email=t@t", ...args], {
-      stdio: "ignore",
-    });
+    runGit(["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: dir });
   mkdirSync(path.join(dir, "sk"), { recursive: true });
   writeFileSync(path.join(dir, "sk", "a.gd"), "1\n");
   writeFileSync(path.join(dir, ".gitignore"), ".godot/\n");

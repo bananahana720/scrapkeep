@@ -579,10 +579,6 @@ func _hold(on: bool) -> void:
 		ctx.player.set_velocity_now(_held_velocity)
 
 
-func held_velocity() -> Vector3:
-	return _held_velocity
-
-
 func _arm(find: Dictionary) -> void:
 	var part: String = find["part"]
 	if _paid.has(part):

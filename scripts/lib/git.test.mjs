@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -78,6 +87,107 @@ test("git and gitOptional use 64 MiB default maxBuffer, trim by default, and han
   );
 });
 
+test("git hands a failed call's exit status and output on the error, and both helpers pass a timeout through", () => {
+  const failed = { status: 1, stdout: "partial\n", stderr: "no match\n" };
+  assert.throws(
+    () => git(["grep", "x"], { spawn: () => failed }),
+    (error) => error.status === 1 && error.stdout === "partial\n" && error.stderr === "no match\n",
+  );
+  const seen = [];
+  const spawn = (_cmd, _args, opts) => {
+    seen.push(opts);
+    return { status: 0, stdout: "ok\n", stderr: "" };
+  };
+  git(["status"], { spawn, timeout: 3000 });
+  gitOptional(["status"], { spawn, timeout: 3000 });
+  git(["status"], { spawn });
+  assert.deepEqual(
+    seen.map((opts) => opts.timeout),
+    [3000, 3000, undefined],
+  );
+  const spawnError = Object.assign(new Error("spawnSync git ETIMEDOUT"), { code: "ETIMEDOUT" });
+  assert.throws(
+    () => git(["status"], { spawn: () => ({ status: null, error: spawnError }) }),
+    /ETIMEDOUT/,
+  );
+  assert.equal(
+    gitOptional(["status"], { spawn: () => ({ status: null, error: spawnError }) }),
+    null,
+  );
+});
+
+test("a git call that passes its time limit stops a child that ignores the first stop signal, and the caller returns", () => {
+  const standIn = 'trap "" TERM; echo $$; sleep 5 </dev/null >/dev/null 2>&1';
+  const ran = [];
+  const spawn = (_cmd, _args, opts) => {
+    const result = spawnSync("/bin/sh", ["-c", standIn], opts);
+    ran.push(result);
+    return result;
+  };
+  assert.throws(() => git(["fetch"], { spawn, timeout: 500 }), /ETIMEDOUT/);
+  assert.equal(gitOptional(["fetch"], { spawn, timeout: 500 }), null);
+  assert.equal(ran.length, 2);
+  for (const result of ran) {
+    assert.equal(result.signal, "SIGKILL");
+    const pid = Number(result.stdout.trim());
+    assert.ok(
+      Number.isInteger(pid) && pid > 0,
+      `the stand-in printed no process id: ${result.stdout}`,
+    );
+    assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+  }
+});
+
+test("git and gitOptional refuse a second argument that is not an options object, before starting git", () => {
+  const bin = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-fake-git-"));
+  const marker = path.join(bin, "started");
+  writeFileSync(path.join(bin, "git"), `#!/bin/sh\necho "$@" >> "${marker}"\n`, { mode: 0o755 });
+  const before = process.env.PATH;
+  process.env.PATH = bin;
+  try {
+    for (const [bad, kind] of [
+      ["/some/dir", "a string"],
+      [3, "a number"],
+      [["/some/dir"], "an array"],
+      [null, "null"],
+      [new Map(), "a Map"],
+      [() => {}, "a function"],
+    ]) {
+      for (const [name, call] of [
+        ["git", git],
+        ["gitOptional", gitOptional],
+      ]) {
+        assert.throws(
+          () => call(["status"], bad),
+          (error) =>
+            error instanceof TypeError &&
+            error.message ===
+              `${name}(args, options): options must be an object such as { cwd }, got ${kind}`,
+        );
+      }
+    }
+    for (const [name, call] of [
+      ["gitState", gitState],
+      ["cleanHead", cleanHead],
+    ]) {
+      assert.throws(
+        () => call({ cwd: "/some/dir" }),
+        (error) =>
+          error instanceof TypeError &&
+          error.message ===
+            `${name}(cwd, options): cwd must be a folder path string, got an object`,
+      );
+    }
+    assert.equal(existsSync(marker), false, "git was started");
+    git(["status"], Object.assign(Object.create(null), { cwd: bin }));
+    assert.equal(readFileSync(marker, "utf8"), "status\n", "the fake git on PATH did not run");
+  } finally {
+    if (before === undefined) delete process.env.PATH;
+    else process.env.PATH = before;
+    rmSync(bin, { recursive: true, force: true });
+  }
+});
+
 test("gitState and cleanHead report repository state and refuse dirty trees", () => {
   const dir = makeTempRepo();
   const nonRepo = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-nongit-"));
@@ -100,5 +210,77 @@ test("gitState and cleanHead report repository state and refuse dirty trees", ()
   } finally {
     rmSync(dir, { recursive: true, force: true });
     rmSync(nonRepo, { recursive: true, force: true });
+  }
+});
+
+const GIT_COMMAND = String.raw`(?:[^"'\`]*?(?:&&|\|\||[;|]|-l?c\s+['"]?))?\s*git\s`;
+const STARTS_GIT = new RegExp(
+  [
+    String.raw`\b[\w$.]+\(\s*["'\`]git["'\`]\s*,`,
+    String.raw`\bexec(?:Sync|Async)?\(\s*["'\`]` + GIT_COMMAND,
+    String.raw`["'\`]-l?c["'\`]\s*,\s*["'\`]` + GIT_COMMAND,
+  ].join("|"),
+);
+
+const STARTS_GIT_BY_HAND = {
+  "scripts/lib/git.mjs": "the helper itself",
+  "scripts/ci/affected.mjs":
+    "the CI changes job checks out only scripts/ci and scripts/lib/cli.mjs, so scripts/lib/git.mjs is not on disk when it runs",
+  "scripts/sketch-lint.test.mjs": "pull request 1332 holds this file",
+};
+
+function filesStartingGit(cwd) {
+  const files = git(["ls-files", "-z", "--", "*.mjs", "*.js"], { cwd, trim: false })
+    .split("\0")
+    .filter(Boolean);
+  if (files.length === 0) throw new Error(`git ls-files lists no .mjs or .js file in ${cwd}`);
+  return files.filter((file) => STARTS_GIT.test(readFileSync(path.join(cwd, file), "utf8"))).sort();
+}
+
+test("only the allowed files start git by hand; every other script starts it through scripts/lib/git.mjs", () => {
+  assert.deepEqual(
+    filesStartingGit(REPO_ROOT),
+    Object.keys(STARTS_GIT_BY_HAND).sort(),
+    "start git with git or gitOptional from scripts/lib/git.mjs, which drops the repository variables a git hook exports so the cwd decides the repository",
+  );
+});
+
+test("the direct-git listing names a file that starts git by hand and fails on an empty listing or a folder outside git", () => {
+  const dir = makeTempRepo();
+  const empty = makeTempRepo();
+  const outside = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-nongit-"));
+  try {
+    writeFileSync(path.join(dir, "a.mjs"), 'spawnSync(\n  "git",\n  ["status"],\n);\n');
+    writeFileSync(path.join(dir, "b.js"), "execSync(`" + "git rev-parse HEAD`);\n");
+    writeFileSync(
+      path.join(dir, "c.mjs"),
+      [
+        'git(["status"]);',
+        "throw new Error(`git status failed`);",
+        'spawnSync("python3", ["-c", "import git"]);',
+        'git(["-c", "user.name=t", "commit"]);',
+        'spawnSync("sh", ["-c", "digit status"]);',
+        "",
+      ].join("\n"),
+    );
+    const cases = {
+      "d.mjs": ["runCmd(", '"git", ["-C", root, "status"]);'],
+      "e.mjs": ['spawnSync("sh", ["-c", "', 'git status"]);'],
+      "f.mjs": ['spawn("bash", [\n  "-lc",\n  `cd ${dir} && ', "git fetch origin`,\n]);"],
+      "g.js": ["execSync(\"bash -lc '", "git status'\");"],
+      "h.mjs": ["execSync(`npm ci; ", "git log -1`);"],
+    };
+    for (const [file, parts] of Object.entries(cases))
+      writeFileSync(path.join(dir, file), parts.join("") + "\n");
+    const files = ["a.mjs", "b.js", "c.mjs", "d.mjs", "e.mjs", "f.mjs", "g.js", "h.mjs"];
+    git(["add", ...files], { cwd: dir });
+    assert.deepEqual(
+      filesStartingGit(dir),
+      files.filter((file) => file !== "c.mjs"),
+    );
+    assert.throws(() => filesStartingGit(empty), /lists no \.mjs or \.js file/);
+    assert.throws(() => filesStartingGit(outside), /not a git repository/i);
+  } finally {
+    for (const d of [dir, empty, outside]) rmSync(d, { recursive: true, force: true });
   }
 });

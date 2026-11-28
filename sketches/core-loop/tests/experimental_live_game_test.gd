@@ -9,9 +9,9 @@ const LiveWorldActors := preload("res://src/experimental/live_world_actors.gd")
 const ActorCraft := preload("res://src/experimental/live_world_actor_craft.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 const AdversityDirector := preload("res://src/experimental/adversity_director.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const DeathCause := preload("res://src/core/death_cause.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const BALL_RADIUS_M := 1.0
 const BALL_GRAVITY_SCALE := 26.0 / 9.8
@@ -600,11 +600,11 @@ func _check_live_squall(game) -> void:
 	await _physics(3)
 	_t.check("the squall ramps", director.hazard_phase in [AdversityDirector.HazardPhase.RAMP, AdversityDirector.HazardPhase.PEAK], str(director.hazard_phase))
 	_t.eq("an active squall shows wind streaks", int(bridge.live_actors.snapshot()["streaks_visible"]), LiveWorldActors.STREAK_COUNT)
-	var was: bool = UiTokens.reduced_motion
-	UiTokens.reduced_motion = true
+	var was: bool = Comfort.reduced_motion
+	Comfort.reduced_motion = true
 	await _physics(2)
 	_t.eq("reduced motion hides the wind streaks", int(bridge.live_actors.snapshot()["streaks_visible"]), 0)
-	UiTokens.reduced_motion = was
+	Comfort.reduced_motion = was
 
 
 func _check_live_lockdown(game) -> void:

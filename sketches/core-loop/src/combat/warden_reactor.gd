@@ -5,10 +5,8 @@ const Palette := preload("res://src/core/palette.gd")
 const Run := preload("res://src/core/run_state.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 static var _sheet_shader: Shader
 
 const SHEET_SECONDS := 3.0
@@ -64,6 +62,7 @@ class FlumePosture extends "res://src/combat/boss_posture.gd":
 
 const Weapons := preload("res://src/combat/weapons.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 static var _line_reference := -1.0
 const LINE_REFERENCE_HEFT := 1.5
 const LINE_REFERENCE_WEAPON := "rapid_laser"
@@ -369,7 +368,7 @@ func _show_sheet(warden, alpha := SHEET_ALPHA) -> void:
 			+ sheet_dir.cross(Vector3.UP) * lane_offset()
 	var ground: float = warden.terrain.height(mid.x, mid.z) if warden.terrain != null else warden.home.y
 	view.global_transform = Transform3D(Basis.looking_at(-sheet_dir, Vector3.UP), Vector3(mid.x, ground + 0.2, mid.z))
-	if is_live and EnemyMotion.motion_scale > 0.0 and not UiTokens.reduced_motion and view.is_inside_tree():
+	if is_live and not Comfort.reduced_motion and view.is_inside_tree():
 		view.scale = Vector3(1.0, 1.0, 0.15)
 		var tw := view.create_tween()
 		tw.tween_property(view, "scale:z", 1.0, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -425,7 +424,7 @@ void fragment() {
 	mat.shader = _sheet_shader
 	mat.set_shader_parameter("opacity", clampf(alpha + (0.22 if is_live else 0.08), 0.0, 0.92))
 	mat.set_shader_parameter("live", 1.0 if is_live else 0.0)
-	mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or EnemyMotion.motion_scale <= 0.0 or UiTokens.reduced_motion else 1.0)
+	mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or Comfort.reduced_motion else 1.0)
 	return mat
 
 

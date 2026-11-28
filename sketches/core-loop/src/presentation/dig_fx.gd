@@ -4,8 +4,8 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const RUPTURE_SECONDS := 0.45
 const BURST_SECONDS := 0.85
 const GRIT_REACH := 22.0
@@ -288,7 +288,7 @@ func _process(delta: float) -> void:
 
 
 func _tick_wayfinding_fx() -> void:
-	var calm := UiTokens.reduced_motion or FlashGuard.on
+	var calm := Comfort.reduced_motion or FlashGuard.on
 	for row in cable_pulses:
 		var node: MeshInstance3D = row["node"]
 		if not is_instance_valid(node):

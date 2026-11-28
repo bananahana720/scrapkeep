@@ -12,10 +12,17 @@ const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const FxBudget := preload("res://src/presentation/fx_budget.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Density := preload("res://src/presentation/density.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const FUSION_KEYS := ["arc+frost", "arc+kinetic", "frost+kinetic", "frost+heat", "arc+heat", "heat+kinetic"]
+const POP_AGES := [0.0, 0.02, 0.0504, 0.08, 0.12, 0.139]
+const POP_PINS := [
+	[12.0, false, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]],
+	[40.0, false, [0.82, 1.1409296469033556, 1.24, 1.1020841637164651, 1.0105753967699607, 1.0000261388524454]],
+	[20.0, true, [0.82, 1.2479061958711406, 1.38, 1.1616332592177363, 1.0167443782191048, 1.0000413865163722]],
+	[80.0, true, [0.82, 1.2937532882859057, 1.44, 1.1871543001468527, 1.019388227411595, 1.0000479212294835]],
+]
 
 var _t := T.new("combat_juice_elevation_test")
 
@@ -42,7 +49,7 @@ func _run() -> void:
 	_check_streak_and_chain_counter()
 	FlashGuard.on = false
 	Density.live().reset()
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	quit(_t.verdict())
 
 
@@ -62,12 +69,14 @@ func _check_damage_numbers() -> void:
 		and DamageNumbers.type_of_kind("cinder") == "heat")
 
 	var peak_age := DamageNumbers.POP_WINDOW_S * DamageNumbers.POP_PEAK_T
-	var plain_pop := DamageNumbers.pop_scale(peak_age, 12.0, false, false)
-	var big_pop := DamageNumbers.pop_scale(peak_age, DamageNumbers.BIG_FROM, false, false)
-	var crit_pop := DamageNumbers.pop_scale(peak_age, 20.0, true, false)
-	var big_crit_pop := DamageNumbers.pop_scale(peak_age, DamageNumbers.BIG_FROM * 2.0, true, false)
-	var settled := DamageNumbers.pop_scale(DamageNumbers.POP_WINDOW_S, DamageNumbers.BIG_FROM * 2.0, true, false)
-	var still_pop := DamageNumbers.pop_scale(peak_age, DamageNumbers.BIG_FROM * 2.0, true, true)
+	var plain_pop := DamageNumbers.pop_scale(peak_age, 12.0, false)
+	var big_pop := DamageNumbers.pop_scale(peak_age, DamageNumbers.BIG_FROM, false)
+	var crit_pop := DamageNumbers.pop_scale(peak_age, 20.0, true)
+	var big_crit_pop := DamageNumbers.pop_scale(peak_age, DamageNumbers.BIG_FROM * 2.0, true)
+	var settled := DamageNumbers.pop_scale(DamageNumbers.POP_WINDOW_S, DamageNumbers.BIG_FROM * 2.0, true)
+	Comfort.reduced_motion = true
+	var still_pop := DamageNumbers.pop_scale(peak_age, DamageNumbers.BIG_FROM * 2.0, true)
+	Comfort.reduced_motion = false
 	_t.check("elastic pop curve overshoots on big hits and crits and settles by 0.14s",
 		is_equal_approx(plain_pop, 1.0)
 		and is_equal_approx(big_pop, DamageNumbers.BIG_POP_PEAK) and big_pop > 1.0
@@ -76,6 +85,7 @@ func _check_damage_numbers() -> void:
 		and is_equal_approx(settled, 1.0)
 		and is_equal_approx(still_pop, 1.0),
 		"plain %.2f big %.2f crit %.2f big_crit %.2f settled %.2f still %.2f" % [plain_pop, big_pop, crit_pop, big_crit_pop, settled, still_pop])
+	_check_pop_follows_comfort()
 
 	var plain_style := DamageNumbers.crit_outline_style(DamageNumbers.FONT, false)
 	var crit_style := DamageNumbers.crit_outline_style(DamageNumbers.CRIT_FONT, true)
@@ -109,6 +119,24 @@ func _check_damage_numbers() -> void:
 	layer.clear()
 	_t.eq("damage_numbers clear empties state", layer.visible_count(), 0)
 	layer.queue_free()
+
+
+func _check_pop_follows_comfort() -> void:
+	for pin in POP_PINS:
+		var off: Array = []
+		var on: Array = []
+		for age in POP_AGES:
+			Comfort.reduced_motion = false
+			off.append(DamageNumbers.pop_scale(age, pin[0], pin[1]))
+			Comfort.reduced_motion = true
+			on.append(DamageNumbers.pop_scale(age, pin[0], pin[1]))
+		Comfort.reduced_motion = false
+		var want: Array = pin[2]
+		var same: bool = off.size() == want.size()
+		for i in off.size():
+			same = same and absf(float(off[i]) - float(want[i])) <= 1e-9
+		_t.check("with reduced motion off, the pop of value %s crit %s matches the base curve" % [pin[0], pin[1]], same, str(off))
+		_t.eq("with reduced motion on, the pop of value %s crit %s holds at 1.0" % [pin[0], pin[1]], on, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
 
 func _check_fusions_and_shockwaves() -> void:
@@ -245,9 +273,9 @@ func _check_streak_and_chain_counter() -> void:
 			tier_cie_ok = false
 	_t.check("chain counter tier colours stay CIE76 >= 35 from HAZARD", tier_cie_ok)
 
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	_t.check("reduced motion clamps chain counter scale to 1.0", is_equal_approx(counter.draw_scale(), 1.0))
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 
 	counter.reset()
 	_t.check("chain counter reset clears all momentum state",

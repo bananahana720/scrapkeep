@@ -8,15 +8,7 @@ skill_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 repo="$(git -C "$skill_dir" rev-parse --show-toplevel)"
 [ -n "$repo" ] || { echo "verify-game: cannot find the repo from $skill_dir (git rev-parse failed)" >&2; exit 2; }
 sketch="$repo/sketches/core-loop"
-godot="${GODOT_BIN:-}"
-for candidate in \
-  "$(command -v godot || true)" \
-  "$HOME/Applications/Godot_4.7.2.app/Contents/MacOS/Godot" \
-  "$HOME/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64" \
-  /opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64; do
-  [ -n "$godot" ] && break
-  [ -n "$candidate" ] && [ -x "$candidate" ] && godot="$candidate"
-done
+godot="${GODOT_BIN:-$(node "$repo/scripts/godot-home.mjs" --bin 2>/dev/null || true)}"
 # Evidence is scratch, and the scripts delete scratch folders inside it, so it stays under artifacts/local/.
 evidence_root="$(canonical_path "${VERIFY_GAME_EVIDENCE_ROOT:-$repo/artifacts/local/verify-game}")"
 case "$evidence_root" in

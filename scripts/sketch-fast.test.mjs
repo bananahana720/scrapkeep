@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -56,8 +65,11 @@ import {
   checkLabels,
   removedChecks,
   checksRemoved,
+  nothingCompared,
+  longestStages,
 } from "./sketch-fast.mjs";
 import { IMPORT_TRIES, importTry, importWithRetry, scriptErrorCount } from "./sketch-smoke.mjs";
+import { cwdDecidesRepository, git } from "./lib/git.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
 
@@ -944,8 +956,8 @@ test("runBootTask overlaps with parallel tests in lanePool and stops queued work
   let peak = 0;
   let stopped = false;
   const stages = [];
-  const stage = (name, ok, detail) => {
-    stages.push({ name, ok, detail });
+  const stage = (name, ok, detail, stageMs) => {
+    stages.push({ name, ok, detail, stageMs });
     return ok;
   };
   const bootPass = runBootTask({
@@ -956,7 +968,7 @@ test("runBootTask overlaps with parallel tests in lanePool and stops queued work
       peak = Math.max(peak, live);
       await new Promise((r) => setTimeout(r, 25));
       live--;
-      return { ok: true, killed: false, reason: null };
+      return { ok: true, killed: false, reason: null, ms: 25 };
     },
     onStop: () => {
       stopped = true;
@@ -974,7 +986,9 @@ test("runBootTask overlaps with parallel tests in lanePool and stops queued work
   assert.equal(bootRes.ok, true);
   assert.equal(testRes, "ran");
   assert.equal(peak, 2, "boot and parallel test must overlap in the lane pool");
-  assert.deepEqual(stages, [{ name: "boot", ok: true, detail: { note: "300 frames" } }]);
+  assert.deepEqual(stages, [
+    { name: "boot", ok: true, detail: { note: "300 frames" }, stageMs: 25 },
+  ]);
 
   // Boot failure stops queued lanes before they start
   const failPool = lanePool(2);
@@ -1255,6 +1269,234 @@ test("sketch:fast prints one line and exits 2 on an argument it does not know", 
   assert.equal(ran.status, 2);
   assert.equal(ran.stdout, "");
   assert.match(ran.stderr, /^sketch:fast: unknown argument "--tests"[^\n]*\n$/);
+});
+
+function scratchFastRepo() {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-fast-pre-"));
+  try {
+    return scratchFastRepoIn(dir);
+  } catch (err) {
+    rmSync(dir, { recursive: true, force: true });
+    throw err;
+  }
+}
+
+function scratchFastRepoIn(dir) {
+  const work = path.join(dir, "work");
+  const remote = path.join(dir, "remote.git");
+  const tmp = path.join(dir, "tmp");
+  const marker = path.join(dir, "checkouts");
+  mkdirSync(tmp);
+  git(["init", "-q", "--bare", remote], { cwd: dir });
+  git(["init", "-q", "-b", "main", work], { cwd: dir });
+  for (const [key, value] of [
+    ["user.email", "test@example.invalid"],
+    ["user.name", "Test"],
+    ["commit.gpgsign", "false"],
+  ])
+    git(["config", key, value], { cwd: work });
+  mkdirSync(path.join(work, "sketches/core-loop/tests"), { recursive: true });
+  writeFileSync(
+    path.join(work, "sketches/core-loop/tests/fx_library_test.gd"),
+    "extends SceneTree\n",
+  );
+  git(["add", "sketches"], { cwd: work });
+  git(["commit", "-q", "-m", "initial"], { cwd: work });
+  git(["remote", "add", "origin", remote], { cwd: work });
+  git(["push", "-q", "origin", "HEAD:refs/pull/7/head"], { cwd: work });
+  writeFileSync(
+    path.join(work, ".git/hooks/post-checkout"),
+    [
+      "#!/bin/sh",
+      `pwd >> "${marker}"`,
+      '[ "$SKETCH_FAST_TEST_STOP" = 1 ] || exit 0',
+      "pid=$PPID",
+      'while [ "${pid:-1}" -gt 1 ]; do',
+      '  case "$(ps -o command= -p "$pid")" in *sketch-fast.mjs*) kill -TERM "$pid"; exit 0;; esac',
+      "  pid=$(ps -o ppid= -p \"$pid\" | tr -d ' ')",
+      "done",
+      "",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+  cpSync(import.meta.dirname, path.join(work, "scripts"), { recursive: true });
+  const run = (args, env = {}) =>
+    spawnSync(process.execPath, [path.join(work, "scripts", "sketch-fast.mjs"), ...args], {
+      cwd: work,
+      encoding: "utf8",
+      env: { ...cwdDecidesRepository(), TMPDIR: tmp, ...env },
+    });
+  return { dir, work, tmp, marker, run };
+}
+
+test("the scratch checkout of --pre is gone after an unmatched --test, a plan-only run and a stop signal", () => {
+  const { dir, work, tmp, marker, run } = scratchFastRepo();
+  try {
+    const ways = [
+      {
+        args: ["--test", "no_such_test"],
+        status: 2,
+        stderr: /no tests\/\*\.gd matched no_such_test/,
+      },
+      { args: ["--test", "fx_library_test", "--dry-run"], status: 0, stderr: /^$/ },
+      { args: ["--base", "main"], stop: true, signal: "SIGTERM" },
+    ];
+    for (const way of ways) {
+      rmSync(marker, { force: true });
+      const ran = run(["--pre", "7", ...way.args], way.stop ? { SKETCH_FAST_TEST_STOP: "1" } : {});
+      const label = way.args.join(" ") + (way.stop ? " (stopped)" : "");
+      assert.equal(ran.signal, way.signal ?? null, `${label}: ${ran.stderr}`);
+      assert.equal(ran.status, way.status ?? null, `${label}: ${ran.stderr}`);
+      if (way.stderr) assert.match(ran.stderr, way.stderr, label);
+      const made = readFileSync(marker, "utf8").trim().split("\n");
+      assert.equal(made.length, 1, `${label}: one scratch checkout was made`);
+      assert.equal(existsSync(made[0]), false, `${label}: ${made[0]} is still on disk`);
+      assert.deepEqual(readdirSync(tmp), [], label);
+      assert.deepEqual(
+        git(["worktree", "list", "--porcelain"], { cwd: work })
+          .split("\n")
+          .filter((line) => line.startsWith("worktree ")).length,
+        1,
+        `${label}: git worktree list still names the scratch checkout`,
+      );
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a finished run gives every stage row its own length, prints its three longest stages and says when it compares nothing", () => {
+  const { dir, work, run } = scratchFastRepo();
+  try {
+    const ran = run(["--base", "main", "--pre", "7", "--ci-godot-only"]);
+    assert.equal(ran.status, 0, ran.stdout + ran.stderr);
+    const head = git(["rev-parse", "HEAD"], { cwd: work });
+    const sentence = `Nothing compared: main plus #7 already contains the head ${head.slice(0, 8)}, so the commit it compares against is the head itself: no file counts as changed and a test red on the head is red on that base too.`;
+    const lines = ran.stdout.trim().split("\n");
+    assert.equal(lines[0], `sketch:fast: ${sentence}`);
+    assert.match(lines.at(-2), /^sketch:fast pass in \d+s on /);
+    assert.ok(lines.at(-2).endsWith(` ${sentence}`), lines.at(-2));
+    assert.match(
+      lines.at(-1),
+      /^longest stages: (?:base checkout|tree hygiene|godot) \d+\.\ds, (?:base checkout|tree hygiene|godot) \d+\.\ds, (?:base checkout|tree hygiene|godot) \d+\.\ds$/,
+    );
+    const receiptDir = path.join(work, "artifacts/local/receipts");
+    const files = readdirSync(receiptDir).filter((file) => file.endsWith(".json"));
+    assert.equal(files.length, 1, files.join(", "));
+    const receipt = JSON.parse(readFileSync(path.join(receiptDir, files[0]), "utf8"));
+    assert.equal(receipt.nothing_compared, sentence);
+    assert.deepEqual(
+      receipt.stages.map((row) => row.name),
+      ["base checkout", "tree hygiene", "godot"],
+    );
+    let end = 0;
+    for (const row of receipt.stages) {
+      assert.ok(Number.isInteger(row.stage_ms) && row.stage_ms >= 0, JSON.stringify(row));
+      assert.ok(Number.isInteger(row.ms) && row.ms >= end, JSON.stringify(row));
+      assert.ok(row.stage_ms <= row.ms, JSON.stringify(row));
+      end = row.ms;
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("nothingCompared names a base that already contains the head and the --test form with no base, and stays quiet once the head has merged the base", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-fast-shapes-"));
+  try {
+    const run = (...args) => git(args, { cwd: dir });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "test@example.invalid");
+    run("config", "user.name", "Test");
+    run("config", "commit.gpgsign", "false");
+    const commit = (file) => {
+      writeFileSync(path.join(dir, file), file);
+      run("add", file);
+      run("commit", "-q", "-m", file);
+    };
+    commit("a");
+    run("switch", "-q", "-c", "feat");
+    commit("f");
+    run("switch", "-q", "main");
+    commit("b");
+    run("switch", "-q", "feat");
+    run("merge", "-q", "--no-edit", "main");
+    const head = run("rev-parse", "HEAD");
+    const ask = (more) => ({ head, base: "main", namedMode: false, baseCheck: true, ...more });
+
+    const mergedBase = run("merge-base", "main", "HEAD");
+    assert.notEqual(mergedBase, head);
+    assert.equal(nothingCompared(ask({ comparedTo: mergedBase })), null);
+
+    run("switch", "-q", "main");
+    run("merge", "-q", "--no-edit", "feat");
+    run("switch", "-q", "feat");
+    const containing = run("merge-base", "main", "HEAD");
+    assert.equal(containing, head);
+    assert.equal(
+      nothingCompared(ask({ comparedTo: containing })),
+      `Nothing compared: main already contains the head ${head.slice(0, 8)}, so the commit it compares against is the head itself: no file counts as changed and a test red on the head is red on that base too.`,
+    );
+    assert.match(
+      nothingCompared(ask({ comparedTo: containing, namedMode: true, pre: ["12", "34"] })),
+      /^Nothing compared: main plus #12, #34 already contains the head /,
+    );
+    assert.equal(
+      nothingCompared(ask({ comparedTo: head, namedMode: true, baseCheck: false })),
+      `Nothing compared: --test without --base-check runs the named tests on the head ${head.slice(0, 8)} alone and checks out no base, so a test red on the head gets no base verdict.`,
+    );
+
+    for (const bad of [
+      { comparedTo: undefined },
+      { comparedTo: "" },
+      { comparedTo: head.slice(0, 8) },
+      { comparedTo: head, head: undefined },
+      { comparedTo: head, base: "" },
+      { comparedTo: head, base: undefined },
+      { comparedTo: head, namedMode: undefined },
+      { comparedTo: head, baseCheck: "yes" },
+    ])
+      assert.throws(() => nothingCompared(ask(bad)), TypeError, JSON.stringify(bad));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("longestStages names the three longest stage rows by their own length, leaves out the tests row when its two parts are listed, and refuses rows it cannot read", () => {
+  const receipt = {
+    stages: [
+      { name: "tree hygiene", ok: true, ms: 400, stage_ms: 400 },
+      { name: "machine slot", ok: true, ms: 90_400, stage_ms: 90_000 },
+      { name: "import", ok: true, ms: 150_400, stage_ms: 60_000 },
+      { name: "boot", ok: true, ms: 170_000, stage_ms: 19_600 },
+      { name: "base import", ok: true, ms: 400_000, stage_ms: 249_600 },
+      { name: "parallel lanes", ok: true, ms: 600_400, stage_ms: 450_000 },
+      { name: "solo tests", ok: true, ms: 4_200_400, stage_ms: 3_600_000 },
+      { name: "tests", ok: true, ms: 4_200_400, stage_ms: 4_050_000 },
+    ],
+  };
+  assert.equal(
+    longestStages(receipt.stages),
+    "longest stages: solo tests 3600.0s, parallel lanes 450.0s, base import 249.6s",
+  );
+  assert.equal(
+    longestStages(receipt.stages.filter((row) => !/^(parallel|solo) /.test(row.name))),
+    "longest stages: tests 4050.0s, base import 249.6s, machine slot 90.0s",
+  );
+  assert.equal(
+    longestStages(receipt.stages.slice(0, 2)),
+    "longest stages: machine slot 90.0s, tree hygiene 0.4s",
+  );
+  for (const bad of [
+    undefined,
+    null,
+    [],
+    {},
+    [{ name: "import", ms: 5 }],
+    [{ stage_ms: 5 }],
+    [null],
+  ])
+    assert.throws(() => longestStages(bad), TypeError, JSON.stringify(bad));
 });
 
 test("unmatchedTestPatterns names each pattern that matches no test, even beside one that does", () => {

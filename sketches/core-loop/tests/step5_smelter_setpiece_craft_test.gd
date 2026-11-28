@@ -2,10 +2,11 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const ChunkSockets := preload("res://src/experimental/arena_chunk_socket.gd")
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 const DynamicSetpieces := preload("res://src/experimental/dynamic_setpieces.gd")
 const SetpieceCraft := preload("res://src/presentation/craft/experimental_setpiece_craft.gd")
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const CHUNK_PATH := "res://src/experimental/smelter_crane_chunk.tscn"
 const DT := 1.0 / 30.0
@@ -23,7 +24,7 @@ func _run() -> void:
 	await _check_dynamic_setpieces_craft_and_topology()
 	await _check_cargo_pendulum_sway_and_reduced_motion()
 	SetpieceCraft.reset_for_tests()
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	quit(t.verdict())
 
 
@@ -161,7 +162,7 @@ func _check_cargo_pendulum_sway_and_reduced_motion() -> void:
 	root.add_child(setpieces)
 	await process_frame
 
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	var info := setpieces.setup_from_chunk(chunk, {"seed": 6060})
 	setpieces.trigger_setpiece(String(info["crane_id"]), "player")
 
@@ -191,9 +192,9 @@ func _check_cargo_pendulum_sway_and_reduced_motion() -> void:
 
 	t.check("cargo_hoist_rigging_visible_during_sweep", saw_hoist_visible, "hoist cables + trolley active")
 	t.check("cargo_sway_active_under_normal_motion", max_sway_rad > 0.015 and max_sway_rad < 0.65, "max_sway=%.4f rad" % max_sway_rad)
-	t.check("cargo_warn_floor_preserved", warn_elapsed >= DynamicSetpieces.MIN_WARN_FLOOR_S, "warn=%.2f s" % warn_elapsed)
+	t.check("cargo_warn_floor_preserved", warn_elapsed >= EnvTags.MIN_TELL_S, "warn=%.2f s" % warn_elapsed)
 
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	for _j in 4:
 		setpieces.step(DT, Vector3(30.0, 0.5, 30.0), Vector3.ZERO, 2)
 	var calm_rot := hull_pivot.basis.get_euler().length()
@@ -201,7 +202,7 @@ func _check_cargo_pendulum_sway_and_reduced_motion() -> void:
 	t.check("cargo_reduced_motion_holds_exact_rest", calm_rot < 0.0001 and calm_pos < 0.0001,
 		"rot=%.5f pos=%.5f" % [calm_rot, calm_pos])
 
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	setpieces.teardown()
 	root.remove_child(setpieces)
 	root.remove_child(chunk)

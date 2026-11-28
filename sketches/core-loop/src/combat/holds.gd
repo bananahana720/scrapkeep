@@ -82,10 +82,6 @@ func immune() -> bool:
 	return immune_left > 0.0
 
 
-func unholdable() -> bool:
-	return immune() or (player != null and player.kit.sprinting)
-
-
 func held(source: Node) -> bool:
 	return source != null and active.has(source.get_instance_id())
 

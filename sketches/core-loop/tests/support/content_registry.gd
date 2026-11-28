@@ -129,6 +129,11 @@ static var _pass_depth := 0
 static var _pass := {}
 
 
+static func reset_for_tests() -> void:
+	_pass_depth = 0
+	_pass.clear()
+
+
 static func _begin_pass() -> void:
 	_pass_depth += 1
 

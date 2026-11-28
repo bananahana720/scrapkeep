@@ -282,10 +282,6 @@ func focal_px() -> float:
 	return camera.get_camera_projection()[1][1] * REF_HEIGHT * 0.5
 
 
-func projected_px(radius: float, depth: float) -> float:
-	return half_width(radius, depth) * 2.0 * focal_px() / depth
-
-
 func _draw_cable(kit, centre: Vector3, smash: bool, delta: float) -> void:
 	var toward: Vector3 = kit.anchor if kit.hooked else (_gone_anchor if _broke_age >= 0.0 or _let_go_age >= 0.0 else centre + _dry_dir)
 	var fresh: bool = not cable.visible or (kit.hooked and (not _was_hooked or kit.anchor.distance_to(_last_anchor) > ANCHOR_JUMP))

@@ -9,6 +9,7 @@ const Push := preload("res://tests/support/push.gd")
 const CampSkee := preload("res://src/world/camp_skee.gd")
 const CampTrial := preload("res://src/world/camp_trial.gd")
 const CampSandbox := preload("res://src/world/camp_sandbox.gd")
+const MetRecord := preload("res://src/core/met_record.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The walkable camp (camp_hub.gd) on the real title:
@@ -114,19 +115,18 @@ func _run() -> void:
 	_t.check("the hub is not built before the first walk", not _hub.built, "")
 	_t.check("the title ball is frozen", player.frozen(), "")
 	# A run marks kinds as met before the camp is ever opened (the listener is wired at setup, once).
-	var Picker := preload("res://src/ui/camp_enemy_picker.gd")
-	_t.check("nothing is met before any spawn", not Picker.met_of(_game).has("chaser"), str(Picker.met_of(_game)))
+	_t.check("nothing is met before any spawn", not MetRecord.met_of(_game, CampSandbox.kinds()).has("chaser"), str(MetRecord.met_of(_game, CampSandbox.kinds())))
 	# Spawners add a body to the tree before announcing it; so do these stand-ins.
 	var ghost := Node3D.new()
 	_game.add_child(ghost)
 	_game.events.enemy_spawned.emit(ghost, "chaser")
-	_t.check("an enemy_spawned before any camp visit marks it met", Picker.met_of(_game).has("chaser") and not _hub.built, str(Picker.met_of(_game)))
-	Picker.watch(_game)
+	_t.check("an enemy_spawned before any camp visit marks it met", MetRecord.met_of(_game, CampSandbox.kinds()).has("chaser") and not _hub.built, str(MetRecord.met_of(_game, CampSandbox.kinds())))
+	MetRecord.watch(_game)
 	var called := Node3D.new()
 	called.set_meta("sandbox_slot", 0)
 	_game.add_child(called)
 	_game.events.enemy_spawned.emit(called, "lobber")
-	_t.check("watch is idempotent and a sandbox call marks nothing", not Picker.met_of(_game).has("lobber"), str(Picker.met_of(_game)))
+	_t.check("watch is idempotent and a sandbox call marks nothing", not MetRecord.met_of(_game, CampSandbox.kinds()).has("lobber"), str(MetRecord.met_of(_game, CampSandbox.kinds())))
 	ghost.free()
 	called.free()
 

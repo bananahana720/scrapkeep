@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { isMain, parseCliArgs } from "./lib/cli.mjs";
 
 export const TOOLCHAIN = JSON.parse(
   readFileSync(new URL("./toolchain.json", import.meta.url), "utf8"),
@@ -91,12 +93,21 @@ export async function withScratchGodotEnv(
 
 export const GODOT_VERSION = TOOLCHAIN.godotNumericVersion;
 
+export function whichTool(toolName, env = process.env) {
+  const found = spawnSync("which", [toolName], { env, encoding: "utf8" });
+  if (found.status === 0) {
+    const resolved = found.stdout.trim().split(/\r?\n/)[0];
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
 export function resolveGodotBinary({
   env = process.env,
   platform = process.platform,
   homeDir = os.homedir(),
   exists = existsSync,
-  which = null,
+  which = (name) => whichTool(name, env),
   requireExplicit = false,
 } = {}) {
   const explicit = typeof env.GODOT_BIN === "string" ? env.GODOT_BIN.trim() : "";
@@ -113,11 +124,7 @@ export function resolveGodotBinary({
     );
     if (exists(macApp)) return macApp;
   }
-  if (which) {
-    const onPath = which("godot");
-    if (onPath && exists(onPath)) return onPath;
-  }
-  const candidates = [
+  const pinned = [
     `/opt/scrapkeep-toolchain/Godot_v${GODOT_VERSION}-stable_linux.x86_64`,
     path.join(
       homeDir,
@@ -127,9 +134,11 @@ export function resolveGodotBinary({
       GODOT_VERSION,
       `Godot_v${GODOT_VERSION}-stable_linux.x86_64`,
     ),
-    "/usr/bin/godot",
-  ];
-  return candidates.find((candidate) => exists(candidate)) ?? null;
+  ].find((candidate) => exists(candidate));
+  if (pinned) return pinned;
+  const onPath = which("godot");
+  if (onPath && exists(onPath)) return onPath;
+  return exists("/usr/bin/godot") ? "/usr/bin/godot" : null;
 }
 
 export function requireGodotBinary(options = {}) {
@@ -139,4 +148,15 @@ export function requireGodotBinary(options = {}) {
     throw new Error(`Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN`);
   }
   return binary;
+}
+
+if (isMain(import.meta.url)) {
+  try {
+    const { bin } = parseCliArgs(process.argv.slice(2), { flags: { "--bin": "bin" } });
+    if (!bin) throw new Error("usage: node scripts/godot-home.mjs --bin");
+    console.log(requireGodotBinary());
+  } catch (error) {
+    console.error(`godot-home: ${error.message}`);
+    process.exitCode = 1;
+  }
 }

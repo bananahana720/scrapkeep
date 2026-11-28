@@ -497,7 +497,7 @@ class FlungPlate extends Node3D:
 			vel.y = absf(vel.y) * 0.35
 			vel.x *= 0.65
 			vel.z *= 0.65
-		rotation += spin * delta * EnemyMotion.motion_scale
+		rotation += spin * delta * Comfort.motion_scale()
 		var fade := clampf((_t - LIFE * 0.55) / (LIFE * 0.45), 0.0, 1.0)
 		var s := maxf(0.01, 1.0 - fade)
 		scale = Vector3.ONE * s

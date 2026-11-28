@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 
 import { parseReceiptArgs, runReceiptCliSync } from "./receipt-cli.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 export const LOOPS = ["heat", "overtime", "called_shot", "marked_hull", "moss_scale", "carry_core"];
 export const MIN_CHECKS = 20;
@@ -70,5 +70,4 @@ function main(argv) {
   });
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

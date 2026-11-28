@@ -26,7 +26,6 @@ const Ground := preload("res://src/combat/ground.gd")
 const WearTrail := preload("res://src/combat/wear_trail.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
-const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
@@ -102,11 +101,6 @@ const SPRING_WINDOW := 3.0
 const SPRING_MULT := 1.5
 const RAKE_DELAY := 0.25
 const RAKE_DAMAGE := 0.6
-const WALK_WINDOW := 2.0
-const WALK_REACH := 6.0
-const WAKE_DAMAGE := 0.5
-const WAKE_MIN_TRAVEL := 1.0
-const WAKE_GRACE := 0.5
 const PIKE_RADIUS_MULT := 2.0
 const PIKE_RING_RADIUS := 1.5
 const GRAPESHOT_ANGLE_DEG := 8.0
@@ -222,6 +216,9 @@ var _has_grapeshot := false
 var _has_hoar := false
 var _has_fault := false
 var orbitals
+var hero_hooks
+var consumables
+var cannon
 var _air_steer_surge_left := 0.0
 var _air_dash_bat_left := 0.0
 var _boost_active_left := 0.0
@@ -253,12 +250,7 @@ var _heated := {}
 const PULL_KNOCK := 7.0
 const PULL_RATIO_CAP := 1.5
 const PULL_FALLOFF := 0.6
-var _cannon := []
-var _cannon_count := 0
-var _walk := {}
-var _wake := {}
 var _exposed := {}
-var last_cannon_paint := {}
 var bay := 0
 var plate := {}
 var link_group := {}
@@ -369,13 +361,16 @@ func setup(ctx_ref) -> void:
 	near_miss.add_child(way_out)
 	way_out.setup(near_miss, Callable(ctx.player, "ball_position"), Callable(ground, "height"))
 	_wire_redline()
+	cannon = preload("res://src/combat/cannon_kit.gd").new()
+	add_child(cannon)
+	cannon.setup(ctx, self)
 	_specials = {
 		"detonation_gauge": {"geometry": discharge_geometry, "fire": fire_discharge},
 		"overdrive_blast": {"geometry": _overdrive_geometry, "fire": _fire_overdrive},
 		"detonation_line": {"geometry": line_geometry, "fire": fire_line},
 		"point_blank": {"geometry": _point_blank_geometry, "fire": _fire_point_blank},
 		"clamp": {"geometry": _clamp_geometry, "fire": _fire_clamp},
-		"cannon_plate": {"geometry": _plate_geometry, "fire": _fire_plate},
+		"cannon_plate": {"geometry": cannon.plate_geometry, "fire": cannon.fire_plate},
 		"gather_plate": {"tap": _tap_gather, "commit": card_aim},
 	}
 	_line_skills = {
@@ -386,7 +381,7 @@ func setup(ctx_ref) -> void:
 		"claw_drag": preload("res://src/combat/tarn_claw.gd").line_row(self),
 		"link_clips": {"on_body": _link_clips_body, "on_world": _link_clips_world, "geometry": _clip_geometry},
 		"link_double": {"on_body": _link_clips_body, "on_world": _link_clips_world, "geometry": _clip_geometry},
-		"cannon_lane_charge": {"on_body": _cannon_line_body, "on_world": _cannon_line_world, "geometry": _cannon_line_geometry},
+		"cannon_lane_charge": {"on_body": cannon.cannon_line_body, "on_world": cannon.cannon_line_world, "geometry": cannon.cannon_line_geometry},
 	}
 	ctx.player.line_load_of = line_load
 	ultimate = KestKit.new()
@@ -402,13 +397,19 @@ func setup(ctx_ref) -> void:
 	orbitals = OrbitalSatellites.new()
 	add_child(orbitals)
 	orbitals.setup(ctx, self)
+	hero_hooks = preload("res://src/combat/hero_hooks.gd").new()
+	add_child(hero_hooks)
+	hero_hooks.setup(ctx, self)
+	consumables = preload("res://src/combat/consumable_runtime.gd").new()
+	add_child(consumables)
+	consumables.setup(ctx, self)
 	relic_swaps = preload("res://src/combat/relic_swaps.gd").new()
 	add_child(relic_swaps)
 	relic_swaps.setup(ctx, self)
 	ctx.events.grapple_fired.connect(func(anchor: Vector3):
 		_bite_load()
 		_on_grapple_fired_muts(anchor)
-		_on_cannon_grapple_fired(anchor))
+		cannon.on_cannon_grapple_fired(anchor))
 	ctx.events.player_died.connect(_on_player_died)
 	_cards = {"balance_due": _run_balance}
 	ctx.events.enemy_struck.connect(_on_card_struck)
@@ -435,15 +436,15 @@ func setup(ctx_ref) -> void:
 		var argc: int = _signal_argc(ctx.events, kind)
 		ctx.events.connect(kind, _on_proc_fact.bind(kind).unbind(argc))
 	ctx.events.slammed.connect(_on_slammed_upgrade)
-	ctx.events.slammed.connect(_on_cannon_slammed)
+	ctx.events.slammed.connect(cannon.on_cannon_slammed)
 	ctx.events.slammed.connect(_on_fault_slammed)
 	ctx.events.slammed.connect(_on_thermobaric_slammed)
-	ctx.events.dashed.connect(_on_cannon_dashed)
+	ctx.events.dashed.connect(cannon.on_cannon_dashed)
 	ctx.events.dashed.connect(_on_wake_dash)
 	ctx.events.dashed.connect(_on_dashed_micro)
 	ctx.events.boosted.connect(_on_wake_dash)
 	ctx.events.boosted.connect(_on_boosted_micro)
-	ctx.events.vault_kicked.connect(_on_vault_kicked_w47)
+	ctx.events.vault_kicked.connect(hero_hooks.on_vault_kicked)
 	ctx.events.grapple_released.connect(_on_grapple_released_w47)
 	ctx.events.world_fact.connect(_on_world_fact_w47)
 	if ctx.events.has_signal("consumable_used"):
@@ -477,16 +478,16 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_ended.connect(func(_won: bool):
 		_clear_devices()
-		_clear_cannon_paint()
+		cannon.clear_cannon_paint()
 		_clear_input_buffers()
-		_reset_w47_h1_state()
+		hero_hooks.reset()
 		_reset_w47_h2_state()
 		weapon_driver.reset())
 	ctx.events.flow_changed.connect(func(state_name: String):
 		if state_name in ["summary", "title"]:
-			_clear_cannon_paint()
+			cannon.clear_cannon_paint()
 			_clear_input_buffers()
-			_reset_w47_h1_state()
+			hero_hooks.reset()
 			_reset_w47_h2_state()
 			weapon_driver.reset())
 	ctx.events.run_started.connect(func(_class_id: String):
@@ -512,8 +513,7 @@ func setup(ctx_ref) -> void:
 		_escape = {}
 		escape_lane = {}
 		escape_acts = 0
-		_free_cannon()
-		_cannon_count = 0
+		cannon.reset_run()
 		_reset_cards()
 		_line_load = {}
 		_cast_pending = {}
@@ -524,7 +524,7 @@ func setup(ctx_ref) -> void:
 		_clear_verb_items()
 		_reset_w47_c2_state(true)
 		_reset_grapple_muts_state(true)
-		_reset_w47_h1_state()
+		hero_hooks.reset()
 		_reset_w47_h2_state()
 		_cloud = {}
 		_sentry = {}
@@ -547,7 +547,7 @@ func setup(ctx_ref) -> void:
 		weapon_driver.interrupt(WeaponDriver.INTERRUPT_MOUNT)
 		if v.length() > 0.1:
 			_since_slingshot = 0.0
-		_on_dismounted_kinetic_pylon(v))
+		hero_hooks.on_dismounted_kinetic_pylon(v))
 	ctx.events.part_gained.connect(func(_part: String, _source: String): rebuild_patterns())
 	ctx.events.mounted.connect(func(_at: Vector3, _banked_speed: float):
 		_mounted_boost_left = Weapons.CHARGE_MOUNT_BOOST_S
@@ -556,7 +556,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
 		weapon_driver.interrupt(WeaponDriver.INTERRUPT_ULTIMATE)
 		_clear_input_buffers()
-		_clear_cannon_paint()
+		cannon.clear_cannon_paint()
 		var wg = ctx.player.abilities.gauge(AbilityState.WEAPON)
 		if wg != null and wg.cancel():
 			ctx.player.indicator.clear("weapon")
@@ -635,12 +635,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		if source != "fuse":
 			ctx.run.kill_tags = _kill_tags(enemy, affix_id)
 			ctx.run.record_kill(kind, where, scrap, source)
-			if source != "hazard" and ctx.flow != null and ctx.flow.in_stage() and Consumables.is_secondary_counter(kind):
-				var drop_id := Consumables.roll_for_counter_kill(_consumable_rng, kind)
-				if drop_id != "":
-					drop_consumable(drop_id, where)
 		var id := enemy.get_instance_id()
-		_memo_frozen.erase(id)
+		consumables.on_enemy_died(id, kind, where, source)
 		_primed.erase(id)
 		_prow_until.erase(id)
 		_record_retirement(_class_for_id(id, kind))
@@ -817,7 +813,7 @@ func _door_events(hit: Dictionary) -> void:
 	var enemy: Node3D = hit["enemy"]
 	var result: Dictionary = hit["result"]
 	if result.get("shred", true):
-		_add_shred(enemy, result["punch"])
+		add_shred(enemy, result["punch"])
 	_detect_after(enemy, hit["kind"], result)
 	_record_delivered(enemy, hit["kind"], hit["removed"], result["dealt"],
 		hit["source"] if hit["source"] != "" else _forced_source)
@@ -967,7 +963,7 @@ func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
 	var mult := 1.0
 	if kind in CONTACT_KINDS and float(_exposed.get(enemy.get_instance_id(), {}).get("until", -INF)) > _clock:
 		mult *= MindAttacks.BRACE_MULT
-	if _memo_exposed(enemy):
+	if consumables.memo_exposed(enemy):
 		mult *= float(Consumables.row_of(Consumables.FOREMAN_MEMO).get("weak_mult", 1.5))
 	if _primer_consumes(enemy, kind, cls) == "primer_coil":
 		mult *= Companion.PRIMER_COIL_MULT
@@ -1389,11 +1385,6 @@ func transformer_ids() -> PackedStringArray:
 	return PackedStringArray(Pattern.TRANSFORMERS.keys())
 
 
-func transformer_info(id: String) -> Dictionary:
-	var row: Dictionary = Pattern.TRANSFORMERS.get(id, {})
-	return {"label": row.get("label", id), "text": row.get("text", "")}
-
-
 func active_transformers() -> Array:
 	var ids := []
 	if ctx == null or ctx.run == null:
@@ -1495,7 +1486,7 @@ func _physics_process(delta: float) -> void:
 	_step_micro_mutations(delta)
 	_step_escape_lane()
 	var enemies_pre := get_tree().get_nodes_in_group(Groups.ENEMY)
-	_step_consumables(delta, enemies_pre)
+	consumables.step(delta, enemies_pre)
 	var intent = ctx.player.intent
 	var weapon := active_weapon()
 	var is_cards: bool = ctx.player.abilities.cap(AbilityState.WEAPON, "cards", null) != null
@@ -1505,13 +1496,13 @@ func _physics_process(delta: float) -> void:
 	var cadence_rate: float = _rate(weapon) if not is_cards and not is_lob and p != null else 0.0
 	var shots: Array = weapon_driver.step(delta, intent, weapon, p, cadence_rate,
 		_weapon_step_context(weapon, p, cadence_rate))
-	if _overclock_left > 0.0 and not shots.is_empty():
-		shots = _apply_overclock_shots(shots, p)
+	if consumables.overclock_card_left() > 0.0 and not shots.is_empty():
+		shots = consumables.apply_overclock_shots(shots, p)
 	if is_cards:
 		_step_cards(delta, shots)
 	elif is_lane:
 		for shot in shots:
-			_fire_cannon_lane(weapon, shot)
+			cannon.fire_cannon_lane(weapon, shot)
 	elif is_lob:
 		_step_sticky_weapon(intent, delta, shots)
 	else:
@@ -1527,13 +1518,12 @@ func _physics_process(delta: float) -> void:
 	_step_special(intent, delta)
 	_step_line(intent, delta)
 	_step_active_buffer(intent, delta)
-	step_cannon(delta)
+	cannon.step_cannon(delta)
 	var enemies := get_tree().get_nodes_in_group(Groups.ENEMY)
 	_step_verb_items(enemies)
 	_step_cross_synergies(delta, enemies)
 	_step_grapple_mutations(delta, enemies)
-	_step_kinetic_pylon(delta, enemies)
-	_step_kest_fuse_trace(delta, enemies)
+	hero_hooks.step(delta, enemies)
 	if relic_swaps != null: relic_swaps.step(delta, enemies)
 	var shells := get_tree().get_nodes_in_group(Groups.ENEMY_SHOT)
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
@@ -1568,7 +1558,7 @@ func _tint(enemies = null) -> void:
 		enemy.set_tint("amber" if against >= plating_of(enemy) else "slate")
 
 
-func _add_shred(enemy: Node3D, punch: float) -> void:
+func add_shred(enemy: Node3D, punch: float) -> void:
 	if enemy.has_method("is_dead") and enemy.is_dead():
 		return
 	if enemy.get("kind") == "warden":
@@ -1661,7 +1651,7 @@ func _weapon_step_context(weapon: String, p: Resource, cadence_rate: float) -> D
 		"managed_commit": is_cards,
 		"slot_ready": ctx.player.abilities.ready(AbilityState.WEAPON, cast_cost),
 		"lob_charging": wg != null and wg.charging,
-		"recoil_airborne": cannon_recoil_airborne(),
+		"recoil_airborne": cannon.cannon_recoil_airborne(),
 	}
 
 
@@ -1749,7 +1739,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 		if ricochet_carve:
 			_stamp_ricochet_canyon(fused, rc_row)
 		if sixth_hot:
-			_stamp_rivet_sixth_hot(fused)
+			hero_hooks.stamp_rivet_sixth_hot(fused)
 		_evolve_record(fused, p)
 		bolts.fire(fused)
 		fired = 1
@@ -1770,10 +1760,10 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 			if ricochet_carve:
 				_stamp_ricochet_canyon(rec, rc_row)
 			if sixth_hot:
-				_stamp_rivet_sixth_hot(rec)
+				hero_hooks.stamp_rivet_sixth_hot(rec)
 			bolts.fire(rec)
 	if sixth_hot:
-		var hfx = _hero_fx()
+		var hfx = hero_hooks.hero_fx()
 		if hfx != null:
 			hfx.add_rivet_hot_tracer(muzzle, aim["to"])
 		effects.beam(muzzle, aim["to"], Palette.COPPER, 0.16)
@@ -1945,7 +1935,7 @@ func _on_wake_dash(dir: Vector3) -> void:
 	_wake_frame = frame
 	var flat := Vector3(dir.x, 0.0, dir.z)
 	flat = flat.normalized() if flat.length() > 0.01 else aim_heading()
-	var from := _ground_under(ctx.player.ball_position())
+	var from := ground_under(ctx.player.ball_position())
 	_lay_strip("dash_wake", from, from - flat * float(row.get("length", 4.0)), float(row.get("width", 2.0)),
 		float(row.get("mult", 0.4)) * _weapon_hit(), float(row.get("life", 1.5)), float(row.get("knock", 4.0)))
 
@@ -1983,7 +1973,7 @@ func _on_slam_crack(at: Vector3, strength: float, _flatness: float) -> void:
 	var heading: Vector3 = ctx.player.planar_velocity()
 	heading.y = 0.0
 	heading = heading.normalized() if heading.length() > 1.0 else aim_heading()
-	var from := _ground_under(at)
+	var from := ground_under(at)
 	var length := float(row.get("length", 8.0))
 	_lay_strip("slam_crack", from, from + heading * length, float(row.get("width", 2.5)),
 		float(row.get("mult", 0.5)) * punch_of("slam", Augments.SLAM_KNOCK * strength), float(row.get("life", 0.5)),
@@ -2051,7 +2041,7 @@ func _toll(bell: Dictionary, enemies = null) -> void:
 			hits += 1
 		_draw_shape(shape, color)
 		if bell["breaks"]:
-			for blast in _shape_blasts(shape):
+			for blast in shape_blasts(shape):
 				ctx.break_props(blast[0], blast[1], "second_bell")
 	last_bell = bell.duplicate()
 	last_bell["hits"] = hits
@@ -2088,7 +2078,7 @@ static func _shape_origin(shape: Dictionary) -> Vector3:
 	return shape.get("centre", Vector3.ZERO)
 
 
-static func _shape_blasts(shape: Dictionary) -> Array:
+static func shape_blasts(shape: Dictionary) -> Array:
 	match String(shape.get("kind", "")):
 		"line":
 			var from: Vector3 = shape["from"]
@@ -2323,7 +2313,7 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 		_check_gravity_ledger(enemy.global_position, [enemy])
 	_bit_tell(acts, bolt, point)
 	if bool(bolt.get("sixth_hot", false)) and not bool(bolt.get("sixth_hot_ricocheted", false)):
-		_resolve_rivet_armor_ricochet(bolt, enemy, point, part)
+		hero_hooks.resolve_rivet_armor_ricochet(bolt, enemy, point, part)
 	if bolt["chain_jumps"] > 0:
 		chain_hit(enemy, from, bolt)
 	if orbitals != null:
@@ -2332,7 +2322,7 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 
 func _on_bolt_bounce(bolt: Dictionary, at: Vector3) -> void:
 	if bool(bolt.get("sixth_hot", false)) and not bool(bolt.get("sixth_hot_ricocheted", false)):
-		_resolve_rivet_wall_ricochet(bolt, at)
+		hero_hooks.resolve_rivet_wall_ricochet(bolt, at)
 		return
 	_bit_tell(ShotBits.bit("bounce"), bolt, at)
 	if orbitals != null:
@@ -2774,14 +2764,14 @@ static func hull_radius(enemy: Node3D) -> float:
 	return ActiveBase.enemy_girth(enemy, 1.0)
 
 
-func _ground_under(at: Vector3) -> Vector3:
+func ground_under(at: Vector3) -> Vector3:
 	return at + Vector3.DOWN * 0.9
 
 
 func floor_at(at: Vector3) -> Vector3:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at, at + Vector3.DOWN * 80.0, PhysicsLayers.WORLD_MASK))
-	return hit["position"] if not hit.is_empty() else _ground_under(at)
+	return hit["position"] if not hit.is_empty() else ground_under(at)
 
 
 func aim_heading() -> Vector3:
@@ -2799,7 +2789,7 @@ func _discharge_speed(f: float) -> float:
 
 func discharge_geometry(f: float) -> Dictionary:
 	var burst := discharge_preview(_discharge_speed(f))
-	return ctx.player.yours({"kind": "ring", "centre": _ground_under(ctx.player.ball_position()), "radius": burst["radius"],
+	return ctx.player.yours({"kind": "ring", "centre": ground_under(ctx.player.ball_position()), "radius": burst["radius"],
 		"full_radius": discharge_preview(_discharge_speed(1.0))["radius"], "fill": f})
 
 
@@ -2812,7 +2802,7 @@ func fire_discharge(f: float, shape: Dictionary) -> void:
 
 
 func _overdrive_geometry(f: float) -> Dictionary:
-	return ctx.player.yours({"kind": "ring", "centre": _ground_under(ctx.player.ball_position()),
+	return ctx.player.yours({"kind": "ring", "centre": ground_under(ctx.player.ball_position()),
 		"radius": Weapons.OVERDRIVE_RADIUS * AbilityState.Gauge.scaled(f, 1.0, Weapons.OVERDRIVE_FULL),
 		"full_radius": Weapons.OVERDRIVE_RADIUS * Weapons.OVERDRIVE_FULL, "fill": f})
 
@@ -2840,7 +2830,7 @@ func _fire_point_blank(f: float, shape: Dictionary) -> void:
 
 
 func _clamp_geometry(f: float) -> Dictionary:
-	return ctx.player.yours({"kind": "ring", "centre": _ground_under(ctx.player.ball_position()),
+	return ctx.player.yours({"kind": "ring", "centre": ground_under(ctx.player.ball_position()),
 		"radius": AbilityState.Gauge.scaled(f, Weapons.CLAMP_RADIUS_MIN, Weapons.CLAMP_RADIUS_MAX),
 		"full_radius": Weapons.CLAMP_RADIUS_MAX, "fill": f})
 
@@ -2876,471 +2866,8 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 	_forced_source = prev_source
 
 
-func _cannon_phase() -> int:
-	return clampi(ctx.stages.world_of(ctx.run.stage), 1, 3) if ctx.stages != null else 1
-
-
-func _cannon_ground(p: Vector3) -> float:
-	return floor_at(p + Vector3.UP).y
-
-
-func commit_cannon(family: String, target: Vector3, centre: Vector3, radius: float, damage: float, source: String,
-		expose := false, overrides := {}) -> Dictionary:
-	_cannon_count += 1
-	var seed: int = _cannon_count * 7919 + ctx.run.stage
-	var phase := _cannon_phase()
-	var descriptors: Array = MindAttacks.commit(family, seed, target, centre, phase, radius)
-	var entry := {"family": family, "hazards": [], "damage": damage, "source": source, "struck": {}, "expose": expose,
-		"verb": "", "window": 0.0, "seed": seed, "target": target, "centre": centre, "radius": radius, "phase": phase, "options": overrides, "noted": false, "born": _clock}
-	for d in descriptors:
-		d["id"] = "cannon_%s_%d" % [String(d["id"]).trim_prefix("mind_"), _cannon_count]
-		for key in ["warn", "live", "from", "dir", "ahead", "half", "band"]:
-			if overrides.has(key):
-				d[key] = overrides[key]
-		var h = Hazard.from_def(d)
-		if overrides.has("warn"):
-			h.warn_seconds = maxf(0.0, float(overrides["warn"]))
-		h.color = overrides["color"] if overrides.has("color") else ClassDef.CANNON_COLOR
-		h.ground = _cannon_ground
-		ctx.root.add_child(h)
-		entry["hazards"].append(h)
-		if d.has("verb"):
-			entry["verb"] = String(d["verb"])
-			entry["window"] = float(d["weak_window"])
-	_cannon.append(entry)
-	return entry
-
-
-func step_cannon(delta: float) -> void:
-	_step_cannon_exposure()
-	_step_cannon_recoil_airborne(delta)
-	_step_cannon_piton()
-	_track_wake()
-	_step_cannon_paint()
-	if ctx.player.abilities.selected == AbilityState.LINE and ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge" and ctx.player.kit.hooked:
-		ctx.player.indicator.set_shape(AbilityState.LINE, _cannon_line_geometry(1.0))
-	elif ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge":
-		ctx.player.indicator.clear(AbilityState.LINE)
-	if _cannon.is_empty():
-		return
-	var enemies := get_tree().get_nodes_in_group(Groups.ENEMY)
-	var kept := []
-	for entry in _cannon:
-		var done := true
-		for h in entry["hazards"]:
-			if not is_instance_valid(h):
-				continue
-			var options: Dictionary = entry["options"]
-			if options.has("live_at"):
-				h.age = maxf(0.0, h.warn_seconds + _clock - float(options["live_at"]))
-				h.step(0.0)
-			else:
-				h.step(delta)
-			if h.is_live() and not entry["noted"]:
-				entry["noted"] = true
-				entry["live_clock"] = _clock
-				_cannon_note(entry)
-			if not h.is_done():
-				done = false
-			if h.is_live():
-				_cannon_strike(entry, h, enemies)
-		if done:
-			for h in entry["hazards"]:
-				if is_instance_valid(h):
-					h.queue_free()
-		else:
-			kept.append(entry)
-	_cannon = kept
-
-
-func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
-	for enemy in enemies:
-		if DamageDoor.dead(enemy):
-			continue
-		var id: int = enemy.get_instance_id()
-		if entry["struck"].has(id) or (enemy != entry["options"].get("forced") and not h.contains(enemy.global_position)):
-			continue
-		entry["struck"][id] = true
-		var push: Vector3 = h.heading if h.shape == Hazard.Shape.LANE else enemy.global_position - h.centre
-		var options: Dictionary = entry["options"]
-		if options.has("budget"):
-			var dealt := cannon_set_piece_hit(enemy, float(entry["damage"]), h.centre, false, false, options["budget"])
-			var record: Dictionary = options["record"]
-			if entry["struck"].size() == 1:
-				record["zone_hits"] = int(record.get("zone_hits", 0)) + 1
-			record["volley_hits"] = int(record.get("volley_hits", 0)) + 1
-			record["damage"] = float(record.get("damage", 0.0)) + dealt
-		else:
-			var chip := Weapons.CANNON_AIR_RAIL_CHIP if bool(options.get("overpenetrate", false)) \
-				else (Weapons.PIERCE_CHIP if bool(options.get("pierce_chip", false)) else CHIP)
-			deal_hit(enemy, "cannon", float(entry["damage"]) * damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "", entry["source"], "", chip)
-		if not entry.get("recital_checked", false):
-			entry["recital_checked"] = true
-			if entry["source"] != "item_proc":
-				_cannon_recital(entry["family"], enemy.global_position)
-			if options.has("discovery"):
-				discover("cannon_lane_charge", enemy.global_position)
-		if entry["expose"] and is_instance_valid(enemy) and not enemy.is_dead():
-			_cannon_expose(enemy, float(entry["window"]), entry["verb"])
-
-
-func _free_cannon() -> void:
-	_recital_index = 0
-	_recital_at = -INF
-	_clear_exposed()
-	for entry in _cannon:
-		for h in entry["hazards"]:
-			if is_instance_valid(h):
-				if h.get_parent() != null:
-					h.get_parent().remove_child(h)
-				h.queue_free()
-	_cannon = []
-	_walk = {}
-	_wake = {}
-	_cannon_recoil_airborne = false
-	_cannon_recoil_air_grace = 0.0
-	_cannon_piton = {}
-	_clear_cannon_paint()
-
-
-func _clear_cannon_paint() -> void:
-	last_cannon_paint = {}
-	if ctx != null and ctx.player != null and ctx.player.get("indicator") != null:
-		ctx.player.indicator.clear("cannon_paint")
-		ctx.player.indicator.clear("cannon_bracket_l")
-		ctx.player.indicator.clear("cannon_bracket_r")
-
-
-func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true) -> Dictionary:
-	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
-	var ball: Vector3 = ctx.player.ball_position()
-	var reach: float = reach_base * ctx.tuning.mod("weapon_range")
-	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, reach + AIM_SLACK)
-	var point: Vector3 = aim["point"]
-	var centre := _ground_under(ball)
-	var target := point
-	if Vector2(point.x - centre.x, point.z - centre.z).length() < 1.5:
-		target = centre + aim_heading() * 10.0
-	var mutation: String = ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")
-	var walked := allow_walk and walk_extends(mutation, _walk, _clock)
-	var half: float = MindAttacks.LANE_HALF * maxf(width_mult, Pattern.MIN_LOCK_WIDTH_MULT)
-	var radius := reach
-	var ahead: float = maxf(1.0, reach - half)
-	var walk_od := 1.0
-	if walked:
-		walk_od = relic_swaps.overdrive_for(AbilityState.WEAPON) if relic_swaps != null else 1.0
-		var walk_reach := WALK_REACH * walk_od
-		var flat := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
-		var dir_w := flat.normalized() if flat.length_squared() > 0.0001 else aim_heading()
-		var end_at: Vector3 = _walk["end"]
-		centre = floor_at(end_at + Vector3.UP)
-		target = centre + dir_w * 10.0
-		radius = walk_reach + half
-		ahead = walk_reach
-	var flat_dir := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
-	var heading := flat_dir.normalized() if flat_dir.length_squared() > 0.0001 else aim_heading()
-	return {
-		"aim": aim, "point": point, "centre": centre, "target": target, "heading": heading,
-		"radius": radius, "ahead": ahead, "half": half, "to": centre + heading * ahead,
-		"walked": walked, "overdrive": walk_od, "mutation": mutation, "ball": ball,
-	}
-
-
-func _step_cannon_paint() -> void:
-	var is_lane: bool = ctx.player.abilities.cap(AbilityState.WEAPON, "family", "") == "lane"
-	var snap: Dictionary = weapon_driver.state_snapshot()
-	if not is_lane or not bool(snap.get("painted", false)):
-		if not last_cannon_paint.is_empty():
-			_clear_cannon_paint()
-		return
-	var weapon := active_weapon()
-	var p: Resource = _patterns.get(weapon)
-	if p == null:
-		_clear_cannon_paint()
-		return
-	var stage: String = String(snap.get("lock_stage", WeaponDriver.SHOT_PULSE))
-	var reach_base: float = float(p.lock_pulse_reach) if float(p.lock_pulse_reach) > 0.0 else float(p.range_m)
-	var width_mult: float = float(p.lock_pulse_width_mult)
-	var color: Color = ClassDef.CANNON_COLOR
-	var air_overpen := false
-	if stage == WeaponDriver.SHOT_RAIL:
-		reach_base = float(p.lock_rail_reach) if float(p.lock_rail_reach) > 0.0 else float(p.range_m)
-		width_mult = float(p.lock_rail_width_mult)
-		if cannon_recoil_airborne():
-			width_mult *= Weapons.CANNON_AIR_RAIL_WIDTH_MULT
-			air_overpen = true
-		color = Palette.ARC
-	elif stage == WeaponDriver.SHOT_BARRAGE:
-		reach_base = float(p.range_m)
-		width_mult = float(p.lock_barrage_width_mult)
-		color = Palette.SLATE
-	var plan := _cannon_lane_plan(reach_base, width_mult, true)
-	var from: Vector3 = plan["centre"]
-	var to: Vector3 = plan["to"]
-	var half: float = float(plan["half"])
-	var heading: Vector3 = plan["heading"]
-	var side := Vector3.UP.cross(heading).normalized()
-	var bracket_norm: float = float(snap.get("lock_bracket", 0.0))
-	var bracket_gap: float = bracket_norm * 1.6
-	var lane_shape := {"kind": "line", "from": from, "to": to, "full_to": to, "width": half * 2.0,
-		"color": color, "ticks": "lane", "fill": 1.0 if stage == WeaponDriver.SHOT_RAIL else 0.5}
-	var offset := side * (half + bracket_gap)
-	var left_bracket := {"kind": "line", "from": from + offset, "to": to + offset, "width": 0.24, "color": color, "fill": 1.0}
-	var right_bracket := {"kind": "line", "from": from - offset, "to": to - offset, "width": 0.24, "color": color, "fill": 1.0}
-	ctx.player.indicator.set_shape("cannon_paint", lane_shape)
-	ctx.player.indicator.set_shape("cannon_bracket_l", left_bracket)
-	ctx.player.indicator.set_shape("cannon_bracket_r", right_bracket)
-	last_cannon_paint = {"stage": stage, "from": from, "to": to, "ahead": float(plan["ahead"]),
-		"half": half, "width": half * 2.0, "color": color, "bracket_gap": bracket_gap,
-		"air_lock_overpen": air_overpen}
-
-
-func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> void:
-	var p: Resource = _patterns.get(weapon)
-	var shot_kind := String(shot_desc.get("kind", "plain"))
-	var has_lock_desc := shot_desc.has("damage")
-	var damage: float = float(shot_desc["damage"]) if has_lock_desc else (float(p.damage) if (p != null and String(p.trigger) == Pattern.TRIGGER_HOLD_AUTO) else Weapons.LANE_DAMAGE)
-	var reach_base: float = float(shot_desc.get("reach", Weapons.CANNON_LANE_REACH)) if has_lock_desc else Weapons.CANNON_LANE_REACH
-	var width_mult: float = float(shot_desc.get("width_mult", 1.0)) if has_lock_desc else 1.0
-	var pierce: bool = source == "weapon" and bool(shot_desc.get("pierce", false))
-	var air_lock_overpen: bool = source == "weapon" and bool(shot_desc.get("air_lock_overpen", false))
-	var overpenetrate: bool = source == "weapon" and (bool(shot_desc.get("overpenetrate", false)) or air_lock_overpen)
-	var breaks_props: bool = source == "weapon" and (bool(shot_desc.get("breaks_props", false)) or air_lock_overpen)
-	var plan := _cannon_lane_plan(reach_base, width_mult, source == "weapon")
-	var walk_od: float = float(plan["overdrive"])
-	if bool(plan["walked"]):
-		damage *= walk_od
-	var aim: Dictionary = plan["aim"]
-	var point: Vector3 = plan["point"]
-	var ball: Vector3 = plan["ball"]
-	var overrides := {"ahead": plan["ahead"], "half": plan["half"], "pierce_chip": pierce, "overpenetrate": overpenetrate}
-	if shot_kind == WeaponDriver.SHOT_RAIL:
-		overrides["color"] = Palette.SAND
-	var entry := commit_cannon("lane", plan["target"], plan["centre"], plan["radius"], damage, source, false, overrides)
-	var h = entry["hazards"][0]
-	var kit = ctx.player.kit
-	if kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
-		var held: Vector3 = kit.anchor_body.global_position
-		if h.contains(Vector3(held.x, h.ground_at(held) + 1.0, held.z)) and not h.contains(held):
-			(entry["options"] as Dictionary)["forced"] = kit.anchor_body
-	var end: Vector3 = (h.centre as Vector3) + (h.heading as Vector3) * float(h.length)
-	if shot_kind == WeaponDriver.SHOT_RAIL:
-		var side: Vector3 = Vector3.UP.cross(h.heading as Vector3).normalized() * float(h.half_width)
-		effects.beam((h.centre as Vector3) + side, end + side, ClassDef.CANNON_COLOR, Effects.RING_LIFE)
-		effects.beam((h.centre as Vector3) - side, end - side, ClassDef.CANNON_COLOR, Effects.RING_LIFE)
-		if air_lock_overpen:
-			effects.beam(h.centre as Vector3, end, Palette.SAND, Effects.RING_LIFE)
-	var breached_props: Array[String] = []
-	if air_lock_overpen:
-		if ctx.destructibles != null and is_instance_valid(ctx.destructibles) and ctx.destructibles.has_method("on_rail_breach"):
-			breached_props = ctx.destructibles.on_rail_breach(
-				h.centre as Vector3, end, float(h.half_width), Weapons.CANNON_AIR_RAIL_MAX_TIER, "cannon_air_rail")
-	elif breaks_props:
-		for blast in _shape_blasts({"kind": "line", "from": h.centre, "to": end, "width": h.half_width * 2.0}):
-			ctx.break_props(blast[0], float(blast[1]), "cannon_rail")
-	if source == "weapon" and String(plan["mutation"]) == "cannon_lane_walk":
-		_walk = {} if bool(plan["walked"]) else {"end": end, "at": _clock}
-	if source == "weapon":
-		_clear_cannon_paint()
-	var muzzle: Vector3 = ball + h.heading * MUZZLE
-	volleys += 1
-	last_shot = {"weapon_id": weapon, "from": muzzle, "to": end, "point": point, "blocked": aim["blocked"], "bolts": 0,
-		"volley": volleys, "sprung": false, "kind": shot_kind, "pierce_chip": pierce,
-		"damage": damage, "overdrive": walk_od, "width_mult": width_mult, "reach": reach_base, "breaks_props": breaks_props,
-		"air_lock_overpen": air_lock_overpen, "overpenetrate": overpenetrate, "breached_props": breached_props}
-	ctx.events.shot_fired.emit(weapon, muzzle, end)
-
-
-static func walk_extends(mutation: String, walk: Dictionary, clock: float) -> bool:
-	return mutation == "cannon_lane_walk" and not walk.is_empty() and clock - float(walk["at"]) <= WALK_WINDOW
-
-
-func _on_cannon_dashed(dir: Vector3) -> void:
-	if ctx.player.abilities.cap(AbilityState.MOVEMENT, "family", "") != "split_lane":
-		return
-	var flat := Vector3(dir.x, 0.0, dir.z)
-	flat = flat.normalized() if flat.length() > 0.01 else aim_heading()
-	var centre := _ground_under(ctx.player.ball_position())
-	commit_cannon("split_lane", centre - flat * 10.0, centre, Weapons.RECOIL_REACH, Weapons.RECOIL_DAMAGE, "special")
-	if cannon_piton_staked():
-		ctx.player.set_velocity_now(Vector3.ZERO, "piton_stake")
-		_cannon_piton["recoil_cancelled"] = true
-		_cannon_recoil_airborne = false
-		_cannon_recoil_air_grace = 0.0
-		last_cannon_piton = {
-			"mode": "stake",
-			"at": _cannon_piton["anchor"],
-			"recoil_cancelled": true,
-			"hits": 0,
-			"walls_broken": [],
-		}
-	else:
-		_cannon_recoil_airborne = true
-		_cannon_recoil_air_grace = Weapons.CANNON_RECOIL_AIR_GRACE_S
-
-
-func _plate_geometry(f: float) -> Dictionary:
-	return ctx.player.yours({"kind": "cone", "apex": _ground_under(ctx.player.ball_position()), "dir": aim_heading(),
-		"length": 2.0 * MindAttacks.PLATE_HALF_BAND, "half_angle": MindAttacks.PLATE_HALF_SPAN, "fill": f})
-
-
-func _fire_plate(f: float, shape: Dictionary) -> void:
-	var apex: Vector3 = shape["apex"]
-	var dir: Vector3 = shape["dir"]
-	var damage := AbilityState.Gauge.scaled(f, Weapons.PLATE_DAMAGE_MIN, Weapons.PLATE_DAMAGE_MAX)
-	commit_cannon("plate", apex + dir * MindAttacks.PLATE_HALF_BAND, apex, shape["length"], damage, "special", true)
-	last_burst = {"at": apex, "damage": damage * damage_mod(Weapons.CANNON_LANE), "kind": "cannon_plate", "breaks_props": false}
-
-
-func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
-	if strength < 0.05 or ctx.player.abilities.cap(AbilityState.SMASH, "family", "") != "rush":
-		return
-	var landing := floor_at(at + Vector3.UP)
-	var target := landing + aim_heading() * 6.0
-	var best := Weapons.RUSH_REACH
-	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-		if enemy.has_method("is_dead") and enemy.is_dead():
-			continue
-		var d := Vector2(enemy.global_position.x - landing.x, enemy.global_position.z - landing.z).length()
-		if d <= best:
-			best = d
-			target = enemy.global_position
-	commit_cannon("rush", target, landing, Weapons.RUSH_REACH, Weapons.RUSH_DAMAGE * clampf(strength, 0.5, 1.5),
-		"drop_or_slam")
-	var from_recoil_surf := _cannon_recoil_airborne or _cannon_recoil_air_grace > 0.0
-	_cannon_recoil_airborne = false
-	_cannon_recoil_air_grace = 0.0
-	if from_recoil_surf and ctx.player.abilities.cap(AbilityState.MOVEMENT, "family", "") == "split_lane":
-		ctx.player.abilities.grant(AbilityState.MOVEMENT)
-		effects.ring(landing, 3.0, Palette.ANCIENT)
-		last_cannon_recoil_reset = {"at": landing, "clock": _clock}
-	if wake_follows("drop_or_slam", ctx.player.abilities.cap(AbilityState.SMASH, "mutation", "")):
-		_lay_wake(landing)
-
-
-static func wake_follows(source: String, mutation: String) -> bool:
-	return source == "drop_or_slam" and mutation == "cannon_rush_wake"
-
-
-func _track_wake() -> void:
-	if ctx.player.abilities.cap(AbilityState.SMASH, "mutation", "") != "cannon_rush_wake":
-		if not _wake.is_empty():
-			_wake.clear()
-		return
-	if ctx.player.kit.slamming:
-		if _wake.is_empty() or float(_wake["until"]) < INF:
-			_wake = {"from": ctx.player.ball_position(), "until": INF}
-	elif not _wake.is_empty() and float(_wake["until"]) == INF:
-		_wake["until"] = _clock + WAKE_GRACE
-
-
-func _lay_wake(landing: Vector3) -> void:
-	var wake := _wake
-	_wake = {}
-	if wake.is_empty() or _clock > float(wake["until"]):
-		return
-	var from: Vector3 = wake["from"]
-	var back := Vector3(from.x - landing.x, 0.0, from.z - landing.z)
-	back = back.normalized() if back.length() >= WAKE_MIN_TRAVEL else -aim_heading()
-	var reach: float = Weapons.CANNON_LANE_REACH * ctx.tuning.mod("weapon_range")
-	commit_cannon("lane", landing + back * 10.0, landing, reach, Weapons.LANE_DAMAGE * WAKE_DAMAGE, "item_proc")
-
-
-const CannonAugments := preload("res://src/movement/augments.gd")
-var _recital_index := 0
-var _recital_at := -INF
 static var _exposure_mesh: ArrayMesh
 static var _exposure_material: ShaderMaterial
-
-
-func cannon_audio():
-	var presentation = ctx.root.get("presentation")
-	return presentation.audio if presentation != null else null
-
-
-func _cannon_note(entry: Dictionary) -> void:
-	var audio = cannon_audio()
-	if audio != null:
-		var kind: String = {"weapon": "cannon_weapon", "line": "cannon_line_live", "drop_or_slam": "cannon_smash"}.get(entry["source"], "cannon_live")
-		if entry["family"] == "split_lane" and entry["source"] == "special" and not entry["options"].has("budget"):
-			kind = "cannon_recoil"
-		audio.cannon_family(entry["family"], false, kind)
-
-
-func _cannon_line_geometry(fraction: float) -> Dictionary:
-	var kit = ctx.player.kit
-	var ball: Vector3 = ctx.player.ball_position()
-	var from := _ground_under(ball)
-	var dir := aim_heading()
-	var ahead := Weapons.CANNON_LANE_REACH - MindAttacks.LANE_HALF
-	if kit.hooked and kit.on_body:
-		dir = Vector3(kit.anchor.x - ball.x, 0.0, kit.anchor.z - ball.z).normalized()
-		if dir.length() < 0.01:
-			dir = aim_heading()
-		ahead = Vector2(kit.anchor.x - ball.x, kit.anchor.z - ball.z).length() + Weapons.LANE_CHARGE_PAST
-	elif kit.hooked:
-		var floor = cannon_floor(kit.anchor)
-		if floor != null:
-			from = floor
-			var normal: Vector3 = kit.anchor_normal
-			if absf(normal.y) < 0.7 and Vector2(normal.x, normal.z).length() > 0.01:
-				dir = Vector3(normal.x, 0.0, normal.z).normalized()
-		else:
-			dir = Vector3(kit.anchor.x - ball.x, 0.0, kit.anchor.z - ball.z).normalized()
-			if dir.length() < 0.01:
-				dir = aim_heading()
-	return ctx.player.yours({"kind": "line", "from": from, "to": from + dir * ahead,
-		"full_to": from + dir * ahead, "width": MindAttacks.LANE_HALF * 2.0, "fill": fraction})
-
-
-func _cannon_line_body(target: Node3D, fraction: float, mult: float) -> void:
-	_cannon_line_fire(fraction, mult, target)
-
-
-func _cannon_line_world(anchor: Vector3, fraction: float, mult: float) -> void:
-	_cannon_line_fire(fraction, mult, null)
-	_arm_cannon_piton(anchor, ctx.player.kit.anchor_normal, mult)
-
-
-func _cannon_line_fire(fraction: float, mult: float, target: Node3D) -> void:
-	var shape := _cannon_line_geometry(fraction)
-	var from: Vector3 = shape["from"]
-	var to: Vector3 = shape["to"]
-	commit_cannon("lane", to, from, from.distance_to(to) + MindAttacks.LANE_HALF,
-		Weapons.LANE_CHARGE_DAMAGE * mult, "line", false,
-		{"warn": Weapons.LANE_CHARGE_WARN, "live": Weapons.LANE_CHARGE_LIVE,
-		"from": from, "dir": (to - from).normalized(), "ahead": from.distance_to(to), "forced": target,
-		"discovery": "cannon_lane_charge"})
-	var audio = cannon_audio()
-	if audio != null:
-		audio.cannon_line(ctx.player.chain.combo)
-
-
-func cannon_floor(at: Vector3):
-	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.1,
-		at - Vector3.UP * Weapons.VOID_DROP, CannonAugments.WORLD_MASK))
-	return hit["position"] if not hit.is_empty() and (hit["normal"] as Vector3).y >= 0.7 else null
-
-
-func _cannon_recital(family: String, at: Vector3) -> void:
-	if _clock - _recital_at > Weapons.RECITAL_SECONDS:
-		_recital_index = 0
-	if family == MindAttacks.FAMILIES[_recital_index]:
-		if _recital_index == 0:
-			_recital_at = _clock
-		_recital_index += 1
-	elif family == "lane":
-		_recital_at = _clock
-		_recital_index = 1
-	else:
-		_recital_index = 0
-	if _recital_index == MindAttacks.FAMILIES.size():
-		_recital_index = 0
-		discover("cannon_recital", at)
-		var audio = cannon_audio()
-		if audio != null:
-			audio.cannon_motif("cannon_recital", true)
 
 
 func cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: bool, mortar: bool, budget: Dictionary) -> float:
@@ -3361,7 +2888,7 @@ func cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: bo
 	return ult_hit(enemy, "slam" if mortar and landing else "ultimate", damage, at, landing)
 
 
-func _cannon_expose(enemy: Node3D, window: float, verb: String) -> void:
+func cannon_expose(enemy: Node3D, window: float, verb: String) -> void:
 	var id := enemy.get_instance_id()
 	var mark: MeshInstance3D = enemy.get_node_or_null("CannonExposure")
 	if mark == null:
@@ -3459,12 +2986,12 @@ func _drop_exposed(key) -> void:
 	_exposed.erase(key)
 
 
-func _clear_exposed() -> void:
+func clear_exposed() -> void:
 	for key in _exposed.keys():
 		_drop_exposed(key)
 
 
-func _step_cannon_exposure() -> void:
+func step_cannon_exposure() -> void:
 	for key in _exposed.keys():
 		var row: Dictionary = _exposed[key]
 		var left := float(row["until"]) - _clock
@@ -4435,7 +3962,7 @@ func _step_tally_cards() -> void:
 
 
 func line_geometry(f: float) -> Dictionary:
-	var from := _ground_under(ctx.player.ball_position())
+	var from := ground_under(ctx.player.ball_position())
 	var length := AbilityState.Gauge.scaled(f, Weapons.LINE_MIN, Weapons.LINE_MAX)
 	var shape: Dictionary = ctx.player.yours({"kind": "line", "from": from, "to": from + aim_heading() * length, "width": Weapons.LINE_WIDTH,
 		"full_to": from + aim_heading() * Weapons.LINE_MAX, "fill": f})
@@ -4498,7 +4025,7 @@ func _on_mounted(at: Vector3, banked_speed: float) -> void:
 	if ctx.run.class_def == null or not ctx.flow.in_play():
 		return
 	if ctx.run.class_def.id == "pylon_engineer":
-		_plant_beachhead_pylon(at)
+		hero_hooks.plant_beachhead_pylon(at)
 	var abilities = ctx.player.abilities
 	if not abilities.cap(AbilityState.SPECIAL, "plant_discharge", false):
 		return
@@ -4732,7 +4259,7 @@ func _throw_sticky(landing: Vector3, snap_token := 0, tail_drop := false) -> voi
 	volleys += 1
 	last_shot = {"weapon_id": Weapons.STICKY_CHARGE, "from": origin, "to": landing, "point": landing,
 		"blocked": false, "bolts": count, "volley": volleys, "radius": radius, "tail_drop": tail_drop}
-	refresh_kest_fuse_trace()
+	hero_hooks.refresh_kest_fuse_trace()
 	ctx.events.shot_fired.emit(Weapons.STICKY_CHARGE, origin, landing)
 
 
@@ -4951,7 +4478,7 @@ func _proc_volley(scale: float) -> void:
 			_run_balance(aim["point"], aim["valid"], {}, "item_proc")
 		elif is_lane:
 			var pulse_reach: float = float(p.lock_pulse_reach) if float(p.lock_pulse_reach) > 0.0 else float(p.range_m)
-			_fire_cannon_lane(weapon, {
+			cannon.fire_cannon_lane(weapon, {
 				"kind": WeaponDriver.SHOT_PULSE, "damage": float(p.damage), "reach": pulse_reach,
 				"width_mult": float(p.lock_pulse_width_mult), "pierce": false, "breaks_props": false,
 			}, "item_proc")
@@ -5395,9 +4922,9 @@ func _on_player_died() -> void:
 	_clear_verb_items()
 	_reset_w47_c2_state()
 	_reset_grapple_muts_state()
-	_reset_w47_h1_state()
+	hero_hooks.reset()
 	_reset_w47_h2_state()
-	_clear_consumables_runtime()
+	consumables.reset()
 	if ally_husks != null:
 		ally_husks.reset()
 	if orbitals != null:
@@ -5406,7 +4933,7 @@ func _on_player_died() -> void:
 	_clear_aftershocks()
 	_rakes.clear()
 	_deferred_procs.clear()
-	_clear_cannon_paint()
+	cannon.clear_cannon_paint()
 	weapon_driver.reset()
 
 
@@ -5440,7 +4967,7 @@ func _start_attempt() -> void:
 	_rakes.clear()
 	_clear_aftershocks()
 	_heated.clear()
-	_clear_exposed()
+	clear_exposed()
 	_cast_pending = {}
 	_bite_pending = false
 	_pike_count = 0
@@ -5448,16 +4975,15 @@ func _start_attempt() -> void:
 	_clear_verb_items()
 	_reset_w47_c2_state(true)
 	_reset_grapple_muts_state(true)
-	_reset_w47_h1_state()
+	hero_hooks.reset()
 	_reset_w47_h2_state()
-	_clear_consumables_runtime()
+	consumables.reset()
 	if ally_husks != null:
 		ally_husks.reset()
 	if orbitals != null:
 		orbitals.reset_attempt()
 	if relic_swaps != null: relic_swaps.reset()
-	if ctx != null and ctx.run != null:
-		_consumable_rng.seed = hash(["consumable_drops", ctx.run.run_seed, ctx.run.stage])
+	consumables.seed_attempt()
 	_spring_until = -1.0
 	_warden_slam_hits = 0
 	_mounted_boost_left = 0.0
@@ -5481,7 +5007,7 @@ func _clear_fight() -> void:
 	bolts.clear()
 	_clear_devices()
 	effects.clear()
-	_free_cannon()
+	cannon.free_cannon()
 
 
 func _clear_devices() -> void:
@@ -5655,12 +5181,6 @@ func _has_cross_synergy(id: String, extra := {}) -> bool:
 	return Synergies.cross_system_awake(id, ctx.run.parts, OrbitalSatellites.part_synergy_info, context)
 
 
-func active_cross_synergies(extra := {}) -> Array:
-	if ctx == null or ctx.run == null:
-		return []
-	return Synergies.cross_system_active(ctx.run.parts, OrbitalSatellites.part_synergy_info, synergy_context(extra))
-
-
 func micro_mutation_count(part_id: String) -> int:
 	return int(_micro_counts.get(part_id, 0))
 
@@ -5746,8 +5266,7 @@ func _on_grapple_released_w47() -> void:
 	_pendulum_swing_charged = false
 	_pendulum_swing_origin = Vector3.INF
 	_on_grapple_released_muts()
-	if not _cannon_piton.is_empty():
-		_detonate_cannon_piton()
+	cannon.detonate_cannon_piton()
 	if not ctx.flow.in_play() or not _has_micro_mutation("long_spool"):
 		return
 	var dur := float(_micro_row("long_spool").get("duration_s", 0.4))
@@ -6449,7 +5968,7 @@ func _step_dragnet_siphon(delta: float, ball: Vector3, anchor: Vector3) -> void:
 	if scrap != null and scrap.has_method("pull_along_segment"):
 		pulled_scrap = scrap.pull_along_segment(ball, anchor, radius, pull_speed * delta)
 	if ctx.run != null and ctx.run.has_method("can_hold_consumable") and ctx.run.can_hold_consumable():
-		for cradle in _consumable_drops:
+		for cradle in consumables.live_consumable_drops():
 			if not is_instance_valid(cradle) or cradle.collected:
 				continue
 			var closest := Geometry3D.get_closest_point_to_segment(cradle.global_position, ball, anchor)
@@ -6580,7 +6099,7 @@ func _step_wrecking_flail(delta: float, ball: Vector3, _anchor: Vector3, _kit, t
 				enemy.plates = maxi(0, int(enemy.plates) - 1)
 				had_armor = true
 			if enemy.has_method("plating_for") and float(enemy.plating_for("ram", "")) > 0.0:
-				_add_shred(enemy, shred_amt)
+				add_shred(enemy, shred_amt)
 				had_armor = true
 			if had_armor:
 				effects.spark(enemy.global_position + Vector3.UP * 0.5, Palette.AMBER)
@@ -6623,452 +6142,9 @@ func _consume_grapple_mut_strike(hit: Dictionary) -> void:
 		effects.shockwave(hit["at"], 6.0, Palette.COPPER)
 		_note_grapple_mut("tether_slam", {"stage": "contact_crush", "at": hit["at"], "mult": mult, "dealt": dealt})
 	if wrecking_flail_taut_active() and kind in CONTACT_KINDS and is_instance_valid(enemy):
-		_add_shred(enemy, float(_grapple_mut_row("wrecking_flail").get("armor_shred_bonus", 25.0)))
+		add_shred(enemy, float(_grapple_mut_row("wrecking_flail").get("armor_shred_bonus", 25.0)))
 		if "plates" in enemy and int(enemy.plates) > 0:
 			enemy.plates = maxi(0, int(enemy.plates) - 1)
-
-var _nitro_left := 0.0
-var _overclock_left := 0.0
-var _memo_left := 0.0
-var _memo_frozen := {}
-var _balloons: Array = []
-var _consumable_drops: Array = []
-var _consumable_rng := RandomNumberGenerator.new()
-var consumable_uses := 0
-var overclock_skilled_shots := 0
-var last_consumable := {}
-
-
-func nitro_siphon_left() -> float:
-	return _nitro_left
-
-
-func overclock_card_left() -> float:
-	return _overclock_left
-
-
-func foreman_memo_left() -> float:
-	return _memo_left
-
-
-func active_balloons() -> Array:
-	return _balloons.filter(func(b): return is_instance_valid(b) and not b.expired)
-
-
-func live_consumable_drops() -> Array:
-	return _consumable_drops.filter(func(d): return is_instance_valid(d) and not d.collected)
-
-
-func _memo_exposed(enemy: Node3D) -> bool:
-	return _memo_left > 0.0 and enemy != null and _memo_frozen.has(enemy.get_instance_id())
-
-
-func drop_consumable(consumable_id: String, at: Vector3) -> Node3D:
-	if ctx == null or ctx.root == null or not Consumables.is_valid(consumable_id):
-		return null
-	var pos := at
-	if ground != null and ground.has_method("height"):
-		pos.y = maxf(pos.y, float(ground.height(at.x, at.z)))
-	var cradle := Consumables.spawn_cradle(consumable_id, pos)
-	ctx.root.add_child(cradle)
-	_consumable_drops.append(cradle)
-	return cradle
-
-
-func _consumable_tap_pressed() -> bool:
-	return Bindings.consumable_just_pressed()
-
-
-func _step_consumables(delta: float, enemies: Array) -> void:
-	if ctx == null or ctx.run == null or ctx.player == null:
-		return
-	var ball_pos: Vector3 = ctx.player.ball_position()
-	var kept_drops: Array = []
-	for d in _consumable_drops:
-		if not is_instance_valid(d):
-			continue
-		if d.step(delta, ball_pos, ctx.run):
-			Consumables.try_clone_pickup(ctx, self, "consumable", d.consumable_id, ball_pos)
-			d.remove_from_group(Consumables.DROP_GROUP)
-			d.queue_free()
-			continue
-		kept_drops.append(d)
-	_consumable_drops = kept_drops
-	Consumables.step_w50(ctx, delta)
-
-	if ctx.run.has_consumable() and _consumable_tap_pressed():
-		use_consumable()
-
-	if _nitro_left > 0.0:
-		_nitro_left = maxf(0.0, _nitro_left - delta)
-		_step_nitro_siphon(enemies)
-		if _nitro_left <= 0.0:
-			clear_buff("consumable_nitro_siphon")
-
-	if _overclock_left > 0.0:
-		_overclock_left = maxf(0.0, _overclock_left - delta)
-		_refresh_overclock_cooldowns()
-		if _overclock_left <= 0.0:
-			clear_buff("consumable_overclock_card")
-
-	if _memo_left > 0.0:
-		_memo_left = maxf(0.0, _memo_left - delta)
-		_hold_memo_formation()
-		if _memo_left <= 0.0:
-			_release_memo_formation()
-			clear_buff("consumable_foreman_memo")
-
-	if not _balloons.is_empty():
-		var kept_balloons: Array = []
-		for b in _balloons:
-			if not is_instance_valid(b):
-				continue
-			if b.step(delta):
-				kept_balloons.append(b)
-				continue
-			if ctx.player.kit != null and ctx.player.kit.hooked and ctx.player.kit.anchor_body == b:
-				ctx.player.kit.drop_line("expired")
-			b.remove_from_group(Augments.STAKE_GROUP)
-			b.remove_from_group(Augments.ANCHOR_GROUP)
-			b.remove_from_group(Consumables.BALLOON_GROUP)
-			b.queue_free()
-		_balloons = kept_balloons
-		if _balloons.is_empty():
-			clear_buff("consumable_anchor_flare")
-
-
-func use_consumable(override_id := "") -> Dictionary:
-	if ctx == null or ctx.flow == null or not ctx.flow.in_play() or ctx.run == null or ctx.player == null:
-		return {}
-	var cid: String = override_id if override_id != "" and Consumables.is_valid(override_id) else String(ctx.run.pop_consumable())
-	if cid == "":
-		return {}
-	var at: Vector3 = ctx.player.ball_position()
-	var result := {"id": cid, "at": at}
-	match cid:
-		Consumables.CAP_CHARGE:
-			result.merge(_fire_cap_charge(at), true)
-		Consumables.NITRO_SIPHON:
-			result.merge(_fire_nitro_siphon(at), true)
-		Consumables.ANCHOR_FLARE:
-			result.merge(_fire_anchor_flare(at), true)
-		Consumables.OVERCLOCK_CARD:
-			result.merge(_fire_overclock_card(at), true)
-		Consumables.FOREMAN_MEMO:
-			result.merge(_fire_foreman_memo(at), true)
-		Consumables.MOSS_PATCH:
-			result.merge(_fire_moss_patch(at), true)
-		Consumables.SCRAP_DICE, Consumables.DUPLICATOR_SPOOL, Consumables.OVERLOAD_FUSE:
-			result.merge(Consumables.fire_w50(cid, ctx, self, at), true)
-	consumable_uses += 1
-	last_consumable = result
-	if ctx.events != null and ctx.events.has_signal("consumable_used"):
-		ctx.events.consumable_used.emit(cid, at)
-	return result
-
-
-func _fire_cap_charge(at: Vector3) -> Dictionary:
-	var row := Consumables.row_of(Consumables.CAP_CHARGE)
-	var radius := float(row.get("radius_m", 6.0))
-	var dmg := float(row.get("blast_damage", 38.0)) * heft()
-	var warden_posture := float(row.get("warden_posture", 45.0))
-	if ctx.destructibles != null and is_instance_valid(ctx.destructibles) and ctx.destructibles.has_method("on_blast"):
-		ctx.destructibles.on_blast(at, radius, Consumables.CAP_CHARGE, 0, Destructibles.TIER_MAX)
-	var stripped := 0
-	var hits := 0
-	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
-			continue
-		if enemy.global_position.distance_to(at) > radius + hull_radius(enemy):
-			continue
-		var kind := String(enemy.get("kind")) if enemy.get("kind") != null else ""
-		if kind == "plated_brute" and enemy.has_method("strip_plate") and enemy.strip_plate():
-			stripped += 1
-		elif kind == "warden":
-			if enemy.has_method("apply_posture_hit"):
-				enemy.apply_posture_hit({"gain": warden_posture, "full": true, "crack": false, "shatter": false, "dealt": 0.0})
-			elif enemy.has_method("take_damage"):
-				strike(enemy, "blast", dmg, enemy.family_point() if enemy.has_method("family_point") else "", "consumable")
-			stripped += 1
-		if enemy.has_method("plating_now") and float(enemy.plating_now()) > 0.0 and kind != "warden":
-			_add_shred(enemy, float(enemy.plating_now()) / maxf(SHRED_PER_PUNCH, 0.01))
-		if kind != "warden":
-			deal_hit(enemy, "blast", dmg, enemy.global_position - at, 12.0, "", "consumable")
-		hits += 1
-	effects.shockwave(at, radius, row.get("color", Palette.AMBER))
-	return {"radius": radius, "stripped": stripped, "hits": hits}
-
-
-func _fire_nitro_siphon(at: Vector3) -> Dictionary:
-	var row := Consumables.row_of(Consumables.NITRO_SIPHON)
-	var dur := float(row.get("duration_s", 6.0))
-	_nitro_left = maxf(_nitro_left, dur)
-	post_consumable_buff("consumable_nitro_siphon", String(row["icon"]), row["color"], _nitro_left)
-	var ripped := _step_nitro_siphon(get_tree().get_nodes_in_group(Groups.ENEMY))
-	effects.ring(at, 4.5, row.get("color", Palette.COPPER))
-	return {"duration_s": dur, "ripped": ripped}
-
-
-func _step_nitro_siphon(enemies: Array) -> int:
-	var row := Consumables.row_of(Consumables.NITRO_SIPHON)
-	var cruise: float = ctx.player.tuning.f("cruise")
-	var blazing_floor: float = cruise * float(SpeedTier.MULTIPLES[SpeedTier.BLAZING])
-	if not Augments.holding(ctx.player.kit):
-		var v: Vector3 = ctx.player.state.velocity
-		var flat := Vector3(v.x, 0.0, v.z)
-		if flat.length() < blazing_floor:
-			var dir: Vector3 = flat.normalized() if flat.length_squared() > 0.01 else ctx.heading()
-			dir.y = 0.0
-			dir = dir.normalized() if dir.length_squared() > 0.01 else Vector3.FORWARD
-			ctx.player.set_velocity_now(Vector3(dir.x * blazing_floor, v.y, dir.z * blazing_floor), "nitro_siphon")
-	if ctx.player.state.carving:
-		var grip_bonus := float(row.get("grip_bonus", 0.50))
-		ctx.player.state.grip_hold = maxf(ctx.player.state.grip_hold, 0.25)
-		var n: Vector3 = ctx.player.state.contact_normal
-		if n.length_squared() > 0.01:
-			ctx.player.add_external_accel(-n.normalized() * ctx.player.tuning.f("drive_accel") * grip_bonus)
-	var rip_r := float(row.get("rip_radius_m", 14.0))
-	var ball: Vector3 = ctx.player.ball_position()
-	var ripped := 0
-	for enemy in enemies:
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
-			continue
-		var kind := String(enemy.get("kind")) if enemy.get("kind") != null else ""
-		if kind == "boom_tender":
-			if enemy.global_position.distance_to(ball) <= rip_r + 12.0:
-				if enemy.has_method("pop_all_floats"):
-					ripped += enemy.pop_all_floats(false)
-				if enemy.has_method("cancel_attack"):
-					enemy.cancel_attack()
-		elif kind == "jolt_layer":
-			if enemy.get("field") != null and enemy.global_position.distance_to(ball) <= rip_r + 10.0:
-				enemy.field = null
-				if enemy.has_method("cancel_attack"):
-					enemy.cancel_attack()
-				ripped += 1
-		elif kind == "gap_net":
-			var nets = enemy.get("nets")
-			if nets is Array:
-				for net in nets:
-					if net is Dictionary and bool(net.get("live", false)):
-						var origin: Vector3 = net.get("origin", enemy.global_position)
-						if origin.distance_to(ball) <= rip_r + 6.0 and enemy.has_method("_tear"):
-							enemy._tear(net)
-							ripped += 1
-		elif kind == "netcaster":
-			if enemy.global_position.distance_to(ball) <= rip_r + 8.0 and enemy.has_method("cancel_attack"):
-				enemy.cancel_attack()
-				ripped += 1
-	return ripped
-
-
-func _fire_anchor_flare(at: Vector3) -> Dictionary:
-	var row := Consumables.row_of(Consumables.ANCHOR_FLARE)
-	var height := float(row.get("height_m", 18.0))
-	var dur := float(row.get("duration_s", 15.0))
-	var radius := float(row.get("bite_radius_m", 2.8))
-	var sky_at := at + Vector3.UP * height
-	var balloon := Consumables.spawn_balloon(sky_at, dur, radius)
-	ctx.root.add_child(balloon)
-	_balloons.append(balloon)
-	post_consumable_buff("consumable_anchor_flare", String(row["icon"]), row["color"], dur)
-	effects.arc(at, sky_at, row.get("color", Palette.ARC))
-	return {"balloon": balloon, "at_sky": sky_at, "duration_s": dur}
-
-
-func _fire_overclock_card(at: Vector3) -> Dictionary:
-	var row := Consumables.row_of(Consumables.OVERCLOCK_CARD)
-	var dur := float(row.get("duration_s", 8.0))
-	_overclock_left = maxf(_overclock_left, dur)
-	_refresh_overclock_cooldowns()
-	post_consumable_buff("consumable_overclock_card", String(row["icon"]), row["color"], _overclock_left)
-	effects.ring(at, 4.0, row.get("color", Palette.SAND))
-	return {"duration_s": dur}
-
-
-func _refresh_overclock_cooldowns() -> void:
-	if ctx == null or ctx.player == null:
-		return
-	ctx.player.state.boost_cooldown = 0.0
-	var abilities = ctx.player.abilities
-	if abilities == null:
-		return
-	for slot_name in [AbilityState.MOVEMENT, AbilityState.SPECIAL]:
-		var s = abilities.slot(slot_name)
-		if s != null:
-			s.charges = s.max_charges
-			s.recharge = 0.0
-			s.cycle_refunded = 0.0
-
-
-func _apply_overclock_shots(shots: Array, p: Resource) -> Array:
-	var row := Consumables.row_of(Consumables.OVERCLOCK_CARD)
-	var mult := float(row.get("skilled_damage_mult", 1.5))
-	var out: Array = []
-	for shot in shots:
-		var s: Dictionary = (shot as Dictionary).duplicate(true)
-		s["overclock_skilled"] = true
-		s["damage_mult"] = maxf(float(s.get("damage_mult", 1.0)), mult)
-		if p != null:
-			match String(p.trigger):
-				Pattern.TRIGGER_STAMP:
-					s["paid"] = true
-					s["kind"] = WeaponDriver.SHOT_STAMP
-					s["refund"] = maxf(float(s.get("refund", 0.0)), float(p.cast_cost) * 0.5)
-				Pattern.TRIGGER_LOCK:
-					s["kind"] = WeaponDriver.SHOT_RAIL
-				Pattern.TRIGGER_BEATS:
-					s["kind"] = WeaponDriver.SHOT_BEAT_3
-				Pattern.TRIGGER_PRESS:
-					s["pierce"] = true
-				Pattern.TRIGGER_TAP_CHARGE:
-					s["pierce"] = true
-		overclock_skilled_shots += 1
-		out.append(s)
-	return out
-
-
-func _fire_foreman_memo(at: Vector3) -> Dictionary:
-	var row := Consumables.row_of(Consumables.FOREMAN_MEMO)
-	var dur := float(row.get("duration_s", 5.0))
-	var radius := float(row.get("radius_m", 24.0))
-	var spacing := float(row.get("formation_spacing_m", 2.6))
-	var paid_cost := ""
-	if ctx.run.bonus_cores >= int(row.get("core_cost", 1)) and ctx.run.lose_core():
-		paid_cost = "core"
-	else:
-		var hull_cost: float = float(ctx.run.max_hp) * float(row.get("hull_cost_share", 0.10))
-		ctx.run.hp = maxf(1.0, float(ctx.run.hp) - hull_cost)
-		ctx.run.since_damage = 0.0
-		paid_cost = "hull"
-	_memo_left = maxf(_memo_left, dur)
-	var forward: Vector3 = ctx.heading()
-	forward.y = 0.0
-	forward = forward.normalized() if forward.length_squared() > 0.01 else Vector3.FORWARD
-	var right := forward.cross(Vector3.UP).normalized()
-	var targets: Array = []
-	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
-			continue
-		var kind := String(enemy.get("kind")) if enemy.get("kind") != null else ""
-		if not EnemyBase.is_ordinary_kind(kind):
-			continue
-		if enemy.global_position.distance_to(at) <= radius:
-			targets.append(enemy)
-	targets.sort_custom(func(a, b): return a.global_position.distance_to(at) < b.global_position.distance_to(at))
-	var anchor := at + forward * 8.0
-	for i in targets.size():
-		var enemy: Node3D = targets[i]
-		var offset := (float(i) - float(targets.size() - 1) * 0.5) * spacing
-		var slot_pos := anchor + right * offset
-		if ground != null and ground.has_method("height"):
-			var hh: float = float(enemy.get("half_height")) if enemy.get("half_height") != null else 0.7
-			slot_pos.y = float(ground.height(slot_pos.x, slot_pos.z)) + hh
-		else:
-			slot_pos.y = enemy.global_position.y
-		if enemy.has_method("cancel_attack"):
-			enemy.cancel_attack()
-		var id := enemy.get_instance_id()
-		if not _memo_frozen.has(id):
-			_memo_frozen[id] = {
-				"enemy": enemy,
-				"pos": slot_pos,
-				"prev_mode": enemy.process_mode,
-			}
-		else:
-			_memo_frozen[id]["pos"] = slot_pos
-		enemy.global_position = slot_pos
-		if enemy is CharacterBody3D:
-			(enemy as CharacterBody3D).velocity = Vector3.ZERO
-		if enemy.has_method("plating_now") and float(enemy.plating_now()) > 0.0:
-			_add_shred(enemy, float(enemy.plating_now()) / maxf(SHRED_PER_PUNCH, 0.01))
-		enemy.process_mode = Node.PROCESS_MODE_DISABLED
-	post_consumable_buff("consumable_foreman_memo", String(row["icon"]), Palette.SAND, _memo_left)
-	return {"duration_s": dur, "frozen": targets.size(), "cost": paid_cost}
-
-
-func _hold_memo_formation() -> void:
-	for id in _memo_frozen.keys():
-		var entry: Dictionary = _memo_frozen[id]
-		var enemy = entry["enemy"]
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
-			_memo_frozen.erase(id)
-			continue
-		enemy.global_position = entry["pos"]
-		if enemy is CharacterBody3D:
-			(enemy as CharacterBody3D).velocity = Vector3.ZERO
-
-
-func _release_memo_formation() -> void:
-	for id in _memo_frozen.keys():
-		var entry: Dictionary = _memo_frozen[id]
-		var enemy = entry["enemy"]
-		if is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead()):
-			enemy.process_mode = int(entry.get("prev_mode", Node.PROCESS_MODE_INHERIT))
-	_memo_frozen.clear()
-
-
-func _fire_moss_patch(at: Vector3) -> Dictionary:
-	var row := Consumables.row_of(Consumables.MOSS_PATCH)
-	var heal_amt: float = float(ctx.run.max_hp) * float(row.get("heal_share", 0.35))
-	var hp_before: float = float(ctx.run.hp)
-	ctx.run.heal(heal_amt)
-	var grace_s := float(row.get("grace_s", 1.5))
-	ctx.run.grant_consumable_grace(grace_s)
-	var radius := float(row.get("knock_radius_m", 12.0))
-	var force := float(row.get("knock_force", 18.0))
-	var knocked := 0
-	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
-			continue
-		if enemy.global_position.distance_to(at) > radius:
-			continue
-		var away: Vector3 = enemy.global_position - at
-		away.y = 0.0
-		var dir := away.normalized() if away.length_squared() > 0.01 else Vector3.FORWARD
-		if enemy.has_method("knock"):
-			enemy.knock(dir + Vector3.UP * 0.25, force)
-			knocked += 1
-	effects.shockwave(at, radius, row.get("color", Palette.VERDIGRIS))
-	return {"healed": ctx.run.hp - hp_before, "knocked": knocked, "grace_s": grace_s}
-
-
-func post_consumable_buff(buff_id: String, icon: String, tone: Color, duration_s: float) -> void:
-	if ctx == null or ctx.buffs == null or duration_s < 3.0:
-		return
-	ctx.buffs.post(buff_id, {
-		"icon": icon,
-		"tone": tone,
-		"duration_s": duration_s,
-		"kind": BuffLedger.KIND_TIMER,
-		"stacks": 1,
-		"max_stacks": 1,
-	})
-
-
-func _clear_consumables_runtime() -> void:
-	_nitro_left = 0.0
-	_overclock_left = 0.0
-	_memo_left = 0.0
-	_release_memo_formation()
-	for b in _balloons:
-		if is_instance_valid(b):
-			if ctx != null and ctx.player != null and ctx.player.kit != null and ctx.player.kit.hooked and ctx.player.kit.anchor_body == b:
-				ctx.player.kit.drop_line("reset")
-			b.remove_from_group(Augments.STAKE_GROUP)
-			b.remove_from_group(Augments.ANCHOR_GROUP)
-			b.remove_from_group(Consumables.BALLOON_GROUP)
-			b.queue_free()
-	_balloons.clear()
-	for d in _consumable_drops:
-		if is_instance_valid(d):
-			d.remove_from_group(Consumables.DROP_GROUP)
-			d.queue_free()
-	_consumable_drops.clear()
-	for id in ["consumable_nitro_siphon", "consumable_anchor_flare", "consumable_overclock_card", "consumable_foreman_memo", "consumable_duplicator_spool"]:
-		clear_buff(id)
-	Consumables.clear_w50(ctx.run if ctx != null else null)
-
 
 func _ghost_shift_ops() -> Array:
 	var out: Array = []
@@ -7147,458 +6223,11 @@ func ally_husk_hit(_husk: Node3D, enemy: Node3D, damage: float, origin: Vector3,
 	return dealt
 
 
-var _beachhead_pylon := {}
-var last_kinetic_arc := {}
-var last_ricochet := {}
-var _kest_trace_left := 0.0
-var last_kest_trace := {}
-
-
-func _reset_w47_h1_state() -> void:
-	_beachhead_pylon = {}
-	last_kinetic_arc = {}
-	last_ricochet = {}
-	_kest_trace_left = 0.0
-	last_kest_trace = {}
-	var hfx = _hero_fx()
-	if hfx != null:
-		hfx.clear()
-
-
-func _hero_fx():
-	var pres = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
-	var vfx_node = pres.get("vfx") if pres != null else null
-	return vfx_node.get("hero_fx") if vfx_node != null else null
-
-
-func _h1_audio():
-	var pres = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
-	return pres.get("audio") if pres != null else null
-
-
-func _plant_beachhead_pylon(at: Vector3) -> void:
-	_beachhead_pylon = {
-		"at": at,
-		"life": Weapons.KINETIC_PYLON_LIFE_S,
-		"overcharge_left": 0.0,
-		"arc_cd": 0.0,
-		"orbit_accum": 0.0,
-		"prev_angle": INF,
-		"arcs_fired": 0,
-		"reason": "",
-	}
-	var hfx = _hero_fx()
-	if hfx != null:
-		hfx.set_sable_pylon_ring(at, Weapons.KINETIC_PYLON_ORBIT_RADIUS, false, true)
-
-
-func _on_dismounted_kinetic_pylon(velocity: Vector3) -> void:
-	if ctx == null or ctx.run == null or ctx.run.class_def == null or ctx.run.class_def.id != "pylon_engineer":
-		return
-	if _beachhead_pylon.is_empty():
-		return
-	var cruise := float(ctx.player.tuning.f("cruise"))
-	if velocity.length() >= cruise:
-		_overcharge_kinetic_pylon("vault_kick")
-
-
-func _on_vault_kicked_w47(at: Vector3, _speed: float) -> void:
-	if ctx == null or ctx.run == null or ctx.run.class_def == null or not ctx.flow.in_play():
-		return
-	if ctx.run.class_def.id != "pylon_engineer":
-		return
-	weapon_driver.arm_instant_max_charge(Weapons.VAULT_INSTANT_CHARGE_S)
-	effects.ring(at, 2.2, Palette.ARC)
-	if not _beachhead_pylon.is_empty():
-		var pylon_at: Vector3 = _beachhead_pylon["at"]
-		if at.distance_to(pylon_at) <= Weapons.KINETIC_PYLON_VAULT_RADIUS:
-			_overcharge_kinetic_pylon("vault_kick")
-			return
-	if ultimate != null and ultimate.stakes != null:
-		for stake in ultimate.stakes.nodes:
-			if is_instance_valid(stake) and at.distance_to(stake.global_position) <= Weapons.KINETIC_PYLON_VAULT_RADIUS:
-				_plant_beachhead_pylon(stake.global_position)
-				_overcharge_kinetic_pylon("vault_kick")
-				return
-
-
-func _overcharge_kinetic_pylon(reason: String) -> void:
-	if _beachhead_pylon.is_empty():
-		return
-	_beachhead_pylon["overcharge_left"] = maxf(float(_beachhead_pylon.get("overcharge_left", 0.0)), Weapons.KINETIC_PYLON_OVERCHARGE_S)
-	_beachhead_pylon["life"] = maxf(float(_beachhead_pylon.get("life", 0.0)), Weapons.KINETIC_PYLON_OVERCHARGE_S + 2.0)
-	_beachhead_pylon["reason"] = reason
-	_beachhead_pylon["orbit_accum"] = 0.0
-	var at: Vector3 = _beachhead_pylon["at"]
-	effects.ring(at, 4.0, Palette.ARC)
-	var hfx = _hero_fx()
-	if hfx != null:
-		hfx.set_sable_pylon_ring(at, Weapons.KINETIC_PYLON_ORBIT_RADIUS, true, true)
-
-
-func _step_kinetic_pylon(delta: float, enemies: Array) -> void:
-	if ctx == null or ctx.run == null or ctx.run.class_def == null or ctx.run.class_def.id != "pylon_engineer":
-		if not _beachhead_pylon.is_empty():
-			_beachhead_pylon = {}
-			var hfx_off = _hero_fx()
-			if hfx_off != null:
-				hfx_off.set_sable_pylon_ring(Vector3.ZERO, 0.0, false, false)
-		return
-	if _beachhead_pylon.is_empty():
-		return
-	_beachhead_pylon["life"] = float(_beachhead_pylon["life"]) - delta
-	if float(_beachhead_pylon["life"]) <= 0.0:
-		_beachhead_pylon = {}
-		var hfx_end = _hero_fx()
-		if hfx_end != null:
-			hfx_end.set_sable_pylon_ring(Vector3.ZERO, 0.0, false, false)
-		return
-	var at: Vector3 = _beachhead_pylon["at"]
-	var player = ctx.player
-	var cruise := float(player.tuning.f("cruise"))
-	var speed: float = player.state.velocity.length()
-	var moving_at_speed: bool = not player.kit.mounted and speed >= cruise
-	var hfx = _hero_fx()
-	if not moving_at_speed:
-		_beachhead_pylon["overcharge_left"] = maxf(0.0, float(_beachhead_pylon["overcharge_left"]) - delta)
-		_beachhead_pylon["prev_angle"] = INF
-		if hfx != null:
-			hfx.set_sable_pylon_ring(at, Weapons.KINETIC_PYLON_ORBIT_RADIUS, false, true)
-		return
-	var offset: Vector3 = player.ball_position() - at
-	var planar_dist := Vector2(offset.x, offset.z).length()
-	if planar_dist <= Weapons.KINETIC_PYLON_ORBIT_RADIUS and planar_dist >= 0.5:
-		var ang := atan2(offset.z, offset.x)
-		var prev_ang := float(_beachhead_pylon.get("prev_angle", INF))
-		if is_finite(prev_ang):
-			var sweep := absf(angle_difference(prev_ang, ang))
-			_beachhead_pylon["orbit_accum"] = float(_beachhead_pylon.get("orbit_accum", 0.0)) + sweep
-			if float(_beachhead_pylon["orbit_accum"]) >= Weapons.KINETIC_PYLON_ORBIT_RAD \
-					or (player.kit.hooked and sweep > 0.05):
-				_overcharge_kinetic_pylon("orbit")
-		_beachhead_pylon["prev_angle"] = ang
-	else:
-		_beachhead_pylon["prev_angle"] = INF
-	var over_left := float(_beachhead_pylon["overcharge_left"])
-	if hfx != null:
-		hfx.set_sable_pylon_ring(at, Weapons.KINETIC_PYLON_ORBIT_RADIUS, over_left > 0.0, true)
-	if over_left <= 0.0:
-		return
-	_beachhead_pylon["overcharge_left"] = maxf(0.0, over_left - delta)
-	_beachhead_pylon["arc_cd"] = float(_beachhead_pylon.get("arc_cd", 0.0)) - delta
-	if float(_beachhead_pylon["arc_cd"]) > 0.0:
-		return
-	var tier := int(player.speed_tier())
-	var cadence := Weapons.KINETIC_PYLON_BLAZING_CADENCE if tier >= SpeedTier.BLAZING \
-		else (Weapons.KINETIC_PYLON_FAST_CADENCE if tier >= SpeedTier.FAST else Weapons.KINETIC_PYLON_ARC_CADENCE)
-	var tier_scale := 1.45 if tier >= SpeedTier.BLAZING else (1.20 if tier >= SpeedTier.FAST else 1.0)
-	var dmg := Weapons.KINETIC_PYLON_ARC_DAMAGE * tier_scale * damage_mod(Weapons.ARC_CASTER)
-	var picks: Array = []
-	for enemy in enemies:
-		if not is_instance_valid(enemy) or DamageDoor.dead(enemy):
-			continue
-		var d: float = enemy.global_position.distance_to(at)
-		if d <= Weapons.KINETIC_PYLON_ARC_RADIUS:
-			picks.append([d, enemy])
-	picks.sort_custom(func(a, b): return a[0] < b[0])
-	if picks.is_empty():
-		return
-	_beachhead_pylon["arc_cd"] = cadence
-	var hit_enemies: Array = []
-	var dealt_total := 0.0
-	for pair in picks.slice(0, Weapons.KINETIC_PYLON_ARC_TARGETS):
-		var target: Node3D = pair[1]
-		effects.arc(at + Vector3.UP * 0.6, target.global_position + Vector3.UP * 0.6, Palette.ARC)
-		deal_hit(target, "arc", dmg, target.global_position - at, 4.0, "", "persistent_actor")
-		hit_enemies.append(target)
-		dealt_total += dmg
-		var chain_next := nearest_enemy(target.global_position, Weapons.BASE[Weapons.ARC_CASTER]["chain_range"], hit_enemies)
-		if chain_next != null:
-			effects.arc(target.global_position + Vector3.UP * 0.6, chain_next.global_position + Vector3.UP * 0.6, Palette.ARC)
-			deal_hit(chain_next, "arc", dmg * 0.6, chain_next.global_position - target.global_position, 2.0, "", "persistent_actor")
-			hit_enemies.append(chain_next)
-			dealt_total += dmg * 0.6
-	_beachhead_pylon["arcs_fired"] = int(_beachhead_pylon.get("arcs_fired", 0)) + hit_enemies.size()
-	last_kinetic_arc = {
-		"at": at,
-		"hits": hit_enemies.size(),
-		"damage": dealt_total,
-		"color": Palette.ARC,
-		"reason": String(_beachhead_pylon.get("reason", "")),
-	}
-
-
-func kinetic_pylon_state() -> Dictionary:
-	return _beachhead_pylon.duplicate()
-
-
-func _stamp_rivet_sixth_hot(rec: Dictionary) -> void:
-	rec["sixth_hot"] = true
-	rec["sixth_hot_ricocheted"] = false
-	rec["extra_bounces"] = mini(int(rec.get("extra_bounces", 0)) + 1, Bolts.MAX_EXTRA_BOUNCES)
-	rec["ricochet_home"] = true
-	rec["ricochet_home_reach"] = Weapons.RIVET_RICOCHET_REACH
-	rec["ricochet_home_turn"] = 1.0
-	rec["color"] = Palette.AMBER.lerp(Palette.COPPER, 0.35)
-	rec["width_scale"] = maxf(float(rec.get("width_scale", 1.0)), 1.45)
-
-
-func _resolve_rivet_wall_ricochet(bolt: Dictionary, at: Vector3) -> void:
-	bolt["sixth_hot_ricocheted"] = true
-	bolt["extra_bounces"] = 0
-	var origin: Vector3 = bolt.get("origin", at)
-	var target := _pick_ricochet_target(origin, bolt.get("exclude", []))
-	var target_end: Vector3 = origin + (bolt["dir"] as Vector3) * minf(float(bolt.get("max_dist", 20.0)), 14.0)
-	if not target.is_empty():
-		var to_pt: Vector3 = (target["point"] as Vector3) - origin
-		if to_pt.length_squared() > 0.0001:
-			var dir := to_pt.normalized()
-			bolt["dir"] = dir
-			var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
-			bolt["right"] = dir.cross(up_hint).normalized()
-			bolt["up"] = (bolt["right"] as Vector3).cross(dir).normalized()
-			target_end = target["point"]
-	bolt["color"] = Palette.AMBER
-	var hfx = _hero_fx()
-	if hfx != null:
-		hfx.add_rivet_hot_tracer(bolt.get("fired_from", at), at, target_end)
-	effects.beam(at, target_end, Palette.AMBER, 0.22)
-	effects.spark(at, Palette.COPPER)
-	_play_rivet_klang_ping(at)
-	last_ricochet = {
-		"surface": "rock",
-		"at": at,
-		"to": target_end,
-		"target": target.get("enemy", null),
-		"part": String(target.get("part", "")),
-		"color": Palette.COPPER,
-		"accent": Palette.AMBER,
-		"sound": "klang_ping",
-	}
-
-
-func _resolve_rivet_armor_ricochet(bolt: Dictionary, enemy: Node3D, point: Vector3, _part: String) -> void:
-	bolt["sixth_hot_ricocheted"] = true
-	var exclude: Array = (bolt.get("exclude", []) as Array).duplicate()
-	exclude.append(enemy.get_instance_id())
-	var target := _pick_ricochet_target(point, exclude)
-	if target.is_empty():
-		return
-	var target_pt: Vector3 = target["point"]
-	var to_target := target_pt - point
-	if to_target.length_squared() < 0.0001:
-		return
-	var dir := to_target.normalized()
-	var kid := Bolts.child(bolt, {
-		"origin": point + dir * 0.2,
-		"dir": dir,
-		"speed": Weapons.RIVET_RICOCHET_SPEED,
-		"max_dist": minf(Weapons.RIVET_RICOCHET_REACH, to_target.length() + 4.0),
-		"damage": float(bolt["damage"]) * Weapons.RIVET_RICOCHET_DAMAGE_MULT,
-		"pierce": 0,
-		"source": "item_proc",
-		"color": Palette.AMBER,
-		"width_scale": 1.45,
-	})
-	kid["bits"] = 0
-	kid["spent"] = 0
-	kid["extra_bounces"] = 0
-	kid["sixth_hot"] = true
-	kid["sixth_hot_ricocheted"] = true
-	kid["exclude"] = exclude
-	bolts.fire(kid)
-	var hfx = _hero_fx()
-	if hfx != null:
-		hfx.add_rivet_hot_tracer(bolt.get("fired_from", point), point, target_pt)
-	effects.beam(point, target_pt, Palette.AMBER, 0.22)
-	effects.spark(point, Palette.COPPER)
-	_play_rivet_klang_ping(point)
-	last_ricochet = {
-		"surface": "armor",
-		"at": point,
-		"to": target_pt,
-		"target": target.get("enemy", null),
-		"part": String(target.get("part", "")),
-		"color": Palette.COPPER,
-		"accent": Palette.AMBER,
-		"sound": "klang_ping",
-	}
-
-
-func _pick_ricochet_target(origin: Vector3, exclude: Array) -> Dictionary:
-	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state if ctx != null and ctx.root != null and ctx.root.is_inside_tree() else null
-	var best := {}
-	var best_score := INF
-	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-		if not is_instance_valid(enemy) or DamageDoor.dead(enemy):
-			continue
-		if enemy.get_instance_id() in exclude:
-			continue
-		var weaks: Array = enemy.weak_points() if enemy.has_method("weak_points") else []
-		var target_pt: Vector3 = weaks[0]["at"] if not weaks.is_empty() else enemy.global_position + Vector3.UP * 0.6
-		var part_id := String(weaks[0].get("id", "weak")) if not weaks.is_empty() else ""
-		var dist := origin.distance_to(target_pt)
-		if dist > Weapons.RIVET_RICOCHET_REACH or dist < 0.1:
-			continue
-		var los := true
-		if space != null:
-			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, target_pt, Hitscan.WORLD))
-			if not hit.is_empty() and origin.distance_to(hit["position"]) < dist - 0.5:
-				los = false
-		var score := dist + (0.0 if los else 100.0) - (2.0 if part_id != "" else 0.0)
-		if score < best_score:
-			best_score = score
-			best = {"enemy": enemy, "point": target_pt, "part": part_id, "los": los}
-	return best
-
-
-func _play_rivet_klang_ping(at: Vector3) -> void:
-	var audio = _h1_audio()
-	if audio == null:
-		return
-	audio.play_at("ricochet_klang", at, -1.0, 1.05, "SFX", "clank")
-	audio.play_at("ricochet_ping", at, -2.0, 1.25, "SFX", "crit_ping")
-
-
-func refresh_kest_fuse_trace(seconds := Weapons.KEST_FUSE_TRACE_HOLD_S) -> void:
-	if ctx == null or ctx.run == null or ctx.run.class_def == null or ctx.run.class_def.id != "demolitions_caster":
-		return
-	_kest_trace_left = maxf(_kest_trace_left, maxf(seconds, 0.0))
-
-
-func _step_kest_fuse_trace(delta: float, enemies: Array) -> void:
-	var hfx = _hero_fx()
-	if ctx == null or ctx.run == null or ctx.run.class_def == null or ctx.run.class_def.id != "demolitions_caster":
-		_kest_trace_left = 0.0
-		last_kest_trace = {}
-		if hfx != null:
-			hfx.clear_kest_fuse_trace()
-		return
-	_kest_trace_left = maxf(0.0, _kest_trace_left - delta)
-	var wg = ctx.player.abilities.gauge(AbilityState.WEAPON)
-	var drawing: bool = (wg != null and wg.charging) or bool(ctx.player.air_draw_active)
-	if not drawing and _kest_trace_left <= 0.0:
-		if hfx != null:
-			hfx.clear_kest_fuse_trace()
-		return
-	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
-	var eye: Vector3 = ctx.player.ball_position() + Vector3.UP * 0.65
-	var forward: Vector3 = ctx.aim_forward()
-	last_kest_trace = HeroFx.scan_kest_sightline(space, eye, forward, enemies, ctx.destructibles, Weapons.KEST_FUSE_TRACE_RANGE)
-	if hfx != null:
-		hfx.set_kest_fuse_trace(last_kest_trace)
-
-
-var _cannon_recoil_airborne := false
-var _cannon_recoil_air_grace := 0.0
-var _cannon_piton := {}
-var last_cannon_piton := {}
-var last_cannon_recoil_reset := {}
-
-
 func _reset_w47_h2_state() -> void:
-	_cannon_recoil_airborne = false
-	_cannon_recoil_air_grace = 0.0
-	_cannon_piton = {}
-	last_cannon_piton = {}
-	last_cannon_recoil_reset = {}
+	cannon.reset_w47_h2_state()
 	var tarn_claw = get_node_or_null("TarnClaw")
 	if tarn_claw != null and tarn_claw.has_method("_clear"):
 		tarn_claw._clear()
-
-
-func cannon_recoil_airborne() -> bool:
-	if not _cannon_recoil_airborne or ctx == null or ctx.player == null:
-		return false
-	return not ctx.player.state.grounded or _cannon_recoil_air_grace > 0.0
-
-
-func _step_cannon_recoil_airborne(delta: float) -> void:
-	if _cannon_recoil_air_grace > 0.0:
-		_cannon_recoil_air_grace = maxf(0.0, _cannon_recoil_air_grace - delta)
-	if _cannon_recoil_airborne and _cannon_recoil_air_grace <= 0.0 and ctx != null and ctx.player != null and ctx.player.state.grounded and not ctx.player.kit.slamming:
-		_cannon_recoil_airborne = false
-
-
-func _on_cannon_grapple_fired(anchor: Vector3) -> void:
-	if ctx == null or ctx.player == null or ctx.player.abilities == null:
-		return
-	if ctx.player.abilities.id_of(AbilityState.LINE) != "cannon_lane_charge":
-		return
-	var kit = ctx.player.kit
-	if kit.hooked and not kit.on_body:
-		_arm_cannon_piton(anchor, kit.anchor_normal, float(ctx.player.chain.multiplier()))
-
-
-func _arm_cannon_piton(anchor: Vector3, normal: Vector3, mult := 1.0) -> void:
-	_cannon_piton = {
-		"anchor": anchor,
-		"normal": normal,
-		"staked": true,
-		"mult": maxf(mult, 1.0),
-		"recoil_cancelled": false,
-		"armed_at": _clock,
-	}
-	last_cannon_piton = {
-		"mode": "stake",
-		"at": anchor,
-		"recoil_cancelled": false,
-		"hits": 0,
-		"walls_broken": [],
-	}
-
-
-func cannon_piton_staked() -> bool:
-	return not _cannon_piton.is_empty() and bool(_cannon_piton.get("staked", false)) \
-		and ctx != null and ctx.player != null and ctx.player.kit.hooked and not ctx.player.kit.on_body
-
-
-func cannon_piton_state() -> Dictionary:
-	return _cannon_piton.duplicate()
-
-
-func _step_cannon_piton() -> void:
-	if _cannon_piton.is_empty():
-		return
-	var kit = ctx.player.kit
-	if not kit.hooked or kit.on_body:
-		if String(kit.line_end) == "reset":
-			_cannon_piton = {}
-		else:
-			_detonate_cannon_piton()
-
-
-func _detonate_cannon_piton() -> Dictionary:
-	if _cannon_piton.is_empty():
-		return {}
-	var piton := _cannon_piton
-	_cannon_piton = {}
-	var anchor: Vector3 = piton["anchor"]
-	var mult: float = float(piton.get("mult", 1.0))
-	var radius := Weapons.CANNON_PITON_BREACH_RADIUS
-	var broken: Array[String] = []
-	if ctx.destructibles != null and is_instance_valid(ctx.destructibles) and ctx.destructibles.has_method("on_piton_breach"):
-		broken = ctx.destructibles.on_piton_breach(anchor, radius, Weapons.CANNON_PITON_MAX_TIER, "cannon_piton_breach")
-	var dmg: float = Weapons.CANNON_PITON_BREACH_DAMAGE * mult * damage_mod(Weapons.CANNON_LANE)
-	var hits := 0
-	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-		if DamageDoor.dead(enemy) or not in_ring(anchor, radius, enemy):
-			continue
-		var push: Vector3 = enemy.global_position - anchor
-		deal_hit(enemy, "cannon", dmg, push, Weapons.CANNON_PITON_BREACH_KNOCK, "", "special")
-		hits += 1
-	effects.ring(anchor, radius, Palette.ANCIENT)
-	effects.spark(anchor + Vector3.UP * 0.4, Palette.SAND)
-	last_cannon_piton = {
-		"mode": "breach",
-		"at": anchor,
-		"radius": radius,
-		"hits": hits,
-		"damage": dmg,
-		"walls_broken": broken,
-		"recoil_cancelled": bool(piton.get("recoil_cancelled", false)),
-	}
-	return last_cannon_piton
 
 
 static func spawnable_kinds(world := 0) -> Array[String]:

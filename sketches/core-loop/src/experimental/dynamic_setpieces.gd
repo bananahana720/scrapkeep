@@ -1,14 +1,14 @@
 extends Node3D
 
 
-const Palette := preload("res://src/core/palette.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const EnvTags := preload("res://src/experimental/env_tags.gd")
 const ChunkSockets := preload("res://src/experimental/arena_chunk_socket.gd")
 const SetpieceCraft := preload("res://src/presentation/craft/experimental_setpiece_craft.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 signal env_tag_emitted(payload: Dictionary)
 signal cover_relocated(from_slot: String, to_slot: String, world_pos: Vector3)
@@ -17,8 +17,6 @@ signal prop_interaction_triggered(prop_id: String, interaction: String, world_or
 
 
 const WORLD_LAYER := 1
-const MIN_WARN_FLOOR_S := 0.6
-const DEFAULT_CRUISE_MPS := 14.0
 const BALL_CLEAR_HOLD_M := 4.6
 const MAX_ACTIVE_TAGS := 32
 
@@ -69,7 +67,7 @@ const PAD_FLIGHT_MAX_S := 3.0
 const PAD_DECK_CLEAR_M := 0.1
 const PAD_DEFAULT_BODY_RADIUS_M := 1.0
 
-var cruise_speed := DEFAULT_CRUISE_MPS
+var cruise_speed := Tuning.CRUISE_MPS
 var _rng := RandomNumberGenerator.new()
 var _berm_phase_offset := 0.0
 var _active_tags: Array[Dictionary] = []
@@ -107,7 +105,7 @@ func setup_from_chunk(chunk_root: Node, opts: Dictionary = {}) -> Dictionary:
 	teardown()
 	_exiting = false
 	name = "DynamicSetpieces"
-	cruise_speed = float(opts.get("cruise_speed", DEFAULT_CRUISE_MPS))
+	cruise_speed = float(opts.get("cruise_speed", Tuning.CRUISE_MPS))
 	_rng.seed = int(opts.get("seed", 20261126))
 	_berm_phase_offset = _rng.randf() * (PI / 3.0)
 
@@ -726,7 +724,6 @@ func _build_crane(id: String, origin_local: Vector3, cover_slots: Array[Dictiona
 	root.add_child(hull_body)
 
 	var cargo_rig := PropMotionRig.new()
-	cargo_rig.reduced_motion = UiTokens.reduced_motion
 	cargo_rig.add_part("cargo_hull", hull_pivot, {
 		"sway": true,
 		"sway_stiffness": 18.0,
@@ -870,11 +867,10 @@ func _on_cargo_touchdown(impulse_strength: float) -> void:
 	if not (rig is PropMotionRig):
 		return
 	var pr := rig as PropMotionRig
-	pr.reduced_motion = UiTokens.reduced_motion
 	var part := pr.part("cargo_hull")
 	if part != null:
 		part.sway_ambient_amp = 0.0
-	if UiTokens.reduced_motion:
+	if Comfort.reduced_motion:
 		pr.reset()
 	else:
 		pr.apply_impulse(Vector3.DOWN, impulse_strength, "cargo_hull")
@@ -912,8 +908,6 @@ func _step_crane(delta: float, ball_local: Vector3, actors: Array, facts: Array[
 	var to_p: Vector3 = slots[next_idx]["position"]
 
 	var rig: PropMotionRig = _crane.get("motion_rig") as PropMotionRig
-	if rig != null:
-		rig.reduced_motion = UiTokens.reduced_motion
 
 	match String(_crane["state"]):
 		"idle":
@@ -934,7 +928,7 @@ func _step_crane(delta: float, ball_local: Vector3, actors: Array, facts: Array[
 				rig.step(delta, Vector3.ZERO)
 			_crane["warn_elapsed"] = float(_crane["warn_elapsed"]) + delta
 			_crane["timer"] = float(_crane["timer"]) - delta
-			if float(_crane["timer"]) <= 0.0 and float(_crane["warn_elapsed"]) >= MIN_WARN_FLOOR_S:
+			if float(_crane["timer"]) <= 0.0 and float(_crane["warn_elapsed"]) >= EnvTags.MIN_TELL_S:
 				_crane["state"] = "sweep_active"
 				_crane["timer"] = CRANE_SWEEP_S
 				_crane["tag_cooldown"] = 0.0

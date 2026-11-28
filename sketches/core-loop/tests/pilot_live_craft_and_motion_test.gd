@@ -5,9 +5,9 @@ const Intent := preload("res://src/movement/intent.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const Dispatcher := preload("res://src/combat/dispatcher.gd")
 const Recipes := preload("res://src/world/park/park_recipes.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const WeaponRigFx := preload("res://src/presentation/weapon_rig_fx.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var _t := T.new("pilot_live_craft_and_motion_test")
 var _game
@@ -70,7 +70,6 @@ func _check_camp_floor_and_turntable() -> void:
 		_t.near("Camp ground collider keeps its walking floor at y = 0", shape.position.y + (shape.shape as CylinderShape3D).height * 0.5, 0.0, 0.0001)
 
 	var customize = screens._camp.customize
-	customize.reduced_motion = true
 	customize._open_from_camp()
 	await _frames(3)
 	_t.check("customize page opened from the lockers", customize.visible)
@@ -96,7 +95,7 @@ func _check_live_pilot() -> void:
 	_t.check("live pilot carries PilotLiveliness", live != null and is_instance_valid(live))
 	if live == null:
 		return
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	live.reset_state()
 	_game.ctx.events.player_hit.emit(5.0, "test")
 	var kicked: float = absf(float(live.get("_recoil_vel")))
@@ -105,15 +104,15 @@ func _check_live_pilot() -> void:
 	live.reset_state()
 	_t.eq("shot_fired and boss_defeated reach the live pilot", [_game.presentation.hero_assets.pilot_impulse("shot_fired"), _game.presentation.hero_assets.pilot_impulse("boss_defeated")], [1, 1])
 	live.reset_state()
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	_game.ctx.events.player_hit.emit(5.0, "test")
 	_t.near("Less motion holds the pilot still on a hit", float(live.get("_recoil_vel")), 0.0, 0.0001)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	live.reset_state()
 
 
 func _spin_per_second(rig: Node3D, reduced: bool) -> float:
-	UiTokens.reduced_motion = reduced
+	Comfort.reduced_motion = reduced
 	await _frames(6)
 	var start: float = rig.spin_angle()
 	var elapsed := 0.0
@@ -133,7 +132,7 @@ func _check_weapon_rig_motion() -> void:
 		return
 	var full: float = await _spin_per_second(rig, false)
 	var calm: float = await _spin_per_second(rig, true)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	_t.check("Less motion slows WeaponRigFx spin to about %.2fx" % WeaponRigFx.REDUCED_RECOIL_SCALE,
 		full > 0.0 and calm / full > WeaponRigFx.REDUCED_RECOIL_SCALE - 0.12 and calm / full < WeaponRigFx.REDUCED_RECOIL_SCALE + 0.12,
 		"full=%.3f calm=%.3f ratio=%.3f" % [full, calm, calm / maxf(full, 0.0001)])
@@ -144,11 +143,11 @@ func _check_weapon_rig_motion() -> void:
 	if carriage != null:
 		var ratios := []
 		for reduced in [true, false]:
-			UiTokens.reduced_motion = reduced
+			Comfort.reduced_motion = reduced
 			rig.on_shot_fired("plain", 1.0)
 			await process_frame
 			ratios.append(carriage.position.z / maxf(rig.recoil_offset(), 0.0001))
-		UiTokens.reduced_motion = false
+		Comfort.reduced_motion = false
 		_t.check("Less motion scales WeaponRigFx recoil to %.2fx" % WeaponRigFx.REDUCED_RECOIL_SCALE,
 			absf(ratios[0] - WeaponRigFx.REDUCED_RECOIL_SCALE) < 0.01 and absf(ratios[1] - 1.0) < 0.01, str(ratios))
 	_game.run.parts.erase("hot_rivets")
@@ -194,6 +193,6 @@ func _run() -> void:
 	await _check_live_pilot()
 	await _check_weapon_rig_motion()
 	await _check_flush_pod_scale()
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	_game.free()
 	quit(_t.verdict())

@@ -2,7 +2,7 @@ extends SceneTree
 
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
-const Foley := preload("res://src/presentation/foley_audio.gd")
+const Cues := preload("res://src/presentation/positional_cue_rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -110,8 +110,7 @@ func _ids() -> Array:
 
 func _loops() -> Array:
 	var loops: Array = Bank.LOOPED.duplicate()
-	loops.append_array(Foley.LOOPS)
-	loops.append("jolt_layer_presence")
+	loops.append_array(Cues.ROWS.keys().filter(func(id): return Cues.ROWS[id].get("loop", false)))
 	return loops
 
 

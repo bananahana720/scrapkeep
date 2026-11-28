@@ -15,24 +15,15 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { ensureNodeModules, parseEnsureArgs } from "./ensure-node-modules.mjs";
+import { git as runGit } from "./lib/git.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const scriptPath = path.join(repoRoot, "scripts", "ensure-node-modules.mjs");
 
 function git(cwd, ...args) {
-  const ran = spawnSync("git", args, {
+  return runGit(["-c", "user.name=Test", "-c", "user.email=test@example.invalid", ...args], {
     cwd,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      GIT_AUTHOR_NAME: "Test",
-      GIT_AUTHOR_EMAIL: "test@example.invalid",
-      GIT_COMMITTER_NAME: "Test",
-      GIT_COMMITTER_EMAIL: "test@example.invalid",
-    },
   });
-  assert.equal(ran.status, 0, ran.stderr);
-  return ran.stdout.trim();
 }
 
 function makeFakePrimary(primaryDir, lockContent = '{"lockfileVersion":3}\n') {

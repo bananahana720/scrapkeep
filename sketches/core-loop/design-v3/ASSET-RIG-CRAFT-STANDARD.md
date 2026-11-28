@@ -124,7 +124,7 @@ Live pilot motion is composed cleanly in layers without mutating imported `Anima
    - Weapon-fire recoil & reaction impulses driven from `PilotReactions.REACTION_IMPULSES`.
    - Direct cockpit control coupling (`YokeRig` roll/pitch, `ThrottleLever` throw, `PedalL`/`PedalR` pump).
 3. **Camera Glance Layer (`PilotGlance`, `SkeletonModifier3D`):** Turns chest/neck/head over the shoulder toward the chase camera when stationary, forwarding frame kinematics to `PilotLiveliness` every tick.
-4. **Accessibility (`UiTokens.reduced_motion`):** When reduced motion is enabled, `PilotLiveliness` decays all cosmetic springs to zero and leaves rest/clip poses undisturbed.
+4. **Accessibility (`Comfort.reduced_motion`):** When reduced motion is enabled, `PilotLiveliness` decays all cosmetic springs to zero and leaves rest/clip poses undisturbed.
 
 ---
 

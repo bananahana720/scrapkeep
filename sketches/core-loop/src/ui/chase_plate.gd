@@ -8,6 +8,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Palette := preload("res://src/core/palette.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const WIDTH := 300.0
@@ -94,7 +95,7 @@ func _init(read: Dictionary) -> void:
 func _ready() -> void:
 	if _flap == null:
 		return
-	if UiTokens.reduced_motion:
+	if Comfort.reduced_motion:
 		_flap.visible_ratio = 1.0
 		return
 	_flap.visible_ratio = 0.0

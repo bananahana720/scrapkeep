@@ -154,7 +154,7 @@ func _run() -> void:
 	_game._screen_key(KEY_K)
 	await _frames(1)
 	_t.check("K again closes the camp", not screens.camp_open() and screens._actions.visible, "")
-	_t.eq("the title body comes back", screens._body.text, FieldNotes.OBJECTIVE)
+	_t.eq("the title body comes back", screens.said_body(), FieldNotes.OBJECTIVE)
 	_t.check("nothing keeps focus after closing", root.gui_get_focus_owner() == null, str(root.gui_get_focus_owner()))
 
 	# Escape and pad Start close (pad B is the boost); pad A presses the focused button.
