@@ -23,7 +23,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 #   5. ParkFlood.tla compliance: even with a ball parked dead-still inside the lane, full water
 #      is NEVER held indefinitely; the cycle always drains back to 0.0 and recharges cleanly.
 #   6. Dam (apron_sluice, pump_yard_sluice) and Flume (wasteway_sluice, forecourt_sluice) specs
-#      load cleanly via sync_stage and reset cleanly.
+#      load cleanly via build_from_specs and reset cleanly.
 
 const CRUISE := 14.0
 const DT := 1.0 / 60.0
