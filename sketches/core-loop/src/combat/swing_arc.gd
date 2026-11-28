@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Tuning := preload("res://src/movement/tuning.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 
 static func forecast(player, seconds: float) -> Vector3:

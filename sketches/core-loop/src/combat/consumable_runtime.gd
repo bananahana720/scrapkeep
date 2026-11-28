@@ -10,7 +10,7 @@ const EnemyBase := preload("res://src/combat/enemy.gd")
 const Groups := preload("res://src/core/groups.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 
 var ctx

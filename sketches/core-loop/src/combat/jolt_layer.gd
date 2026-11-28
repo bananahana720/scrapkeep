@@ -3,7 +3,7 @@ extends "res://src/combat/counter.gd"
 const AreaField := preload("res://src/combat/area_field.gd")
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const FIELD := "static_jam"
 const HP := 45.0

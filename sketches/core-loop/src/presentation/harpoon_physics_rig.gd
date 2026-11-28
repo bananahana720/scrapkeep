@@ -2,7 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
 

@@ -2,7 +2,7 @@ extends SceneTree
 
 const Floors := preload("res://src/boss/waking_floors.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
-const Posture := preload("res://src/combat/boss_posture.gd")
+const Posture := preload("res://src/core/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The Waking's floor rule (src/boss/waking_floors.gd) on its own, no Game: one floor per

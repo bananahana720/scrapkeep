@@ -2,7 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const MODEL := "res://assets/models/world_one/radio_cache.glb"

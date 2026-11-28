@@ -7,7 +7,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 var t := T.new("fx_library_test")

@@ -1,7 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const Projectile := preload("res://src/combat/projectile.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const SPECIAL_CUES := "res://src/combat/special_cues.gd"
 

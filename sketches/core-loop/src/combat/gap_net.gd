@@ -2,7 +2,7 @@ extends "res://src/combat/counter.gd"
 
 const IslandEdge := preload("res://src/combat/island_edge.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const HP := 70.0
 const RIM_DROP := 4.0

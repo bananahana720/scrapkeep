@@ -10,7 +10,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const BLAST_RADIUS := 3.6
 const DAMAGE := 12.0

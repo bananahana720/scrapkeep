@@ -1,7 +1,7 @@
 extends "res://src/world/device.gd"
 
 
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 
 const MAST_HEIGHT := 16.0
 const COIL_RADIUS := 2.2

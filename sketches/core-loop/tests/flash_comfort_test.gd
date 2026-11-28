@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Pod := preload("res://src/combat/splitter_pod.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")

@@ -1,7 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const FIELD_RADIUS := 5.5
 const FIELD_TOP := 10.0

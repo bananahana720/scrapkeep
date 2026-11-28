@@ -1,7 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const FloorRule := preload("res://src/combat/floor_rule.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
 

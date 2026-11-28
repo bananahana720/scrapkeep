@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Combat := preload("res://src/combat/combat.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const BossDouble := preload("res://tests/doubles/boss_spawner_double.gd")
 const SpineDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const SourceScan := preload("res://tests/support/source_scan.gd")

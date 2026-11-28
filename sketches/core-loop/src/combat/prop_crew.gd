@@ -4,7 +4,7 @@ const RubbleFall := preload("res://src/world/events/rubble_fall.gd")
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 const FloorRule := preload("res://src/combat/floor_rule.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const HP := 60.0
 const BODY_PATH := "res://assets/models/world_two/enemy_prop_crew.glb"

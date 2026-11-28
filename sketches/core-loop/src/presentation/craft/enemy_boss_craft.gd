@@ -5,7 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 
 static var _mesh_cache: Dictionary = {}

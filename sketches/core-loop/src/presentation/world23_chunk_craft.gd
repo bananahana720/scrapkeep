@@ -6,7 +6,7 @@ const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculpto
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const DECK_LOOK := {"bottom_grime": 0.56, "side_wear": 0.36}
 const ANNULUS_LOOK := {
 	"lip_ratio": 0.12,

@@ -9,7 +9,7 @@ const Density := preload("res://src/presentation/density.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 # W45 polish unit P4: each shot bit's own shape where it acts, and the verb evolutions' payoffs, in
 # the running game. Real bolts fly through Bolts.step into combat's hit and glance seams, real

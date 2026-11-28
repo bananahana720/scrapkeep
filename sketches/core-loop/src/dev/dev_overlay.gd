@@ -2,7 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")

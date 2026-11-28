@@ -1,6 +1,6 @@
 extends "res://src/combat/counter.gd"
 
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 const BODY := "res://assets/models/world_one/enemy_boom_tender.glb"

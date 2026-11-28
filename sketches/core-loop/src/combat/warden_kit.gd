@@ -2,7 +2,7 @@ extends Node3D
 
 const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Roster := preload("res://src/combat/roster.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 const DECK := 2.2
 const SEAM_DIM := 0.8

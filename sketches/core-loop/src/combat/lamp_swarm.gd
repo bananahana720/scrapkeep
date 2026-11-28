@@ -1,6 +1,6 @@
 extends "res://src/combat/counter.gd"
 
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const HP := 35.0
 const LAMP_COUNT := 3

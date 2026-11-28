@@ -12,7 +12,7 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const FieldTips := preload("res://src/ui/field_tips.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const BOOST_WAIT_MAX := 20.0
 
 const PROMPT_VERBS := ["haul", "interact", "jump", "harpoon", "boost", "ultimate"]

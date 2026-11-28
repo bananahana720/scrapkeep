@@ -5,7 +5,7 @@ const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 
 const BEAM_HEIGHT := 70.0

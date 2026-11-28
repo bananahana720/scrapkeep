@@ -2,7 +2,7 @@ class_name CraftLookdev
 extends RefCounted
 
 
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 const MASTER_SHADER_PATH := "res://assets/shaders/craft_master_weathering.gdshader"

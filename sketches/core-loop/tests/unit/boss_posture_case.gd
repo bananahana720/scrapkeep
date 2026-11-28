@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Posture := preload("res://src/combat/boss_posture.gd")
+const Posture := preload("res://src/core/boss_posture.gd")
 const Sweep := preload("res://tools/posture_sweep.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 

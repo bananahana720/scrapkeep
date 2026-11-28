@@ -2,7 +2,7 @@ extends Node3D
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const BallState := preload("res://src/movement/ball_state.gd")
 const RigidBall := preload("res://src/movement/rigid_ball.gd")
 const Intent := preload("res://src/movement/intent.gd")

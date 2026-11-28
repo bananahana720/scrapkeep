@@ -408,7 +408,6 @@
   },
   "L16": [
     "sketches/core-loop/src/boss/arena.gd",
-    "sketches/core-loop/src/boss/boss.gd",
     "sketches/core-loop/src/boss/mind.gd",
     "sketches/core-loop/src/boss/mind_dress.gd",
     "sketches/core-loop/src/boss/stub_boss.gd",
