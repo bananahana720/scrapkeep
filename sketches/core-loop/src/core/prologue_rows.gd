@@ -1,5 +1,6 @@
 extends RefCounted
 
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 const ID := "lore.prologue"
 const LINE_WORD_CAP := 14
@@ -31,4 +32,4 @@ static func for_world(world: int) -> Array:
 
 
 static func words(text: String) -> int:
-	return text.split(" ", false).size()
+	return WordBudget.words_in(text)

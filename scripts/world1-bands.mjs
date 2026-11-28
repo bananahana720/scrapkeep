@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { median } from "./checkpoint.mjs";
 import { cellVerdict, meets, targetFor } from "./challenge/lib.mjs";
 import { LEDGER_FILE, parseLedger, pastReview } from "./known-failing.mjs";
+import { isMain } from "./lib/cli.mjs";
+import { WORLD1_MAPS as CANONICAL_WORLD1_MAPS } from "./lib/game-defs.mjs";
+import { REPO_ROOT, gitOptional } from "./lib/git.mjs";
 import { scan } from "./placeholder-gate.mjs";
 import { FINDINGS_FILE, parseFindings } from "./redteam/lib.mjs";
 import { readRuns } from "./run-summary.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = REPO_ROOT;
 export const ROWS_FILE = path.join(root, "scripts", "world1-bands.rows.json");
-export const WORLD1_MAPS = ["park_dam", "park_flume"];
+export const WORLD1_MAPS = [...CANONICAL_WORLD1_MAPS];
 
 const read = (file) => readFileSync(path.isAbsolute(file) ? file : path.join(root, file), "utf8");
 const has = (file) => existsSync(path.isAbsolute(file) ? file : path.join(root, file));
@@ -647,11 +648,7 @@ export function parseArgs(argv) {
 }
 
 function checkoutHead() {
-  try {
-    return execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  } catch {
-    return null;
-  }
+  return gitOptional(["rev-parse", "HEAD"], { cwd: root });
 }
 
 function main() {
@@ -714,4 +711,4 @@ function main() {
   process.exitCode = passed(rows) ? 0 : 1;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

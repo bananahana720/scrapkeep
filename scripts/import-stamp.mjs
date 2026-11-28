@@ -11,8 +11,9 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { scratchHomeEnv } from "./godot-home.mjs";
+import { GODOT_VERSION, resolveGodotBinary, scratchHomeEnv } from "./godot-home.mjs";
+import { isMain } from "./lib/cli.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 export const DEFAULT_SKETCH = "sketches/core-loop";
 const STAMP = "scrapkeep-import.json";
@@ -20,12 +21,10 @@ const GODOT_ASSET_FILE =
   /(?:^|\/)project\.godot$|\.(?:gd|tscn|tres|glb|png|ogg|wav|ttf|otf|gdshader|json|bin|import)$/i;
 
 function git(root, args, { trim = true } = {}) {
-  const ran = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  if (ran.status !== 0) return null;
-  return trim ? ran.stdout.trim() : ran.stdout.replace(/\r?\n$/, "");
+  return gitOptional(args, { cwd: root, trim });
 }
 
-export function godotIdentity(godotBin = process.env.GODOT_BIN) {
+export function godotIdentity(godotBin = resolveGodotBinary({ requireExplicit: true })) {
   if (!godotBin || !existsSync(godotBin)) return null;
   try {
     return `${path.basename(godotBin)}:${statSync(godotBin).size}`;
@@ -148,8 +147,9 @@ export function isCleanImportPass({ status, signal = null, output = "", uidCache
 }
 
 function runGodotImportPass(root, sketch) {
-  const godot = process.env.GODOT_BIN;
-  if (!godot || !existsSync(godot)) throw new Error("set GODOT_BIN to the Godot 4.7.2 editor");
+  const godot = resolveGodotBinary({ requireExplicit: true });
+  if (!godot || !existsSync(godot))
+    throw new Error(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor`);
   const scratchDir = mkdtempSync(path.join(os.tmpdir(), "import-stamp-"));
   try {
     return spawnSync(
@@ -226,7 +226,7 @@ function main(argv) {
   return 2;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (error) {

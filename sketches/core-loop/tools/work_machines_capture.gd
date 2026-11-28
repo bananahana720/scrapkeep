@@ -3,6 +3,7 @@ extends "res://tests/work_machines_test.gd"
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const FPS := 15.0
@@ -26,7 +27,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--") and "=" in arg:
 			settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
-	if DisplayServer.get_name() == "headless" or not settings.has("out"):
+	if AppShell.headless() or not settings.has("out"):
 		printerr("work_machines_capture: needs a rendered display and -- --out=<absolute dir>")
 		quit(2)
 		return
@@ -112,7 +113,7 @@ func _ride_lines() -> Array:
 
 func _vantage(m: Dictionary, lines: Array, near_m: float, far_m: float, want_m: float) -> Vector2:
 	var at: Vector2 = m.row.at
-	var target := Vector3(at.x, Terrain._grid_height(_heights, at.x, at.y) + MID_M, at.y)
+	var target := Vector3(at.x, Terrain.grid_height(_heights, at.x, at.y) + MID_M, at.y)
 	var props := _scatter.filter(func(prop): return Vector2(prop.pos.x, prop.pos.z).distance_to(at) < far_m + 10.0)
 	var best := Vector2.INF
 	var best_score := INF
@@ -126,7 +127,7 @@ func _vantage(m: Dictionary, lines: Array, near_m: float, far_m: float, want_m: 
 				var d := q.distance_to(at)
 				if d < near_m or d > far_m or absf(d - want_m) >= best_score:
 					continue
-				var eye := Vector3(q.x, Terrain._grid_height(_heights, q.x, q.y) + CAM_EYE_M, q.y)
+				var eye := Vector3(q.x, Terrain.grid_height(_heights, q.x, q.y) + CAM_EYE_M, q.y)
 				if _sight_clear(eye, target, _heights, props):
 					best_score = absf(d - want_m)
 					best = q

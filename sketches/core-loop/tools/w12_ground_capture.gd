@@ -1,6 +1,7 @@
 extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 var out := ""
 var class_index := 1
 var game
@@ -12,7 +13,7 @@ func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--out="): out = a.trim_prefix("--out=")
 		elif a.begins_with("--class="): class_index = int(a.trim_prefix("--class="))
-	if DisplayServer.get_name() == "headless" or out == "":
+	if AppShell.headless() or out == "":
 		printerr("needs native display and --out"); quit(2); return
 	root.size = Vector2i(1920, 1080)
 	root.content_scale_size = root.size

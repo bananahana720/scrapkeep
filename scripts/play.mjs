@@ -14,7 +14,11 @@ import { cpus, tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { binary, judge, sketchDirectories, testScripts } from "./sketch-smoke.mjs";
+import { resolveGodotBinary } from "./godot-home.mjs";
+import { judge, sketchDirectories, testScripts } from "./lib/godot-test-runner.mjs";
+import { pool, runProcess } from "./lib/proc.mjs";
+
+const binary = resolveGodotBinary();
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const tty = process.stdout.isTTY === true;
@@ -188,48 +192,29 @@ export function resolve(entries, name, cwdTree = null) {
   return { ambiguous: [] };
 }
 
-function runHeadless(label, args) {
-  return new Promise((resolveRun) => {
-    const child = spawn(binary, args);
-    let output = "";
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
-    }, 120_000);
-    child.stdout.on("data", (chunk) => (output += chunk));
-    child.stderr.on("data", (chunk) => (output += chunk));
-    child.on("close", (status, signal) => {
-      clearTimeout(timer);
-      const verdict = judge({ test: args.includes("--script"), status, output });
-      resolveRun({
-        label,
-        ok: verdict.ok,
-        reason: verdict.reason,
-        status,
-        crashed: signal !== null && !timedOut,
-        output,
-      });
-    });
-  });
+async function runHeadless(label, args) {
+  const res = await runProcess(binary, args, { timeoutMs: 120_000 });
+  const verdict = judge({ test: args.includes("--script"), status: res.exit, output: res.output });
+  return {
+    label,
+    ok: verdict.ok,
+    reason: verdict.reason,
+    status: res.exit,
+    crashed: res.signal !== null && !res.timedOut,
+    output: res.output,
+  };
 }
 
-async function inPool(jobs, limit, onDone) {
-  const results = [];
-  let next = 0;
-  const width = Math.max(1, Math.min(limit, jobs.length));
-  await Promise.all(
-    Array.from({ length: width }, async () => {
-      while (next < jobs.length) {
-        const index = next++;
-        results[index] = await jobs[index]();
-        try {
-          onDone?.(results[index]);
-        } catch {}
-      }
-    }),
-  );
-  return results;
+function inPool(jobs, limit, onDone) {
+  return pool(jobs, limit, {
+    onDone: onDone
+      ? (result) => {
+          try {
+            onDone(result);
+          } catch {}
+        }
+      : undefined,
+  });
 }
 
 const failureLog = path.join(root, "artifacts", "local", "sketch-tests");
@@ -609,8 +594,8 @@ async function main(argv) {
     command = "list";
   }
 
-  if (!existsSync(binary)) {
-    console.error(`Godot binary not found at ${binary}; set GODOT_BIN.`);
+  if (!binary || !existsSync(binary)) {
+    console.error(`Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN.`);
     process.exit(2);
   }
 

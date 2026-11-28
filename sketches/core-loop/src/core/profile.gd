@@ -76,7 +76,8 @@ func load_profile() -> bool:
 	if read["state"] == "missing":
 		return true
 	if read["state"] == "newer":
-		return _refuse("%s; playing without saving" % read["why"])
+		disable_saving("%s; playing without saving" % read["why"])
+		return false
 	if read["state"] != "ok":
 		return _reject(read["why"])
 	_doc = read["doc"]
@@ -100,6 +101,18 @@ func save() -> bool:
 	var saved := _save_locked()
 	_unlock()
 	return saved
+
+
+func save_if_allowed() -> bool:
+	if not can_save:
+		return true
+	return save()
+
+
+func disable_saving(reason: String) -> void:
+	can_save = false
+	_refusal = "not saving: %s" % reason
+	last_error = reason
 
 
 func transact(change: Callable) -> Variant:
@@ -558,17 +571,11 @@ func _add(list: Array, id: String) -> void:
 		list.append(id)
 
 
-func _refuse(why: String) -> bool:
-	can_save = false
-	_refusal = "not saving: %s" % why
-	last_error = why
-	return false
-
-
 func _reject(why: String) -> bool:
 	var kept := SafeStore.quarantine(path)
 	if kept.is_empty():
-		return _refuse("%s and could not be moved aside; not saving this session" % why)
+		disable_saving("%s and could not be moved aside; not saving this session" % why)
+		return false
 	last_error = "%s; kept as %s" % [why, kept]
 	return false
 

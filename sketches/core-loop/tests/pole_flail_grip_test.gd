@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Grip := preload("res://src/movement/grip.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -70,16 +71,17 @@ func _run() -> void:
 		["the vault never flails", 9.0, _enemy("vault"), Grip.REEL],
 	]
 	for r in rows:
-		_t.eq(r[0], Grip.of(r[2], r[1]), r[3])
-	_t.near("chassis heft", Grip.heft_of(_enemy("chaser")), 1.4)
-	_t.near("threat 2 heft", Grip.heft_of(_enemy("chaser", 2.0)), 1.8)
-	_t.near("elite heft", Grip.heft_of(_enemy("plated_brute", 1.0, "target_stamp")), 4.5)
-	_t.check("boss heft is infinite", Grip.heft_of(_enemy("brindle_hull")) == INF)
+		_t.eq(r[0], Grip.of(r[2], r[1], Roster.heft_of(r[2])), r[3])
+	_t.near("chassis heft", Roster.heft_of(_enemy("chaser")), 1.4)
+	_t.near("threat 2 heft", Roster.heft_of(_enemy("chaser", 2.0)), 1.8)
+	_t.near("elite heft", Roster.heft_of(_enemy("plated_brute", 1.0, "target_stamp")), 4.5)
+	_t.check("boss heft is infinite", Roster.heft_of(_enemy("brindle_hull")) == INF)
 
 	var loose := Node3D.new()
 	root.add_child(loose)
-	_t.eq("a body outside the enemy group has no grip", Grip.of(loose, 1.0), "")
-	var aim := Grip.mark({"state": 2, "point": Vector3.ZERO, "body": _enemy("swarm_remnant")}, 1.0)
+	_t.eq("a body outside the enemy group has no grip", Grip.of(loose, 1.0, Roster.heft_of(loose)), "")
+	var swarm := _enemy("swarm_remnant")
+	var aim := Grip.mark({"state": 2, "point": Vector3.ZERO, "body": swarm}, 1.0, Roster.heft_of(swarm))
 	_t.eq("aim on a body carries the grip", aim.get("grip", ""), Grip.FLAIL)
-	var world := Grip.mark({"state": 1, "point": Vector3.ZERO, "grip": "pole"}, 1.0)
+	var world := Grip.mark({"state": 1, "point": Vector3.ZERO, "grip": "pole"}, 1.0, INF)
 	_t.check("a world aim carries no grip", not world.has("grip"))

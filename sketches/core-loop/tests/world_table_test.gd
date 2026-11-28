@@ -5,6 +5,10 @@ const Worlds := preload("res://src/core/worlds.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
+const DigTable := preload("res://tests/doubles/dig_table_defs.gd")
+const HighdraftTable := preload("res://tests/doubles/highdraft_table_defs.gd")
+const HighdraftWorldThree := preload("res://tests/doubles/highdraft_world_three_defs.gd")
+const RowPacks := preload("res://tests/doubles/row_packs_defs.gd")
 
 # The world helpers on the three tables, and the world and boss rows in worlds.gd.
 
@@ -14,6 +18,7 @@ func _initialize() -> void:
 	_default(t)
 	_slice(t)
 	_double(t)
+	_doubles_protocol(t)
 	_rows(t)
 	quit(t.verdict())
 
@@ -62,6 +67,54 @@ func _double(t) -> void:
 	t.eq("double last_of 1", TwoWorld.last_of(1), 3)
 	t.eq("double last_of 2", TwoWorld.last_of(2), 6)
 	t.eq("double worlds", TwoWorld.worlds(), [1, 2])
+
+
+func _doubles_protocol(t) -> void:
+	var lobber_packs := [{"id": "table_lobbers", "kinds": ["lobber"]}]
+	var lobber_elite := {"id": "table_elite", "kinds": ["lobber", "lobber"]}
+	var cases := [
+		["dig", DigTable, 1, [1], "dig", "reactor", lobber_packs, lobber_elite, 3],
+		["highdraft", HighdraftTable, 1, [1], "highdraft", "mind", lobber_packs, lobber_elite, 3],
+		["highdraft_w3", HighdraftWorldThree, 1, [3], "highdraft", "mind", lobber_packs, lobber_elite, 3],
+		["row_packs", RowPacks, 2, [1], "spillway", "reactor", lobber_packs, lobber_elite, 3],
+		["two_world", TwoWorld, 6, [1, 2], "spillway", "reactor", [], {}, 0],
+		["first_world", TwoWorld.FirstWorld, 3, [1], "spillway", "reactor", [], {}, 0],
+	]
+	for item in cases:
+		var tag: String = item[0]
+		var tbl = item[1]
+		var count: int = item[2]
+		var want_worlds: Array = item[3]
+		t.eq(tag + " BOSS", tbl.BOSS, "brindle")
+		t.eq(tag + " COUNT", tbl.COUNT, count)
+		t.eq(tag + " DEFS size", tbl.DEFS.size(), count)
+		t.eq(tag + " PICK_ON_CLASS_UP", tbl.PICK_ON_CLASS_UP, false)
+		t.eq(tag + " worlds", tbl.worlds(), want_worlds)
+		t.eq(tag + " of(0) clamps to 1", tbl.of(0), tbl.DEFS[0])
+		t.eq(tag + " of(1) map", String(tbl.of(1)["map"]), item[4])
+		t.eq(tag + " of(1) warden_family", String(tbl.of(1)["warden_family"]), item[5])
+		t.eq(tag + " of(COUNT + 1) clamps to last", tbl.of(count + 1), tbl.DEFS[count - 1])
+		t.eq(tag + " is_last(COUNT)", tbl.is_last(count), true)
+		t.eq(tag + " is_run_last(COUNT)", tbl.is_run_last(count), true)
+		t.eq(tag + " is_world_last(COUNT)", tbl.is_world_last(count), true)
+		if count > 1:
+			t.eq(tag + " is_last(1)", tbl.is_last(1), false)
+		var first_world: int = want_worlds[0]
+		t.eq(tag + " world_of(1)", tbl.world_of(1), first_world)
+		t.eq(tag + " local(1)", tbl.local(1), 1)
+		t.eq(tag + " first_of(first)", tbl.first_of(first_world), 1)
+		t.eq(tag + " last_of(last)", tbl.last_of(want_worlds.back()), count)
+		t.eq(tag + " synergy_in_play", tbl.synergy_in_play("any"), true)
+		t.eq(tag + " part_in_play", tbl.part_in_play("any"), true)
+		t.eq(tag + " parts_listed", tbl.parts_listed(), false)
+		t.eq(tag + " packs", tbl.packs(), item[6])
+		t.eq(tag + " elite", tbl.elite(), item[7])
+		t.eq(tag + " elite_arrival", tbl.elite_arrival(), item[8])
+		t.eq(tag + " has_vault", tbl.has_vault(), true)
+	for lobber_tbl in [DigTable, HighdraftTable, HighdraftWorldThree, RowPacks]:
+		t.eq("lobber PACKS const", lobber_tbl.PACKS, lobber_packs)
+	t.eq("row_packs stage 2 map", String(RowPacks.of(2)["map"]), "gorge")
+	t.eq("first_world stage 3 local", TwoWorld.FirstWorld.local(3), 3)
 
 
 func _rows(t) -> void:

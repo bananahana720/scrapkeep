@@ -6,6 +6,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const Palette := preload("res://src/core/palette.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const SIZE := Vector2i(1920, 1080)
@@ -35,7 +36,7 @@ func _initialize() -> void:
 			_dry = true
 		elif arg.begins_with("--only="):
 			_only = Array(arg.trim_prefix("--only=").split(","))
-	if not _dry and (_out.is_empty() or DisplayServer.get_name() == "headless"):
+	if not _dry and (_out.is_empty() or AppShell.headless()):
 		printerr("stand_in_capture: needs a rendered display and -- --out=<absolute dir> (or --dry)")
 		quit(2)
 		return

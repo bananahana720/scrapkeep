@@ -1,4 +1,4 @@
-# smoke: solo (per-stage dial lists; the mobs wire on the real combat, the pulse wire on a Warden)
+# per-stage dial lists; the mobs wire on the real combat, the pulse wire on a Warden
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

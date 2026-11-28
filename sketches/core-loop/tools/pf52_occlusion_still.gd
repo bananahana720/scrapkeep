@@ -5,6 +5,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SETTLE := 45
 const WAIT_TICKS := 2400
@@ -37,7 +38,7 @@ func _initialize() -> void:
 			stage = int(arg.trim_prefix("--stage="))
 		elif arg.begins_with("--heading="):
 			heading_arg = deg_to_rad(float(arg.trim_prefix("--heading=")))
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		quit(2)
 		return
 	if DirAccess.make_dir_recursive_absolute(out) != OK:

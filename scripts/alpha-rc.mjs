@@ -14,6 +14,8 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { scratchGodotEnv } from "./godot-home.mjs";
+import { runProcess as runChild, stopGroup as stopChildGroup } from "./lib/proc.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const node = process.execPath;
@@ -294,16 +296,16 @@ export function judgeRedteam(findings, head, previous) {
 
 export function freshProfile() {
   const home = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-rc-home-"));
-  const env = { HOME: home };
-  for (const [key, dir] of [
-    ["XDG_CONFIG_HOME", ".config"],
-    ["XDG_DATA_HOME", ".local/share"],
-    ["XDG_CACHE_HOME", ".cache"],
-    ["XDG_STATE_HOME", ".local/state"],
-  ]) {
-    env[key] = path.join(home, dir);
-    mkdirSync(env[key], { recursive: true });
-  }
+  const env = scratchGodotEnv(home, {
+    dirs: {
+      config: ".config",
+      data: ".local/share",
+      cache: ".cache",
+      state: ".local/state",
+    },
+    forceHome: true,
+    create: true,
+  });
   return { home, env };
 }
 
@@ -351,54 +353,8 @@ export function processAlive(pid) {
   return state !== "" && !state.startsWith("Z");
 }
 
-function groupLive(pgid) {
-  if (!Number.isInteger(pgid) || pgid <= 0) return false;
-  try {
-    process.kill(-pgid, 0);
-  } catch (error) {
-    if (error.code === "ESRCH") return false;
-  }
-  const ps = spawnSync("ps", ["-e", "-o", "pgid=,state="], { encoding: "utf8" });
-  if (ps.status !== 0) return true;
-  return (ps.stdout || "").split("\n").some((line) => {
-    const parts = line.trim().split(/\s+/);
-    return Number(parts[0]) === pgid && Boolean(parts[1]) && !parts[1].startsWith("Z");
-  });
-}
-
-function waitGroupDead(pgid, budgetMs = 1500) {
-  return new Promise((resolve) => {
-    const deadline = Date.now() + budgetMs;
-    const poll = () => {
-      if (!groupLive(pgid) || Date.now() >= deadline) return resolve();
-      setTimeout(poll, 15);
-    };
-    poll();
-  });
-}
-
 function stopGroup(child) {
-  const pgid = child.pid;
-  return new Promise((resolve) => {
-    const signal = (sig) => {
-      try {
-        process.kill(-pgid, sig);
-      } catch {}
-    };
-    const finishKill = () => {
-      signal("SIGKILL");
-      waitGroupDead(pgid).then(resolve);
-    };
-    if (child.exitCode !== null || child.signalCode !== null) {
-      return finishKill();
-    }
-    const force = setTimeout(() => signal("SIGKILL"), KILL_GRACE_MS);
-    child.once("exit", () => {
-      clearTimeout(force);
-      finishKill();
-    });
-    signal("SIGTERM");
-  });
+  return stopChildGroup(child, { graceMs: KILL_GRACE_MS });
 }
 
 export function bootFailure(output) {
@@ -497,40 +453,16 @@ export function launchAppImage(
   });
 }
 
-export function runProcess(step, timeoutMs = STEP_TIMEOUT_MS) {
-  return new Promise((resolve) => {
-    let output = "";
-    let timedOut = false;
-    let stopping = null;
-    const child = spawn(step.command, step.args, {
-      cwd: root,
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: true,
-    });
-    const timer = setTimeout(() => {
-      timedOut = true;
-      stopping = stopGroup(child);
-    }, timeoutMs);
-    child.stdout.on("data", (c) => (output += c));
-    child.stderr.on("data", (c) => (output += c));
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({ exit: null, output, error: error.message });
-    });
-    let done = false;
-    const settle = async (code) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      if (stopping) await stopping;
-      else if (child.pid) await stopGroup(child);
-      child.stdout.destroy();
-      child.stderr.destroy();
-      resolve({ exit: timedOut ? null : code, output });
-    };
-    child.on("close", settle);
-    child.on("exit", (code) => setTimeout(() => settle(code), 2000));
+export async function runProcess(step, timeoutMs = STEP_TIMEOUT_MS) {
+  const res = await runChild(step.command, step.args, {
+    cwd: root,
+    timeoutMs,
+    killGraceMs: KILL_GRACE_MS,
+    reapOnClose: true,
+    exitDrainMs: 2000,
   });
+  if (res.error) return { exit: null, output: res.output, error: res.error.message };
+  return { exit: res.timedOut ? null : res.exit, output: res.output };
 }
 
 export function verdict(results, { cloud = false } = {}) {

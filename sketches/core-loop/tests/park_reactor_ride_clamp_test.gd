@@ -1,4 +1,4 @@
-# smoke: solo timeout=60s
+# smoke: timeout=60s
 extends SceneTree
 const Reactor = preload("res://src/combat/warden_reactor.gd")
 const Warden = preload("res://src/combat/warden.gd")

@@ -3,6 +3,7 @@ extends SceneTree
 const Audio := preload("res://src/presentation/audio.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
+const MixRows := preload("res://src/presentation/mix_rows.gd")
 const MusicDsp := preload("res://src/presentation/music_dsp.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -83,7 +84,7 @@ func _free_audio(rig: Dictionary) -> void:
 func _test_bus_setup_and_idempotency() -> void:
 	var rig := _make_audio()
 	var audio: Audio = rig["audio"]
-	var music_idx := AudioServer.get_bus_index(MusicDsp.MUSIC_BUS)
+	var music_idx := AudioServer.get_bus_index(MixRows.BUS_MUSIC)
 	var before_count := AudioServer.get_bus_effect_count(music_idx)
 	audio.music_dsp.setup()
 	var after_count := AudioServer.get_bus_effect_count(music_idx)
@@ -92,7 +93,7 @@ func _test_bus_setup_and_idempotency() -> void:
 	_t.check("resting Music bus effects are bypassed", not snap["eq_enabled"] and not snap["lpf_enabled"] and not snap["hpf_enabled"], str(snap))
 	_t.eq("StingerMusic bus sends to SFX", snap["stinger_send"], "SFX")
 	_t.check("StingerMusic carries room reverb", snap["stinger_reverb"])
-	_t.eq("stinger player routes through StingerMusic", audio._stinger_player.bus, MusicDsp.STINGER_BUS)
+	_t.eq("stinger player routes through StingerMusic", audio._stinger_player.bus, MixRows.BUS_STINGER)
 	_free_audio(rig)
 
 

@@ -70,7 +70,7 @@ func _run() -> void:
 
 
 func _roll(from: Vector3, velocity: Vector3, seconds: float) -> void:
-	var ball = game.player.active_body()
+	var ball = game.player.body()
 	ball.set_active(true)
 	ball.teleport(from, velocity)
 	await _ticks(seconds)
@@ -105,7 +105,7 @@ func _ball_cases() -> void:
 	landings.clear()
 	await _roll(BASE + Vector3(-20, 14.0, 0), Vector3(0, -6, 0), 1.6)
 	t.check("a hard landing is a landing, not a bump", bumps.is_empty() and not landings.is_empty(), "%d bumps, %d landings" % [bumps.size(), landings.size()])
-	game.player.active_body().set_active(false)
+	game.player.body().set_active(false)
 
 
 func _never() -> bool:

@@ -20,9 +20,8 @@ const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker"
 	"swarm_remnant", "mind_hand", "burrower", "drill_crew", "lamp_swarm", "line_cutter", "anchor_crew",
 	"kite_drone", "linker", "foreman", "prop_crew", "pit_jaw", "splitter", "ballast_heavy", "gap_net",
 	"dispatcher", "jolt_layer", "boom_tender"]
-const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
-	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
-const FAMILY_ANCIENT := ["reactor_relic", "swarm_remnant", "mind_hand"]
+const COUNTERS := Roster.COUNTERS
+const FAMILY_ANCIENT := Roster.ANCIENTS
 const PACKS := {
 	"grounded": {"controller": "mag_trapper", "punisher": "bola_thrower", "tests": "heft"},
 	"strung": {"controller": "hooker", "punisher": "plated_brute", "tests": "speed"},
@@ -603,7 +602,7 @@ static func read_park(map_id: String) -> Dictionary:
 static func prepare_park(map_id: String) -> void:
 	if _parks.has(map_id) or not map_id.begins_with("park_"):
 		return
-	load("res://src/world/park/park_schema.gd")._registry()
+	load("res://src/world/park/park_schema.gd").warm_registry()
 	load("res://src/world/park/park_recipes.gd").origin("")
 	var out := {}
 	_parks[map_id] = {"task": WorkerThreadPool.add_task(func(): out.merge(read_park(map_id)), false, "director park " + map_id), "out": out}

@@ -9,8 +9,9 @@ const Profile := preload("res://src/core/profile.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Worlds := preload("res://src/core/worlds.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 var _t := T.new("ending_sequence_test")
 var _game
@@ -293,7 +294,7 @@ func _capture(seq) -> bool:
 	var folder := OS.get_environment("SCRAPKEEP_END_CAPTURE_DIR")
 	if folder == "":
 		return false
-	if not _t.check("capture requires rendered display", DisplayServer.get_name() != "headless"):
+	if not _t.check("capture requires rendered display", not AppShell.headless()):
 		return true
 	DirAccess.make_dir_recursive_absolute(folder)
 	seq.set_process(false)

@@ -1,7 +1,10 @@
 extends RefCounted
 
-const WORLD := 1
-const WORLD_AND_ENEMIES := 5
+const Groups := preload("res://src/core/groups.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
+
+const WORLD := PhysicsLayers.WORLD_MASK
+const WORLD_AND_ENEMIES := PhysicsLayers.WORLD_AND_ENEMIES_MASK
 
 
 static func aim(space: PhysicsDirectSpaceState3D, aim_from: Vector3, aim_dir: Vector3,
@@ -20,7 +23,7 @@ static func aim(space: PhysicsDirectSpaceState3D, aim_from: Vector3, aim_dir: Ve
 		if not cover.is_empty():
 			to = cover["position"]
 			blocked = true
-	return {"point": point, "to": to, "blocked": blocked, "on_enemy": not sight.is_empty() and (sight["collider"] as Node).is_in_group("enemy")}
+	return {"point": point, "to": to, "blocked": blocked, "on_enemy": not sight.is_empty() and (sight["collider"] as Node).is_in_group(Groups.ENEMY)}
 
 
 static func cast(space: PhysicsDirectSpaceState3D, aim_from: Vector3, aim_dir: Vector3,
@@ -32,6 +35,6 @@ static func cast(space: PhysicsDirectSpaceState3D, aim_from: Vector3, aim_dir: V
 	var shot := space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + (target - origin) * 1.05, mask))
 	var end: Vector3 = shot["position"] if not shot.is_empty() else target
 	var enemy: Node3D = null
-	if not shot.is_empty() and (shot["collider"] as Node).is_in_group("enemy"):
+	if not shot.is_empty() and (shot["collider"] as Node).is_in_group(Groups.ENEMY):
 		enemy = shot["collider"]
 	return {"from": origin, "to": end, "enemy": enemy}

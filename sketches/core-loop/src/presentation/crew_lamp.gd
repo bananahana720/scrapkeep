@@ -1,6 +1,6 @@
 extends Node3D
 
-const Palette := preload("res://src/core/palette.gd")
+const CrewLampField := preload("res://src/presentation/crew_lamp_field.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 
@@ -19,16 +19,11 @@ const ROWS := {
 	"winch_drone": {"part": "WinchBody/Body", "at": Vector3(0.0, 0.95, 0.39)},
 }
 
-const LENS := 0.085
-const LENS_DEPTH := 0.06
 const SWELL := 2.6
 const REST := 0.25
-const PEAK := 1.3
 const REST_TINT := 0.45
-const REST_COLOUR := Palette.LEDGER
 const FADE := 0.3
 const FIELD := "CrewLamps"
-const FIELD_ROOM := 48
 
 var warmth := 0.0
 var _out := false
@@ -63,7 +58,7 @@ static func _in_part(part: Node3D, pivot: Node3D) -> Transform3D:
 static func _field_in(world: Node) -> Node3D:
 	var found := world.get_node_or_null(FIELD) as Node3D
 	if found == null:
-		found = (load("res://src/presentation/crew_lamp_field.gd") as GDScript).new()
+		found = CrewLampField.new()
 		found.name = FIELD
 		world.add_child(found)
 	return found
@@ -82,7 +77,7 @@ func go_out() -> void:
 
 
 func energy() -> float:
-	return 0.0 if _out else lerpf(REST, FlashGuard.spike(REST, PEAK), warmth * warmth)
+	return 0.0 if _out else lerpf(REST, FlashGuard.spike(REST, CrewLampField.PEAK), warmth * warmth)
 
 
 func swell() -> float:

@@ -3,7 +3,7 @@
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { isBot, testScripts } from "../sketch-smoke.mjs";
+import { isBot, testScripts } from "../lib/godot-test-runner.mjs";
 import { shuffleFiles } from "./node-tests.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");

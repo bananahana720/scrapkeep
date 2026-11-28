@@ -356,7 +356,7 @@ func _run_live() -> void:
 	await _check_wrecking_flail_gameplay()
 	await _check_attempt_reset_hygiene()
 
-	Consumables._reset()
+	Consumables.reset_for_tests()
 	GrappleRig._reset()
 	_game.free()
 	quit(_t.verdict())

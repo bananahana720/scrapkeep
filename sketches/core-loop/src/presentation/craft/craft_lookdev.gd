@@ -3,6 +3,7 @@ extends RefCounted
 
 
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 const MASTER_SHADER_PATH := "res://assets/shaders/craft_master_weathering.gdshader"
 const FLOOR_SHADER_PATH := "res://assets/shaders/craft_combat_floor.gdshader"
@@ -50,6 +51,7 @@ const HERO_SURFACE_PRESETS := {
 
 static var _cache: Dictionary = {}
 static var _unmasked_cache: Dictionary = {}
+static var _micro_normal_tex: ImageTexture = null
 
 
 static func reset_for_tests() -> void:
@@ -59,6 +61,7 @@ static func reset_for_tests() -> void:
 			mat.set_shader_parameter("reduce_flashes", false)
 	_cache.clear()
 	_unmasked_cache.clear()
+	_micro_normal_tex = null
 
 
 static func preset_ids() -> PackedStringArray:
@@ -97,6 +100,31 @@ static func has_vertex_color_masks(mesh: Mesh, surface_idx: int = 0) -> bool:
 	if not (mesh is ArrayMesh) or surface_idx < 0 or surface_idx >= mesh.get_surface_count():
 		return false
 	return ((mesh as ArrayMesh).surface_get_format(surface_idx) & Mesh.ARRAY_FORMAT_COLOR) != 0
+
+
+static func duplicate_preset(preset_id: String, res_name: String) -> ShaderMaterial:
+	var base := preset_material(preset_id)
+	if base == null:
+		return null
+	var copy := base.duplicate(false) as ShaderMaterial
+	copy.resource_name = res_name
+	return copy
+
+
+static func bind_surface_materials(mi: MeshInstance3D, materials: Callable) -> int:
+	if mi == null or mi.mesh == null or not (mi.mesh is ArrayMesh):
+		return 0
+	var am := mi.mesh as ArrayMesh
+	var count := am.get_surface_count()
+	var bound := 0
+	mi.material_override = null
+	for i in count:
+		var slot := am.surface_get_name(i)
+		var mat: Material = materials.call(slot)
+		if mat != null:
+			mi.set_surface_override_material(i, mat)
+			bound += 1
+	return bound
 
 
 static func preset_material(name_or_alias: String) -> ShaderMaterial:
@@ -240,3 +268,71 @@ static func _apply_flash_guard(mat: ShaderMaterial, reduce_flashes: bool) -> voi
 		return
 	if mat.shader.resource_path == MASTER_SHADER_PATH:
 		mat.set_shader_parameter("reduce_flashes", reduce_flashes)
+
+
+static func micro_normal_texture() -> ImageTexture:
+	if _micro_normal_tex != null:
+		return _micro_normal_tex
+	var sz := 128
+	var noise := FastNoiseLite.new()
+	noise.seed = 40731
+	noise.frequency = 0.09
+	noise.fractal_octaves = 3
+	var h := noise.get_seamless_image(sz, sz)
+	var img := Image.create_empty(sz, sz, false, Image.FORMAT_RGB8)
+	for y in sz:
+		var ym := (y - 1 + sz) % sz
+		var yp := (y + 1) % sz
+		for x in sz:
+			var xm := (x - 1 + sz) % sz
+			var xp := (x + 1) % sz
+			var dx := (h.get_pixel(xp, y).r - h.get_pixel(xm, y).r) * 2.2
+			var dy := (h.get_pixel(x, yp).r - h.get_pixel(x, ym).r) * 2.2
+			var n := Vector3(-dx, -dy, 1.0).normalized()
+			img.set_pixel(x, y, Color(n.x * 0.5 + 0.5, n.y * 0.5 + 0.5, n.z * 0.5 + 0.5))
+	img.generate_mipmaps()
+	_micro_normal_tex = ImageTexture.create_from_image(img)
+	return _micro_normal_tex
+
+
+static func make_weathered_pbr(
+	albedo: Color,
+	roughness: float = 0.72,
+	metallic: float = 0.24,
+	emit_color: Color = Color(0.0, 0.0, 0.0, 0.0),
+	emit_energy: float = 0.0,
+	triplanar_scale: float = 0.35,
+	normal_scale: float = 0.42
+) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = albedo
+	mat.albedo_texture = Palette.painted_texture(256)
+	mat.roughness = roughness
+	mat.roughness_texture = Palette.painted_texture(256)
+	mat.metallic = metallic
+	mat.normal_enabled = true
+	mat.normal_texture = micro_normal_texture()
+	mat.normal_scale = normal_scale
+	mat.uv1_triplanar = true
+	mat.uv1_scale = Vector3.ONE * triplanar_scale
+	if emit_energy > 0.0:
+		mat.emission_enabled = true
+		mat.emission = emit_color
+		mat.emission_energy_multiplier = emit_energy
+	return mat
+
+
+static func enrich_standard_pbr(mat: StandardMaterial3D, normal_scale: float = 0.38, triplanar_scale: float = 0.22) -> StandardMaterial3D:
+	if mat == null:
+		return null
+	if mat.albedo_texture == null:
+		mat.albedo_texture = Palette.painted_texture(256)
+	if mat.roughness_texture == null:
+		mat.roughness_texture = Palette.painted_texture(256)
+	mat.normal_enabled = true
+	if mat.normal_texture == null:
+		mat.normal_texture = micro_normal_texture()
+	mat.normal_scale = normal_scale
+	mat.uv1_triplanar = true
+	mat.uv1_scale = Vector3.ONE * triplanar_scale
+	return mat

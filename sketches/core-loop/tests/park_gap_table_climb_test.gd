@@ -25,6 +25,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -166,7 +167,7 @@ func _plant(plant: String, node: Node3D) -> void:
 		wall.name = "PlantedLipWall"
 		wall.collision_layer = 0
 		wall.collision_mask = 0
-		wall.set_collision_layer_value(ParkRecipes.WORLD_LAYER, true)
+		wall.set_collision_layer_value(PhysicsLayers.WORLD_LAYER, true)
 		var shape := CollisionShape3D.new()
 		var box := BoxShape3D.new()
 		box.size = Vector3(table.x1 - table.x0, LIP_M, 1.0)

@@ -1,7 +1,7 @@
 extends RefCounted
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const MAX_SLOPE_DOT := 0.45
+const Tuning := preload("res://src/movement/tuning.gd")
 
 var velocity := Vector3.ZERO
 var grounded := false
@@ -19,7 +19,7 @@ var carving := false
 
 
 func on_floor() -> bool:
-	return grounded and contact_normal.y > MAX_SLOPE_DOT
+	return grounded and contact_normal.y > Tuning.MAX_SLOPE_DOT
 
 
 func speed() -> float:

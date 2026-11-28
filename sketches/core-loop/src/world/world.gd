@@ -1,6 +1,7 @@
 extends Node
 
 const Terrain := preload("res://src/world/terrain.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Flood := preload("res://src/world/flood.gd")
 const Director := preload("res://src/world/director.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
@@ -640,7 +641,7 @@ func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 
 func _breach_strike(opened: Array[String], at: Vector3, strength: float) -> void:
 	const Augments := preload("res://src/movement/augments.gd")
-	var enemies := get_tree().get_nodes_in_group("enemy").filter(func(e):
+	var enemies := get_tree().get_nodes_in_group(Groups.ENEMY).filter(func(e):
 		return is_instance_valid(e) and not (e.has_method("is_dead") and e.is_dead()) and e.global_position.y < at.y - 2.0)
 	var force := Augments.SLAM_KNOCK * strength
 	for i in breach.under(opened, enemies.map(func(e): return e.global_position)):
@@ -686,20 +687,20 @@ func _author_director(def := {}) -> void:
 
 
 func director_alive() -> int:
-	return maxi(0, get_tree().get_nodes_in_group("enemy").size() - activities.standing())
+	return maxi(0, get_tree().get_nodes_in_group(Groups.ENEMY).size() - activities.standing())
 
 
 func _dismiss_left_packs() -> void:
 	var at: Vector3 = ctx.player.ball_position()
 	var ball := Vector2(at.x, at.z)
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not enemy is Node3D or not enemy.has_meta("pack_seq") or enemy.has_meta("elite_pack") or enemy.has_meta("yard_crew"):
 			continue
 		if enemy.has_method("is_dead") and enemy.is_dead():
 			continue
 		if Director.leaves(Vector2(enemy.global_position.x, enemy.global_position.z), ball):
-			enemy.remove_from_group("enemy")
-			enemy.remove_from_group("enemy_shot")
+			enemy.remove_from_group(Groups.ENEMY)
+			enemy.remove_from_group(Groups.ENEMY_SHOT)
 			enemy.queue_free()
 
 
@@ -708,7 +709,7 @@ func director_held() -> int:
 	var ball := Vector2(at.x, at.z)
 	var held := 0
 	var total := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not enemy is Node3D or activities.keeps(enemy):
 			continue
 		total += 1
@@ -875,7 +876,7 @@ func _watch_layer(delta: float, ball: Vector3) -> void:
 	_chute_clock = maxf(0.0, _chute_clock - delta)
 	_skylight_clock = maxf(0.0, _skylight_clock - delta)
 	_glide_clock = maxf(0.0, _glide_clock - delta)
-	if "marble_path" in m and m._polyline_channel(ball.x, ball.z, m.marble_path, m.MARBLE_HALF, m.MARBLE_WALL)[1] > 0.5:
+	if "marble_path" in m and m.in_marble_chute(ball.x, ball.z):
 		_chute_clock = 3.0
 	if absf(ball.x - m.SKYLIGHT_X) < m.SKYLIGHT_DEPTH and ball.z > m.SKYLIGHT_Z.x and ball.z < m.SKYLIGHT_Z.y:
 		_skylight_clock = 3.0

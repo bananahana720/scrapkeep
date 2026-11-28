@@ -1,6 +1,7 @@
 extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 var out := ""
 var scene := ""
 var class_index := 1
@@ -20,7 +21,7 @@ func _initialize() -> void:
 			seam = true
 		elif a.begins_with("--class="):
 			class_index = int(a.trim_prefix("--class="))
-	if DisplayServer.get_name() == "headless" or out == "" or scene == "":
+	if AppShell.headless() or out == "" or scene == "":
 		printerr("needs native display, --out, --scene")
 		quit(2)
 		return

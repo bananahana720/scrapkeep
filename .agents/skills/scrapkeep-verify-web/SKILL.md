@@ -38,7 +38,7 @@ Chromium is `CHROMIUM_PATH`, else the cloud's preinstalled browser (`/opt/pw-bro
 
 ## Evidence
 
-Each drive writes `artifacts/local/verify-web/<name>/`: numbered pictures, a rows file (every check with what was seen, the page errors, the commit) and `identity.txt`. That folder is gitignored scratch: attach the decisive pictures and rows to the pull request, or copy them to the area's folder under `/mnt/project-files/`.
+Each drive writes `artifacts/local/verify-web/<name>/`: numbered pictures, a rows file (every check with what was seen, the page errors, the commit) and `identity.txt`. That folder is gitignored scratch: keep local outputs in `artifacts/local/` and attach the decisive pictures and rows to the pull request.
 
 Proof standards:
 

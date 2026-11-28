@@ -1,5 +1,5 @@
 extends SceneTree
-# smoke: solo timeout=300s (boots the game into the dam and the flume and reads every plate against the colliders)
+# smoke: timeout=300s (boots the game into the dam and the flume and reads every plate against the colliders)
 
 # Lore plate seats (W45 P8): every plate in the Dam and the Flume sits on the surface a ball rolling there stands on.
 #   Seat     around the plate's bottom rim (RIM points) and an inner ring, no point floats more than FLOAT_M above
@@ -36,7 +36,7 @@ const ParkStamps := preload("res://src/world/park/park_stamps.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Activities := preload("res://src/world/activities.gd")
 const Palette := preload("res://src/core/palette.gd")
-const DefenceBars := preload("res://src/core/defence_bars.gd")
+const DefenceBars := preload("res://tests/support/defence_bars.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const IsleRig := preload("res://src/world/park/isle_rig.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")

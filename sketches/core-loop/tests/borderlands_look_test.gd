@@ -7,7 +7,7 @@ const Juice := preload("res://src/presentation/juice.gd")
 const ComicPage := preload("res://src/ui/comic_page.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Palette := preload("res://src/core/palette.gd")
-const DefenceBars := preload("res://src/core/defence_bars.gd")
+const DefenceBars := preload("res://tests/support/defence_bars.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const MIN_COLOR_LAW_DE := 35.0

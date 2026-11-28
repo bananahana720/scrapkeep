@@ -2,7 +2,7 @@
 job="$1"
 f=""
 for i in $(seq 1 30); do
-  f=$(ls /home/andrew/.claude/plugins/data/codex-openai-codex/state/*/jobs/"$job".json 2>/dev/null | head -1)
+  f=$(ls "$HOME"/.claude/plugins/data/codex-openai-codex/state/*/jobs/"$job".json 2>/dev/null | head -1)
   if [ -n "$f" ]; then
     break
   else

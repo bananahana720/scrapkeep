@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { test } from "node:test";
+import { after, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import * as render from "./model-render-receipt.mjs";
@@ -13,9 +13,15 @@ import * as display from "./display-run.mjs";
 const HEAD = "abc1234";
 const KINDS = render.KINDS;
 const here = path.dirname(fileURLToPath(import.meta.url));
+const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
+const tempDirs = [];
+after(() => {
+  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+});
 
 function repo() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "look-receipts-git-"));
+  tempDirs.push(dir);
   const git = (...args) =>
     spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
       cwd: dir,
@@ -347,72 +353,76 @@ test("display-run: releases the slot when the launch throws", async () => {
   assert.deepEqual(events, ["acquire", "release"]);
 });
 
-test("display-run: the timeout kills the whole run, a forked child or an exec, in under 2 s", async () => {
-  const { dir } = repo();
-  for (const body of ["sleep 30 &\nwait\n", "exec sleep 30\n"]) {
-    const fake = path.join(dir, `fake-${body.length}.sh`);
-    writeFileSync(fake, `#!/bin/sh\necho started "$@"\n${body}`, { mode: 0o755 });
-    const events = [];
-    const t0 = Date.now();
-    const r = await display.runWindowed({
-      platform: "linux",
-      cwd: dir,
-      script: "res://x.gd",
-      binary: fake,
-      env: { DISPLAY: ":0" },
-      timeoutMs: 300,
-      acquire: noSlot(events),
-    });
-    assert.ok(Date.now() - t0 < 2000, `${body.trim()}: returned in ${Date.now() - t0} ms`);
-    assert.equal(r.timedOut, true);
-    assert.equal(r.exit, null);
-    assert.match(r.output, /^started --path .* --script res:\/\/x\.gd --/);
-    assert.deepEqual(events, ["acquire", "release"]);
-  }
-});
+describe("display-run timeouts and signals", { concurrency: CONCURRENCY }, () => {
+  test("display-run: the timeout kills the whole run, a forked child or an exec, in under 2 s", async () => {
+    const { dir } = repo();
+    await Promise.all(
+      ["sleep 30 &\nwait\n", "exec sleep 30\n"].map(async (body) => {
+        const fake = path.join(dir, `fake-${body.length}.sh`);
+        writeFileSync(fake, `#!/bin/sh\necho started "$@"\n${body}`, { mode: 0o755 });
+        const events = [];
+        const t0 = Date.now();
+        const r = await display.runWindowed({
+          platform: "linux",
+          cwd: dir,
+          script: "res://x.gd",
+          binary: fake,
+          env: { DISPLAY: ":0" },
+          timeoutMs: 300,
+          acquire: noSlot(events),
+        });
+        assert.ok(Date.now() - t0 < 2000, `${body.trim()}: returned in ${Date.now() - t0} ms`);
+        assert.equal(r.timedOut, true);
+        assert.equal(r.exit, null);
+        assert.match(r.output, /^started --path .* --script res:\/\/x\.gd --/);
+        assert.deepEqual(events, ["acquire", "release"]);
+      }),
+    );
+  });
 
-test("display-run: SIGTERM to the node process kills the run's group", async () => {
-  const { dir } = repo();
-  const pids = path.join(dir, "pids");
-  const fake = path.join(dir, "fake-group.sh");
-  writeFileSync(fake, `#!/bin/sh\nsleep 30 &\necho $$ $! > "${pids}"\nwait\n`, { mode: 0o755 });
-  const runner = path.join(dir, "runner.mjs");
-  writeFileSync(
-    runner,
-    `import { runWindowed } from ${JSON.stringify(path.join(here, "display-run.mjs"))};
+  test("display-run: SIGTERM to the node process kills the run's group", async () => {
+    const { dir } = repo();
+    const pids = path.join(dir, "pids");
+    const fake = path.join(dir, "fake-group.sh");
+    writeFileSync(fake, `#!/bin/sh\nsleep 30 &\necho $$ $! > "${pids}"\nwait\n`, { mode: 0o755 });
+    const runner = path.join(dir, "runner.mjs");
+    writeFileSync(
+      runner,
+      `import { runWindowed } from ${JSON.stringify(path.join(here, "display-run.mjs"))};
 await runWindowed({ platform: "linux", env: { DISPLAY: ":0" }, cwd: ${JSON.stringify(dir)}, script: "res://x.gd", binary: ${JSON.stringify(fake)}, timeoutMs: 20000, acquire: async () => ({ release() { console.error("released"); } }) });
 process.exit(1); // An interrupted receipt producer must never reach its next step.
 `,
-  );
-  const node = spawn(process.execPath, [runner], { stdio: "ignore" });
-  const until = async (ok, ms) => {
-    const end = Date.now() + ms;
-    while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50));
-    return ok();
-  };
-  assert.ok(
-    await until(
-      () => existsSync(pids) && readFileSync(pids, "utf8").trim().split(" ").length === 2,
-      5000,
-    ),
-    "the fake started",
-  );
-  const [shell, sleeper] = readFileSync(pids, "utf8").trim().split(" ").map(Number);
-  const exited = new Promise((r) => node.on("exit", (code) => r(code)));
-  node.kill("SIGTERM");
-  assert.equal(await exited, 143);
-  const alive = (pid) => {
-    try {
-      process.kill(pid, 0);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  assert.ok(
-    await until(() => !alive(shell) && !alive(sleeper), 2000),
-    "the shell and its child are gone",
-  );
+    );
+    const node = spawn(process.execPath, [runner], { stdio: "ignore" });
+    const until = async (ok, ms) => {
+      const end = Date.now() + ms;
+      while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50));
+      return ok();
+    };
+    assert.ok(
+      await until(
+        () => existsSync(pids) && readFileSync(pids, "utf8").trim().split(" ").length === 2,
+        5000,
+      ),
+      "the fake started",
+    );
+    const [shell, sleeper] = readFileSync(pids, "utf8").trim().split(" ").map(Number);
+    const exited = new Promise((r) => node.on("exit", (code) => r(code)));
+    node.kill("SIGTERM");
+    assert.equal(await exited, 143);
+    const alive = (pid) => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    assert.ok(
+      await until(() => !alive(shell) && !alive(sleeper), 2000),
+      "the shell and its child are gone",
+    );
+  });
 });
 
 test("display-run: no display on Linux, or another platform, is not supported and starts nothing", async () => {

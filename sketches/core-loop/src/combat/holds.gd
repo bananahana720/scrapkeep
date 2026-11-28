@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
@@ -201,7 +202,7 @@ func _on_grapple_fired(anchor: Vector3) -> void:
 	if active.is_empty():
 		return
 	var body = player.kit.anchor_body
-	if body != null and is_instance_valid(body) and body.is_in_group("enemy"):
+	if body != null and is_instance_valid(body) and body.is_in_group(Groups.ENEMY):
 		return
 	_player_action("hook", anchor - player.ball_position())
 

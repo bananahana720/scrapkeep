@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const SIZE := Vector2i(1920, 1080)
@@ -23,7 +24,7 @@ func _initialize() -> void:
 			_out = arg.trim_prefix("--out=")
 		elif arg.begins_with("--shots="):
 			_only = Array(arg.trim_prefix("--shots=").split(","))
-	if _out.is_empty() or DisplayServer.get_name() == "headless":
+	if _out.is_empty() or AppShell.headless():
 		printerr("flume_climb_capture: needs a rendered display and -- --out=<absolute dir>")
 		quit(2)
 		return

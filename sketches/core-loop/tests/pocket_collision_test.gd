@@ -21,7 +21,7 @@ func _run() -> void:
 	game.world.set_physics_process(false)
 	game.flow.set_physics_process(false)
 	game.player.set_physics_process(false)
-	game.player.active_body().freeze = true
+	game.player.body().freeze = true
 	var acts = game.world.activities
 	acts.set_physics_process(false)
 	acts.clear()
@@ -32,7 +32,7 @@ func _run() -> void:
 	var interior = site.get_node("Interior_runner_yard")
 	t.eq("terrain meshes are visible before entry", _meshes(interior), 4)
 	t.eq("unvisited interior creates no physics bodies", _bodies(interior), 0)
-	var ball = game.player.active_body()
+	var ball = game.player.body()
 	ball.global_position = site.global_position + Vector3(30.01, 1, 0)
 	acts._physics_process(0.0)
 	await physics_frame

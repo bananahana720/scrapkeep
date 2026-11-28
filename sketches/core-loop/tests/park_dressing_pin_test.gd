@@ -1,4 +1,4 @@
-# smoke: solo timeout=300s (builds every park stage synchronously)
+# smoke: timeout=300s (builds every park stage synchronously)
 extends SceneTree
 
 # SWAP-HITCH-2 moved the set dressing's placement draw into a static plan() a worker can run. The

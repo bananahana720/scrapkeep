@@ -3,7 +3,7 @@ extends SceneTree
 const HelpPage := preload("res://src/ui/help_page.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("help_page_alpha_test")

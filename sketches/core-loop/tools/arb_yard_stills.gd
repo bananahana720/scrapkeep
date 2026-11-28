@@ -4,6 +4,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const VIEWS := [
 	["floor_to_stand_a", [120.0, 20.0, 5.0], [300.0, 72.0, 20.0]],
@@ -29,7 +30,7 @@ func _initialize() -> void:
 			out = arg.trim_prefix("--out=")
 		elif arg == "--hold":
 			hold = true
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		quit(2)
 		return
 	DirAccess.make_dir_recursive_absolute(out)

@@ -2,6 +2,7 @@ extends Node
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
@@ -127,7 +128,7 @@ func _release(enemy: Node3D) -> void:
 
 
 func _enemies() -> Array:
-	return get_tree().get_nodes_in_group("enemy").filter(func(enemy): return _alive(enemy))
+	return get_tree().get_nodes_in_group(Groups.ENEMY).filter(func(enemy): return _alive(enemy))
 
 
 func _mark(enemy: Node3D, seconds: float) -> void:
@@ -217,7 +218,7 @@ func step(delta: float) -> void:
 		var codex = combat._codex()
 		var frame := Engine.get_physics_frames()
 		if frame > _card_frame and frame > int(entry["queued"]) and codex != null and codex.known(entry["after"]):
-			combat._discover(id, entry["at"])
+			combat.discover(id, entry["at"])
 			_cards.erase(id)
 			_card_frame = frame
 			break
@@ -302,7 +303,7 @@ static func in_strip(shape: Dictionary, point: Vector3) -> bool:
 func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
 	var hits := 0
 	if id == "rake_run":
-		rake_shapes = strips(_previous, ball, 3.0 + 1.5 * float(combat.ultimate._knob("ult_volley", 0)))
+		rake_shapes = strips(_previous, ball, 3.0 + 1.5 * float(combat.ultimate.knob("ult_volley", 0)))
 		for shape in rake_shapes:
 			_draw_rake(shape)
 		for enemy in _enemies():
@@ -324,7 +325,7 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 			var biased := to.length() > 0.01 and aim.length() > 0.01 and aim.angle_to(to) <= deg_to_rad(25.0)
 			picks.append([(0.0 if biased else 100.0) + to.length(), enemy])
 		picks.sort_custom(func(a, b): return a[0] < b[0])
-		for pick in picks.slice(0, 2 + int(combat.ultimate._knob("ult_volley", 0))):
+		for pick in picks.slice(0, 2 + int(combat.ultimate.knob("ult_volley", 0))):
 			var enemy: Node3D = pick[1]
 			_hit_piece(enemy, SNATCH_DAMAGE * heft, ball, false)
 			hits += 1
@@ -335,11 +336,11 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 					if enemy.has_method("open_ring_out"):
 						enemy.open_ring_out()
 				elif id == "vice_leap":
-					var ult = combat.ultimate
-					var left := maxf(0.05, float(ult._plan["legs"][ult._leg]["seconds"]) - float(ult._leg_time))
+					var state: Dictionary = combat.ultimate.leg_state()
+					var left := maxf(0.05, float(state["remaining"]))
 					if enemy.has_method("open_ring_out"):
 						enemy.open_ring_out()
-					hurls.append({"enemy": enemy, "from": enemy.global_position, "to": ult._plan["legs"][ult._leg]["to"], "time": 0.0, "seconds": left})
+					hurls.append({"enemy": enemy, "from": enemy.global_position, "to": state["to"], "time": 0.0, "seconds": left})
 					_hold(enemy)
 		for enemy in tow.duplicate():
 			if _alive(enemy):
@@ -378,7 +379,7 @@ func peak(id: String, at: Vector3) -> void:
 			if rake_shapes.any(func(shape): return in_strip(shape, enemy.global_position)):
 				_hit_piece(enemy, 24.0 * heft, at, false)
 	elif id == "vice_leap":
-		_vice = {"at": combat.ultimate._plan["legs"][combat.ultimate._leg]["to"], "radius": combat.ultimate.landing_radius() + 2.0, "clock": 0.0}
+		_vice = {"at": combat.ultimate.leg_state()["to"], "radius": combat.ultimate.landing_radius() + 2.0, "clock": 0.0}
 		ctx.player.indicator.set_shape("tarn_vice", ctx.player.yours({"kind": "ring", "centre": _vice["at"], "radius": _vice["radius"], "full_radius": _vice["radius"], "fill": 1.0}))
 	else:
 		combat.effects.ring(at, 5.0, ctx.player.class_color())
@@ -431,7 +432,7 @@ func _step_piece(delta: float) -> void:
 	if _piece == "" or combat.ultimate == null or combat.ultimate.phase() != "flight":
 		return
 	var ball: Vector3 = ctx.player.ball_position()
-	var heading: Vector3 = combat.ultimate._ride.heading if combat.ultimate._ride != null else combat._flat_aim()
+	var heading: Vector3 = combat.ultimate.ride_heading(combat._flat_aim())
 	var side := Vector3(-heading.z, 0.0, heading.x)
 	for i in range(tow.size() - 1, -1, -1):
 		var enemy = tow[i]

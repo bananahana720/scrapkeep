@@ -13,7 +13,6 @@ signal fused(result: Dictionary)
 signal extended_fused(result: Dictionary)
 signal shard_cone(cone: Dictionary)
 
-const ICE := Color("c8f0ff")
 const FROST := Color("e9f8ff")
 const HEAT := Color("ff7a29")
 const STEAM := Color("e8edf2")
@@ -67,7 +66,7 @@ func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	_shard_mesh = BoxMesh.new()
 	_shard_mesh.size = Vector3(0.35, 0.35, 0.9)
-	_shard_material = Palette.solid(ICE, 2.2)
+	_shard_material = Palette.solid(Palette.ICE, 2.2)
 	_puff_mesh = SphereMesh.new()
 	_puff_mesh.radius = 0.45
 	_puff_mesh.height = 0.9
@@ -261,9 +260,9 @@ func _create_surface(surface: Dictionary, result: Dictionary) -> void:
 	disc.height = thickness
 	disc.radial_segments = 6
 	mesh.mesh = disc
-	var mat := Palette.solid(ICE, 0.6)
+	var mat := Palette.solid(Palette.ICE, 0.6)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(ICE.r, ICE.g, ICE.b, 0.85)
+	mat.albedo_color = Color(Palette.ICE.r, Palette.ICE.g, Palette.ICE.b, 0.85)
 	mat.roughness = 0.15
 	mesh.material_override = mat
 	body.add_child(mesh)
@@ -400,7 +399,7 @@ func _flash_condense(cloud_idx: int, row: Dictionary, result: Dictionary) -> voi
 	var radius: float = float(cloud["radius"])
 	var damage: float = float(row["damage"])
 	_create_surface(Elements.SURFACES[row["surface"]], result)
-	flash_ring(at + Vector3.UP * 0.15, radius, FROST.lerp(ICE, 0.5))
+	flash_ring(at + Vector3.UP * 0.15, radius, FROST.lerp(Palette.ICE, 0.5))
 	puff(at + Vector3.UP * 0.3)
 	var struck := 0
 	if is_inside_tree():
@@ -431,7 +430,7 @@ func _flash_melt(row: Dictionary, result: Dictionary) -> void:
 			melted.append(slab_at)
 			_remove_slab(i, true)
 		i -= 1
-	flash_ring(at + Vector3.UP * 0.12, radius, HEAT.lerp(ICE, 0.5))
+	flash_ring(at + Vector3.UP * 0.12, radius, HEAT.lerp(Palette.ICE, 0.5))
 	var struck := 0
 	if not melted.is_empty():
 		for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -618,7 +617,7 @@ func _draw_cone(cone: Dictionary) -> MeshInstance3D:
 	var node := MeshInstance3D.new()
 	node.name = "ShardCone"
 	node.mesh = _cone_mesh(length, half)
-	node.material_override = _unshaded_material(Color(ICE.r, ICE.g, ICE.b, 0.55), true)
+	node.material_override = _unshaded_material(Color(Palette.ICE.r, Palette.ICE.g, Palette.ICE.b, 0.55), true)
 	add_child(node)
 	node.global_position = apex + Vector3.UP * 0.1
 	node.rotation.y = atan2(-dir.x, -dir.z)

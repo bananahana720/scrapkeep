@@ -14,7 +14,7 @@ const PENDING := {
 		"missing": ["combat challenge", "contraption or cache secret"]},
 }
 const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal"]
-const SIDE_CONTENT_PENDING := preload("res://src/core/pending_content.gd").SIDE_CONTENT_PENDING
+const SIDE_CONTENT_PENDING := preload("res://tests/support/pending_content.gd").SIDE_CONTENT_PENDING
 var _game
 var _failures := 0
 

@@ -2,6 +2,7 @@ extends RefCounted
 
 const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 static var run_seed := 0
 
@@ -60,7 +61,7 @@ static func apply(p: GPUParticles3D, seed: int) -> Dictionary:
 	p.seed = dials["seed"]
 	p.set_meta("grain", dials)
 	var base: Color = p.get_meta("tint") if p.has_meta("tint") else Color.WHITE
-	p.set_instance_shader_parameter("tint", tint(id, dials, base))
+	p.set_instance_shader_parameter(FxLibrary.TINT, tint(id, dials, base))
 	return dials
 
 

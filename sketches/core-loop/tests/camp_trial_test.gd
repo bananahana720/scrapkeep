@@ -33,6 +33,9 @@ class DiskProfile:
 	func set_camp(doc: Dictionary) -> void:
 		text = JSON.stringify(doc)
 
+	func save_if_allowed() -> bool:
+		return true
+
 
 func _initialize() -> void:
 	Engine.physics_ticks_per_second = 90

@@ -1,5 +1,6 @@
 extends RefCounted
 
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SETTLE_S := 0.5
 const LATE_S := 2.5
@@ -40,7 +41,7 @@ var _shot_at := -1.0
 
 
 func setup(game, dir: String, every: float, live := false, world_scale := 1.0) -> bool:
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		push_error("eye-film: no picture under --headless; run with a display (xvfb and --rendering-driver opengl3)")
 		return false
 	if DirAccess.make_dir_recursive_absolute(dir) != OK:

@@ -134,8 +134,10 @@ func _run() -> void:
 	for name in BASE_CONSTS:
 		_check(constants.get(name) == BASE_CONSTS[name], "unchanged constant " + name)
 	var source := FileAccess.get_file_as_string("res://src/combat/miniboss.gd")
+	var enemy_source := FileAccess.get_file_as_string("res://src/combat/enemy.gd")
 	for name in GAMEPLAY_HASHES:
-		var body := source.get_slice("func " + name + "(", 1).get_slice("\nfunc ", 0).get_slice("\n\n#", 0).strip_edges()
+		var text := enemy_source if name == "_fill" else source
+		var body := text.get_slice("func " + name + "(", 1).get_slice("\nfunc ", 0).get_slice("\n\n#", 0).strip_edges()
 		body = "func " + name + "(" + body
 		_check(body.sha256_text() == GAMEPLAY_HASHES[name], "unchanged gameplay function " + name)
 	if boss._pose_rig != null:

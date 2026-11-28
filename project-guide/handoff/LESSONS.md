@@ -1,6 +1,6 @@
 # Scrapkeep lessons and ways of working
 
-How this project actually runs, learned the hard way since 16 Oct 2026. Each lesson is the rule, then why. **Do not read it end to end at start-up: read the section for the work you are about to do.** The rules every thread follows are in [AGENTS.md](../../AGENTS.md). Lesson numbers stay fixed so older receipts still match; a retired lesson keeps its number and says what replaced it, and its old text is in git history. Andrew's reading copy is the Claude Doc [Scrapkeep lessons and ways of working](https://claude.ai/code/artifact/95d92907-5cfe-4290-b303-d465baccedde). Owner: the project coordinator. Last trimmed 14 Nov 2026: lessons 2, 9, 11, 16, 17, 20, 26 and 40 retired or pointed at their one home.
+How this project actually runs, learned the hard way since 16 Oct 2026. Each lesson is the rule, then why. **Do not read it end to end at start-up: read the section for the work you are about to do.** The rules every thread follows are in [AGENTS.md](../../AGENTS.md). Lesson numbers stay fixed so older receipts still match; a retired lesson keeps its number and says what replaced it, and its old text is in git history. This repository file is the sole live copy (earlier Claude Doc reading copy: [Scrapkeep lessons and ways of working](https://claude.ai/code/artifact/95d92907-5cfe-4290-b303-d465baccedde), no longer synced). Owner: the project coordinator. Last trimmed 14 Nov 2026: lessons 2, 9, 11, 16, 17, 20, 26 and 40 retired or pointed at their one home.
 
 ## Getting Andrew's word
 
@@ -28,7 +28,7 @@ How this project actually runs, learned the hard way since 16 Oct 2026. Each les
 
 ## The cloud container
 
-15. **A cloud container is reclaimed after it sits idle, and `artifacts/local/` goes with it.** Copy evidence you want kept to `/mnt/project-files/` (red team runs live in `redteam/w<n>/`) and push branches before going quiet.
+15. **A cloud container is reclaimed after it sits idle, and `artifacts/local/` goes with it.** Commit durable evidence to repository doc folders (`docs/`, `project-guide/handoff/`) or push branches (`scratch/*` for gate receipts) before going quiet.
 16. **Retired.** The cloud box's size and caps are in [DEVICES.md](DEVICES.md). A full gate takes about 2 h in the cloud, so shard it.
 17. **Retired.** The cloud setup is in [DEVICES.md](DEVICES.md).
 18. **GPU work stays on the 4080:** frame times, ACE-Step music renders, Eevee/Vulkan captures, the real export proof. Cloud perf numbers never count (the bench swings 24-146 ms p99 between sandboxes).
@@ -36,7 +36,7 @@ How this project actually runs, learned the hard way since 16 Oct 2026. Each les
 ## Gating and testing
 
 19. **No thread grades its own work.** A game change is done only when a tool check passes (smoke, lab gate, placeholder gate) and an independent reviewer agrees.
-20. **The Gate is the gate of record (the local session on the PC since 15 Nov, ruling ds; the board thread before that); shards don't push, comment or fix.** Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. The recipe is [GATE.md](GATE.md).
+20. **The Gate is the gate of record (the local session on the Mac Studio since 16 Nov, ruling eb; on the PC on 15 Nov, ruling ds; the board thread before that); shards don't push, comment or fix.** Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. The recipe is [GATE.md](GATE.md).
 21. **Known reds live in the ledger.** Each red a promotion may carry has a row in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) with a cause, an owner and a review date (ruling bq). The 23 Oct list of cloud-only false fails that stood here is in the archive copy.
 22. **"Flake" is not a cause.** The effects RNG test failed on and off for a day; the real cause was a 65 s limit on a busy machine (now 180 s). Rerunning a red to see whether it repeats is always fine; what needs a found cause is calling it a flake.
 23. **Red team every wave, carrying the last findings.** Camper stalls without a Warden break and traversal stalls are by design. A hitch counts only when it lands at the same run moment across seeds.

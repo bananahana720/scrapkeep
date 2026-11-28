@@ -184,10 +184,11 @@ func _geometry(scene: Node3D) -> void:
 
 func _baseline() -> void:
 	var source := FileAccess.get_file_as_string("res://src/combat/drill_crew.gd")
+	var counter_source := FileAccess.get_file_as_string("res://src/combat/counter.gd")
 	for name in GAMEPLAY_HASHES:
 		var re := RegEx.new()
 		re.compile("(?ms)^func " + name + ".*?(?=^(?:static )?func |\\z)")
-		var match0 := re.search(source)
+		var match0 := re.search(counter_source if name == "take_damage" else source)
 		t.check("base gameplay function unchanged " + name, match0 != null
 			and match0.get_string().strip_edges().sha256_text() == GAMEPLAY_HASHES[name])
 	# Shared combat files are not pinned here; the merge-time fence owns shared-file changes (2026-10-13, ENEMY-PINS).

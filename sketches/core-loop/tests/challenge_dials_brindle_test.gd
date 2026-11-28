@@ -1,4 +1,4 @@
-# smoke: solo (Brindle's arena through the spine; the mobs damage wire on the real combat)
+# Brindle's arena through the spine; the mobs damage wire on the real combat
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

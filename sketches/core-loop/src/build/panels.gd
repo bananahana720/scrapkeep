@@ -55,7 +55,7 @@ const NO_DROP_KINDS := ["warden", "vault", "brindle", "waking", "mind"]
 
 
 static func drop_row(world: int) -> Dictionary:
-	return Dropper.drop_row(world)
+	return DROP_BY_WORLD.get(world, DROP)
 
 
 static func ids() -> Array:
@@ -177,13 +177,10 @@ class Dropper:
 	func reset() -> void:
 		dry = 0
 
-	static func drop_row(w: int) -> Dictionary:
-		return DROP_BY_WORLD.get(w, DROP)
-
 	func chance(elite: bool, rib: float, jackpot: bool) -> float:
 		if elite:
 			return clampf(float(DROP["elite"]) * scale, 0.0, 1.0)
-		var row: Dictionary = drop_row(world)
+		var row: Dictionary = DROP_BY_WORLD.get(world, DROP)
 		var p: float = (float(row["chance"]) + float(row["pity"]) * dry) * rib * (float(DROP["jackpot"]) if jackpot else 1.0)
 		return clampf(p * scale, 0.0, 1.0)
 
