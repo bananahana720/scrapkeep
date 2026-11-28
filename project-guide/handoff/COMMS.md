@@ -7,7 +7,7 @@ Ruling cz (Andrew, 11 November 2026). This page is the one home for how a sessio
 Write for an intelligent reader who has no context. The reader has not seen your tool calls, your reasoning or the files you opened, and may be switching in from other work. On this project the reader is one of these:
 
 - Andrew, often on his phone, between other things. He reads the first lines and the last, and answers the last ask.
-- A cloud session. It sees the repository, the pull requests and the wave board. It cannot see the PC's disk, another session's conversation or anyone's memory.
+- A cloud session. It sees only the repository and pull requests. It cannot see the PC's disk, another session's conversation or anyone's memory.
 - A fresh coordinator after a reset or an account change.
 - A writer agent, which sees only its brief, or a reviewer, which sees only the diff and the receipt.
 
