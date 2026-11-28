@@ -1,22 +1,29 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
+  lutimesSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
+  realpathSync,
   rmSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { treeFiles } from "../ci/affected.mjs";
 import { REPO_ROOT, git } from "../lib/git.mjs";
 import {
   HIGH_LOAD_RATIO,
   HOOK_BUDGET_S,
+  STALE_COPY_MS,
   changedFilesForRange,
   evaluateHookOutcome,
   executeHookPlan,
@@ -614,4 +621,89 @@ test("a pushed script whose name git would quote is checked like any other, on a
   write(names[1], "export const kept = 2;\n");
   const [pushed] = pushedChanges([{ localSha: heads[2][0], remoteSha: base }], { cwd: work });
   assert.deepEqual(workingTreeDrift([pushed], { cwd: work }), [names[1]]);
+});
+
+const HOOK = path.join(REPO_ROOT, "scripts/hooks/pre-push.mjs");
+const runHook = (tmp) =>
+  spawnSync(process.execPath, [HOOK], {
+    env: { ...process.env, TMPDIR: tmp },
+    input: "",
+    encoding: "utf8",
+  });
+
+test("a hook stopped by SIGTERM in a child call leaves a copy that the next start removes, and nothing else", async () => {
+  const tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), "pre-push-stop-")));
+  scratchDirs.push(tmp);
+  const stopped = spawn(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      [
+        'import { spawnSync } from "node:child_process";',
+        `import { executeHookPlan } from ${JSON.stringify(pathToFileURL(HOOK).href)};`,
+        'executeHookPlan([{ jsFiles: ["scripts/a.mjs"], head: "HEAD", modes: new Map() }], {',
+        "  exists: () => true,",
+        "  ensureModules: () => {},",
+        '  readPushed: (_head, files) => files.map(() => "export {};\\n"),',
+        "  spawn: () => {",
+        '    process.stdout.write("in a child call\\n");',
+        '    return spawnSync("sleep", ["30"]);',
+        "  },",
+        "});",
+      ].join("\n"),
+    ],
+    { env: { ...process.env, TMPDIR: tmp }, detached: true, stdio: ["ignore", "pipe", "inherit"] },
+  );
+  const exited = new Promise((resolve) => stopped.once("exit", (_code, signal) => resolve(signal)));
+  await new Promise((resolve) => stopped.stdout.once("data", resolve));
+  process.kill(stopped.pid, "SIGTERM");
+  assert.equal(await exited, "SIGTERM");
+  try {
+    process.kill(-stopped.pid, "SIGKILL");
+  } catch {}
+
+  const folder = path.join(tmp, "scrapkeep-pre-push");
+  const [left, ...more] = readdirSync(folder);
+  assert.deepEqual(more, []);
+  assert.match(left, new RegExp(`^copy-${stopped.pid}-[A-Za-z0-9]{6}$`));
+  assert.ok(existsSync(path.join(folder, left, "scripts/a.mjs")), "the stop skipped the cleanup");
+
+  const outside = path.join(tmp, `copy-${stopped.pid}-aaaaaa`);
+  const kept = {
+    [`other-${stopped.pid}-bbbbbb`]: "dir",
+    [`copy-${process.pid}-cccccc`]: "dir",
+    [`copy-${stopped.pid}-dddddd`]: "fresh",
+    [`copy-${stopped.pid}-eeeeee`]: "link",
+    [`copy-${stopped.pid}-ffffff`]: "file",
+    [`copy-${stopped.pid}-ggggggg`]: "dir",
+  };
+  mkdirSync(path.join(outside, "inner"), { recursive: true });
+  for (const [name, kind] of Object.entries(kept)) {
+    const at = path.join(folder, name);
+    if (kind === "link") symlinkSync(outside, at);
+    else if (kind === "file") writeFileSync(at, "");
+    else mkdirSync(at);
+  }
+  const old = new Date(Date.now() - 2 * STALE_COPY_MS);
+  for (const name of [left, ...Object.keys(kept)].filter((name) => kept[name] !== "fresh"))
+    lutimesSync(path.join(folder, name), old, old);
+  utimesSync(outside, old, old);
+
+  const next = runHook(tmp);
+  assert.equal(next.status, 0, next.stderr);
+  assert.match(next.stdout, /^pre-push: PASS in /);
+  assert.deepEqual(readdirSync(folder).sort(), Object.keys(kept).sort());
+  assert.ok(existsSync(path.join(outside, "inner")), "a folder outside the hook's own is kept");
+});
+
+test("the hook stops when the folder for its copies is not a plain folder", () => {
+  for (const make of [(at) => writeFileSync(at, ""), (at) => symlinkSync(os.tmpdir(), at)]) {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-folder-"));
+    scratchDirs.push(tmp);
+    make(path.join(tmp, "scrapkeep-pre-push"));
+    const ran = runHook(tmp);
+    assert.equal(ran.status, 2, ran.stdout);
+    assert.match(ran.stderr, /^pre-push: .*scrapkeep-pre-push/);
+  }
 });

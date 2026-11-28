@@ -1,7 +1,16 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -169,6 +178,38 @@ export function planHookChecks(changedFiles, exists) {
   return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing, hasBaseline };
 }
 
+const COPY_NAME = /^copy-(\d+)-[A-Za-z0-9]{6}$/;
+export const STALE_COPY_MS = 60_000;
+
+export function copyFolder() {
+  const folder = path.join(os.tmpdir(), "scrapkeep-pre-push");
+  mkdirSync(folder, { recursive: true });
+  if (!lstatSync(folder).isDirectory())
+    throw new Error(`${folder} is not a folder; the hook keeps its copies of pushed files there`);
+  return folder;
+}
+
+function liveProcess(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code !== "ESRCH";
+  }
+}
+
+export function removeStaleCopies() {
+  const folder = copyFolder();
+  for (const name of readdirSync(folder)) {
+    const pid = Number(COPY_NAME.exec(name)?.[1]);
+    if (!pid || liveProcess(pid)) continue;
+    const dir = path.join(folder, name);
+    const stat = lstatSync(dir, { throwIfNoEntry: false });
+    if (stat?.isDirectory() && Date.now() - stat.mtimeMs >= STALE_COPY_MS)
+      rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 function runStep(label, cmd, args, { cwd = root, spawn = spawnSync } = {}) {
   const t0 = performance.now();
   const ran = spawn(cmd, args, { cwd, stdio: "inherit" });
@@ -219,7 +260,7 @@ export function executeHookPlan(
     } else {
       ranLabels.push(`oxfmt(${count})`, `oxlint(${count})`);
       for (const plan of scripted) {
-        const copy = mkdtempSync(path.join(os.tmpdir(), "pre-push-"));
+        const copy = mkdtempSync(path.join(copyFolder(), `copy-${process.pid}-`));
         try {
           const contents = readPushed(plan.head, plan.jsFiles, plan.modes);
           plan.jsFiles.forEach((file, i) => {
@@ -340,6 +381,7 @@ if (isMain(import.meta.url)) {
   const cpus = os.cpus().length;
   try {
     const opts = parseHookArgs(process.argv.slice(2));
+    removeStaleCopies();
     const ranges = opts.base
       ? [
           {
