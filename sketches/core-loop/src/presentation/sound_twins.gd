@@ -190,7 +190,7 @@ const ACT := [
 		"script": "res://src/combat/sticky.gd", "fn": "fuse_ring_color", "token": "return Palette.live()",
 		"also": [{"what": "the closing fuse ring repainted on snap state changes", "script": "res://src/combat/sticky.gd", "fn": "sync_snap_state", "token": "_draw_fuse_rings()"}]},
 	{"facts": ["UI_ROWS:cadence_kest_snap"], "traced": true, "what": "Kest's snapped charge bursts with a bone ring and amber edge",
-		"script": "res://src/combat/combat.gd", "fn": "_detonate", "token": "effects.ring(at, radius * 0.88, Palette.SAND)"},
+		"script": "res://src/combat/combat.gd", "fn": "detonate", "token": "effects.ring(at, radius * 0.88, Palette.SAND)"},
 	{"facts": ["UI_ROWS:cadence_tarn_window"], "traced": true, "what": "Tarn's beat-3 pip turns live mint on the aim reticle",
 		"script": "res://src/ui/aim_reticle.gd", "fn": "_tarn_marks", "token": "\"role\": \"pip_open\", \"layer\": \"line\""},
 	{"facts": ["UI_ROWS:cadence_tarn_rend"], "traced": true, "what": "Tarn's beat-3 heavy rend fires a widened, high-knock sweep bolt",

@@ -237,7 +237,7 @@ func _watch_frame() -> bool:
 		var r: float = float(row.get("radius", -1.0))
 		var gs: Vector3 = mark.global_basis.get_scale()
 		var flat := Vector2(mark.global_position.x - _watched.global_position.x, mark.global_position.z - _watched.global_position.z)
-		radius_ok = is_equal_approx(r, _combat._hull(_watched)) and absf(gs.x - r) < TOL and absf(gs.z - r) < TOL and flat.length() < TOL
+		radius_ok = is_equal_approx(r, _combat.hull_radius(_watched)) and absf(gs.x - r) < TOL and absf(gs.z - r) < TOL and flat.length() < TOL
 	if drawn != live or not radius_ok or absf(mult - (_mult() if live else 1.0)) > TOL:
 		if _mismatch.size() < 5:
 			_mismatch.append("frame %d live %s drawn %s radius_ok %s mult %.4f" % [_frames, live, drawn, radius_ok, mult])

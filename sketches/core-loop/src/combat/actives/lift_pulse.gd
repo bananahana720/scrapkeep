@@ -99,7 +99,7 @@ func _chain(shape: Dictionary, first: Node3D, jumps: int) -> void:
 			return
 		visited.append(next)
 		combat.effects.arc(at, next.global_position, ActiveFx.peak(COLOR))
-		combat._hit(next, KIND, dmg, next.global_position - at, float(shape["knock"]) * 0.3, "", SOURCE, IMPACT)
+		combat.deal_hit(next, KIND, dmg, next.global_position - at, float(shape["knock"]) * 0.3, "", SOURCE, IMPACT)
 		chain_hits += 1
 		at = next.global_position
 
@@ -129,7 +129,7 @@ func _pulse(shape: Dictionary, share: float) -> Array:
 		away.y = 0.0
 		if away.length() < 0.01:
 			away = shape["forward"]
-		combat._hit(enemy, KIND, float(shape["damage"]) * share, away, float(shape["knock"]) * share, "", SOURCE, IMPACT)
+		combat.deal_hit(enemy, KIND, float(shape["damage"]) * share, away, float(shape["knock"]) * share, "", SOURCE, IMPACT)
 		struck.append(enemy)
 	return struck
 

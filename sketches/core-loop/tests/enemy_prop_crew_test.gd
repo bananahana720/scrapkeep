@@ -73,7 +73,7 @@ func _spawn(kind: String, offset: Vector3):
 
 
 func _ram(enemy, force := 30.0) -> void:
-	game.combat._hit(enemy, "ram", force, Vector3.RIGHT, 0.0, "", "", "ram")
+	game.combat.deal_hit(enemy, "ram", force, Vector3.RIGHT, 0.0, "", "", "ram")
 
 
 func _flat(v: Vector3) -> Vector2:

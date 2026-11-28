@@ -159,7 +159,7 @@ func _cases() -> void:
 	_t.check("Cable Charge is still cooling at the round-two twelve-second reload", not _player.abilities.ready("line"))
 	_player.abilities.tick(2.0)
 	_t.check("Cable Charge reloads at fourteen seconds", _player.abilities.ready("line"))
-	var lane: Dictionary = _combat._line_geometry(1.0)
+	var lane: Dictionary = _combat.line_geometry(1.0)
 	var from: Vector3 = lane["from"]
 	var dir: Vector3 = (lane["to"] - from).normalized()
 	var inside: Array = []
@@ -168,7 +168,7 @@ func _cases() -> void:
 	var outside: Dictionary = _combat.sticky.drop(from + Vector3(-dir.z, 0.0, dir.x) * 5.0, 1.0, 0.2, 10.0, INF)
 	_tick({"slot_pick": 1, "fire_pressed": true, "fire_held": true})
 	_tick({"fire_held": true}, 0.783333333)
-	lane = _combat._line_geometry(1.0)
+	lane = _combat.line_geometry(1.0)
 	_t.eq("held preview catches exactly two charges", lane["caught"].size(), 2)
 	_t.eq("caught charge positions are the preview ticks", _player.indicator.shapes["kest_caught"]["points"], lane["caught"])
 	_t.near("preview reads x1.5 before release", lane["bonus"], 1.5)

@@ -135,8 +135,8 @@ func _pierce(enemy: Node3D, lance: Dictionary) -> void:
 	pierced += 1
 	var dmg: float = lance["damage"]
 	combat.effects.spark(enemy.global_position + Vector3.UP, ActiveFx.peak(SHARD_COLOR))
-	combat._hit(enemy, KIND, dmg, lance["dir"], KNOCK, "", SOURCE)
+	combat.deal_hit(enemy, KIND, dmg, lance["dir"], KNOCK, "", SOURCE)
 	var jumps := pattern_level("chain_arc")
 	if jumps > 0:
-		combat._chain(enemy, enemy.global_position, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
+		combat.chain_hit(enemy, enemy.global_position, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
 			"chain_falloff": CHAIN_FALLOFF, "color": ActiveFx.peak(COLOR), "kind": KIND, "knock": KNOCK, "source": SOURCE})

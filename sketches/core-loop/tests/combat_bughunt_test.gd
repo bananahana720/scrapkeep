@@ -66,7 +66,7 @@ func _daisy_chain() -> void:
 		var c: Dictionary = _combat.sticky.drop(base + Vector3(float(i), 0.0, 0.0), 1.0, 1.0, 99.0, 0.0)
 		if i == 0:
 			first = c
-	_combat._detonate(_combat.sticky.take(first))
+	_combat.detonate(_combat.sticky.take(first))
 	_game.player.tree._knobs.erase("sticky_chain")
 	_game.events.sticky_detonated.disconnect(count)
 	_report("F001 chain", seen.size() == 3 and _combat.sticky.charges.is_empty(),

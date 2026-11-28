@@ -465,7 +465,7 @@ func _check_wake_edges() -> void:
 	_t.check("a slam that ended is held for the grace", float(_combat._wake["until"]) == _combat._clock + Combat.WAKE_GRACE, str(_combat._wake))
 	_combat._on_cannon_slammed(_combat.floor_at(_player.ball_position() + Vector3.UP), 1.0, 1.0)
 	var lanes := _lanes("item_proc")
-	_t.check("a straight drop lays its wake back along the aim", lanes.size() == 1 and _lane(lanes[0]).heading.dot(-_combat._flat_aim()) > 0.9999,
+	_t.check("a straight drop lays its wake back along the aim", lanes.size() == 1 and _lane(lanes[0]).heading.dot(-_combat.aim_heading()) > 0.9999,
 		"%d lanes" % lanes.size())
 	# A later slam overwrites a slam that never landed.
 	_combat._free_cannon()

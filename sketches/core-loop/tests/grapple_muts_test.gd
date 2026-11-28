@@ -365,7 +365,7 @@ func _run_live() -> void:
 func _equip_only(part_ids: Array) -> void:
 	_game.ctx.run.parts.assign(part_ids)
 	_build.effects.refresh(_game.ctx.run.parts)
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 
 
 func _check_hot_wire_gameplay() -> void:

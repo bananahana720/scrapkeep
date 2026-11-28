@@ -163,7 +163,7 @@ func arc(at: Vector3, targets: int, damage: float, radius := 10.0) -> int:
 	var picks: Array = combat.nearest_enemies(at, radius, targets)
 	for enemy in picks:
 		combat.effects.arc(at, enemy.global_position, Palette.ARC)
-		combat._ult_hit(enemy, "arc", damage, at, false)
+		combat.ult_hit(enemy, "arc", damage, at, false)
 	return picks.size()
 
 
@@ -217,7 +217,7 @@ func step(delta: float) -> void:
 func _sentry_volley() -> void:
 	var picks: Array = []
 	for stake in nodes:
-		var target = combat._nearest(stake.global_position, SENTRY_REACH, [])
+		var target = combat.nearest_enemy(stake.global_position, SENTRY_REACH, [])
 		if target != null:
 			picks.append([stake.global_position.distance_to(target.global_position), stake, target])
 	picks.sort_custom(func(a, b): return a[0] < b[0])

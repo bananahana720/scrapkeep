@@ -200,8 +200,8 @@ func _interruptions() -> void:
 	_windup(enemy)
 	control._clock = enemy._clock
 	control._show_charge(0.5)
-	_game.combat._hit(enemy, "ram", 1.0, Vector3.RIGHT, EventKinds.impact("ram")["knock"])
-	_game.combat._hit(control, "ram", 1.0, Vector3.RIGHT, EventKinds.impact("ram")["knock"])
+	_game.combat.deal_hit(enemy, "ram", 1.0, Vector3.RIGHT, EventKinds.impact("ram")["knock"])
+	_game.combat.deal_hit(control, "ram", 1.0, Vector3.RIGHT, EventKinds.impact("ram")["knock"])
 	var peak := 0.0
 	var pivot_exact := true
 	for i in 10:

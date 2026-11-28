@@ -333,7 +333,7 @@ func _rocket_start() -> void:
 
 
 func _blast_at_feet() -> void:
-	_combat._detonate({"pos": _player.ball_position() + Vector3.DOWN * 0.5, "radius": 3.0, "damage": 0.0, "crit": false})
+	_combat.detonate({"pos": _player.ball_position() + Vector3.DOWN * 0.5, "radius": 3.0, "damage": 0.0, "crit": false})
 
 
 func _rocket_floor() -> void:
@@ -402,7 +402,7 @@ func _check_void() -> void:
 
 func _line_start() -> void:
 	_as_class("demolitions_caster")
-	var aim: Vector3 = _combat._flat_aim()
+	var aim: Vector3 = _combat.aim_heading()
 	var ground: Vector3 = _player.ball_position() + Vector3.DOWN * 0.9
 	for d in [2.5, 4.5]:
 		_combat.sticky.drop(ground + aim * d, 0.0, 1.0, 10.0, 10.0)
@@ -421,7 +421,7 @@ func _check_line() -> void:
 
 func _line_cap_start() -> void:
 	_as_class("demolitions_caster")
-	var aim: Vector3 = _combat._flat_aim()
+	var aim: Vector3 = _combat.aim_heading()
 	var ground: Vector3 = _player.ball_position() + Vector3.DOWN * 0.9
 	for d in [1.5, 2.5, 3.5, 4.5, 5.5]:
 		_combat.sticky.drop(ground + aim * d, 0.0, 1.0, 10.0, 10.0)
@@ -442,7 +442,7 @@ func _check_line_cap() -> void:
 
 func _cloak_start() -> void:
 	_as_class("demolitions_caster")
-	var aim: Vector3 = _combat._flat_aim()
+	var aim: Vector3 = _combat.aim_heading()
 	_record = {"near": _spawn("chaser", _ball_flat() + aim * 18.0), "far": _spawn("chaser", _ball_flat() - aim * 34.0),
 		"started": _facts["cloak_started"].size(), "broken": _facts["cloak_broken"].size()}
 	_source.hold = {"fire_held": true}

@@ -146,7 +146,7 @@ func _run() -> void:
 	rig = _spawn()
 	rig.hp = 1.0e6
 	await _until(func(): return rig.phase == rig.Phase.WARN)
-	game.combat._hit(rig, "ram", 1.0, Vector3.RIGHT, 60.0, "", "", "ram")
+	game.combat.deal_hit(rig, "ram", 1.0, Vector3.RIGHT, 60.0, "", "", "ram")
 	await _frames(2)
 	t.eq("a slam in the wind-up breaks the drop", rig.phase, rig.Phase.ROAM)
 	await _frames(120)

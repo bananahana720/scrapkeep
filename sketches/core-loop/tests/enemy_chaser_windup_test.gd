@@ -174,7 +174,7 @@ func _interruptions() -> void:
 	_t.check("WC-4 stagger rest", enemy.state == enemy.State.RECOVER and _rest(enemy), "rest within two physics frames")
 	enemy.free()
 	enemy = await _armed()
-	_game.combat._hit(enemy, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"])
+	_game.combat.deal_hit(enemy, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"])
 	await _frames(3)
 	var tipped: bool = enemy.reaction_pivot.transform != Transform3D.IDENTITY
 	var before: Transform3D = enemy.reaction_pivot.transform
@@ -185,7 +185,7 @@ func _interruptions() -> void:
 	_game.events.line_state_changed.emit("latched_body", enemy, enemy.global_position, "")
 	await _frames(2)
 	_game.events.line_state_changed.emit("smash_committed", enemy, Vector3.ZERO, "")
-	_game.combat._hit(enemy, "ram", 1.0, Vector3.RIGHT, enemy.INTERRUPT + 5.0)
+	_game.combat.deal_hit(enemy, "ram", 1.0, Vector3.RIGHT, enemy.INTERRUPT + 5.0)
 	await _frames(2)
 	_t.check("WC-4 harpoon smash rest", enemy.state == enemy.State.RECOVER and _rest(enemy))
 	enemy.free()
@@ -238,7 +238,7 @@ func _trace(enabled: bool) -> Array:
 		if frame in [0, 180]:
 			enemy._begin_windup(Vector3.FORWARD)
 		if frame == 198:
-			_game.combat._hit(enemy, "ram", 1.0, Vector3.RIGHT, 14.0)
+			_game.combat.deal_hit(enemy, "ram", 1.0, Vector3.RIGHT, 14.0)
 		if frame == 200:
 			_game.events.line_state_changed.emit("latched_body", enemy, enemy.global_position, "")
 		if frame == 205:

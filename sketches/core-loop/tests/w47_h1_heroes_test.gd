@@ -96,7 +96,7 @@ func _switch_pilot(class_id: String, at: Vector3) -> void:
 	var def: Resource = ClassDef.by_id(class_id)
 	_game.run.class_def = def
 	_player.fit_class(def)
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 	_combat.weapon_driver.reset(_combat.pattern(def.weapon_id))
 	_player.body().freeze = true
 	_player.reset_to(at, Vector3.ZERO)

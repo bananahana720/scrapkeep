@@ -180,8 +180,8 @@ func _on_door_hit(hit: Dictionary) -> void:
 			"where": enemy.global_position, "damage": dealt * SPLINTER_SHARE})
 	if has("rounded_up") and not bool(hit.get("killed", false)):
 		var extra := ceilf(dealt / ROUND_TO - 0.0001) * ROUND_TO - dealt
-		if extra > 0.01 and ctx.spawner.has_method("_trail_deal"):
-			ctx.spawner._trail_deal(enemy, extra, "rounded_up", "item_proc")
+		if extra > 0.01 and ctx.spawner.has_method("trail_deal"):
+			ctx.spawner.trail_deal(enemy, extra, "rounded_up", "item_proc")
 			fires["rounded_up"] = int(fires.get("rounded_up", 0)) + 1
 
 

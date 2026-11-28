@@ -328,7 +328,7 @@ func _run() -> void:
 	# The drawn arrow is the committed throw; a punched machine pins the one behind it.
 	await _fresh()
 	a = _enemy("chaser", 12.0)
-	var b := _enemy("chaser", 12.0 + 2.0 * _combat._hull(a) + 1.0)
+	var b := _enemy("chaser", 12.0 + 2.0 * _combat.hull_radius(a) + 1.0)
 	_player.grapple_to(a.global_position, Vector3.UP, a)
 	_tick({"slot_pick": 2})
 	_kit.step(0.0)

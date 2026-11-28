@@ -43,7 +43,7 @@ func _rack() -> void:
 
 func _hit(kind: String, force: float) -> void:
 	var drone: Node3D = _warden.guard.alive()[0]
-	# player_ball._on_enemy_touched and combat._hit both knock before strike.
+	# player_ball._on_enemy_touched and combat.deal_hit both knock before strike.
 	drone.knock(Vector3.RIGHT, 6.0 * float(drone.weight))
 	_combat.strike(drone, kind, force)
 

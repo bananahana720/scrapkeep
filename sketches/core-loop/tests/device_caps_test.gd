@@ -255,7 +255,7 @@ func _as_class(id: String) -> void:
 	_game.run.class_def = def
 	_game.player.fit_class(def)
 	_combat.sticky.clear()
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 
 
 func _devices():
