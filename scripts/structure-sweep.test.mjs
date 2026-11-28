@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 
 import { PAGE, POOL, UNITS, check, checkSweep, render } from "./structure-sweep.mjs";
@@ -18,7 +21,6 @@ const row = (id, status, units = "", finding = "a finding") => ({
   id,
   status,
   unit: units,
-  "pull request": "",
   finding,
 });
 const blockOf = (name, body) =>
@@ -85,21 +87,78 @@ test("a closed or waiting row must be named on the page, where its reason goes",
     pageFor(pool, units, "UI-05 is closed because the HUD owns four of its inputs."),
   );
   assert.deepEqual(found, [
-    `${POOL}: DOC-03 is "waits on Andrew" and ${PAGE} does not name it; give its reason there`,
+    `${POOL}: DOC-03 is "waits on Andrew" and ${PAGE} does not name it outside the generated blocks; give its reason there`,
   ]);
+});
+
+test("a closed row named only in the generated table still has no reason", () => {
+  const units = [unit("P1", "landed")];
+  const pool = [row("VM-10", "closed", "P1")];
+  assert.match(pageFor(pool, units), /\| VM-10 \|/);
+  assert.deepEqual(messages(pool, units), [
+    `${POOL}: VM-10 is "closed" and ${PAGE} does not name it outside the generated blocks; give its reason there`,
+  ]);
+});
+
+test("a place in a list cited by number is refused", () => {
+  const units = [unit("M2", "landed")];
+  const pool = [row("A-01", "landed", "M2")];
+  const found = messages(
+    pool,
+    units,
+    pageFor(pool, units, "The layer order waits on Andrew ([Waiting](#waiting), item 2)."),
+  );
+  assert.equal(found.length, 1);
+  assert.match(found[0], /the page says "item 2"; a place in a list goes stale/);
+});
+
+test("two rows for one unit or one finding are refused", () => {
+  const units = [unit("M2", "landed"), unit("M2", "landed")];
+  const pool = [row("A-01", "landed", "M2"), row("A-01", "landed", "M2")];
+  const found = messages(pool, units);
+  assert.ok(
+    found.includes(`${UNITS}: M2 has two rows; keep one, since the later row hides the first`),
+  );
+  assert.ok(
+    found.includes(`${POOL}: A-01 has two rows; keep one, since the later row hides the first`),
+  );
+});
+
+test("a unit number of two digits is read as one unit", () => {
+  const units = [unit("S1", "landed"), unit("S10", "with writer", "")];
+  assert.deepEqual(messages([row("A-01", "in flight", "S10")], units), []);
+});
+
+test("a page without its data files is refused, and a tree with none of the three is not checked", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "structure-sweep-"));
+  try {
+    assert.deepEqual(checkSweep(root), []);
+    mkdirSync(path.join(root, path.dirname(PAGE)), { recursive: true });
+    writeFileSync(path.join(root, PAGE), "# Sweep\n");
+    assert.deepEqual(
+      checkSweep(root).map((finding) => finding.file),
+      [POOL, UNITS],
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("a line number is refused in the page and in a lead", () => {
   const units = [unit("M2", "landed")];
-  const pool = [row("LEAD-01", "open", "", "`combat.gd` line 310 still reads the private queue")];
+  const pool = [
+    row("LEAD-01", "open", "", "`combat.gd` line 310 still reads the private queue"),
+    row("LEAD-02", "open", "", "the reach is at `src/combat/combat.gd:310`"),
+  ];
   const found = messages(
     pool,
     units,
-    pageFor(pool, units, "Checked: `flow.gd` lines 40 to 52 hold the guard."),
+    pageFor(pool, units, "Checked: `flow.gd` Lines 40 to 52 hold the guard."),
   );
-  assert.equal(found.length, 2);
+  assert.equal(found.length, 3);
   assert.match(found[0], /LEAD-01 says "line 310"; a line number goes stale/);
-  assert.match(found[1], /the page says "lines 40"/);
+  assert.match(found[1], /LEAD-02 says "\.gd:310"/);
+  assert.match(found[2], /the page says "Lines 40"/);
 });
 
 test("a hand-edited count or table is refused and names the command that rewrites it", () => {
@@ -117,13 +176,14 @@ test("the table lists each unit's pool rows, marking a row several units share",
   const pool = [
     row("A-01", "landed", "M2"),
     row("A-02", "in flight", "M2 the first half, B4 the rest"),
+    row("A-03", "in flight", "M2, B4"),
   ];
   const { rounds, counts } = render(pool, units);
-  assert.match(rounds, /\| M2 \| what M2 did \| A-01, A-02 \(part\) \|/);
-  assert.match(rounds, /\| B4 \| what B4 did \| A-02 \(part\) \|/);
+  assert.match(rounds, /\| M2 \| what M2 did \| A-01, A-02 \(part\), A-03 \(part\) \|/);
+  assert.match(rounds, /\| B4 \| what B4 did \| A-02 \(part\), A-03 \(part\) \|/);
   assert.match(
     counts,
-    /^The pool holds 2 items \(2 survey findings and 0 leads\): 1 landed, 1 with a unit/,
+    /^The pool holds 3 items \(3 survey findings and 0 leads\): 1 landed, 2 with a unit/,
   );
 });
 

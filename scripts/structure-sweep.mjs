@@ -11,11 +11,15 @@ export const UNITS = "project-guide/handoff/shared/structure-sweep/units.tsv";
 const POOL_STATUSES = ["landed", "in flight", "open", "closed", "waits on Andrew"];
 const NEEDS_REASON = ["closed", "waits on Andrew"];
 const UNIT_STAGES = ["landed", "in review", "with writer"];
-const UNIT_ID = /(?<![A-Za-z0-9-])[A-Z][0-9](?![A-Za-z0-9])/g;
-const LINE_CITATION = /\blines? [0-9]+/;
+const UNIT_ID = /(?<![A-Za-z0-9-])[A-Z][0-9]{1,2}(?![A-Za-z0-9])/g;
+const LINE_CITATION = /\blines? [0-9]+|\.[a-z]{2,4}:[0-9]+|#L[0-9]+/i;
+const ITEM_CITATION = /\bitems? [0-9]+/i;
+const BLOCKS = ["counts", "rounds"];
 const FIX = "node scripts/structure-sweep.mjs --write";
 const NO_LINES =
   "a line number goes stale when another unit lands, so name the function or give a `git grep` pattern instead";
+const NO_ITEMS =
+  "a place in a list goes stale when the list changes, so name the finding or the decision instead";
 
 function parseTsv(text) {
   const [head, ...rows] = text.split("\n").filter((line) => line.length);
@@ -43,7 +47,7 @@ function blockPattern(name) {
 function poolRowsOf(unit, pool) {
   return pool
     .filter((row) => unitsNamed(row.unit).includes(unit))
-    .map((row) => (unitsNamed(row.unit).join(", ") === row.unit ? row.id : `${row.id} (part)`));
+    .map((row) => (row.unit === unit ? row.id : `${row.id} (part)`));
 }
 
 export function render(pool, units) {
@@ -81,6 +85,21 @@ export function check({ page, pool, units }) {
   const findings = [];
   const fail = (file, line, message) => findings.push({ level: "failure", file, line, message });
   const stageOf = new Map(units.map((unit) => [unit.unit, unit.stage]));
+  const handWritten = BLOCKS.reduce((text, name) => text.replace(blockPattern(name), ""), page);
+  const repeated = (rows, key, file) => {
+    const seen = new Set();
+    for (const row of rows) {
+      if (seen.has(row[key]))
+        fail(
+          file,
+          row.line,
+          `${row[key]} has two rows; keep one, since the later row hides the first`,
+        );
+      seen.add(row[key]);
+    }
+  };
+  repeated(units, "unit", UNITS);
+  repeated(pool, "id", POOL);
 
   for (const unit of units) {
     if (!UNIT_STAGES.includes(unit.stage))
@@ -133,11 +152,11 @@ export function check({ page, pool, units }) {
         row.line,
         `${row.id} is "${row.status}" but names ${unfinished.join(", ")}, which has not landed; set the status to "in flight"`,
       );
-    } else if (NEEDS_REASON.includes(row.status) && !page.includes(row.id)) {
+    } else if (NEEDS_REASON.includes(row.status) && !handWritten.includes(row.id)) {
       fail(
         POOL,
         row.line,
-        `${row.id} is "${row.status}" and ${PAGE} does not name it; give its reason there`,
+        `${row.id} is "${row.status}" and ${PAGE} does not name it outside the generated blocks; give its reason there`,
       );
     }
     const cited = row.id.startsWith("LEAD-") && LINE_CITATION.exec(row.finding);
@@ -145,7 +164,7 @@ export function check({ page, pool, units }) {
   }
 
   const generated = render(pool, units);
-  for (const name of ["counts", "rounds"]) {
+  for (const name of BLOCKS) {
     const found = blockPattern(name).exec(page);
     if (!found) fail(PAGE, 1, `the page has no "sweep:${name}" block; run ${FIX}`);
     else if (found[0] !== block(name, generated[name]))
@@ -159,6 +178,8 @@ export function check({ page, pool, units }) {
   page.split("\n").forEach((line, index) => {
     const found = LINE_CITATION.exec(line);
     if (found) fail(PAGE, index + 1, `the page says "${found[0]}"; ${NO_LINES}`);
+    const item = ITEM_CITATION.exec(line);
+    if (item) fail(PAGE, index + 1, `the page says "${item[0]}"; ${NO_ITEMS}`);
   });
   return findings;
 }
@@ -172,7 +193,15 @@ export function load(root) {
 }
 
 export function checkSweep(root) {
-  if (!existsSync(path.join(root, PAGE))) return [];
+  const missing = [PAGE, POOL, UNITS].filter((file) => !existsSync(path.join(root, file)));
+  if (missing.length === 3) return [];
+  if (missing.length)
+    return missing.map((file) => ({
+      level: "failure",
+      file,
+      line: 1,
+      message: `${file} is missing; the page and its two data files are kept together`,
+    }));
   return check(load(root));
 }
 
@@ -180,7 +209,7 @@ export function write(root) {
   const { page, pool, units } = load(root);
   const generated = render(pool, units);
   let next = page;
-  for (const name of ["counts", "rounds"]) {
+  for (const name of BLOCKS) {
     if (!blockPattern(name).test(next))
       throw new Error(`${PAGE} has no "sweep:${name}" block to fill`);
     next = next.replace(blockPattern(name), () => block(name, generated[name]));

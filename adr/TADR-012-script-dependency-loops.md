@@ -12,7 +12,7 @@ Paths below are under `sketches/core-loop/` unless they start with `adr/`, `scri
 
 **A loop costs every change inside it.** No file in a loop can be loaded alone, so a test of one loads all of them, a change to one can break any other, and two writers working in the loop cannot be given files that are independent. The sweep's aim of many writers working at once depends on the loops getting smaller.
 
-**The directories are not layers.** `src/core` names files in each of the seven other main directories, `movement`, `build`, `combat`, `boss`, `world`, `presentation` and `ui` (116 file pairs), so no rule of the form "this directory may not load that one" can be switched on today without hundreds of exceptions, and choosing the order of the layers is a design decision Andrew has not made.
+**The directories are not layers.** `src/core` names files in each of the seven other main directories, `movement`, `build`, `combat`, `boss`, `world`, `presentation` and `ui` (116 file pairs), so no rule of the form "this directory may not load that one" can be switched on today without hundreds of exceptions, and no order of the layers had been chosen when this rule was written. On 27 November 2026 Andrew approved proposing one (ruling `es` in [DECISIONS.md](../project-guide/handoff/DECISIONS.md)); a later record will set it.
 
 **Nothing stopped a loop from growing.** Lint rule L7 stops a file under `src/` from naming a `res://tools/` path, and L8 stops presentation and UI code from reading the ball's position on the physics tick. Neither looks at which script depends on which, and no other check did.
 
@@ -21,7 +21,7 @@ Paths below are under `sketches/core-loop/` unless they start with `adr/`, `scri
 | Option | Disposition | Reason |
 | --- | --- | --- |
 | Forbid a file from joining a loop, with a list of the files already in one that may only shrink | **Chosen** | Needs no layer order. Fails the change that makes things worse and passes everything else. The list is the work left to do, in a form a machine reads |
-| Forbid upward dependencies between directories in a chosen layer order | Rejected for now | The best order of the eight main directories (`core`, `movement`, `build`, `combat`, `boss`, `world`, `presentation`, `ui`) still leaves 329 file pairs pointing up, and picking the order waits on Andrew. Can be added on top of L16 once he picks one |
+| Forbid upward dependencies between directories in a chosen layer order | Rejected for now | The best order of the eight main directories (`core`, `movement`, `build`, `combat`, `boss`, `world`, `presentation`, `ui`) still leaves 329 file pairs pointing up, and no order was chosen when this rule was written. A later record adds it on top of L16 (Andrew approved proposing one on 27 November 2026, ruling `es`) |
 | Record the size of each loop and fail when a loop grows | Rejected | A loop has no stable name: cutting one dependency can split it in two, and adding one can join two. A per-file list stays meaningful through both |
 | Leave it to the reviewer | Rejected | Review alone did not stop a 169-file loop forming, and the sweep asks for a check behind each rule |
 | Build the graph from Godot's own script loader | Rejected | It needs an engine start for a lint that runs before every push in under a second. Reading the text finds the same loops for the forms the code uses |

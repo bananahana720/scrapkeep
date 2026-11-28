@@ -97,6 +97,11 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     hasKnownFailing: true,
   });
 
+  assert.equal(
+    planHookChecks(["scripts/structure-sweep.mjs"], (f) => existing.has(f)).hasDocsOrPkg,
+    true,
+  );
+
   const nearMissLedger = planHookChecks(["docs/KNOWN-FAILING.tsv"], (f) => existing.has(f));
   assert.deepEqual(nearMissLedger, {
     jsFiles: [],
