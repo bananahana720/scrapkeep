@@ -189,23 +189,58 @@ test("diffFiles reads a changed path git would quote as the path itself, and fai
   }
 });
 
-test("the selector job's sparse checkout holds every module the selector imports", () => {
-  const root = path.resolve(path.dirname(affectedScript), "..", "..");
-  const workflow = readFileSync(path.join(root, ".github/workflows/ci.yml"), "utf8");
-  const block = workflow.match(
-    /- name: Checkout selector script only\n[^]*?sparse-checkout: \|\n((?: {12}\S.*\n)+)/,
-  );
-  assert.ok(block, "ci.yml has no sparse list under the selector's checkout step");
-  const listed = block[1]
+function sparseListOfJob(workflow, job) {
+  const body = workflow.match(new RegExp(`\\n  ${job}:\\n((?:(?: {4}.*)?\\n)+?)(?=  \\S|$)`))?.[1];
+  if (body === undefined) throw new Error(`ci.yml has no job named ${job}`);
+  const block = body.match(/\n( +)sparse-checkout: \|\n((?:\1 {2}\S.*\n)+)/)?.[2];
+  if (block === undefined) throw new Error(`the ${job} job in ci.yml has no sparse-checkout list`);
+  return block
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+const RELATIVE_IMPORT =
+  /(?:^|[\s;(])(?:(?:import|export)\s[^;]*?\sfrom\s*|import\s*\(\s*|import\s+)(["'])(\.{1,2}\/[^"']+)\1/gm;
+
+const relativeImports = (text) => [...text.matchAll(RELATIVE_IMPORT)].map((match) => match[2]);
+
+test("the selector job's sparse checkout holds every module the selector imports", () => {
+  assert.deepEqual(
+    relativeImports(
+      [
+        'import { a } from "./a.mjs";',
+        "import {\n  b,\n  c,\n} from '../b.mjs';",
+        'export { d } from "./d.mjs";',
+        'export * from "./e.mjs";',
+        'import "./f.mjs";',
+        'const g = await import("./g.mjs");',
+        'import fs from "node:fs";',
+      ].join("\n"),
+    ),
+    ["./a.mjs", "../b.mjs", "./d.mjs", "./e.mjs", "./f.mjs", "./g.mjs"],
+  );
+  const shape =
+    "jobs:\n  other:\n    steps:\n      - uses: x\n        with:\n          sparse-checkout: |\n            scripts/x\n  changes:\n    runs-on: y\n";
+  assert.throws(
+    () => sparseListOfJob(shape, "changes"),
+    /changes job in ci.yml has no sparse-checkout list/,
+  );
+  assert.throws(() => sparseListOfJob(shape, "absent"), /no job named absent/);
+  assert.deepEqual(sparseListOfJob(shape, "other"), ["scripts/x"]);
+
+  const root = path.resolve(path.dirname(affectedScript), "..", "..");
+  const listed = sparseListOfJob(
+    readFileSync(path.join(root, ".github/workflows/ci.yml"), "utf8"),
+    "changes",
+  );
+  assert.ok(listed.includes("scripts/ci"), listed.join(", "));
   const reached = new Set();
   const visit = (file) => {
     if (reached.has(file)) return;
     reached.add(file);
     const text = readFileSync(path.join(root, file), "utf8");
-    for (const [, spec] of text.matchAll(/^import [^;]*?from "(\.{1,2}\/[^"]+)";$/gm))
+    for (const spec of relativeImports(text))
       visit(path.posix.normalize(path.posix.join(path.posix.dirname(file), spec)));
   };
   visit("scripts/ci/affected.mjs");

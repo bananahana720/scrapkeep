@@ -238,6 +238,7 @@ test(
   { timeout: 60_000 },
   async () => {
     assert.equal(GIT_STOP_GRACE_MS, 5000);
+    const [limit, grace, early] = [300, 1500, 50];
     for (const [body, signal] of [
       ["exec /bin/sleep 30", "SIGTERM"],
       ['trap "" TERM\nexec /bin/sleep 30', "SIGKILL"],
@@ -245,15 +246,19 @@ test(
       const bin = fakeGit(body);
       await withPath(bin, async () => {
         const started = Date.now();
-        const error = await gitAsync(["fetch"], { cwd: bin, timeout: 300, graceMs: 1500 }).then(
+        const error = await gitAsync(["fetch"], { cwd: bin, timeout: limit, graceMs: grace }).then(
           () => assert.fail("a call past its limit returned"),
           (error) => error,
         );
         const ms = Date.now() - started;
         assert.equal(error.signal, signal);
         assert.match(error.message, /^git fetch passed its 300 ms limit/);
-        if (signal === "SIGTERM") assert.ok(ms < 1500, `the stop took ${ms} ms`);
-        else assert.ok(ms >= 1800, `the kill came after ${ms} ms, before the grace ended`);
+        if (signal === "SIGTERM") assert.ok(ms < grace, `the stop took ${ms} ms`);
+        else
+          assert.ok(
+            ms >= limit + grace - early,
+            `the kill came after ${ms} ms, more than ${early} ms before the grace ended`,
+          );
         const pid = Number(readFileSync(path.join(bin, "pid"), "utf8"));
         assert.ok(Number.isInteger(pid) && pid > 0, "the stand-in wrote no process id");
         assert.equal(processLive(pid), false);
@@ -360,7 +365,7 @@ const STARTS_GIT = new RegExp(
 const STARTS_GIT_BY_HAND = {
   "scripts/lib/git.mjs": "the helper itself",
   "scripts/ci/affected.mjs":
-    "the CI changes job checks out only scripts/ci and scripts/lib/cli.mjs, so scripts/lib/git.mjs is not on disk when it runs",
+    "treeFiles still starts git by hand; its own error text (git ls-tree <ref> failed) is pinned by tests in affected.test.mjs and pre-push.test.mjs, while diffFiles starts git through git()",
   "scripts/sketch-lint.test.mjs": "pull request 1332 holds this file",
 };
 
