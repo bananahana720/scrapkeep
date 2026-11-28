@@ -914,5 +914,6 @@
     "sketches/core-loop/src/world/victory_lap.gd -> sketches/core-loop/src/ui/ui_fonts.gd",
     "sketches/core-loop/src/world/wave_cross.gd -> sketches/core-loop/src/presentation/palette_materials.gd"
   ],
-  "L21": ["sketches/core-loop/tests/support/teardown_noise.gd:_line"]
+  "L21": ["sketches/core-loop/tests/support/teardown_noise.gd:_line"],
+  "L22": ["sketches/core-loop/tests/part_levels_test.gd"]
 }

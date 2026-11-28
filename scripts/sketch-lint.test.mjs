@@ -738,6 +738,7 @@ test("the baseline silences listed offenders and shrinks only", () => {
     L19: [],
     L20: [],
     L21: [],
+    L22: [],
   });
 });
 
@@ -2258,6 +2259,99 @@ test("L19 flags a helper that opens its parameter for reading", () => {
   );
 });
 
+test("L22 flags each by-hand read L19 cannot see, and a file L19 flags stays under L19", () => {
+  const consts = 'const A := "res://src/a.gd"\nconst B := "res://src/b.gd"\n';
+  const read = "FileAccess.get_file_as_string";
+  for (const [form, text, line] of [
+    [
+      "a constant list of constants",
+      `${consts}const SOURCES := [A, B]\n\nfunc _initialize() -> void:\n\tfor path in SOURCES:\n\t\tvar text := ${read}(path)\n`,
+      7,
+    ],
+    [
+      "a dictionary constant",
+      `const SOURCES := {\n\t"res://src/a.gd": ["_x"],\n}\n\nfunc _initialize() -> void:\n\tfor path in SOURCES:\n\t\tvar text := ${read}(path)\n`,
+      7,
+    ],
+    [
+      "a typed loop over a wrapped list",
+      `const SOURCES := PackedStringArray(["res://src/a.gd"])\n\nfunc _initialize() -> void:\n\tfor path: String in SOURCES:\n\t\tvar text := ${read}(path)\n`,
+      5,
+    ],
+    [
+      "a lambda bound to a variable",
+      `func _initialize() -> void:\n\tvar take := func(p: String) -> String: return ${read}(p)\n\ttake.call("res://src/a.gd")\n`,
+      2,
+    ],
+    [
+      "a lambda over a list",
+      `const SOURCES := ["res://src/a.gd"]\n\nfunc _initialize() -> void:\n\tvar texts = SOURCES.map(func(p):\n\t\treturn ${read}(p))\n`,
+      5,
+    ],
+    [
+      "a helper called through self",
+      `func _initialize() -> void:\n\tself._take("res://src/a.gd")\n\n\nfunc _take(path: String) -> String:\n\treturn ${read}(path)\n`,
+      6,
+    ],
+    [
+      "a converted parameter",
+      `func _initialize() -> void:\n\t_take("res://src/a.gd")\n\n\nfunc _take(path) -> String:\n\treturn ${read}(ProjectSettings.globalize_path(str(path)))\n`,
+      6,
+    ],
+    [
+      "a parameter copied to a local",
+      `func _initialize() -> void:\n\t_take("res://src/a.gd")\n\n\nfunc _take(path: String) -> String:\n\tvar p := path\n\treturn ${read}(p)\n`,
+      7,
+    ],
+  ])
+    assert.deepEqual(
+      l19("tests/x_test.gd", text),
+      [`L22 ${l19Root}/tests/x_test.gd:${line} ${l19Message}`],
+      form,
+    );
+
+  const both = `const SOURCES := {"res://src/a.gd": 1}\n\nfunc _initialize() -> void:\n\tvar t := ${read}("res://src/b.gd")\n\tfor path in SOURCES:\n\t\tvar u := ${read}(path)\n`;
+  assert.deepEqual(l19("tests/y_test.gd", both), [
+    `L19 ${l19Root}/tests/y_test.gd:4 ${l19Message}`,
+  ]);
+});
+
+test("L22 flags a helper in another test file that reads what its caller passes, through a preload or extends", () => {
+  const helper = {
+    path: `${l19Root}/tests/support/take.gd`,
+    text: "extends RefCounted\n\nstatic func take(path: String) -> String:\n\treturn FileAccess.get_file_as_string(path)\n",
+  };
+  const run = (text) =>
+    lintL19([l19Reader, helper, { path: `${l19Root}/tests/z_test.gd`, text }], l19Root).map(
+      (item) => formatFinding(item),
+    );
+  const flagged = [`L22 ${l19Root}/tests/support/take.gd:4 ${l19Message}`];
+  assert.deepEqual(
+    run(
+      'const Take := preload("res://tests/support/take.gd")\n\nfunc _initialize() -> void:\n\tTake.take("res://src/core/flow.gd")\n',
+    ),
+    flagged,
+  );
+  assert.deepEqual(
+    run(
+      'extends "res://tests/support/take.gd"\n\nfunc _initialize() -> void:\n\ttake("res://src/core/flow.gd")\n',
+    ),
+    flagged,
+  );
+  assert.deepEqual(
+    run(
+      'const Take := preload("res://tests/support/take.gd")\n\nfunc _initialize() -> void:\n\tTake.take("res://tests/fixtures/rows.json")\n',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    run(
+      'const Other := preload("res://tests/support/other.gd")\n\nfunc _initialize() -> void:\n\tOther.take("res://src/core/flow.gd")\n',
+    ),
+    [],
+  );
+});
+
 test("L19 passes data reads, writes, other roots, comments, the reader itself and files outside tests/", () => {
   for (const text of [
     'const README := "res://README.md"\nconst NOTES := "res://DESIGN-NOTES.md"\n\nfunc _initialize() -> void:\n\tfor path in [README, NOTES]:\n\t\tvar text := FileAccess.get_file_as_string(path)\n',
@@ -2270,6 +2364,10 @@ test("L19 passes data reads, writes, other roots, comments, the reader itself an
     'const CASE_DIR := "res://tests/unit/"\n\nfunc _initialize() -> void:\n\tfor file in DirAccess.get_files_at(CASE_DIR):\n\t\tvar script = load(CASE_DIR + file)\n',
     'func _initialize() -> void:\n\tfor file in DirAccess.get_files_at("res://src/combat"):\n\t\tif file.ends_with(".gd"):\n\t\t\tvar table = load("res://src/combat/" + file)\n',
     'const DOCS := ["res://README.md"]\n\nfunc _initialize() -> void:\n\tfor path in DOCS:\n\t\tvar text := FileAccess.get_file_as_string(path)\n',
+    'const ROWS := {"res://tests/fixtures/a.json": 1}\n\nfunc _initialize() -> void:\n\tfor path: String in ROWS:\n\t\tvar text := FileAccess.get_file_as_string(path)\n',
+    'func _initialize() -> void:\n\tvar take := func(p): return FileAccess.get_file_as_string(p)\n\ttake.call("res://tests/fixtures/a.json")\n',
+    'func _initialize() -> void:\n\tself._take("res://README.md")\n\n\nfunc _take(path) -> String:\n\treturn FileAccess.get_file_as_string(str(path))\n',
+    'const ROWS := ["res://tests/fixtures/a.json"]\n\nfunc _initialize() -> void:\n\tvar texts = ROWS.map(func(p): return FileAccess.get_file_as_string(p))\n',
   ])
     assert.deepEqual(l19("tests/ok_test.gd", text), [], text);
   const direct =
@@ -2298,8 +2396,9 @@ test("L19 passes the checked-out core-loop tests against its list, and its list 
   );
   const raw = lintSketch("core-loop").filter((item) => item.rule === "L19");
   assert.ok(raw.length > 0);
+  const strict = lintSketch("core-loop").filter((item) => item.rule === "L22");
   assert.deepEqual(
-    applyBaseline(raw, { L19: baseline.L19 }, () => true),
+    applyBaseline([...raw, ...strict], { L19: baseline.L19, L22: baseline.L22 }, () => true),
     [],
   );
   const planted = {

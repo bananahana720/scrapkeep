@@ -220,6 +220,29 @@ test("a top-level test that reaches a folder scan through two other test files i
   ]);
 });
 
+test("a folder guard is also a test that lists a folder of scanning helpers, builds a path from parts, or calls the reader by a string name", () => {
+  const scan = 'SourceScan.sources(t, ["res://src"])';
+  const index = files({
+    "tests/support/source_scan.gd": "",
+    "tests/unit/scan_case.gd": READER + scan,
+    "tests/suite_test.gd": 'const CASE_DIR := "res://tests/unit/"',
+    "tests/checks/scanner.gd": READER + scan,
+    "tests/parts_test.gd": 'var s = load("res://tests/" + "checks/scanner.gd")',
+    "tests/built_reader_test.gd":
+      'const S := preload("res://tests/support/" + "source_scan.gd")\nvar all = S.sources(t, ["res://src"])',
+    "tests/by_name_test.gd": READER + 'var rows = SourceScan.call("captures", t, ["res://src"], P)',
+    "tests/plain_test.gd":
+      'const T := preload("res://tests/support/t.gd")\nvar s := "my_scanner.gd"',
+    "tests/one_file_test.gd": READER + 'SourceScan.text(_t, "res://src/core/flow.gd")',
+  });
+  assert.deepEqual([...selectTests(index, ["src/world/a.gd"]).picked.keys()].sort(), [
+    "tests/built_reader_test.gd",
+    "tests/by_name_test.gd",
+    "tests/parts_test.gd",
+    "tests/suite_test.gd",
+  ]);
+});
+
 test("the folder-guard selection fails when no top-level test scans folders through the shared reader", () => {
   const index = files({
     "tests/support/source_scan.gd": "",

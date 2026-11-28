@@ -36,6 +36,7 @@ export const BASELINE_RULES = {
     keyOf: (item) => item.key ?? item.path,
     fileOf: (key) => key.split(":")[0],
   },
+  L22: { shape: "keys" },
 };
 const UID_FOLDERS = ["addons", "src", "tests", "tools"];
 const MAX_QUARANTINE = 0;
@@ -1666,112 +1667,161 @@ const anyLiteral = /"[^"]*"/g;
 const textRead = /\bFileAccess\s*\.\s*(?:get_file_as_string|open)\s*\(([^)]*)/g;
 const folderList = /\bDirAccess\s*\.\s*(?:open|get_files_at|get_directories_at)\s*\(([^)]*)/g;
 const scriptNameFilter = /\.ends_with\(\s*"\.gd"\s*\)|\.get_extension\(\)\s*==\s*"gd"/;
-const literalBinding =
+const oldBinding =
   /^(?:static\s+)?(?:const|var)\s+([A-Za-z_]\w*)\s*(?::\s*[\w[\]]+\s*)?:?=\s*(\[[^\]]*\]?|"[^"]*")/;
-const literalLoop = /^for\s+([A-Za-z_]\w*)\s+in\s+([A-Za-z_]\w*|\[[^\]]*\]?)/;
+const oldLoop = /^for\s+([A-Za-z_]\w*)\s+in\s+([A-Za-z_]\w*|\[[^\]]*\]?)/;
+const literalBinding =
+  /^(?:static\s+)?(?:const|var)\s+([A-Za-z_]\w*)\s*(?::\s*[\w[\], ]+?\s*)?:?=\s*(?:[A-Z]\w*\(\s*)?(\[[^\]]*\]?|\{[^}]*\}?|"[^"]*")/;
+const literalLoop = /^for\s+([A-Za-z_]\w*)(?:\s*:\s*[\w[\]]+)?\s+in\s+([A-Za-z_]\w*|\[[^\]]*\]?)/;
+const lambdaOverList =
+  /([A-Za-z_]\w*|\[[^\]]*\])\s*\.\s*(?:map|filter|any|all)\(\s*func\s*\(\s*([A-Za-z_]\w*)/;
+const lambdaBinding = /^var\s+([A-Za-z_]\w*)\s*(?::[^=]*)?:?=\s*func\s*\(([^)]*)\)/;
+const localBinding = /^var\s+([A-Za-z_]\w*)\s*(?::[^=]*)?:?=\s*(.+)$/;
 const funcDecl = /^(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/;
+const preloadAlias =
+  /^const\s+([A-Za-z_]\w*)\s*:?=\s*preload\(\s*"res:\/\/(tests\/[^"]+\.gd)"\s*\)/;
+const extendsTest = /^extends\s+"res:\/\/(tests\/[^"]+\.gd)"/;
 
 function joinList(raw, index, value) {
-  for (
-    let next = index + 1;
-    value.startsWith("[") && !value.includes("]") && next < raw.length;
-    next++
-  )
+  const close = { "[": "]", "{": "}" }[value[0]];
+  for (let next = index + 1; close && !value.includes(close) && next < raw.length; next++)
     value += raw[next];
   return value;
 }
 
-function readScopes(text) {
+function paramNames(list) {
+  return list
+    .split(",")
+    .map((param) => param.trim().match(/^[A-Za-z_]\w*/)?.[0])
+    .filter(Boolean);
+}
+
+function words(code) {
+  return code.match(/\b[A-Za-z_]\w*\b/g) ?? [];
+}
+
+function substitute(value, names) {
+  return /^[[{]/.test(value)
+    ? value.replace(/"[^"]*"|\b[A-Za-z_]\w*\b/g, (token) => names.get(token) ?? token)
+    : value;
+}
+
+function readScopes(text, strict) {
   const raw = text.split("\n");
   const global = new Map();
   let local = new Map();
   let fn = null;
+  let lambda = null;
   const scopes = new Map();
+  const indent = (line) => line.match(/^\s*/)[0].length;
   for (let index = 0; index < raw.length; index++) {
     const topLevel = /^\S/.test(raw[index]);
     const code = raw[index].trim();
+    if (lambda && code && indent(raw[index]) <= lambda.indent) lambda = null;
     if (topLevel) {
       local = new Map();
       const decl = code.match(funcDecl);
-      fn = decl
-        ? {
-            name: decl[1],
-            params: decl[2]
-              .split(",")
-              .map((param) => param.trim().match(/^[A-Za-z_]\w*/)?.[0])
-              .filter(Boolean),
-          }
-        : null;
+      fn = decl ? { name: decl[1], params: paramNames(decl[2]) } : null;
     }
-    const bound = code.match(literalBinding);
-    if (bound) (topLevel ? global : local).set(bound[1], joinList(raw, index, bound[2]));
-    const loop = code.match(literalLoop);
-    if (loop) {
-      const names = new Map([...global, ...local]);
-      const value = loop[2].startsWith("[")
-        ? joinList(raw, index, loop[2]).replace(
-            /"[^"]*"|\b[A-Za-z_]\w*\b/g,
-            (token) => names.get(token) ?? token,
-          )
-        : names.get(loop[2]);
-      if (value) local.set(loop[1], value);
+    const names = () => new Map([...global, ...local]);
+    const bound = code.match(strict ? literalBinding : oldBinding);
+    if (bound) {
+      const value = joinList(raw, index, bound[2]);
+      (topLevel ? global : local).set(bound[1], strict ? substitute(value, names()) : value);
     }
-    scopes.set(index + 1, { names: new Map([...global, ...local]), fn });
+    const loop = code.match(strict ? literalLoop : oldLoop);
+    const mapped = loop || !strict || !code.includes("func") ? null : code.match(lambdaOverList);
+    const [name, over] = loop ? [loop[1], loop[2]] : mapped ? [mapped[2], mapped[1]] : [];
+    if (name) {
+      const value = over.startsWith("[")
+        ? substitute(joinList(raw, index, over), names())
+        : names().get(over);
+      if (value) local.set(name, value);
+    }
+    const lambdaDecl = strict ? code.match(lambdaBinding) : null;
+    if (lambdaDecl)
+      lambda = {
+        name: lambdaDecl[1],
+        params: paramNames(lambdaDecl[2]),
+        indent: indent(raw[index]),
+      };
+    const derived = strict && !topLevel && fn && !lambdaDecl ? code.match(localBinding) : null;
+    if (derived && words(derived[2]).some((word) => fn.params.includes(word)))
+      fn.params.push(derived[1]);
+    scopes.set(index + 1, { names: names(), fn, lambda });
   }
   return scopes;
 }
 
-function handReads(file, rel, text) {
-  if (rel === SOURCE_READER || !rel.startsWith("tests/")) return [];
-  if (!text.includes("FileAccess") && !text.includes("DirAccess")) return [];
+const helperCall = (prefix, name, strict) =>
+  new RegExp(
+    String.raw`(?:^|[^\w.])${prefix}${name}${strict ? String.raw`(?:\.call)?` : ""}\s*\(([^)]*)`,
+    "g",
+  );
+
+function scanReads(file, rel, text, strict) {
+  const scan = { file, rel, text, strict, reads: new Set(), throughParam: new Map(), lists: [] };
+  const reads = text.includes("FileAccess") || text.includes("DirAccess");
+  if (!reads && !(strict && text.includes("res://tests/"))) return { ...scan, lines: [] };
   const lines = codeLines(text);
-  const scopes = readScopes(text);
+  let scopes = null;
+  const scope = (line) => (scopes ??= readScopes(text, strict)).get(line.number);
   const resolve = (line, arg) =>
-    arg.replace(/\b[A-Za-z_]\w*\b/g, (word) => scopes.get(line.number).names.get(word) ?? word);
-  const picksScripts = lines.some((line) => scriptNameFilter.test(line.code));
-  const builtFromListing = (arg) =>
-    (arg.match(anyLiteral) ?? []).every(
-      (literal) => scriptRootLiteral.test(literal) && !/\.\w+"$/.test(literal),
-    );
+    arg.replace(/\b[A-Za-z_]\w*\b/g, (word) => scope(line).names.get(word) ?? word);
   const args = (line, pattern) =>
     [...line.code.matchAll(pattern)].map((match) => ({
       bare: match[1].trim(),
       arg: resolve(line, match[1]),
     }));
-  const throughParam = new Map();
+  Object.assign(scan, { lines, args });
+  if (!reads) return scan;
+  const picksScripts = lines.some((line) => scriptNameFilter.test(line.code));
+  const builtFromListing = (arg) =>
+    (arg.match(anyLiteral) ?? []).every(
+      (literal) => scriptRootLiteral.test(literal) && !/\.\w+"$/.test(literal),
+    );
+  const first = (bare) => bare.split(",")[0];
+  const mentions = (bare, params) =>
+    strict
+      ? words(first(bare)).some((word) => params.includes(word))
+      : params.includes(first(bare).trim());
   for (const line of lines) {
-    const fn = scopes.get(line.number).fn;
-    for (const { bare } of args(line, textRead))
-      if (fn && fn.params.includes(bare.split(",")[0].trim()) && !/\bWRITE\b/.test(bare))
-        throughParam.set(fn.name, [...(throughParam.get(fn.name) ?? []), line]);
+    const { fn, lambda } = scope(line);
+    for (const { bare } of args(line, textRead)) {
+      if (/\bWRITE\b/.test(bare)) continue;
+      for (const owner of strict ? [fn, lambda] : [fn])
+        if (owner && mentions(bare, owner.params))
+          scan.throughParam.set(owner.name, [...(scan.throughParam.get(owner.name) ?? []), line]);
+    }
   }
-  const reads = new Set();
   for (const line of lines) {
     for (const { arg } of args(line, textRead))
       if (
         !/\bWRITE\b/.test(arg) &&
         (scriptPathLiteral.test(arg) || (picksScripts && builtFromListing(arg)))
       )
-        reads.add(line);
-    for (const [name, sites] of throughParam) {
-      const call = new RegExp(String.raw`(?:^|[^\w.])${name}\s*\(([^)]*)`, "g");
-      if (args(line, call).some(({ arg }) => scriptPathLiteral.test(arg)))
-        for (const site of sites) reads.add(site);
-    }
+        scan.reads.add(line);
   }
-  if (reads.size === 0) return [];
-  const lists = picksScripts
+  scan.lists = picksScripts
     ? lines.filter((line) =>
         args(line, folderList).some(
           ({ arg }) => scriptRootLiteral.test(arg) && builtFromListing(arg),
         ),
       )
     : [];
-  const message =
-    "reads script source by hand; read script source through tests/support/source_scan.gd";
-  return [...new Set([...lists, ...reads])]
-    .sort((a, b) => a.number - b.number)
-    .map((line) => finding("L19", file, line.number, message));
+  return scan;
+}
+
+function markHelperReads(caller, helper, prefix) {
+  for (const [name, sites] of helper.throughParam) {
+    const call = helperCall(prefix, name, helper.strict);
+    for (const line of caller.lines)
+      if (
+        line.code.includes(name) &&
+        caller.args(line, call).some(({ arg }) => scriptPathLiteral.test(arg))
+      )
+        for (const site of sites) helper.reads.add(site);
+  }
 }
 
 export function lintL19(files, relative) {
@@ -1785,9 +1835,41 @@ export function lintL19(files, relative) {
         "the shared source reader is not among the test scripts read, so L19 checked nothing; restore tests/support/source_scan.gd",
       ),
     ];
-  return files.flatMap((file) =>
-    handReads(file.path, file.path.slice(relative.length + 1), file.text),
-  );
+  const scansOf = (strict) => {
+    const scans = new Map();
+    for (const file of files) {
+      const rel = file.path.slice(relative.length + 1);
+      if (rel !== SOURCE_READER && rel.startsWith("tests/"))
+        scans.set(rel, scanReads(file.path, rel, file.text, strict));
+    }
+    for (const scan of scans.values()) markHelperReads(scan, scan, strict ? "(?:self\\.)?" : "");
+    if (strict) markCrossFileReads(scans);
+    return scans;
+  };
+  const old = scansOf(false);
+  const message =
+    "reads script source by hand; read script source through tests/support/source_scan.gd";
+  return [...scansOf(true).values()].flatMap((scan) => {
+    const listed = old.get(scan.rel);
+    const shown = listed.reads.size > 0 ? listed : scan;
+    if (shown.reads.size === 0) return [];
+    return [...new Set([...shown.lists, ...shown.reads])]
+      .sort((a, b) => a.number - b.number)
+      .map((line) => finding(shown === listed ? "L19" : "L22", scan.file, line.number, message));
+  });
+}
+
+function markCrossFileReads(scans) {
+  for (const scan of scans.values()) {
+    if (!scan.text.includes("res://tests/")) continue;
+    for (const line of scan.lines) {
+      const alias = line.code.match(preloadAlias);
+      const base = line.code.match(extendsTest);
+      const helper = scans.get(alias?.[2] ?? base?.[1]);
+      if (helper && helper !== scan && helper.throughParam.size > 0)
+        markHelperReads(scan, helper, alias ? `${alias[1]}\\.` : "(?:self\\.)?");
+    }
+  }
 }
 
 export function lintTrackedUids(relative, repoRoot = root) {

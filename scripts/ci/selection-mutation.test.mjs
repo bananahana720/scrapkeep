@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ALWAYS, buildIndex, canaries, plan, selectTests } from "../sketch-fast.mjs";
+import { ALWAYS, buildIndex, canaries, folderGuards, plan, selectTests } from "../sketch-fast.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const sketchDir = path.join(root, "sketches", "core-loop");
@@ -55,6 +55,16 @@ test("selection mutation proof: a changed world script runs a test that scans sr
   assert.ok(
     picked.has("tests/sound_own_recipes_test.gd"),
     "expected tests/sound_own_recipes_test.gd, which scans src through tests/sound_twins_test.gd",
+  );
+});
+
+test("selection mutation proof: the unit suite, which lists tests/unit/, is a folder guard because its cases scan src", () => {
+  const index = buildIndex(sketchDir);
+  const { picked } = selectTests(index, ["src/world/camp_sandbox.gd"]);
+  assert.equal(picked.get("tests/unit_suite_test.gd")?.tier, 0, "unit_suite always runs");
+  assert.ok(
+    folderGuards(index).includes("tests/unit_suite_test.gd"),
+    "expected tests/unit_suite_test.gd among the folder guards: it runs every case under tests/unit/",
   );
 });
 
