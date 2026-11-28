@@ -9,6 +9,9 @@ const CraftedGear := preload("res://src/presentation/crafted_ball_gear.gd")
 
 const PIN := "res://tests/fixtures/pins/mesh_census.pin"
 const PLATFORM_LINE := "# recorded on "
+const RECORDING_PLATFORMS: Array[String] = ["macOS arm64"]
+const OTHER_PLATFORMS: Array[String] = ["Linux x86_64"]
+const NO_INDEX := "none"
 const TOLERANCE := {
 	Mesh.ARRAY_VERTEX: 0.0001,
 	Mesh.ARRAY_NORMAL: 0.0001,
@@ -76,11 +79,15 @@ func _initialize() -> void:
 	var pin_text := read_pin(PIN)
 	var recorded_on := pin_platform(pin_text)
 	_t.check("the census pin names the platform it was recorded on", recorded_on != "", PIN)
-	if recorded_on == platform():
+	var mode := comparison_mode(recorded_on, platform())
+	_t.check("the census pin was recorded on a known platform and is read on a known platform", mode != "",
+		"the pin's first line names %s and this is %s; a pin recorded on one of %s must be read there, or on one of %s"
+		% [recorded_on, platform(), str(RECORDING_PLATFORMS), str(OTHER_PLATFORMS)])
+	if mode == "exact":
 		var exact := compare(got, pin_text, true)
 		_t.check("every crafted mesh matches the census pin byte for byte (recorded on %s)" % recorded_on, exact.is_empty(),
 			"%d differences: %s" % [exact.size(), ", ".join(exact.slice(0, 12))])
-	else:
+	elif mode == "tolerant":
 		_t.skip("every crafted mesh matches the census pin byte for byte", "the pin was recorded on %s and this is %s" % [recorded_on, platform()])
 	var worst := {}
 	var close := compare(got, pin_text, false, worst)
@@ -90,13 +97,17 @@ func _initialize() -> void:
 	for a in SUMMED:
 		spread.append("array %d %.9f of %s" % [a, worst.get(a, 0.0), TOLERANCE[a]])
 	print("mesh_census: largest sum difference from the pin on %s: %s" % [platform(), ", ".join(spread)])
-	_check_moved_vertex_fails(got, meshes, pin_text)
+	_t.check("temporary: off the recording platform this fails so the log shows the line above", mode == "exact", ", ".join(spread))
+	_check_real_changes_fail(got, meshes, pin_text, mode)
 	quit(_t.verdict())
 
 
 func _record(got: Dictionary) -> void:
 	if not PinHash.can_record():
 		_t.check("PIN_RECORD=1 needs %s=1 to rewrite %s" % [PinHash.ALLOW_RECORD_ENV, PIN], false)
+		return
+	if not platform() in RECORDING_PLATFORMS:
+		_t.check("the census pin is recorded only on one of %s" % str(RECORDING_PLATFORMS), false, "this is " + platform())
 		return
 	var out := FileAccess.open(PIN, FileAccess.WRITE)
 	if out == null:
@@ -111,8 +122,16 @@ static func platform() -> String:
 	return "%s %s" % [OS.get_name(), Engine.get_architecture_name()]
 
 
+static func comparison_mode(recorded_on: String, here: String) -> String:
+	if not recorded_on in RECORDING_PLATFORMS:
+		return ""
+	if here == recorded_on:
+		return "exact"
+	return "tolerant" if here in OTHER_PLATFORMS else ""
+
+
 func _check_compare_fails_closed() -> void:
-	var base := {"name": "x", "sha": "aa", "counts": [4, 1, 3, 3, 0], "sums": {Mesh.ARRAY_VERTEX: [1.0, 2.0, 3.0], Mesh.ARRAY_TANGENT: [0.5, 0.25]}}
+	var base := {"name": "x", "sha": "aa", "index": "ab12", "counts": [4, 1, 3, 3, 0], "sums":{Mesh.ARRAY_VERTEX: [1.0, 2.0, 3.0], Mesh.ARRAY_TANGENT: [0.5, 0.25]}}
 	var one := {"a.gd:m()": [base]}
 	var pinned := render(one, "Here arm")
 	for exact in [true, false]:
@@ -132,6 +151,16 @@ func _check_compare_fails_closed() -> void:
 		_t.check("%s: a position sum moved by 0.001 fails" % mode, not compare({"a.gd:m()": [_with(base, "sums", {Mesh.ARRAY_VERTEX: [1.001, 2.0, 3.0], Mesh.ARRAY_TANGENT: [0.5, 0.25]})]}, pinned, exact).is_empty())
 		_t.check("%s: a tangent sum moved by 0.05 fails" % mode, not compare({"a.gd:m()": [_with(base, "sums", {Mesh.ARRAY_VERTEX: [1.0, 2.0, 3.0], Mesh.ARRAY_TANGENT: [0.55, 0.25]})]}, pinned, exact).is_empty())
 		_t.check("%s: a lost array fails" % mode, not compare({"a.gd:m()": [_with(base, "sums", {Mesh.ARRAY_VERTEX: [1.0, 2.0, 3.0]})]}, pinned, exact).is_empty())
+		_t.check("%s: a changed index array fails" % mode, not compare({"a.gd:m()": [_with(base, "index", "ab13")]}, pinned, exact).is_empty())
+		_t.check("%s: an index array lost fails" % mode, not compare({"a.gd:m()": [_with(base, "index", NO_INDEX)]}, pinned, exact).is_empty())
+	_t.eq("a pin recorded on macOS arm64 is read byte for byte there", comparison_mode("macOS arm64", "macOS arm64"), "exact")
+	_t.eq("a pin recorded on macOS arm64 is read by its counts and sums on Linux x86_64", comparison_mode("macOS arm64", "Linux x86_64"), "tolerant")
+	_t.eq("a pin recorded on macOS arm64 read on an unknown platform fails", comparison_mode("macOS arm64", "macOS x86_64"), "")
+	_t.eq("a pin recorded on macOS arm64 read on a renamed platform fails", comparison_mode("macOS arm64", "Linux x86_64 v2"), "")
+	_t.eq("a pin whose first line has a typo fails on the recording platform", comparison_mode("macos arm64", "macOS arm64"), "")
+	_t.eq("a pin whose first line has a typo fails on Linux", comparison_mode("macos arm64", "Linux x86_64"), "")
+	_t.eq("a pin recorded on Linux fails, read there or elsewhere", [comparison_mode("Linux x86_64", "Linux x86_64"), comparison_mode("Linux x86_64", "macOS arm64")], ["", ""])
+	_t.eq("a pin with no platform line fails", comparison_mode("", "Linux x86_64"), "")
 	_t.check("byte-for-byte: a changed surface hash fails", not compare({"a.gd:m()": [_with(base, "sha", "ab")]}, pinned, true).is_empty())
 	var noise := {Mesh.ARRAY_VERTEX: [1.0 + 1e-7, 2.0 - 3e-7, 3.0 + 2e-6], Mesh.ARRAY_TANGENT: [0.5 + 8e-4, 0.25 - 1e-6]}
 	_t.check("byte-for-byte: sums off by last-bit noise fail", not compare({"a.gd:m()": [_with(base, "sums", noise)]}, pinned, true).is_empty())
@@ -140,28 +169,39 @@ func _check_compare_fails_closed() -> void:
 	_t.eq("pin_platform reads the platform line", pin_platform(pinned), "Here arm")
 
 
-func _check_moved_vertex_fails(got: Dictionary, meshes: Dictionary, pin_text: String) -> void:
-	var key := "craft_prop_meshes.gd:stake_chest_body[]"
+func _check_real_changes_fail(got: Dictionary, meshes: Dictionary, pin_text: String, mode: String) -> void:
+	var key := "crafted_ball_gear.gd:bolt_dart_mesh[]"
 	var mesh: ArrayMesh = meshes.get(key)
-	if not _t.check("the census holds %s to move a vertex of" % key, mesh != null):
+	if not _t.check("the census holds %s to change" % key, mesh != null):
 		return
-	var arrays := mesh.surface_get_arrays(0)
-	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var corner := 0
-	if arrays[Mesh.ARRAY_INDEX] != null:
-		corner = (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array)[0]
-	vertices[corner] += Vector3(0.001, 0.0, 0.0)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
+	var moved := mesh.surface_get_arrays(0)
+	if not _t.check("%s is indexed" % key, moved[Mesh.ARRAY_INDEX] != null):
+		return
+	var index: PackedInt32Array = moved[Mesh.ARRAY_INDEX]
+	var vertices: PackedVector3Array = moved[Mesh.ARRAY_VERTEX]
+	vertices[index[0]] += Vector3(0.001, 0.0, 0.0)
+	moved[Mesh.ARRAY_VERTEX] = vertices
+	_check_change_fails(got, mesh, key, moved, "a vertex moved by 0.001", " sum ", pin_text, mode)
+	var flipped := mesh.surface_get_arrays(0)
+	var winding: PackedInt32Array = flipped[Mesh.ARRAY_INDEX]
+	var second := winding[1]
+	winding[1] = winding[2]
+	winding[2] = second
+	flipped[Mesh.ARRAY_INDEX] = winding
+	_check_change_fails(got, mesh, key, flipped, "its first triangle's winding flipped", " index ", pin_text, mode)
+
+
+func _check_change_fails(got: Dictionary, mesh: ArrayMesh, key: String, arrays: Array, change: String, why: String, pin_text: String, mode: String) -> void:
 	var records := surface_records(mesh)
 	records[0] = surface_record(mesh.surface_get_name(0), mesh.surface_get_primitive_type(0), mesh.surface_get_format(0),
 		arrays, mesh.surface_get_blend_shape_arrays(0))
 	var census := got.duplicate()
 	census[key] = records
-	if pin_platform(pin_text) == platform():
-		_t.eq("a vertex of %s moved by 0.001 fails the byte-for-byte comparison" % key, compare(census, pin_text, true), ["changed " + key] as Array[String])
+	if mode == "exact":
+		_t.eq("%s with %s fails the byte-for-byte comparison" % [key, change], compare(census, pin_text, true), ["changed " + key] as Array[String])
 	var close := compare(census, pin_text, false)
-	_t.check("a vertex of %s moved by 0.001 fails the tolerant comparison on a sum" % key,
-		close.size() == 1 and close[0].begins_with("changed " + key) and close[0].contains(" sum "), str(close))
+	_t.check("%s with %s fails the tolerant comparison, on its %s" % [key, change, why.strip_edges()],
+		close.size() == 1 and close[0].begins_with("changed " + key) and close[0].contains(why), str(close))
 
 
 static func _with(record: Dictionary, field: String, value) -> Dictionary:
@@ -205,7 +245,7 @@ static func _render_line(key: String, surfaces: Array) -> String:
 			for x in by_array[a]:
 				sums.append("%.9f" % x)
 			arrays.append("%d:%s" % [a, ",".join(sums)])
-		parts.append("%s=%s=%s=%s" % [record["name"], record["sha"], ",".join(counts), ";".join(arrays)])
+		parts.append("%s=%s=%s=%s=%s" % [record["name"], record["sha"], record["index"], ",".join(counts), ";".join(arrays)])
 	return "%s\t%d\t%s" % [key, surfaces.size(), " ".join(parts)]
 
 
@@ -216,15 +256,15 @@ static func _parse_line(line: String) -> Variant:
 	var surfaces := []
 	for part in cells[2].split(" ", false):
 		var fields := part.split("=")
-		if fields.size() != 4:
+		if fields.size() != 5 or fields[2] == "":
 			return null
 		var counts := []
-		for c in fields[2].split(",", false):
+		for c in fields[3].split(",", false):
 			if not c.is_valid_int():
 				return null
 			counts.append(int(c))
 		var sums := {}
-		for block in fields[3].split(";", false):
+		for block in fields[4].split(";", false):
 			var head := block.get_slice(":", 0)
 			if block.get_slice_count(":") != 2 or not head.is_valid_int():
 				return null
@@ -234,7 +274,7 @@ static func _parse_line(line: String) -> Variant:
 					return null
 				values.append(float(x))
 			sums[int(head)] = values
-		surfaces.append({"name": fields[0], "sha": fields[1], "counts": counts, "sums": sums})
+		surfaces.append({"name": fields[0], "sha": fields[1], "index": fields[2], "counts": counts, "sums": sums})
 	if surfaces.size() != int(cells[1]):
 		return null
 	return [cells[0], surfaces]
@@ -285,6 +325,8 @@ static func _close(have: Array, want: Array, worst: Dictionary) -> String:
 			return "surface %d is named %s, pinned %s" % [s, a["name"], b["name"]]
 		if a["counts"] != b["counts"]:
 			return "surface %d counts %s, pinned %s" % [s, str(a["counts"]), str(b["counts"])]
+		if a["index"] != b["index"]:
+			return "surface %d index array hashes to %s, pinned %s" % [s, a["index"], b["index"]]
 		var sa: Dictionary = a["sums"]
 		var sb: Dictionary = b["sums"]
 		var ka := sa.keys()
@@ -321,8 +363,13 @@ static func surface_record(surface_name: String, primitive: int, format: int, ar
 	var vertex_count := (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
 	var index = arrays[Mesh.ARRAY_INDEX]
 	var corners := PackedInt32Array()
+	var index_hash := NO_INDEX
 	if index != null:
 		corners = index
+		var index_ctx := HashingContext.new()
+		index_ctx.start(HashingContext.HASH_SHA256)
+		index_ctx.update(corners.to_byte_array())
+		index_hash = index_ctx.finish().hex_encode()
 	else:
 		corners.resize(vertex_count)
 		for c in vertex_count:
@@ -334,6 +381,7 @@ static func surface_record(surface_name: String, primitive: int, format: int, ar
 	return {
 		"name": surface_name,
 		"sha": ctx.finish().hex_encode(),
+		"index": index_hash,
 		"counts": [primitive, format, vertex_count, corners.size(), blend_shapes.size()],
 		"sums": sums,
 	}
