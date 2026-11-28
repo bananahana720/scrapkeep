@@ -119,11 +119,12 @@ func _run() -> void:
 
 	var prior_hook: Callable = game.run.defend_hook
 	console.run("god on")
+	_t.eq("god on leaves defend_hook untouched", game.run.defend_hook, prior_hook)
 	var hp: float = game.run.hp
 	game.run.damage(25.0, "dev_console_test")
 	_t.near("god mode takes no hull", game.run.hp, hp)
 	console.run("god off")
-	_t.eq("god off hands back the defend hook it replaced", game.run.defend_hook, prior_hook)
+	_t.eq("god off keeps defend_hook unchanged", game.run.defend_hook, prior_hook)
 	game.run.damage(5.0, "dev_console_test")
 	_t.check("god off lets hits land again", game.run.hp < hp, "%s < %s" % [game.run.hp, hp])
 

@@ -28,7 +28,6 @@ var _time_scale := 1.0
 var _frozen := false
 var _stepping := false
 var _phys_steps := 0
-var _held_hook := Callable()
 var _spawned := 0
 
 
@@ -117,12 +116,7 @@ func set_god(on: bool) -> String:
 	var c = ctx()
 	if c == null or c.run == null:
 		return "!no run state yet"
-	if on and not god:
-		_held_hook = c.run.defend_hook
-		c.run.defend_hook = func(_amount: float, _hp: float) -> float: return 0.0
-	elif not on and god:
-		c.run.defend_hook = _held_hook
-		_held_hook = Callable()
+	c.run.invulnerable = on
 	god = on
 	if on:
 		c.run.heal(c.run.max_hp)
