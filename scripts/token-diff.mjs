@@ -4,7 +4,7 @@ import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./lib/cli.mjs";
-import { git, gitOptional } from "./lib/git.mjs";
+import { git, gitOptional, nulSeparated } from "./lib/git.mjs";
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -550,12 +550,6 @@ export function diffTokenStreams(baseTokens, headTokens) {
   return { changed: false };
 }
 
-function splitNull(stdout) {
-  return String(stdout ?? "")
-    .split("\0")
-    .filter(Boolean);
-}
-
 function resolveDefaultBase(root) {
   if (gitOptional(["rev-parse", "--verify", "--quiet", "origin/main"], { cwd: root }) !== null)
     return "origin/main";
@@ -586,7 +580,7 @@ export function runTokenDiff({ root = defaultRoot, base = null, staged = false }
   const diffArgs = staged
     ? ["diff", "--cached", "--name-only", "-z", targetBase]
     : ["diff", "--name-only", "-z", targetBase];
-  for (const file of splitNull(git(diffArgs, { cwd: root, trim: false }))) {
+  for (const file of nulSeparated(git(diffArgs, { cwd: root, trim: false }))) {
     if (SUPPORTED_EXTENSIONS.has(path.extname(file).toLowerCase())) changedSet.add(file);
   }
 
@@ -595,7 +589,7 @@ export function runTokenDiff({ root = defaultRoot, base = null, staged = false }
       cwd: root,
       trim: false,
     });
-    for (const file of splitNull(untracked)) {
+    for (const file of nulSeparated(untracked)) {
       if (SUPPORTED_EXTENSIONS.has(path.extname(file).toLowerCase())) changedSet.add(file);
     }
   }

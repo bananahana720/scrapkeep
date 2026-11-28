@@ -356,9 +356,7 @@ const STARTS_GIT_BY_HAND = {
 };
 
 function filesStartingGit(cwd) {
-  const files = git(["ls-files", "-z", "--", "*.mjs", "*.js"], { cwd, trim: false })
-    .split("\0")
-    .filter(Boolean);
+  const files = nulSeparated(git(["ls-files", "-z", "--", "*.mjs", "*.js"], { cwd, trim: false }));
   if (files.length === 0) throw new Error(`git ls-files lists no .mjs or .js file in ${cwd}`);
   return files.filter((file) => STARTS_GIT.test(readFileSync(path.join(cwd, file), "utf8"))).sort();
 }
