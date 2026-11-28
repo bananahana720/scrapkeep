@@ -82,6 +82,10 @@ const ModelKit := preload("res://src/world/model_kit.gd")
 const World23ChunkCraft := preload("res://src/presentation/world23_chunk_craft.gd")
 const CraftShowcaseAssembly := preload("res://src/presentation/craft/craft_showcase_assembly.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
+const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -259,13 +263,17 @@ func _reset() -> void:
 	Enemy.rim_color = Palette.ARC
 	WorldFx.current = null
 	WorldFxWord.quiet(false)
-	Synth.score_transpose = 0
 	Footings.plant_ignore_lines = false
 	RescueSite.model_path = RescueSite.MODEL
 	RescueSite.scarf_path = RescueSite.SCARF
 	MusicRows.stem_dir = ""
 	HighdraftFx.shader_dir = HighdraftFx.SHADER_DIR
 	QuietGun.housing_path = QuietGun.HOUSING
+	Synth.reset_for_tests()
+	SfxBank.reset_for_tests()
+	MusicEngine.reset_for_tests()
+	MusicPrebake.reset_for_tests()
+	VoiceSynth.reset_for_tests()
 
 
 static func _clear_dir(path: String) -> void:

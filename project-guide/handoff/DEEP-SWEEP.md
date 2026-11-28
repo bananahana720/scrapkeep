@@ -38,4 +38,6 @@ The fast lane also runs the sweep on each pull request's own lines and puts the 
 - Replace a run of bool parameters with one options dictionary or a named enum, only where callers pass more than two.
 - Split a giant file only along a seam that already exists (a group of functions that share private state nobody else reads).
 
+The larger pass that works through a surveyed list of the whole repository is [STRUCTURE-SWEEP.md](STRUCTURE-SWEEP.md).
+
 Leave alone: the invariant and state-machine guards from #616-#625, and the boss.gd content pin in `tests/boss_pickup_asset_test.gd` (re-pin it in the same PR if boss.gd logic moves).

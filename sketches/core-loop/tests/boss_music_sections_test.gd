@@ -1,6 +1,7 @@
 extends SceneTree
 
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Ctx := preload("res://src/core/context.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
@@ -41,7 +42,7 @@ var _t := T.new("boss_music_sections_test")
 
 
 func _initialize() -> void:
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	for track in EXPECTED:
 		_engine_checks(track)
 		_director_checks(track)

@@ -5,6 +5,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -22,7 +23,7 @@ var _audio
 
 
 func _initialize() -> void:
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	_rounding()
 	_lift_layer()
 	_game = Game.new()

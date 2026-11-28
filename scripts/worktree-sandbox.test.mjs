@@ -316,9 +316,14 @@ describe("worktree-sandbox import completeness", () => {
   function sandboxWith(build) {
     const worktreeDir = mkdtempSync(path.join(os.tmpdir(), "sandbox-import-"));
     const sketchDir = path.join(worktreeDir, SKETCH);
-    mkdirSync(path.join(sketchDir, ".godot"), { recursive: true });
-    writeFileSync(path.join(sketchDir, ".godot", "uid_cache.bin"), "uids");
-    build(sketchDir);
+    try {
+      mkdirSync(path.join(sketchDir, ".godot"), { recursive: true });
+      writeFileSync(path.join(sketchDir, ".godot", "uid_cache.bin"), "uids");
+      build(sketchDir);
+    } catch (error) {
+      rmSync(worktreeDir, { recursive: true, force: true });
+      throw error;
+    }
     return {
       worktreeDir,
       sketchDir,

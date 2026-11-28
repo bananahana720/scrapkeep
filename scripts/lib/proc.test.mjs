@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
-import { pool, runProcess, stopGroup, waitGroupDead } from "./proc.mjs";
+import { groupLive, pool, runProcess, stopGroup, waitGroupDead } from "./proc.mjs";
 
 function pidAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
@@ -99,6 +101,45 @@ test("proc: runProcess aborts and reaps grandchild process group via AbortSignal
     await waitGroupDead(res.pid, 1500);
     assert.equal(pidAlive(grandchild), false);
   } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("proc: a signal that lands the moment the child starts still reaps its group", async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "proc-test-signal-"));
+  let pgid = 0;
+  try {
+    const pidFile = path.join(dir, "child.pid");
+    const runner = path.join(dir, "runner.mjs");
+    writeFileSync(
+      runner,
+      `import { writeFileSync } from "node:fs";
+import { runProcess } from ${JSON.stringify(fileURLToPath(new URL("./proc.mjs", import.meta.url)))};
+const res = await runProcess("/bin/sh", ["-c", "sleep 30 & wait"], {
+  timeoutMs: 20000,
+  forwardSignals: true,
+  onChild: (child) => {
+    writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
+    process.kill(process.pid, "SIGTERM");
+  },
+});
+process.exit(res.interrupted ?? 1);
+`,
+    );
+    const node = spawn(process.execPath, [runner], { stdio: "ignore" });
+    const [code, signal] = await new Promise((resolve) =>
+      node.on("exit", (...ended) => resolve(ended)),
+    );
+    pgid = Number(readFileSync(pidFile, "utf8"));
+    assert.deepEqual([code, signal], [143, null]);
+    await waitGroupDead(pgid, 1500);
+    assert.equal(groupLive(pgid), false);
+  } finally {
+    if (pgid > 0) {
+      try {
+        process.kill(-pgid, "SIGKILL");
+      } catch {}
+    }
     rmSync(dir, { recursive: true, force: true });
   }
 });
