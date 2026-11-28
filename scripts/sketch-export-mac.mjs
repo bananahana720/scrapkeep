@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
 import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import { isMain } from "./lib/cli.mjs";
 import {
   bootFailures,
   defaultStemsFrom,
@@ -323,5 +324,4 @@ async function main() {
   console.log("BUILD.txt: " + path.join(outDir, "BUILD.txt"));
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  await main();
+if (isMain(import.meta.url)) await main();

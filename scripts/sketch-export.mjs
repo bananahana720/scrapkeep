@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
+import { isMain } from "./lib/cli.mjs";
 import {
   GODOT_VERSION,
   resolveGodotBinary,
@@ -1025,5 +1026,4 @@ export async function playProofTries(proof, playOnce) {
   return { ok: true, line: last.line + note, outcomes };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  await main();
+if (isMain(import.meta.url)) await main();

@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -14,15 +15,38 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { GODOT_VERSION, resolveGodotBinary, scratchHomeEnv } from "./godot-home.mjs";
 
+const gitLibUrl = new URL("./lib/git.mjs", import.meta.url);
+const cliLibUrl = new URL("./lib/cli.mjs", import.meta.url);
+const { gitOptional } = existsSync(gitLibUrl)
+  ? await import(gitLibUrl.href)
+  : {
+      gitOptional: (args, { cwd = process.cwd(), trim = true } = {}) => {
+        const ran = spawnSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
+        if (ran.status !== 0) return null;
+        return trim ? ran.stdout.trim() : ran.stdout.replace(/\r?\n$/, "");
+      },
+    };
+const { isMain } = existsSync(cliLibUrl)
+  ? await import(cliLibUrl.href)
+  : {
+      isMain: (metaUrl, argv1 = process.argv[1]) => {
+        if (!argv1) return false;
+        const self = fileURLToPath(metaUrl);
+        try {
+          return realpathSync(self) === realpathSync(argv1);
+        } catch {
+          return path.resolve(self) === path.resolve(argv1);
+        }
+      },
+    };
+
 export const DEFAULT_SKETCH = "sketches/core-loop";
 const STAMP = "scrapkeep-import.json";
 const GODOT_ASSET_FILE =
   /(?:^|\/)project\.godot$|\.(?:gd|tscn|tres|glb|png|ogg|wav|ttf|otf|gdshader|json|bin|import)$/i;
 
 function git(root, args, { trim = true } = {}) {
-  const ran = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  if (ran.status !== 0) return null;
-  return trim ? ran.stdout.trim() : ran.stdout.replace(/\r?\n$/, "");
+  return gitOptional(args, { cwd: root, trim });
 }
 
 export function godotIdentity(godotBin = resolveGodotBinary({ requireExplicit: true })) {
@@ -227,7 +251,7 @@ function main(argv) {
   return 2;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (error) {

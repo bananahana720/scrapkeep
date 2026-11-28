@@ -1,18 +1,34 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, readFileSync, realpathSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { appendFileSync, readFileSync } from "node:fs";
+import { isMain } from "../lib/cli.mjs";
 
+export const KNOWN_FAILING_LEDGER = "project-guide/handoff/KNOWN-FAILING.tsv";
 const WEB_PATTERN =
   /^(index\.html|orchard\.html|vite\.config\.js|package\.json|package-lock\.json|public\/|src\/|server\/|scripts\/check-build\.mjs|scripts\/verify\.mjs)/;
 const GODOT_PATTERN = /^sketches\/core-loop\//;
+const PACKAGE_PATTERN = /^package(?:-lock)?\.json$/;
+const HANDOFF_DOC_PATTERN =
+  /(?:\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv))/;
+const SKILL_PATTERN = /^\.(?:agents|claude)\/skills\//;
+const AGENT_CONFIG_PATTERN = /^\.(?:agents|claude|codex)\//;
+const DOCS_SCRIPT_PATTERN =
+  /^scripts\/(?:check-docs|check-project|check-skills|check-agents\.mjs|brief-check|wave-state|known-failing|gate\/weekly)/;
 const NODE_PATTERN =
-  /^(package\.json|package-lock\.json|scripts\/|tests\/|tools\/|src\/|server\/|project-guide\/handoff\/sitting-kit\/|\.github\/workflows\/)/;
-const DOCS_PATTERN =
-  /(\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.(?:agents|claude|codex)\/|^scripts\/(?:check-docs|check-project|check-skills|check-agents\.mjs|brief-check|wave-state|known-failing|gate\/weekly))/;
-const WORKFLOW_PATTERN = /^(\.github\/workflows\/|scripts\/ci\/)/;
+  /^(package\.json|package-lock\.json|scripts\/|tests\/|tools\/|src\/|server\/|project-guide\/handoff\/sitting-kit\/|\.github\/(?:workflows|actions)\/)/;
+const WORKFLOW_PATTERN = /^(\.github\/(?:workflows|actions)\/|scripts\/ci\/)/;
+
+export const isWebPath = (file) => WEB_PATTERN.test(file);
+export const isGodotPath = (file) => GODOT_PATTERN.test(file);
+export const isPackagePath = (file) => PACKAGE_PATTERN.test(file);
+export const isHandoffDocPath = (file) => HANDOFF_DOC_PATTERN.test(file);
+export const isSkillPath = (file) => SKILL_PATTERN.test(file);
+export const isAgentConfigPath = (file) => AGENT_CONFIG_PATTERN.test(file);
+export const isDocsPath = (file) =>
+  isHandoffDocPath(file) || isAgentConfigPath(file) || DOCS_SCRIPT_PATTERN.test(file);
+export const isNodePath = (file) => NODE_PATTERN.test(file);
+export const isWorkflowPath = (file) => WORKFLOW_PATTERN.test(file);
 
 export function classifyAffected(changedFiles, { full = false } = {}) {
   const files = changedFiles.filter(Boolean);
@@ -27,11 +43,11 @@ export function classifyAffected(changedFiles, { full = false } = {}) {
       changedCount: files.length,
     };
   }
-  const workflowTouched = files.some((f) => WORKFLOW_PATTERN.test(f));
-  const web = workflowTouched || files.some((f) => WEB_PATTERN.test(f));
-  const godot = files.some((f) => GODOT_PATTERN.test(f));
-  const node = workflowTouched || godot || web || files.some((f) => NODE_PATTERN.test(f));
-  const docs = workflowTouched || files.some((f) => DOCS_PATTERN.test(f));
+  const workflowTouched = files.some(isWorkflowPath);
+  const web = workflowTouched || files.some(isWebPath);
+  const godot = files.some(isGodotPath);
+  const node = workflowTouched || godot || web || files.some(isNodePath);
+  const docs = workflowTouched || files.some(isDocsPath);
   return {
     full: false,
     lint: true,
@@ -82,16 +98,7 @@ function parseArgs(argv) {
   return opts;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const opts = parseArgs(process.argv.slice(2));
     let files = [];
