@@ -126,7 +126,7 @@ ABILITIES row (the keys SKILL-BAR.md:439 names):
 "cannon_lane_charge": {"icon": "ab_cannon_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "family": "lane"},
 ```
 
-Build note: `_commit_cannon` (`combat.gd:1470-1489`) gains an optional overrides dictionary (`warn`, `live`, `from`, `dir`, `ahead`). The geometry stays the lane family's from `MindAttacks`, as `BIBLE.md:608` requires; only the timing and the start point change.
+Build note: `commit_cannon` (`combat.gd:1470-1489`) gains an optional overrides dictionary (`warn`, `live`, `from`, `dir`, `ahead`). The geometry stays the lane family's from `MindAttacks`, as `BIBLE.md:608` requires; only the timing and the start point change.
 
 ### 2.5 Shift, Recoil Split (kept)
 
@@ -538,7 +538,7 @@ Headless proofs that fail loud, in the style of `tests/cannon_kit_test.gd` (the 
 - `src/core/class_def.gd`: the Cannon row gains `line_id: "cannon_lane_charge"` and `ultimate_id: "cannon_fire_mission"`.
 - `src/core/ability_state.gd`: four rows (sections 2.4, 3.1, 3.5).
 - `src/combat/weapons.gd`: a Cannon constants block: `LANE_CHARGE_DAMAGE 28.0`, `LANE_CHARGE_PAST 12.0`, `LANE_CHARGE_WARN 0.1`, `LANE_CHARGE_LIVE 0.3`, `ZONE_DAMAGE 12.0`, `ZONE_REACH 26.0`, `CALL_CAP 12`, `VOID_DROP 12.0`, `APEX_CAP 20.0`, `CREEP_AHEAD_BEATS 2`, `MORTAR_BEATS 6`, `MORTAR_REACH 0.5`, `RECITAL_SECONDS 6.0`.
-- `src/combat/combat.gd`, the Cannon section only (`:1456-1603`): the `_line_skills` row, the overrides on `_commit_cannon`, the exposure mark hook, Recital detection.
+- `src/combat/combat.gd`, the Cannon section only (`:1456-1603`): the `_line_skills` row, the overrides on `commit_cannon`, the exposure mark hook, Recital detection.
 - `src/combat/ultimate.gd`: three `_ult_rows` entries.
 - `src/core/trees/cannon.gd`: 8 swaps and 16 knobs (sections 3.5 and 3.6).
 - `src/presentation/harmony.gd`: `family_note(family)`.

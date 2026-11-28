@@ -1527,7 +1527,7 @@ func _physics_process(delta: float) -> void:
 	_step_special(intent, delta)
 	_step_line(intent, delta)
 	_step_active_buffer(intent, delta)
-	_step_cannon(delta)
+	step_cannon(delta)
 	var enemies := get_tree().get_nodes_in_group(Groups.ENEMY)
 	_step_verb_items(enemies)
 	_step_cross_synergies(delta, enemies)
@@ -2884,7 +2884,7 @@ func _cannon_ground(p: Vector3) -> float:
 	return floor_at(p + Vector3.UP).y
 
 
-func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: float, damage: float, source: String,
+func commit_cannon(family: String, target: Vector3, centre: Vector3, radius: float, damage: float, source: String,
 		expose := false, overrides := {}) -> Dictionary:
 	_cannon_count += 1
 	var seed: int = _cannon_count * 7919 + ctx.run.stage
@@ -2911,7 +2911,7 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 	return entry
 
 
-func _step_cannon(delta: float) -> void:
+func step_cannon(delta: float) -> void:
 	_step_cannon_exposure()
 	_step_cannon_recoil_airborne(delta)
 	_step_cannon_piton()
@@ -3116,7 +3116,7 @@ func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> v
 	var overrides := {"ahead": plan["ahead"], "half": plan["half"], "pierce_chip": pierce, "overpenetrate": overpenetrate}
 	if shot_kind == WeaponDriver.SHOT_RAIL:
 		overrides["color"] = Palette.SAND
-	var entry := _commit_cannon("lane", plan["target"], plan["centre"], plan["radius"], damage, source, false, overrides)
+	var entry := commit_cannon("lane", plan["target"], plan["centre"], plan["radius"], damage, source, false, overrides)
 	var h = entry["hazards"][0]
 	var kit = ctx.player.kit
 	if kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
@@ -3161,7 +3161,7 @@ func _on_cannon_dashed(dir: Vector3) -> void:
 	var flat := Vector3(dir.x, 0.0, dir.z)
 	flat = flat.normalized() if flat.length() > 0.01 else aim_heading()
 	var centre := _ground_under(ctx.player.ball_position())
-	_commit_cannon("split_lane", centre - flat * 10.0, centre, Weapons.RECOIL_REACH, Weapons.RECOIL_DAMAGE, "special")
+	commit_cannon("split_lane", centre - flat * 10.0, centre, Weapons.RECOIL_REACH, Weapons.RECOIL_DAMAGE, "special")
 	if cannon_piton_staked():
 		ctx.player.set_velocity_now(Vector3.ZERO, "piton_stake")
 		_cannon_piton["recoil_cancelled"] = true
@@ -3188,7 +3188,7 @@ func _fire_plate(f: float, shape: Dictionary) -> void:
 	var apex: Vector3 = shape["apex"]
 	var dir: Vector3 = shape["dir"]
 	var damage := AbilityState.Gauge.scaled(f, Weapons.PLATE_DAMAGE_MIN, Weapons.PLATE_DAMAGE_MAX)
-	_commit_cannon("plate", apex + dir * MindAttacks.PLATE_HALF_BAND, apex, shape["length"], damage, "special", true)
+	commit_cannon("plate", apex + dir * MindAttacks.PLATE_HALF_BAND, apex, shape["length"], damage, "special", true)
 	last_burst = {"at": apex, "damage": damage * damage_mod(Weapons.CANNON_LANE), "kind": "cannon_plate", "breaks_props": false}
 
 
@@ -3205,7 +3205,7 @@ func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 		if d <= best:
 			best = d
 			target = enemy.global_position
-	_commit_cannon("rush", target, landing, Weapons.RUSH_REACH, Weapons.RUSH_DAMAGE * clampf(strength, 0.5, 1.5),
+	commit_cannon("rush", target, landing, Weapons.RUSH_REACH, Weapons.RUSH_DAMAGE * clampf(strength, 0.5, 1.5),
 		"drop_or_slam")
 	var from_recoil_surf := _cannon_recoil_airborne or _cannon_recoil_air_grace > 0.0
 	_cannon_recoil_airborne = false
@@ -3243,7 +3243,7 @@ func _lay_wake(landing: Vector3) -> void:
 	var back := Vector3(from.x - landing.x, 0.0, from.z - landing.z)
 	back = back.normalized() if back.length() >= WAKE_MIN_TRAVEL else -aim_heading()
 	var reach: float = Weapons.CANNON_LANE_REACH * ctx.tuning.mod("weapon_range")
-	_commit_cannon("lane", landing + back * 10.0, landing, reach, Weapons.LANE_DAMAGE * WAKE_DAMAGE, "item_proc")
+	commit_cannon("lane", landing + back * 10.0, landing, reach, Weapons.LANE_DAMAGE * WAKE_DAMAGE, "item_proc")
 
 
 const CannonAugments := preload("res://src/movement/augments.gd")
@@ -3253,13 +3253,13 @@ static var _exposure_mesh: ArrayMesh
 static var _exposure_material: ShaderMaterial
 
 
-func _cannon_audio():
+func cannon_audio():
 	var presentation = ctx.root.get("presentation")
 	return presentation.audio if presentation != null else null
 
 
 func _cannon_note(entry: Dictionary) -> void:
-	var audio = _cannon_audio()
+	var audio = cannon_audio()
 	if audio != null:
 		var kind: String = {"weapon": "cannon_weapon", "line": "cannon_line_live", "drop_or_slam": "cannon_smash"}.get(entry["source"], "cannon_live")
 		if entry["family"] == "split_lane" and entry["source"] == "special" and not entry["options"].has("budget"):
@@ -3279,7 +3279,7 @@ func _cannon_line_geometry(fraction: float) -> Dictionary:
 			dir = aim_heading()
 		ahead = Vector2(kit.anchor.x - ball.x, kit.anchor.z - ball.z).length() + Weapons.LANE_CHARGE_PAST
 	elif kit.hooked:
-		var floor = _cannon_floor(kit.anchor)
+		var floor = cannon_floor(kit.anchor)
 		if floor != null:
 			from = floor
 			var normal: Vector3 = kit.anchor_normal
@@ -3306,17 +3306,17 @@ func _cannon_line_fire(fraction: float, mult: float, target: Node3D) -> void:
 	var shape := _cannon_line_geometry(fraction)
 	var from: Vector3 = shape["from"]
 	var to: Vector3 = shape["to"]
-	_commit_cannon("lane", to, from, from.distance_to(to) + MindAttacks.LANE_HALF,
+	commit_cannon("lane", to, from, from.distance_to(to) + MindAttacks.LANE_HALF,
 		Weapons.LANE_CHARGE_DAMAGE * mult, "line", false,
 		{"warn": Weapons.LANE_CHARGE_WARN, "live": Weapons.LANE_CHARGE_LIVE,
 		"from": from, "dir": (to - from).normalized(), "ahead": from.distance_to(to), "forced": target,
 		"discovery": "cannon_lane_charge"})
-	var audio = _cannon_audio()
+	var audio = cannon_audio()
 	if audio != null:
 		audio.cannon_line(ctx.player.chain.combo)
 
 
-func _cannon_floor(at: Vector3):
+func cannon_floor(at: Vector3):
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.1,
 		at - Vector3.UP * Weapons.VOID_DROP, CannonAugments.WORLD_MASK))
@@ -3338,7 +3338,7 @@ func _cannon_recital(family: String, at: Vector3) -> void:
 	if _recital_index == MindAttacks.FAMILIES.size():
 		_recital_index = 0
 		discover("cannon_recital", at)
-		var audio = _cannon_audio()
+		var audio = cannon_audio()
 		if audio != null:
 			audio.cannon_motif("cannon_recital", true)
 

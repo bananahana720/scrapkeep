@@ -122,7 +122,7 @@ func _tick() -> void:
 		for h in entry["hazards"]:
 			if not _live.has(h.get_instance_id()) and _combat._clock >= float(entry["options"].get("live_at", INF)):
 				_live[h.get_instance_id()] = _combat._clock
-	_combat._step_cannon(DT)
+	_combat.step_cannon(DT)
 
 
 func _finish_ride() -> void:
