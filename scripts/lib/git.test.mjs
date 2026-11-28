@@ -18,6 +18,22 @@ function makeTempRepo() {
   return dir;
 }
 
+test("git and gitOptional read the repository cwd is in, even when a git hook exported another one", () => {
+  const dir = makeTempRepo();
+  const before = process.env.GIT_DIR;
+  process.env.GIT_DIR = path.join(REPO_ROOT, ".git");
+  try {
+    const cwd = path.join(dir, "sketches/core-loop");
+    assert.equal(git(["ls-files", "--", "src"], { cwd }), "src/a.gd");
+    assert.equal(gitOptional(["ls-files", "--", "src"], { cwd }), "src/a.gd");
+    assert.equal(realpathSync(git(["rev-parse", "--show-toplevel"], { cwd })), realpathSync(dir));
+  } finally {
+    if (before === undefined) delete process.env.GIT_DIR;
+    else process.env.GIT_DIR = before;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("git and gitOptional use 64 MiB default maxBuffer, trim by default, and handle errors", () => {
   assert.equal(DEFAULT_MAX_BUFFER, 64 * 1024 * 1024);
   let seen = null;
