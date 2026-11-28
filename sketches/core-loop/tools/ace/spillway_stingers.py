@@ -1,6 +1,6 @@
 """World 1's designed event sounds and story stings (world 1 unit 18, "Spillway sound identity").
 
-    /home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I spillway_stingers.py [--out <assets/audio/stingers>]
+    $HOME/.local/share/ACE-Step-1.5/.venv/bin/python -I spillway_stingers.py [--out <assets/audio/stingers>]
 
 Until now every Spillway event landed on a sound the Dig and the Highdraft also played. These are
 designed one-shots at the Spillway's own cue ids, in D Dorian (the band's home key). The dam is

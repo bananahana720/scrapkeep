@@ -1,7 +1,7 @@
 """Cut each park stage's event stingers from that stage's own ACE music pack.
 
 Run with the ACE-Step venv python in isolated mode:
-  /home/andrew/.local/share/ACE-Step-1.5/.venv/bin/python -I tools/ace/cut_stingers.py \
+  $HOME/.local/share/ACE-Step-1.5/.venv/bin/python -I tools/ace/cut_stingers.py \
       [--packs <dir holding <pack>/<clip>.{drums,bass,other}.ogg>] [--out assets/audio/stingers]
 
 Stage -> pack -> park comes from src/core/park_defs.gd; the cues a stage needs come from that
@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent.parent
-DEFAULT_PACKS = Path("/home/andrew/Projects/scrapkeep/sketches/core-loop/assets/music_ace")
+DEFAULT_PACKS = Path.home() / "Projects/scrapkeep/sketches/core-loop/assets/music_ace"
 RATE = 44100
 TARGET_LUFS = -16.0
 CEILING_DBTP = -1.0

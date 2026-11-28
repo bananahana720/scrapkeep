@@ -404,6 +404,36 @@ async function checkArchitectureSync(docs) {
   return failures;
 }
 
+const SCRIPT_HOME_DIRS = ["sketches/core-loop/tools", "sketches/core-loop/tests"];
+const SCRIPT_HOME_EXTS = [".py", ".sh", ".gd"];
+
+async function checkScriptHomePaths(docs) {
+  let failures = 0;
+  for (const dir of SCRIPT_HOME_DIRS) {
+    const files = await walk(
+      docs.root,
+      dir,
+      (file) => SCRIPT_HOME_EXTS.some((ext) => file.endsWith(ext)),
+      shouldSkipDir,
+    );
+    for (const file of files.sort()) {
+      const content = await readFile(path.join(docs.root, file), "utf8");
+      for (const [index, line] of content.split("\n").entries()) {
+        if (line.includes("/home/andrew")) {
+          docs.fail(
+            "machine-paths",
+            file,
+            index + 1,
+            "hardcoded /home/andrew path; derive from HOME (os.path.expanduser, Path.home(), or $HOME)",
+          );
+          failures++;
+        }
+      }
+    }
+  }
+  return failures;
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const docs = new Documents(options.root);
@@ -416,6 +446,7 @@ async function main() {
   const ledgerFindings = await checkLedgerStage(docs);
   await checkRulingLetters(docs);
   const architectureFindings = await checkArchitectureSync(docs);
+  const machinePathFindings = await checkScriptHomePaths(docs);
   const manifest = {};
   for (const file of [...docs.cache.keys()].sort()) manifest[file] = docs.cache.get(file).sha256;
   const failures = docs.findings.filter((finding) => finding.level === "failure");
@@ -430,6 +461,7 @@ async function main() {
       waveFindings,
       ledgerFindings,
       architectureFindings,
+      machinePathFindings,
     },
     failures: failures.length,
     findings: docs.findings,
@@ -468,6 +500,8 @@ async function main() {
       " known-failing findings, " +
       architectureFindings +
       " architecture findings, " +
+      machinePathFindings +
+      " machine-path findings, " +
       failures.length +
       " failures. Report: " +
       options.report,
