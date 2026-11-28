@@ -89,6 +89,7 @@ var stage_index := 1
 var biome_id: StringName = &""
 var sim_time_s := 0.0
 var configured := false
+var audio_cooldowns: Dictionary = {}
 
 var env_tags: RefCounted = null
 var synergies: RefCounted = null
@@ -322,10 +323,10 @@ func trigger_audio_cue(event_id: String, force: bool = false) -> Dictionary:
 	var is_loop := bool(spec.get("loop", false))
 	if is_loop and bool(_active_loops.get(event_id, false)) and not force:
 		return {"triggered": false, "reason": "loop_already_active", "event_id": event_id}
-	if not force and not ExperimentalAudioBank.can_trigger(event_id, sim_time_s):
+	if not force and not ExperimentalAudioBank.can_trigger(event_id, sim_time_s, audio_cooldowns):
 		return {"triggered": false, "reason": "cooldown", "event_id": event_id}
 
-	ExperimentalAudioBank.mark_triggered(event_id, sim_time_s)
+	ExperimentalAudioBank.mark_triggered(event_id, sim_time_s, audio_cooldowns)
 	var player := _ensure_audio_player(event_id)
 	var player_ok := false
 	if player != null:
@@ -764,7 +765,7 @@ func _dispatch_live(trigger: StringName, origin: Vector3, dir: Vector3 = Vector3
 func teardown() -> void:
 	_disconnect_signals()
 	_free_live_actors()
-	ExperimentalAudioBank.reset_cooldowns()
+	audio_cooldowns.clear()
 	for event_id in _active_loops.keys():
 		if _audio_players.has(event_id):
 			var p := _audio_players[event_id] as AudioStreamPlayer

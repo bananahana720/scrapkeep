@@ -109,17 +109,11 @@ const PBR_MASK_SPECS := {
 
 static var _stream_cache: Dictionary = {}
 static var _texture_cache: Dictionary = {}
-static var _last_trigger_s: Dictionary = {}
 
 
 static func _reset() -> void:
 	_stream_cache.clear()
 	_texture_cache.clear()
-	_last_trigger_s.clear()
-
-
-static func reset_cooldowns() -> void:
-	_last_trigger_s.clear()
 
 
 static func event_ids() -> PackedStringArray:
@@ -161,18 +155,18 @@ static func ducking_for(event_id: String) -> Dictionary:
 	}
 
 
-static func can_trigger(event_id: String, sim_time_s: float) -> bool:
+static func can_trigger(event_id: String, sim_time_s: float, last_trigger_s: Dictionary) -> bool:
 	if not EVENT_SPECS.has(event_id):
 		return false
 	var cooldown: float = cooldown_for(event_id)
-	if cooldown <= 0.0 or not _last_trigger_s.has(event_id):
+	if cooldown <= 0.0 or not last_trigger_s.has(event_id):
 		return true
-	return (sim_time_s - float(_last_trigger_s[event_id])) >= cooldown
+	return (sim_time_s - float(last_trigger_s[event_id])) >= cooldown
 
 
-static func mark_triggered(event_id: String, sim_time_s: float) -> void:
+static func mark_triggered(event_id: String, sim_time_s: float, last_trigger_s: Dictionary) -> void:
 	if EVENT_SPECS.has(event_id):
-		_last_trigger_s[event_id] = sim_time_s
+		last_trigger_s[event_id] = sim_time_s
 
 
 static func stream_for(event_id: String) -> AudioStreamOggVorbis:

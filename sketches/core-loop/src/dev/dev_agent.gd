@@ -27,8 +27,8 @@ func setup(game_ref, console_ref) -> void:
 	name = "DevAgent"
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_parse_args(OS.get_cmdline_user_args())
-	if out_dir != "" and is_instance_valid(console) and "shot_dir" in console:
-		console.shot_dir = out_dir
+	if out_dir != "" and is_instance_valid(console) and "capture" in console:
+		console.capture.shot_dir = out_dir
 	if inbox_dir != "" or not _batch_steps.is_empty():
 		var insp := _inspect()
 		if insp != null:
@@ -38,8 +38,8 @@ func setup(game_ref, console_ref) -> void:
 	elif not _batch_steps.is_empty():
 		if out_dir == "":
 			out_dir = "user://dev_out"
-			if is_instance_valid(console) and "shot_dir" in console:
-				console.shot_dir = out_dir
+			if is_instance_valid(console) and "capture" in console:
+				console.capture.shot_dir = out_dir
 		_run_batch.call_deferred()
 
 
@@ -391,18 +391,19 @@ func _exec_until(step: String, words: Array[String]) -> Dictionary:
 func _exec_shot(step: String, shot_name: String, scripted: bool, shots: Array) -> Dictionary:
 	if not is_instance_valid(console):
 		return {"cmd": step, "ok": false, "text": "!no console", "tone": "warn", "data": null}
+	var capture = console.capture
 	var reply: Variant = "!console cannot capture shots"
-	if console.has_method("shot_detailed"):
-		reply = await console.shot_detailed(shot_name, scripted)
-	elif console.has_method("shot"):
-		reply = await console.shot(shot_name, scripted)
+	if capture.has_method("shot_detailed"):
+		reply = await capture.shot_detailed(shot_name, scripted)
+	elif capture.has_method("shot"):
+		reply = await capture.shot(shot_name, scripted)
 	return _normalize_capture(step, "shot", shot_name, reply, shots)
 
 
 func _exec_qa_pack(step: String, pack_name: String, scripted: bool, shots: Array) -> Dictionary:
-	if not is_instance_valid(console) or not console.has_method("qa_pack_detailed"):
+	if not is_instance_valid(console) or not console.capture.has_method("qa_pack_detailed"):
 		return {"cmd": step, "ok": false, "text": "!console cannot capture qa_pack", "tone": "warn", "data": null}
-	var reply: Dictionary = await console.qa_pack_detailed(pack_name, scripted)
+	var reply: Dictionary = await console.capture.qa_pack_detailed(pack_name, scripted)
 	return _normalize_capture(step, "qa_pack", pack_name, reply, shots)
 
 
@@ -431,19 +432,20 @@ func _exec_sheet(step: String, words: Array[String], scripted: bool, shots: Arra
 		sheet_name = DevCommands.word(words, 2, "")
 	else:
 		sheet_name = DevCommands.word(words, 1, "")
+	var capture = console.capture
 	var reply: Variant = "!console cannot capture contact sheets"
-	if console.has_method("sheet_detailed"):
-		reply = await console.sheet_detailed(mode, sheet_name, scripted)
-	elif console.has_method("contact_sheet_mode"):
-		reply = await console.contact_sheet_mode(mode, sheet_name, scripted)
-	elif console.has_method("contact_sheet"):
-		var argc := _method_argc(console, "contact_sheet")
+	if capture.has_method("sheet_detailed"):
+		reply = await capture.sheet_detailed(mode, sheet_name, scripted)
+	elif capture.has_method("contact_sheet_mode"):
+		reply = await capture.contact_sheet_mode(mode, sheet_name, scripted)
+	elif capture.has_method("contact_sheet"):
+		var argc := _method_argc(capture, "contact_sheet")
 		if argc >= 3:
-			reply = await console.contact_sheet(mode, sheet_name, scripted)
+			reply = await capture.contact_sheet(mode, sheet_name, scripted)
 		elif argc == 2:
-			reply = await console.contact_sheet(mode, scripted)
+			reply = await capture.contact_sheet(mode, scripted)
 		else:
-			reply = await console.contact_sheet(scripted)
+			reply = await capture.contact_sheet(scripted)
 	return _normalize_capture(step, "sheet:%s" % mode, sheet_name, reply, shots)
 
 
