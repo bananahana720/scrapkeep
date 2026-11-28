@@ -5,50 +5,7 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const Placement := preload("res://src/world/park/park_placement.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
-
-const ALLOWED_TERRAIN_REACH_INS: Array[String] = []
-const ALLOWED_EVENT_GROUND_REACH_INS: Array[String] = []
-const ALLOWED_PARK_MAP_REACH_INS: Array[String] = []
-const ALLOWED_PARK_SCHEMA_REACH_INS: Array[String] = []
-const ALLOWED_PARK_RECIPES_REACH_INS: Array[String] = []
-const ALLOWED_PLACEMENT_REACH_INS: Array[String] = []
-const ALLOWED_SCREENS_PRESS_REACH_INS: Array[String] = []
-const ALLOWED_POLYLINE_CHANNEL_REACH_INS: Array[String] = []
-const ALLOWED_DIRECTOR_FAMILIES_REACH_INS: Array[String] = []
-
-
-func _gd_files(root: String) -> Array[String]:
-	var out: Array[String] = []
-	var dir := DirAccess.open(root)
-	if dir == null:
-		return out
-	dir.list_dir_begin()
-	var name := dir.get_next()
-	while name != "":
-		if name.begins_with("."):
-			name = dir.get_next()
-			continue
-		var full := root.path_join(name)
-		if dir.current_is_dir():
-			out.append_array(_gd_files(full))
-		elif name.ends_with(".gd"):
-			out.append(full)
-		name = dir.get_next()
-	dir.list_dir_end()
-	out.sort()
-	return out
-
-
-func _offenders(root: String, pattern: String, owner: String, allowed: Array[String]) -> Array[String]:
-	var re := RegEx.new()
-	re.compile(pattern)
-	var out: Array[String] = []
-	for path in _gd_files(root):
-		if path == owner or allowed.has(path):
-			continue
-		if re.search(FileAccess.get_file_as_string(path)) != null:
-			out.append(path)
-	return out
+const SourceScan := preload("res://tests/support/source_scan.gd")
 
 
 func run(t) -> void:
@@ -72,24 +29,25 @@ func run(t) -> void:
 	t.check("Gorge.in_marble_chute is true on marble_path start", gorge.in_marble_chute(start.x, start.z))
 	t.check("Gorge.in_marble_chute is false far off marble_path", not gorge.in_marble_chute(190.0, 190.0))
 
-	t.eq("no terrain._ reach-ins outside terrain.gd",
-		_offenders("res://src", "terrain\\._[a-z]", "res://src/world/terrain.gd", ALLOWED_TERRAIN_REACH_INS), [])
-	t.eq("no EventGround._ reach-ins outside event_ground.gd",
-		_offenders("res://src", "EventGround\\._[a-z]", "res://src/world/events/event_ground.gd", ALLOWED_EVENT_GROUND_REACH_INS), [])
-	t.eq("no ParkMap._ reach-ins outside park_map.gd",
-		_offenders("res://src", "ParkMap\\._[a-z]", "res://src/world/park/park_map.gd", ALLOWED_PARK_MAP_REACH_INS), [])
-	t.eq("no ParkSchema._ reach-ins outside park_schema.gd",
-		_offenders("res://src", "(?:ParkSchema|park_schema\\.gd\"\\))\\._[a-z]", "res://src/world/park/park_schema.gd", ALLOWED_PARK_SCHEMA_REACH_INS), [])
-	t.eq("no ParkRecipes._ or Recipes._ reach-ins outside park_recipes.gd",
-		_offenders("res://src", "(?<![A-Za-z0-9_])(?:ParkRecipes|Recipes)\\._[a-z]", "res://src/world/park/park_recipes.gd", ALLOWED_PARK_RECIPES_REACH_INS), [])
-	t.eq("no Placement._ reach-ins outside park_placement.gd",
-		_offenders("res://src", "Placement\\._[a-z]", "res://src/world/park/park_placement.gd", ALLOWED_PLACEMENT_REACH_INS), [])
+	var src: Array[String] = ["res://src"]
+	t.eq("no terrain._ reach-ins in src/",
+		SourceScan.matching(t, src, "terrain\\._[a-z]"), [])
+	t.eq("no EventGround._ reach-ins in src/",
+		SourceScan.matching(t, src, "EventGround\\._[a-z]"), [])
+	t.eq("no ParkMap._ reach-ins in src/",
+		SourceScan.matching(t, src, "ParkMap\\._[a-z]"), [])
+	t.eq("no ParkSchema._ reach-ins in src/",
+		SourceScan.matching(t, src, "(?:ParkSchema|park_schema\\.gd\"\\))\\._[a-z]"), [])
+	t.eq("no ParkRecipes._ or Recipes._ reach-ins in src/",
+		SourceScan.matching(t, src, "(?<![A-Za-z0-9_])(?:ParkRecipes|Recipes)\\._[a-z]"), [])
+	t.eq("no Placement._ reach-ins in src/",
+		SourceScan.matching(t, src, "Placement\\._[a-z]"), [])
 	t.eq("no screens._press reach-ins in src/",
-		_offenders("res://src", "screens\\._press\\b", "", ALLOWED_SCREENS_PRESS_REACH_INS), [])
-	t.eq("no _polyline_channel outside map_gorge.gd",
-		_offenders("res://src", "_polyline_channel", "res://src/world/map_gorge.gd", ALLOWED_POLYLINE_CHANNEL_REACH_INS), [])
+		SourceScan.matching(t, src, "screens\\._press\\b"), [])
+	t.eq("only map_gorge.gd names _polyline_channel in src/",
+		SourceScan.matching(t, src, "_polyline_channel"), ["res://src/world/map_gorge.gd"])
 	t.eq("no director._park_families reach-ins in src/",
-		_offenders("res://src", "director\\._park_families", "", ALLOWED_DIRECTOR_FAMILIES_REACH_INS), [])
-	var bot_flag := "(?m)^\\s*(?:static\\s+)?var\\s+threaded_in_bot_runs\\b"
+		SourceScan.matching(t, src, "director\\._park_families"), [])
 	t.eq("only sim_clock.gd declares threaded_in_bot_runs",
-		_offenders("res://src", bot_flag, "res://src/core/sim_clock.gd", []) + _offenders("res://tools", bot_flag, "", []), [])
+		SourceScan.matching(t, ["res://src", "res://tools", "res://tests"], "(?m)^\\s*(?:static\\s+)?var\\s+threaded_in_bot_runs\\b"),
+		["res://src/core/sim_clock.gd"])
