@@ -14,11 +14,14 @@ import {
   BASELINE_RULES,
   FAULT_SWITCHES,
   L13_ALLOWED,
+  LAYERS,
   applyBaseline,
   baselineFrom,
   baselineGrowth,
+  baselineText,
   buildScriptGraph,
   formatFinding,
+  layerReport,
   lintL1,
   lintL2,
   lintL3,
@@ -39,15 +42,18 @@ import {
   lintL17,
   lintL18,
   lintL19,
+  lintL20,
   lintPreloadedTestSupport,
   lintSketch,
   lintTrackedUids,
   parseBatchDriverRefs,
   parseBatchDriverVars,
+  parseLayerOrder,
   parseLintArgs,
   parseTuning,
   preloadedTestSupportFiles,
   readBaselineAt,
+  renamesSince,
   stronglyConnectedComponents,
 } from "./sketch-lint.mjs";
 import {
@@ -731,6 +737,7 @@ test("the baseline silences listed offenders and shrinks only", () => {
     S8: {},
     L18: [],
     L19: [],
+    L20: [],
   });
 });
 
@@ -1506,6 +1513,198 @@ test("L16 reports one finding per file in a cycle with size and in-loop neighbou
   assert.match(after[1].message, /L16 no longer offends: remove from baseline/);
 });
 
+const layerTree = (texts) =>
+  Object.entries(texts).map(([rel, text]) => ({ path: `sketches/core-loop/src/${rel}`, text }));
+
+test("the layer report counts pairs between directories, the upward pairs of an order, the files that carry them and the fewest over every order", () => {
+  const files = layerTree({
+    "low/a.gd":
+      'const T := preload("res://src/top/t.gd")\nconst U := preload("res://src/top/u.gd")\n',
+    "low/b.gd":
+      'const T := preload("res://src/top/t.gd")\nconst A := preload("res://src/low/a.gd")\n',
+    "top/t.gd": "class_name TopThing\nextends RefCounted\n",
+    "top/u.gd": 'const B := preload("res://src/low/b.gd")\n',
+    "game.gd": "var t := TopThing.new()\n",
+  });
+  const report = layerReport(files, parseLayerOrder("low,top,game.gd"));
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.lines, [
+    "layer order, bottom first: low < top < game.gd",
+    "5 scripts, 6 dependencies; each cell counts the pairs of files where a file in the row's directory depends on a file in the column's",
+    "from \\ to low       top       game.gd",
+    "low                 3",
+    "top       1",
+    "game.gd             1",
+    "upward pairs: 3 in 2 files; the files with the most:",
+    "    2 src/low/a.gd",
+    "    1 src/low/b.gd",
+    "fewest upward pairs over every order of these 3 layers: 1, top < low < game.gd",
+  ]);
+  assert.match(
+    layerReport(files, parseLayerOrder("low+top,game.gd")).lines.at(-2),
+    /^upward pairs: 0 in 0 files/,
+  );
+  const ten = Array.from({ length: 10 }, (_, index) => `d${index}`);
+  assert.equal(
+    layerReport(
+      layerTree(Object.fromEntries(ten.map((dir) => [`${dir}/x.gd`, "extends RefCounted\n"]))),
+      ten.map((dir) => [dir]),
+    ).lines.at(-1),
+    "10 layers are too many to try every order; name 9 or fewer",
+  );
+});
+
+test("the layer report fails on an empty read, a directory the order leaves out and a name the tree lacks, and refuses a malformed order", () => {
+  assert.deepEqual(layerReport([], [["core"]]), {
+    ok: false,
+    lines: [
+      "read no scripts under src/, so there is nothing to measure",
+      "the order names core, which holds no script",
+    ],
+  });
+  const files = layerTree({
+    "low/a.gd": "extends RefCounted\n",
+    "top/t.gd": "extends RefCounted\n",
+  });
+  assert.deepEqual(layerReport(files, [["low"], ["gone"]]), {
+    ok: false,
+    lines: ["src/top is in no layer of the order", "the order names gone, which holds no script"],
+  });
+  assert.throws(() => parseLayerOrder("low,,top"), /name each layer's directories/);
+  assert.throws(() => parseLayerOrder("low,top+"), /name each layer's directories/);
+  assert.throws(() => parseLayerOrder("low,top,low"), /low is named twice/);
+  assert.equal(parseLintArgs(["--layers"]).layers, LAYERS);
+  assert.deepEqual(parseLintArgs(["--layers", "--sketch", "core-loop"]), {
+    sketch: "core-loop",
+    writeBaseline: false,
+    base: null,
+    layers: LAYERS,
+  });
+  assert.deepEqual(parseLintArgs(["--layers", "a,b+c"]).layers, [["a"], ["b", "c"]]);
+});
+
+const l20Src = "sketches/core-loop/src";
+const l20Up = `${l20Src}/core/low.gd -> ${l20Src}/ui/high.gd`;
+
+test("L20 fails an upward load that is not listed, naming both files, both layers, the record and the ways out", () => {
+  const files = layerTree({
+    "core/low.gd": 'const HIGH := preload("res://src/ui/high.gd")\n',
+    "ui/high.gd": "extends RefCounted\n",
+  });
+  const findings = lintL20(files);
+  assert.deepEqual(
+    findings.map((item) => `${item.rule} ${item.path} ${item.key}`),
+    [`L20 ${l20Src}/core/low.gd ${l20Up}`],
+  );
+  assert.equal(
+    formatFinding(applyBaseline(findings, { L20: [] }, () => true)[0]),
+    `L20 ${l20Src}/core/low.gd:1 loads src/ui/high.gd, a script in a higher layer: core is layer 1 and ui is layer 8 (adr/TADR-014-source-layer-order.md).\n    Hand the value or a callable in from the script above, move a pure data file down to core, or move the fact to its owner in core; never list the pair`,
+  );
+  assert.deepEqual(
+    applyBaseline(findings, { L20: [l20Up] }, () => true),
+    [],
+  );
+  assert.deepEqual(baselineFrom(findings).L20, [l20Up]);
+});
+
+test("L20 fails a listed pair that no longer points up and asks for its entry to be removed", () => {
+  const files = layerTree({
+    "core/low.gd": "extends RefCounted\n",
+    "ui/high.gd": 'const LOW := preload("res://src/core/low.gd")\n',
+  });
+  assert.deepEqual(lintL20(files), []);
+  assert.deepEqual(
+    applyBaseline(lintL20(files), { L20: [l20Up] }, () => true).map((item) => formatFinding(item)),
+    [`BASELINE ${l20Src}/core/low.gd:1 L20 (${l20Up}) no longer offends: remove from baseline`],
+  );
+});
+
+test("L20 fails a script in a directory with no layer, and the list cannot excuse it", () => {
+  const files = layerTree({
+    "camp/hub.gd": 'const LOW := preload("res://src/core/low.gd")\n',
+    "core/low.gd": "extends RefCounted\n",
+  });
+  const findings = lintL20(files);
+  assert.deepEqual(
+    findings.map((item) => formatFinding(item)),
+    [
+      `L20 ${l20Src}/camp/hub.gd:1 src/camp is in no layer; place it in LAYERS in scripts/sketch-lint.mjs and in adr/TADR-014-source-layer-order.md before it can land`,
+    ],
+  );
+  assert.deepEqual(baselineFrom(findings).L20, []);
+  assert.equal(
+    applyBaseline(findings, { L20: [`${l20Src}/camp/hub.gd`] }, () => true).filter(
+      (item) => item.rule === "L20",
+    ).length,
+    1,
+  );
+  assert.equal(
+    lintL20(layerTree({ "loose.gd": "extends Node\n" }))[0].message.split(";")[0],
+    "src/loose.gd is in no layer",
+  );
+});
+
+test("L20 passes loads inside one layer, between the peers of a shared layer, and downward", () => {
+  const files = layerTree({
+    "combat/a.gd":
+      'const B := preload("res://src/combat/b.gd")\nconst LOW := preload("res://src/core/low.gd")\n',
+    "combat/b.gd": 'const A := preload("res://src/combat/a.gd")\n',
+    "core/low.gd": "class_name LowThing\nextends RefCounted\n",
+    "ui/high.gd": "var low := LowThing.new()\n",
+    "game.gd": 'const DEV := preload("res://src/dev/console.gd")\n',
+    "dev/console.gd":
+      'const GAME := preload("res://src/game.gd")\nconst UI := preload("res://src/ui/high.gd")\n',
+    "boot/boot.gd": 'const DEV := preload("res://src/dev/console.gd")\n',
+  });
+  assert.equal(buildScriptGraph(files).get(`${l20Src}/dev/console.gd`).length, 2);
+  assert.deepEqual(lintL20(files), []);
+});
+
+test("L20 fails when it reads no scripts", () => {
+  assert.deepEqual(
+    lintL20([]).map((item) => formatFinding(item)),
+    [
+      "L20 sketches/core-loop/src:1 read no scripts under src/, so L20 checked nothing; run the lint from a full checkout",
+    ],
+  );
+});
+
+test("L20 passes the checked-out tree against its list, which the write command writes in a stable order, and fails when one entry is removed", () => {
+  const baselineFile = new URL("./sketch-lint.baseline.json", import.meta.url);
+  const committed = readFileSync(baselineFile, "utf8");
+  const baseline = JSON.parse(committed);
+  assert.equal(baselineText(baseline), committed);
+  assert.deepEqual(LAYERS.flat().sort(), [
+    "boot",
+    "boss",
+    "build",
+    "combat",
+    "core",
+    "dev",
+    "experimental",
+    "game.gd",
+    "movement",
+    "presentation",
+    "ui",
+    "world",
+  ]);
+  const raw = lintSketch("core-loop").filter((item) => item.rule === "L20");
+  assert.ok(raw.length > 0);
+  assert.deepEqual(baselineFrom(raw).L20, baseline.L20);
+  assert.deepEqual(
+    applyBaseline(raw, { L20: baseline.L20 }, () => true),
+    [],
+  );
+  const dropped = baseline.L20.find((key) => key.startsWith(`${l20Src}/core/run_state.gd -> `));
+  assert.ok(dropped);
+  assert.deepEqual(
+    applyBaseline(raw, { L20: baseline.L20.filter((key) => key !== dropped) }, () => true).map(
+      (item) => `${item.rule} ${item.key}`,
+    ),
+    [`L20 ${dropped}`],
+  );
+});
+
 test("L17 flags hardcoded /home/andrew paths in scripts and passes HOME-based paths", () => {
   const clean = [
     "from pathlib import Path",
@@ -1535,6 +1734,9 @@ test("L17 flags hardcoded /home/andrew paths in scripts and passes HOME-based pa
   assert.deepEqual(realL17, []);
 });
 
+const splitLine =
+  "\n    An offence that moved with a split file passes only when it stays inside one directory";
+
 test("baselineGrowth fails a rule whose list gained an entry and names the rule, both counts, the new entry and the fix", () => {
   const base = { L1: ["a.gd", "b.gd"], L14: ["s.gd:_x"], L15: { "c.gd": 2 } };
   const [grew, ...rest] = baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "d.gd"] });
@@ -1543,7 +1745,7 @@ test("baselineGrowth fails a rule whose list gained an entry and names the rule,
   assert.equal(grew.path, "scripts/sketch-lint.baseline.json");
   assert.equal(
     grew.message,
-    "L1 list grew from 2 to 3 entries (new: d.gd): fix the offence instead of listing it",
+    `L1 list grew from 2 to 3 entries (new: d.gd): fix the offence instead of listing it${splitLine}`,
   );
   assert.match(
     formatFinding(baselineGrowth(base, { ...base, L14: ["s.gd:_x", "t.gd:_y"] })[0]),
@@ -1551,7 +1753,7 @@ test("baselineGrowth fails a rule whose list gained an entry and names the rule,
   );
   assert.equal(
     baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "b.gd"] })[0].message,
-    "L1 list grew from 2 to 3 entries (new: b.gd): fix the offence instead of listing it",
+    `L1 list grew from 2 to 3 entries (new: b.gd): fix the offence instead of listing it${splitLine}`,
   );
   assert.equal(
     baselineGrowth(base, { ...base, L15: { "c.gd": 3 } })[0].message,
@@ -1561,17 +1763,163 @@ test("baselineGrowth fails a rule whose list gained an entry and names the rule,
 
 test("baselineGrowth passes a moved or removed entry, fails a rule with an empty list that gains one, and allows a new rule's first list", () => {
   const base = { L1: ["a.gd", "b.gd"], L2: [], L15: { "c.gd": 2 }, W1: {} };
-  assert.deepEqual(baselineGrowth(base, { ...base, L1: ["a.gd", "moved/b.gd"] }), []);
+  assert.deepEqual(
+    baselineGrowth(
+      base,
+      { ...base, L1: ["a.gd", "moved/b.gd"] },
+      new Map([["moved/b.gd", "b.gd"]]),
+    ),
+    [],
+  );
+  assert.equal(
+    baselineGrowth(base, { ...base, L1: ["a.gd", "moved/b.gd"] })[0].message,
+    `L1 list has 1 entry the base list lacks, and no file it names was renamed (new: moved/b.gd): fix the offence instead of listing it${splitLine}`,
+  );
   assert.deepEqual(baselineGrowth(base, { ...base, L15: { "moved/c.gd": 2 } }), []);
   assert.deepEqual(baselineGrowth(base, { ...base, L1: ["a.gd"], L15: {} }), []);
   assert.deepEqual(baselineGrowth(base, { ...base, L99: ["new.gd"] }), []);
   assert.deepEqual(
     baselineGrowth(base, { ...base, L2: ["x.gd"], W1: { "y.gd": 1 } }).map((item) => item.message),
     [
-      "L2 list grew from 0 to 1 entries (new: x.gd): fix the offence instead of listing it",
+      `L2 list grew from 0 to 1 entries (new: x.gd): fix the offence instead of listing it${splitLine}`,
       "W1 list grew from 0 to 1 entries (new: y.gd (0 to 1)): fix the offence instead of listing it",
     ],
   );
+});
+
+test("baselineGrowth fails a keyed list that swaps one entry for another, and passes the swap when git renamed a file the entry names", () => {
+  const up = (from, to) => `src/${from}.gd -> src/${to}.gd`;
+  const base = {
+    L16: ["src/a.gd", "src/b.gd"],
+    L19: ["tests/a_test.gd"],
+    L20: [up("core/a", "ui/x"), up("core/b", "ui/y")],
+    L14: ["src/s.gd:_x"],
+  };
+  const swapped = {
+    L16: ["src/a.gd", "src/other/c.gd"],
+    L19: ["tests/unit/b_case.gd"],
+    L20: [up("core/a", "ui/x"), up("world/c", "ui/y")],
+    L14: ["src/s.gd:_renamed"],
+  };
+  assert.deepEqual(
+    baselineGrowth(base, swapped).map((item) => item.message),
+    [
+      `L16 list has 1 entry the base list lacks, and no file it names was renamed (new: src/other/c.gd): fix the offence instead of listing it${splitLine}`,
+      `L19 list has 1 entry the base list lacks, and no file it names was renamed (new: tests/unit/b_case.gd): fix the offence instead of listing it${splitLine}`,
+      `L20 list has 1 entry the base list lacks, and no file it names was renamed (new: ${up("world/c", "ui/y")}): fix the offence instead of listing it${splitLine}`,
+    ],
+  );
+  const renamed = new Map([
+    ["src/other/c.gd", "src/b.gd"],
+    ["tests/unit/b_case.gd", "tests/a_test.gd"],
+    ["src/world/c.gd", "src/core/b.gd"],
+  ]);
+  assert.deepEqual(baselineGrowth(base, swapped, renamed), []);
+  const highMoved = { ...base, L20: [up("core/a", "ui/x"), up("core/b", "presentation/z")] };
+  assert.equal(baselineGrowth(base, highMoved).length, 1);
+  assert.deepEqual(
+    baselineGrowth(base, highMoved, new Map([["src/presentation/z.gd", "src/ui/y.gd"]])),
+    [],
+  );
+  assert.equal(
+    baselineGrowth(base, { ...base, L20: [...base.L20, up("core/c", "ui/y")] }, renamed).length,
+    1,
+  );
+  assert.deepEqual(baselineGrowth(base, { ...base, L20: [up("core/a", "ui/x")] }), []);
+});
+
+test("baselineGrowth lets an offence move with a file split inside one directory, one for one, and fails every other new entry", () => {
+  const up = (from, to) => `src/${from}.gd -> src/${to}.gd`;
+  const base = { L20: [up("combat/combat", "presentation/x"), up("core/a", "ui/y")] };
+  const grow = (L20, renamed) =>
+    baselineGrowth(base, { L20 }, renamed).map((item) => item.message.split(" (new: ")[1]);
+  assert.deepEqual(grow([up("combat/grapple", "presentation/x"), up("core/a", "ui/y")]), []);
+  assert.deepEqual(grow([up("combat/combat", "presentation/x"), up("core/a", "ui/y_part")]), []);
+  assert.deepEqual(grow([up("combat/grapple", "presentation/x_part"), up("core/a", "ui/y")]), [
+    `${up("combat/grapple", "presentation/x_part")}): fix the offence instead of listing it${splitLine}`,
+  ]);
+  assert.deepEqual(grow([up("world/grapple", "presentation/x"), up("core/a", "ui/y")]), [
+    `${up("world/grapple", "presentation/x")}): fix the offence instead of listing it${splitLine}`,
+  ]);
+  assert.deepEqual(
+    grow(
+      [up("world/grapple", "presentation/x"), up("core/a", "ui/y")],
+      new Map([["src/world/grapple.gd", "src/combat/combat.gd"]]),
+    ),
+    [],
+  );
+  assert.deepEqual(
+    grow([
+      up("combat/grapple", "presentation/x"),
+      up("combat/hooks", "presentation/x"),
+      up("core/a", "ui/y"),
+    ]),
+    [`${up("combat/hooks", "presentation/x")}): fix the offence instead of listing it${splitLine}`],
+  );
+
+  const paths = { L19: ["tests/a_test.gd", "tests/b_test.gd"] };
+  assert.deepEqual(baselineGrowth(paths, { L19: ["tests/a_test.gd", "tests/b_part_test.gd"] }), []);
+  assert.equal(
+    baselineGrowth(paths, { L19: ["tests/a_test.gd", "tests/unit/b_case.gd"] }).length,
+    1,
+  );
+  assert.deepEqual(baselineGrowth({ L16: ["src/a.gd"] }, { L16: ["src/b.gd"] }), []);
+  assert.equal(baselineGrowth({ L16: ["src/a.gd"] }, { L16: ["src/b.gd", "src/c.gd"] }).length, 1);
+});
+
+test("baselineGrowth matches split entries one for one in an order that does not change the answer", () => {
+  const either = "src/c/a.gd -> src/p/z.gd";
+  const only = "src/c/b.gd -> src/p/x.gd";
+  const base = { L20: ["src/c/a.gd -> src/p/x.gd", "src/c/a.gd -> src/p/y.gd"] };
+  assert.deepEqual(baselineGrowth(base, { L20: [either, only] }), []);
+  assert.deepEqual(baselineGrowth(base, { L20: [only, either] }), []);
+  assert.deepEqual(baselineGrowth({ L20: [...base.L20].reverse() }, { L20: [only, either] }), []);
+});
+
+test("renamesSince maps each renamed file to its old name between two commits and in the working tree, and fails on a ref git cannot read", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-renames-"));
+  try {
+    const run = (...args) => {
+      const ran = spawnSync("git", args, {
+        cwd: tmp,
+        encoding: "utf8",
+        env: cwdDecidesRepository(),
+      });
+      assert.equal(ran.status, 0, ran.stderr);
+      return ran.stdout.trim();
+    };
+    const commit = (message) => {
+      run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", message);
+      return run("rev-parse", "HEAD");
+    };
+    run("init", "-q");
+    mkdirSync(path.join(tmp, "src"));
+    const body = Array.from({ length: 20 }, (_, index) => `var line_${index} := ${index}`).join(
+      "\n",
+    );
+    writeFileSync(path.join(tmp, "src", "old.gd"), `${body}\n`);
+    writeFileSync(path.join(tmp, "src", "kept.gd"), `${body}\nvar kept := true\n`);
+    run("add", "src");
+    const base = commit("base");
+    run("mv", "src/old.gd", "src/new.gd");
+    const head = commit("rename");
+    assert.deepEqual(
+      renamesSince(base, head, { cwd: tmp }),
+      new Map([["src/new.gd", "src/old.gd"]]),
+    );
+    assert.deepEqual(renamesSince(head, head, { cwd: tmp }), new Map());
+    run("mv", "src/kept.gd", "src/moved.gd");
+    assert.deepEqual(
+      renamesSince(base, null, { cwd: tmp }),
+      new Map([
+        ["src/moved.gd", "src/kept.gd"],
+        ["src/new.gd", "src/old.gd"],
+      ]),
+    );
+    assert.throws(() => renamesSince("no-such-ref-q2", null, { cwd: tmp }), /git diff .* failed/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });
 
 test("readBaselineAt reads the committed baseline at a commit and refuses a ref that is not one", () => {
@@ -1691,6 +2039,7 @@ test("parseLintArgs refuses a --base with no ref and a flag it does not know", (
     sketch: "core-loop",
     writeBaseline: false,
     base: "origin/main",
+    layers: null,
   });
   assert.throws(() => parseLintArgs(["--sketch", "core-loop", "--base"]), /--base requires a ref/);
   assert.throws(() => parseLintArgs(["--base", ""]), /--base requires a ref/);
@@ -1699,6 +2048,31 @@ test("parseLintArgs refuses a --base with no ref and a flag it does not know", (
     () => parseLintArgs(["--base=origin/main"]),
     /unknown argument --base=origin\/main/,
   );
+});
+
+test("parseLintArgs refuses a bare argument and a --sketch with no name, and the command exits 2 on each", () => {
+  assert.throws(
+    () => parseLintArgs(["core-loop"]),
+    /^Error: unknown argument core-loop; use --sketch NAME/,
+  );
+  assert.throws(() => parseLintArgs(["--sketch", "core-loop", "extra"]), /unknown argument extra/);
+  assert.throws(() => parseLintArgs(["--sketch"]), /^Error: --sketch requires a name/);
+  assert.throws(
+    () => parseLintArgs(["--sketch", "--write-baseline"]),
+    /--sketch requires a name, as in --sketch core-loop/,
+  );
+  const lint = fileURLToPath(new URL("./sketch-lint.mjs", import.meta.url));
+  for (const [args, said] of [
+    [["core-loop"], "sketch-lint: unknown argument core-loop;"],
+    [["--sketch"], "sketch-lint: --sketch requires a name, as in --sketch core-loop"],
+    [["--sketch", "--base", "HEAD"], "sketch-lint: --sketch requires a name"],
+    [["--sketch", "core-loop", "--base"], "sketch-lint: --base requires a ref"],
+  ]) {
+    const ran = spawnSync(process.execPath, [lint, ...args], { encoding: "utf8" });
+    assert.equal(ran.status, 2, `${args.join(" ")}: ${ran.stderr}`);
+    assert.ok(ran.stderr.startsWith(said), `${args.join(" ")}: ${ran.stderr}`);
+    assert.equal(ran.stdout, "");
+  }
 });
 
 const l19Root = "sketches/core-loop";
@@ -1864,7 +2238,7 @@ test("L19 passes the checked-out core-loop tests against its list, and its list 
       (item) => item.message,
     ),
     [
-      `L19 list grew from ${baseline.L19.length} to ${baseline.L19.length + 1} entries (new: ${planted.path}): fix the offence instead of listing it`,
+      `L19 list grew from ${baseline.L19.length} to ${baseline.L19.length + 1} entries (new: ${planted.path}): fix the offence instead of listing it${splitLine}`,
     ],
   );
   const [fixed, ...kept] = baseline.L19;

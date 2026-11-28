@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ALPHA_MAPS, PARK_MAPS, PILOT_IDS } from "./lib/game-defs.mjs";
-import { REPO_ROOT, git } from "./lib/git.mjs";
+import { REPO_ROOT, git, nulSeparated } from "./lib/git.mjs";
 import { isMain } from "./lib/cli.mjs";
 import { walkSync } from "./lib/walk.mjs";
 import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
@@ -17,6 +17,7 @@ export const BASELINE_RULES = {
   L11: { shape: "count" },
   L14: {
     shape: "keys",
+    growth: "count",
     keyOf: (item) => item.key ?? item.path,
     fileOf: (key) => key.split(":")[0],
   },
@@ -25,6 +26,11 @@ export const BASELINE_RULES = {
   ...Object.fromEntries(WORD_RULES.map((rule) => [rule, { shape: "count" }])),
   L18: { shape: "keys" },
   L19: { shape: "keys" },
+  L20: {
+    shape: "keys",
+    keyOf: (item) => item.key,
+    fileOf: (key) => key.split(" -> ")[0],
+  },
 };
 const UID_FOLDERS = ["addons", "src", "tests", "tools"];
 const MAX_QUARANTINE = 0;
@@ -624,35 +630,100 @@ export function readBaselineAt(ref, { cwd = root } = {}) {
   }
 }
 
-export function baselineGrowth(before, after) {
+export function renamesSince(base, head = null, { cwd = root } = {}) {
+  const fields = nulSeparated(
+    git(
+      [
+        "diff",
+        "--find-renames",
+        "--name-status",
+        "-z",
+        "--diff-filter=R",
+        base,
+        ...(head ? [head] : []),
+      ],
+      { cwd, trim: false },
+    ),
+  );
+  const renamed = new Map();
+  for (let at = 0; at < fields.length; at += 3) renamed.set(fields[at + 2], fields[at + 1]);
+  return renamed;
+}
+
+function movedBySplit(fresh, gone) {
+  const now = fresh.split(" -> ");
+  const was = gone.split(" -> ");
+  const at = now.findIndex((file, index) => file !== was[index]);
+  return (
+    at !== -1 &&
+    now.length === was.length &&
+    now.every((file, index) => index === at || file === was[index]) &&
+    path.posix.dirname(now[at]) === path.posix.dirname(was[at])
+  );
+}
+
+function splitExcused(fresh, gone) {
+  const owner = new Map();
+  const fit = (one, seen) => {
+    for (const [at, entry] of gone.entries()) {
+      if (seen.has(at) || !movedBySplit(fresh[one], entry)) continue;
+      seen.add(at);
+      if (!owner.has(at) || fit(owner.get(at), seen)) {
+        owner.set(at, one);
+        return true;
+      }
+    }
+    return false;
+  };
+  for (const one of fresh.keys()) fit(one, new Set());
+  return new Set([...owner.values()].map((one) => fresh[one]));
+}
+
+export function baselineGrowth(before, after, renamed = new Map()) {
   const size = (list) =>
     Array.isArray(list) ? list.length : Object.values(list ?? {}).reduce((a, b) => a + b, 0);
   const grew = [];
   for (const [rule, now] of Object.entries(after)) {
     if (!Object.hasOwn(before, rule)) continue;
     const was = before[rule];
-    if (size(now) <= size(was)) continue;
+    const exact = Array.isArray(now) && BASELINE_RULES[rule]?.growth !== "count";
+    if (!exact && size(now) <= size(was)) continue;
     const unmatched = [...(Array.isArray(was) ? was : [])];
-    const added = Array.isArray(now)
-      ? now.filter((key) => {
-          const at = unmatched.indexOf(key);
-          if (at === -1) return true;
-          unmatched.splice(at, 1);
-          return false;
-        })
+    const take = (key) => {
+      const at = unmatched.indexOf(key);
+      if (at !== -1) unmatched.splice(at, 1);
+      return at !== -1;
+    };
+    const named = (key) =>
+      key
+        .split(" -> ")
+        .map((file) => renamed.get(file) ?? file)
+        .join(" -> ");
+    let added = Array.isArray(now)
+      ? now.filter((key) => !(exact && take(named(key))) && !take(key))
       : Object.entries(now)
           .filter(([file, count]) => count > (was?.[file] ?? 0))
           .map(([file, count]) => `${file} (${was?.[file] ?? 0} to ${count})`);
+    if (exact) {
+      const fresh = [...new Set(added.map(named))].sort();
+      const excused = splitExcused(fresh, [...unmatched].sort());
+      added = added.filter((key) => !excused.has(named(key)));
+    }
+    if (added.length === 0) continue;
     const fix =
       rule === "L14"
         ? "register a reset in sketches/core-loop/tools/test_batch_driver.gd"
         : "fix the offence";
+    const change =
+      size(now) > size(was)
+        ? `grew from ${size(was)} to ${size(now)} entries`
+        : `has ${added.length} ${added.length === 1 ? "entry" : "entries"} the base list lacks, and no file it names was renamed`;
     grew.push(
       finding(
         "BASELINE",
         BASELINE_PATH,
         1,
-        `${rule} list grew from ${size(was)} to ${size(now)} entries (new: ${added.join(", ")}): ${fix} instead of listing it`,
+        `${rule} list ${change} (new: ${added.join(", ")}): ${fix} instead of listing it${exact ? "\n    An offence that moved with a split file passes only when it stays inside one directory" : ""}`,
       ),
     );
   }
@@ -665,7 +736,7 @@ export function baselineFrom(findings) {
     const mine = findings.filter((item) => item.rule === rule);
     if (spec.shape === "keys") {
       const keyOf = spec.keyOf ?? ((item) => item.path);
-      baseline[rule] = [...new Set(mine.map(keyOf))].sort();
+      baseline[rule] = [...new Set(mine.map(keyOf))].filter((key) => key !== undefined).sort();
     } else {
       const counts = {};
       for (const item of mine) counts[item.path] = (counts[item.path] ?? 0) + 1;
@@ -677,19 +748,40 @@ export function baselineFrom(findings) {
   return baseline;
 }
 
+export function baselineText(baseline) {
+  const rules = Object.entries(baseline);
+  const lines = rules.map(([rule, list], index) => {
+    const end = index === rules.length - 1 ? "" : ",";
+    const head = `  ${JSON.stringify(rule)}: `;
+    if (!Array.isArray(list)) {
+      const rows = Object.entries(list).map(
+        ([file, count]) => `    ${JSON.stringify(file)}: ${count}`,
+      );
+      return rows.length === 0 ? `${head}{}${end}` : `${head}{\n${rows.join(",\n")}\n  }${end}`;
+    }
+    const inline = `${head}[${list.map((key) => JSON.stringify(key)).join(", ")}]${end}`;
+    if (inline.length <= 100) return inline;
+    return `${head}[\n${list.map((key) => `    ${JSON.stringify(key)}`).join(",\n")}\n  ]${end}`;
+  });
+  return `{\n${lines.join("\n")}\n}\n`;
+}
+
 export function parseLintArgs(argv) {
-  const options = { sketch: null, writeBaseline: false, base: null };
+  const options = { sketch: null, writeBaseline: false, base: null, layers: null };
+  const value = (at, needs) => {
+    if (!argv[at] || argv[at].startsWith("-")) throw new Error(`${argv[at - 1]} requires ${needs}`);
+    return argv[at];
+  };
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--sketch" && argv[i + 1]) options.sketch = argv[++i];
-    else if (argv[i] === "--base") {
-      const ref = argv[++i];
-      if (!ref || ref.startsWith("-"))
-        throw new Error("--base requires a ref, as in --base origin/main");
-      options.base = ref;
-    } else if (argv[i] === "--write-baseline") options.writeBaseline = true;
-    else if (argv[i].startsWith("-"))
+    if (argv[i] === "--sketch") options.sketch = value(++i, "a name, as in --sketch core-loop");
+    else if (argv[i] === "--layers") {
+      const order = argv[i + 1];
+      options.layers = order && !order.startsWith("-") ? parseLayerOrder(argv[++i]) : LAYERS;
+    } else if (argv[i] === "--base") options.base = value(++i, "a ref, as in --base origin/main");
+    else if (argv[i] === "--write-baseline") options.writeBaseline = true;
+    else
       throw new Error(
-        `unknown argument ${argv[i]}; use --sketch NAME, --base REF or --write-baseline`,
+        `unknown argument ${argv[i]}; use --sketch NAME, --base REF, --layers [ORDER] or --write-baseline`,
       );
   }
   return options;
@@ -1163,8 +1255,7 @@ export function stronglyConnectedComponents(graph) {
   return components;
 }
 
-export function lintL16(files) {
-  const graph = buildScriptGraph(files);
+export function lintL16(files, graph = buildScriptGraph(files)) {
   const components = stronglyConnectedComponents(graph).filter(
     (component) => component.length >= 2,
   );
@@ -1186,6 +1277,176 @@ export function lintL16(files) {
     }
   }
   return findings.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function srcDir(filePath) {
+  const rel = scriptRel(filePath).slice("src/".length);
+  const slash = rel.indexOf("/");
+  return slash === -1 ? rel : rel.slice(0, slash);
+}
+
+export function parseLayerOrder(text) {
+  const layers = text.split(",").map((layer) => layer.split("+"));
+  const named = layers.flat();
+  if (named.some((dir) => dir === ""))
+    throw new Error(
+      `--layers ${text}: name each layer's directories, bottom first, as in core,movement,boot+dev`,
+    );
+  const twice = named.filter((dir, index) => named.indexOf(dir) !== index);
+  if (twice.length > 0) throw new Error(`--layers ${text}: ${twice[0]} is named twice`);
+  return layers;
+}
+
+function layerIndex(layers) {
+  return new Map(layers.flatMap((layer, index) => layer.map((dir) => [dir, index])));
+}
+
+function upwardPairs(graph, layerOf) {
+  const pairs = [];
+  for (const [from, deps] of graph) {
+    const low = layerOf.get(srcDir(from));
+    if (low === undefined) continue;
+    for (const to of deps) if (layerOf.get(srcDir(to)) > low) pairs.push({ from, to });
+  }
+  return pairs;
+}
+
+function fewestUpward(matrix) {
+  const order = matrix.map((_, index) => index);
+  const cost = () => {
+    let sum = 0;
+    for (let low = 0; low < order.length; low++)
+      for (let high = low + 1; high < order.length; high++) sum += matrix[order[low]][order[high]];
+    return sum;
+  };
+  let best = { cost: cost(), order: [...order] };
+  const swaps = order.map(() => 0);
+  for (let at = 1; at < order.length;) {
+    if (swaps[at] < at) {
+      const other = at % 2 === 0 ? 0 : swaps[at];
+      [order[other], order[at]] = [order[at], order[other]];
+      const now = cost();
+      if (now < best.cost) best = { cost: now, order: [...order] };
+      swaps[at]++;
+      at = 1;
+    } else {
+      swaps[at] = 0;
+      at++;
+    }
+  }
+  return best;
+}
+
+export function layerReport(files, layers) {
+  const graph = buildScriptGraph(files);
+  const dirs = [...new Set([...graph.keys()].map(srcDir))].sort();
+  const named = layers.flat();
+  const problems = [];
+  if (graph.size === 0) problems.push("read no scripts under src/, so there is nothing to measure");
+  for (const dir of dirs)
+    if (!named.includes(dir)) problems.push(`src/${dir} is in no layer of the order`);
+  for (const dir of named)
+    if (!dirs.includes(dir)) problems.push(`the order names ${dir}, which holds no script`);
+  if (problems.length > 0) return { ok: false, lines: problems };
+  const layerOf = layerIndex(layers);
+  const cell = new Map();
+  let dependencies = 0;
+  for (const [from, deps] of graph)
+    for (const to of deps) {
+      dependencies++;
+      const key = `${srcDir(from)}\0${srcDir(to)}`;
+      if (srcDir(from) !== srcDir(to)) cell.set(key, (cell.get(key) ?? 0) + 1);
+    }
+  const width = Math.max("from \\ to".length, ...named.map((dir) => dir.length)) + 1;
+  const row = (head, cells) =>
+    [head, ...cells]
+      .map((text) => String(text).padEnd(width))
+      .join("")
+      .trimEnd();
+  const name = (layer) => layer.join("+");
+  const lines = [
+    `layer order, bottom first: ${layers.map(name).join(" < ")}`,
+    `${graph.size} scripts, ${dependencies} dependencies; each cell counts the pairs of files where a file in the row's directory depends on a file in the column's`,
+    row("from \\ to", named),
+    ...named.map((from) =>
+      row(
+        from,
+        named.map((to) => cell.get(`${from}\0${to}`) ?? ""),
+      ),
+    ),
+  ];
+  const upward = upwardPairs(graph, layerOf);
+  const byFile = new Map();
+  for (const pair of upward) byFile.set(pair.from, (byFile.get(pair.from) ?? 0) + 1);
+  lines.push(`upward pairs: ${upward.length} in ${byFile.size} files; the files with the most:`);
+  for (const [file, count] of [...byFile]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 10))
+    lines.push(`${String(count).padStart(5)} ${scriptRel(file)}`);
+  if (layers.length > 9) {
+    lines.push(`${layers.length} layers are too many to try every order; name 9 or fewer`);
+  } else {
+    const matrix = layers.map((low) =>
+      layers.map((high) =>
+        low === high
+          ? 0
+          : low.reduce(
+              (sum, a) => sum + high.reduce((inner, b) => inner + (cell.get(`${a}\0${b}`) ?? 0), 0),
+              0,
+            ),
+      ),
+    );
+    const best = fewestUpward(matrix);
+    lines.push(
+      `fewest upward pairs over every order of these ${layers.length} layers: ${best.cost}, ${best.order.map((index) => name(layers[index])).join(" < ")}`,
+    );
+  }
+  return { ok: true, lines };
+}
+
+export const LAYERS = parseLayerOrder(
+  "core,movement,build,combat,boss,world,presentation,ui,boot+dev+experimental+game.gd",
+);
+const LAYER_RECORD = "adr/TADR-014-source-layer-order.md";
+
+export function lintL20(files, graph = buildScriptGraph(files), layers = LAYERS) {
+  if (files.length === 0)
+    return [
+      finding(
+        "L20",
+        "sketches/core-loop/src",
+        1,
+        "read no scripts under src/, so L20 checked nothing; run the lint from a full checkout",
+      ),
+    ];
+  const layerOf = layerIndex(layers);
+  const findings = [];
+  for (const file of graph.keys()) {
+    const dir = srcDir(file);
+    if (!layerOf.has(dir))
+      findings.push(
+        finding(
+          "L20",
+          file,
+          1,
+          `src/${dir} is in no layer; place it in LAYERS in scripts/sketch-lint.mjs and in ${LAYER_RECORD} before it can land`,
+        ),
+      );
+  }
+  const place = (dir) => `${dir} is layer ${layerOf.get(dir) + 1}`;
+  for (const { from, to } of upwardPairs(graph, layerOf)) {
+    const low = srcDir(from);
+    findings.push({
+      ...finding(
+        "L20",
+        from,
+        1,
+        `loads ${scriptRel(to)}, a script in a higher layer: ${place(low)} and ${place(srcDir(to))} (${LAYER_RECORD}).\n    Hand the value or a callable in from the script above, move a pure data file down to ${low}, or move the fact to its owner in ${low}; never list the pair`,
+      ),
+      key: `${from} -> ${to}`,
+    });
+  }
+  return findings.sort((a, b) => (a.key ?? a.path).localeCompare(b.key ?? b.path));
 }
 
 export function lintL17(file, text) {
@@ -1436,7 +1697,9 @@ export function lintSketch(sketch) {
     findings.push(...lintL13(file.path, rel, file.text));
     findings.push(...lintL14(file.path, rel, file.text, driverRefs, null, driverVars));
   }
-  findings.push(...lintL16(srcFiles));
+  const graph = buildScriptGraph(srcFiles);
+  findings.push(...lintL16(srcFiles, graph));
+  if (sketch === "core-loop") findings.push(...lintL20(srcFiles, graph));
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   if (sketch === "core-loop") {
     const words = lintWords({
@@ -1503,11 +1766,19 @@ function main() {
     console.error("sketch-lint: pass --sketch NAME for a folder under sketches/");
     process.exit(2);
   }
+  if (options.layers) {
+    const report = layerReport(
+      sources(path.join(root, "sketches", options.sketch, "src"), new Set([".gd"])),
+      options.layers,
+    );
+    for (const line of report.lines) console.log(line);
+    process.exit(report.ok ? 0 : 1);
+  }
   const started = Date.now();
   const raw = lintSketch(options.sketch);
   if (options.writeBaseline) {
     const baseline = baselineFrom(raw);
-    writeFileSync(BASELINE_FILE, JSON.stringify(baseline, null, 2) + "\n");
+    writeFileSync(BASELINE_FILE, baselineText(baseline));
     for (const [rule, spec] of Object.entries(BASELINE_RULES)) {
       if (spec.shape === "keys") console.log(`${rule} ${baseline[rule].length} baseline entries`);
       else
@@ -1523,10 +1794,10 @@ function main() {
     baseline,
     (file) => existsSync(path.join(root, file)) && statSync(path.join(root, file)).isFile(),
   );
-  if (options.base)
-    findings.push(
-      ...baselineGrowth(readBaselineAt(git(["merge-base", options.base, "HEAD"])), baseline),
-    );
+  if (options.base) {
+    const base = git(["merge-base", options.base, "HEAD"]);
+    findings.push(...baselineGrowth(readBaselineAt(base), baseline, renamesSince(base)));
+  }
   for (const item of findings) console.log(formatFinding(item));
   if (options.sketch === "core-loop") {
     for (const [rel, entry] of Object.entries(LIGHT_OWNERS).filter(([, entry]) => entry.open)) {

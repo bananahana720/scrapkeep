@@ -21,6 +21,8 @@ Behavioral contracts for module seams (Warden handshake, `event_kinds`, Spawner/
 | `src/dev/` | `--dev` developer console and headless agent/probe helpers (`dev_console.gd`, `dev_agent.gd`, `dev_capture.gd`, `dev_commands.gd`, `dev_fight.gd`, `dev_inspect.gd`, `dev_lens.gd`, `dev_look.gd`, `dev_overlay.gd`, `dev_session.gd`). Mounted only when `--dev` is active (never in plain launches or tests). |
 | `src/experimental/` | Opt-in `--experimental-depth` / `SCRAPKEEP_EXPERIMENTAL` live run bridge (`live_run_bridge.gd`), adversity/encounter prototypes, dynamic setpieces, jury-rig synergies, and experimental director resources (`resources/director/*`). |
 
+**Layer order.** The directories above stand in layers, with `core` at the bottom and the entry points on top. A script may load one in its own layer or a lower one; lint rule `L20` fails a new upward load and holds today's upward loads on a list that only shrinks. [TADR-014](../../adr/TADR-014-source-layer-order.md) owns the order, the numbers and the ways to take an entry off the list.
+
 To count tracked `.gd` scripts, run `git ls-tree -r --name-only HEAD sketches/core-loop/src | grep -c '\.gd$'` (or pass a subdirectory path for one folder).
 
 ### Module mount order in `src/game.gd`
@@ -108,4 +110,4 @@ Helper methods on `Context`: `build_module()`, `aim_origin()`, `aim_forward()`, 
 
 - **Static graph**: `buildScriptGraph` scans every `.gd` file under `sketches/core-loop/src/` for `"res://src/...gd"` references and declared `class_name` uses, then computes strongly connected components (`stronglyConnectedComponents`).
 - **Ratchet baseline**: `scripts/sketch-lint.baseline.json` pins the existing files in cycles. Any file newly joining a cycle fails `sketch:lint`, and any baselined file that leaves its cycle fails until its entry is removed so the list can only shrink.
-- **Targeted ownership and boundary rules**: Directories are not yet strict acyclic layers because `src/core/` still references files in other directories. Alongside `L16`, `sketch:lint` enforces `L6` (runtime `Light3D` ownership), `L7` (no `res://tools/` paths in `src/`), `L8` (no physics-tick `ball_position()` reads in `src/presentation/` or `src/ui/`), `L9` (no direct `player.global_position` / `position` reads), and `L10` (no hand-moving the ball's `RigidBody3D`).
+- **Targeted ownership and boundary rules**: Alongside `L16` and `L20`, `sketch:lint` enforces `L6` (runtime `Light3D` ownership), `L7` (no `res://tools/` paths in `src/`), `L8` (no physics-tick `ball_position()` reads in `src/presentation/` or `src/ui/`), `L9` (no direct `player.global_position` / `position` reads), and `L10` (no hand-moving the ball's `RigidBody3D`).
