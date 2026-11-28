@@ -4,7 +4,7 @@ extends RefCounted
 static func matching(t, roots: Array, pattern: String) -> Array[String]:
 	var out: Array[String] = []
 	var re := RegEx.new()
-	if re.compile(pattern) != OK or not re.is_valid():
+	if re.compile(pattern, false) != OK or not re.is_valid():
 		t.check("source scan pattern compiles", false, pattern)
 		return out
 	for root in roots:
