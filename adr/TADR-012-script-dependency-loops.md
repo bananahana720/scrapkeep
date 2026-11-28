@@ -43,6 +43,6 @@ Paths below are under `sketches/core-loop/` unless they start with `adr/`, `scri
 
 ## Later qualification and reconsideration
 
-- When a later record sets a layer order for the directories, add the direction rule on top of this one and record it here.
+- [TADR-014](TADR-014-source-layer-order.md) sets the layer order for the directories, and lint rule L20 checks it on top of this rule with the same graph.
 - When the list is short enough to read, replace it with the named loops that remain and a reason for each, or delete the rule's list and forbid loops outright.
 - If the code starts building script paths at run time in more places, the graph needs a registry of those paths or a reading from the engine.
