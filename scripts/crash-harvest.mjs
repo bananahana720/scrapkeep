@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, readFileSync, readlinkSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { isMain } from "./lib/cli.mjs";
 import { walkSync } from "./lib/walk.mjs";
@@ -254,12 +254,18 @@ export function renderMarkdown({ inputs, logs, findings, skipped = [] }) {
 
 const SKIP_DIRS = new Set(["node_modules", ".git", ".godot"]);
 
+function absent(p) {
+  return lstatSync(p, { throwIfNoEntry: false })?.isSymbolicLink()
+    ? `${p} (broken link to ${readlinkSync(p)})`
+    : `${p} (missing)`;
+}
+
 export function collect(inputs) {
   const files = [];
   const skipped = [];
   const addFile = (p, explicit) => {
     const st = statSync(p, { throwIfNoEntry: false });
-    if (!st) return skipped.push(`${p} (missing)`);
+    if (!st) return skipped.push(absent(p));
     if (st.isDirectory()) return;
     if (LOG_FILE.test(path.basename(p)) || explicit) {
       if (st.size > MAX_BYTES) skipped.push(`${p} (over ${MAX_BYTES / 1024 / 1024} MB)`);
@@ -269,7 +275,7 @@ export function collect(inputs) {
   for (const input of inputs) {
     const st = statSync(input, { throwIfNoEntry: false });
     if (!st) {
-      skipped.push(`${input} (missing)`);
+      skipped.push(absent(input));
       continue;
     }
     if (st.isDirectory()) {

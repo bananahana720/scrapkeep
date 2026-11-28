@@ -216,3 +216,29 @@ test("collect sorts by code unit (B < _ < a) and follows symlinked directories w
     rmSync(target, { recursive: true, force: true });
   }
 });
+
+test("collect names a broken link and what it pointed to, and does not harvest it", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "crash-harvest-broken-"));
+  try {
+    writeFileSync(path.join(dir, "a.log"), "ok\n");
+    const gone = path.join(dir, "rotated.log.1");
+    symlinkSync(gone, path.join(dir, "latest.log"));
+    const lone = path.join(dir, "lone.log");
+    symlinkSync(gone, lone);
+    const { files, skipped } = collect([dir, path.join(dir, "nothing.log")]);
+    assert.deepEqual(files, [path.join(dir, "a.log")]);
+    assert.deepEqual(skipped, [
+      `${path.join(dir, "latest.log")} (broken link to ${gone})`,
+      `${lone} (broken link to ${gone})`,
+      `${path.join(dir, "nothing.log")} (missing)`,
+    ]);
+    const lines = [];
+    assert.equal(
+      main([lone], (line) => lines.push(line)),
+      2,
+    );
+    assert.match(lines.join("\n"), /broken link to /);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
