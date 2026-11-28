@@ -4,6 +4,7 @@ extends RefCounted
 const EnvTags := preload("res://src/experimental/env_tags.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const DEFAULT_CATALOG_PATH := "res://src/experimental/resources/director/spillway_encounter_catalog.tres"
 const DIG_CATALOG_PATH := "res://src/experimental/resources/director/dig_encounter_catalog.tres"
@@ -199,7 +200,7 @@ func activate_triggered(id: String, run_ctx: Dictionary) -> Dictionary:
 	return result
 
 
-func report_encounter_kill(ball_speed_mps: float = 14.0, cruise_mps: float = 14.0) -> Dictionary:
+func report_encounter_kill(ball_speed_mps: float = Tuning.CRUISE_MPS, cruise_mps: float = Tuning.CRUISE_MPS) -> Dictionary:
 	var out := {"facts": [], "payout": {}, "unlocked": false}
 	if active_triggered_id == "" or not triggered_volumes.has(active_triggered_id):
 		return out
@@ -361,7 +362,7 @@ func advance(delta: float, run_ctx: Dictionary) -> Dictionary:
 
 	var ball_pos: Vector3 = run_ctx.get("ball_pos", Vector3.ZERO)
 	var ball_vel: Vector3 = run_ctx.get("ball_vel", Vector3.ZERO)
-	var cruise_mps: float = float(run_ctx.get("cruise_mps", 14.0))
+	var cruise_mps: float = float(run_ctx.get("cruise_mps", Tuning.CRUISE_MPS))
 	var warden_awake: bool = bool(run_ctx.get("warden_awake", false))
 
 	if active_triggered_id == "" and not warden_awake:

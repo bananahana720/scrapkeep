@@ -4,6 +4,7 @@ extends RefCounted
 const EventDirector := preload("res://src/world/event_director.gd")
 const EnvTags := preload("res://src/experimental/env_tags.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const DEFAULT_CONFIG_PATH := "res://src/experimental/resources/director/spillway_adversity_config.tres"
 const DIG_CONFIG_PATH := "res://src/experimental/resources/director/dig_adversity_config.tres"
@@ -270,7 +271,7 @@ func compute_magnetic_force(
 	if not hdefs.has(&"magnetic_storm"):
 		return Vector3.ZERO
 	var def: Dictionary = hdefs[&"magnetic_storm"]
-	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var cruise := float(_cfg("default_cruise_mps", Tuning.CRUISE_MPS)) if cruise_mps <= 0.0 else cruise_mps
 	var fast_ratio := float(_cfg("fast_speed_ratio", 0.85))
 	var radius := float(def["radius_m"])
 	var to_pole := Vector3(hazard_origin.x - entity_pos.x, 0.0, hazard_origin.z - entity_pos.z)
@@ -325,7 +326,7 @@ func compute_crosswind_force(
 	var dist := Vector2(entity_pos.x - hazard_origin.x, entity_pos.z - hazard_origin.z).length()
 	if dist > radius:
 		return Vector3.ZERO
-	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var cruise := float(_cfg("default_cruise_mps", Tuning.CRUISE_MPS)) if cruise_mps <= 0.0 else cruise_mps
 	var fast_ratio := float(_cfg("fast_speed_ratio", 0.85))
 	var strength := float(def.get("crosswind_strength", 13.5)) * intensity
 	var wind_dir := Vector3(0.0, 0.0, 1.0) if int(hazard_cycles_completed) % 2 == 0 else Vector3(1.0, 0.0, 0.0)
@@ -365,7 +366,7 @@ func compute_tremor_force(
 	var dist := Vector2(entity_pos.x - hazard_origin.x, entity_pos.z - hazard_origin.z).length()
 	if dist > radius:
 		return Vector3.ZERO
-	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var cruise := float(_cfg("default_cruise_mps", Tuning.CRUISE_MPS)) if cruise_mps <= 0.0 else cruise_mps
 	var fast_ratio := float(_cfg("fast_speed_ratio", 0.85))
 	var pulse_sign := 1.0 if sin(hazard_elapsed_s * 5.0) >= 0.0 else -1.0
 	var lateral_dir := Vector3(pulse_sign, 0.0, -pulse_sign * 0.5).normalized()
@@ -383,7 +384,7 @@ func advance(
 		alive_count: int,
 		cruise_mps: float = -1.0,
 		grounded: bool = true) -> Dictionary:
-	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var cruise := float(_cfg("default_cruise_mps", Tuning.CRUISE_MPS)) if cruise_mps <= 0.0 else cruise_mps
 	var result := {
 		"facts": [],
 		"due_spawns": [],
