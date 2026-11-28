@@ -198,60 +198,68 @@ async function withPath(bin, run) {
   }
 }
 
-test("gitAsync returns what git printed in the repository cwd is in, and fails on a failed, missing or wrongly called git", async () => {
-  const bin = fakeGit(
-    'if [ "$1" = fail ]; then echo "no such ref" >&2; exit 1; fi\necho "$* in $PWD with ${GIT_DIR-no GIT_DIR}"',
-  );
-  await withPath(bin, async () => {
-    assert.equal(
-      await gitAsync(["fetch", "-q"], { cwd: bin }),
-      `fetch -q in ${bin} with no GIT_DIR`,
+test(
+  "gitAsync returns what git printed in the repository cwd is in, and fails on a failed, missing or wrongly called git",
+  { timeout: 60_000 },
+  async () => {
+    const bin = fakeGit(
+      'if [ "$1" = fail ]; then echo "no such ref" >&2; exit 1; fi\necho "$* in $PWD with ${GIT_DIR-no GIT_DIR}"',
     );
-    await assert.rejects(
-      gitAsync(["fail"], { cwd: bin }),
-      (error) =>
-        error.status === 1 &&
-        error.stderr === "no such ref\n" &&
-        error.message === "git fail failed: no such ref",
-    );
-    rmSync(path.join(bin, "pid"));
-    await assert.rejects(
-      gitAsync(["status"], "/some/dir"),
-      (error) =>
-        error instanceof TypeError &&
-        error.message ===
-          "gitAsync(args, options): options must be an object such as { cwd }, got a string",
-    );
-    assert.equal(existsSync(path.join(bin, "pid")), false, "git was started");
-    rmSync(path.join(bin, "git"));
-    await assert.rejects(gitAsync(["status"], { cwd: bin }), { code: "ENOENT" });
-  });
-});
-
-test("gitAsync stops a call that passes its limit with SIGTERM, and kills it after the grace only when it stays", async () => {
-  assert.equal(GIT_STOP_GRACE_MS, 5000);
-  for (const [body, signal] of [
-    ["exec /bin/sleep 30", "SIGTERM"],
-    ['trap "" TERM\nexec /bin/sleep 30', "SIGKILL"],
-  ]) {
-    const bin = fakeGit(body);
     await withPath(bin, async () => {
-      const started = Date.now();
-      const error = await gitAsync(["fetch"], { cwd: bin, timeout: 300, graceMs: 1500 }).then(
-        () => assert.fail("a call past its limit returned"),
-        (error) => error,
+      assert.equal(
+        await gitAsync(["fetch", "-q"], { cwd: bin }),
+        `fetch -q in ${bin} with no GIT_DIR`,
       );
-      const ms = Date.now() - started;
-      assert.equal(error.signal, signal);
-      assert.match(error.message, /^git fetch passed its 300 ms limit/);
-      if (signal === "SIGTERM") assert.ok(ms < 1500, `the stop took ${ms} ms`);
-      else assert.ok(ms >= 1800, `the kill came after ${ms} ms, before the grace ended`);
-      const pid = Number(readFileSync(path.join(bin, "pid"), "utf8"));
-      assert.ok(Number.isInteger(pid) && pid > 0, "the stand-in wrote no process id");
-      assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+      await assert.rejects(
+        gitAsync(["fail"], { cwd: bin }),
+        (error) =>
+          error.status === 1 &&
+          error.stderr === "no such ref\n" &&
+          error.message === "git fail failed: no such ref",
+      );
+      rmSync(path.join(bin, "pid"));
+      await assert.rejects(
+        gitAsync(["status"], "/some/dir"),
+        (error) =>
+          error instanceof TypeError &&
+          error.message ===
+            "gitAsync(args, options): options must be an object such as { cwd }, got a string",
+      );
+      assert.equal(existsSync(path.join(bin, "pid")), false, "git was started");
+      rmSync(path.join(bin, "git"));
+      await assert.rejects(gitAsync(["status"], { cwd: bin }), { code: "ENOENT" });
     });
-  }
-});
+  },
+);
+
+test(
+  "gitAsync stops a call that passes its limit with SIGTERM, and kills it after the grace only when it stays",
+  { timeout: 60_000 },
+  async () => {
+    assert.equal(GIT_STOP_GRACE_MS, 5000);
+    for (const [body, signal] of [
+      ["exec /bin/sleep 30", "SIGTERM"],
+      ['trap "" TERM\nexec /bin/sleep 30', "SIGKILL"],
+    ]) {
+      const bin = fakeGit(body);
+      await withPath(bin, async () => {
+        const started = Date.now();
+        const error = await gitAsync(["fetch"], { cwd: bin, timeout: 300, graceMs: 1500 }).then(
+          () => assert.fail("a call past its limit returned"),
+          (error) => error,
+        );
+        const ms = Date.now() - started;
+        assert.equal(error.signal, signal);
+        assert.match(error.message, /^git fetch passed its 300 ms limit/);
+        if (signal === "SIGTERM") assert.ok(ms < 1500, `the stop took ${ms} ms`);
+        else assert.ok(ms >= 1800, `the kill came after ${ms} ms, before the grace ended`);
+        const pid = Number(readFileSync(path.join(bin, "pid"), "utf8"));
+        assert.ok(Number.isInteger(pid) && pid > 0, "the stand-in wrote no process id");
+        assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+      });
+    }
+  },
+);
 
 test("nulSeparated reads a -z answer as its paths, keeping spaces and line breaks, and refuses what is not text", () => {
   assert.deepEqual(nulSeparated(' a b\0café "q"\0\0line\nbreak\0'), [
