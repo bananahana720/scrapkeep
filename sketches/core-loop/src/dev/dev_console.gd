@@ -358,14 +358,10 @@ func _register() -> void:
 	commands.add("boss", "[phase]", "enter this world's boss, or jump the running boss to a phase", func(args: Array[String]):
 		return fight.boss(DevCommands.whole(args, 0, 0)))
 	commands.add("run", "[pilot number]", "start a run from the title with a pilot (1 is the first)", func(args: Array[String]):
-		var flow = game.flow
-		var index := DevCommands.whole(args, 0, 1) - 1
-		if flow.state_name() != "title":
-			return "!runs start from the title screen"
-		if index < 0 or index >= flow.classes.size():
-			return "!no pilot %d" % (index + 1)
-		flow.launch_from_title(flow.classes[index])
-		return "run started")
+		var res = fight.launch_pilot(["1"] if args.is_empty() else args)
+		if res is Dictionary and bool(res.get("ok", false)):
+			return "run started"
+		return res)
 	commands.add("bake", "<name>", "save the current look to a file", func(args: Array[String]):
 		return look.bake(DevCommands.word(args, 0, "look-%d" % Engine.get_frames_drawn())))
 	commands.add("load", "<name>", "load a baked look", func(args: Array[String]):

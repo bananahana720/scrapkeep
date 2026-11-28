@@ -256,7 +256,7 @@ func register_extra(commands) -> void:
 	commands.add("stage", "<1..6|dam|flume|pit|sinkhole|islands|crown>", "jump directly to a stage by index or park alias", _cmd_stage)
 	commands.add("retry", "", "retry the current stage or boss arena", _cmd_retry)
 	commands.add("seed", "<n>", "set deterministic run seed override and RNG seed", _cmd_seed)
-	commands.add("pilot", "<index|id>", "launch a run from the title screen with a pilot by 1-based index or id", _cmd_pilot)
+	commands.add("pilot", "<index|id>", "launch a run from the title screen with a pilot by 1-based index or id", launch_pilot)
 	commands.add("warp", "<x> <z> | spawn | beacon | landmark | moss | vault | warden | ahead [m]", "move the ball safely to a point or landmark", _cmd_warp)
 	commands.add("vel", "<vx> <vy> <vz>", "set the ball's velocity vector directly", _cmd_vel)
 	commands.add("speed", "<m/s>", "launch the ball forward along camera heading at m/s", _cmd_speed)
@@ -316,7 +316,7 @@ func _cmd_seed(args: Array[String]):
 	return {"ok": true, "text": "seed %d" % n, "data": {"seed": n}}
 
 
-func _cmd_pilot(args: Array[String]):
+func launch_pilot(args: Array[String]):
 	if game.flow == null:
 		return "!no flow yet"
 	if game.flow.state_name() != "title":
