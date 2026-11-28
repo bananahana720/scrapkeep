@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ALPHA_MAPS, PARK_MAPS, PILOT_IDS } from "./lib/game-defs.mjs";
-import { REPO_ROOT, git, gitOptional } from "./lib/git.mjs";
+import { REPO_ROOT, git } from "./lib/git.mjs";
 import { isMain } from "./lib/cli.mjs";
 import { walkSync } from "./lib/walk.mjs";
 import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
@@ -613,8 +613,14 @@ export function applyBaseline(findings, baseline, exists) {
 
 export function readBaselineAt(ref, { cwd = root } = {}) {
   git(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], { cwd });
-  const text = gitOptional(["show", `${ref}:${BASELINE_PATH}`], { cwd });
-  return text === null ? {} : JSON.parse(text);
+  if (!git(["ls-tree", "--full-tree", "--name-only", ref, "--", BASELINE_PATH], { cwd })) return {};
+  try {
+    return JSON.parse(git(["show", `${ref}:${BASELINE_PATH}`], { cwd }));
+  } catch (error) {
+    throw new Error(
+      `the base copy of ${BASELINE_PATH} at ${ref} could not be read, so the shrink-only check could not run; fetch ${ref} with its files and run again: ${error.message}`,
+    );
+  }
 }
 
 export function baselineGrowth(before, after) {
