@@ -5,6 +5,12 @@
 # Usage, from the root of the integration checkout (macOS):
 #   sh <path>/gate-check.sh <full SHA of the last pushed gate tip> [node]
 # "node" skips the Godot run, for a merge that changes no file the game loads.
+# "reds" runs nothing and only reads the last Godot run's log for old reds (below).
+#
+# The Godot run calls a test "base-red" when it is also red on the commit it was compared with.
+# That commit is the previous gate tip, so a red this sweep let in once would count as old for
+# ever. An old red is one that is red on main: this script fails on any base-red test that is
+# not listed in main-reds.txt beside it, and that file is only added to after a run on main.
 # Each step's full output goes to artifacts/local/gate-check/<step>.log.
 # Safe to rerun: it only overwrites those logs. Exit 1 if any step failed.
 # The last line printed is "GATE CHECK: PASS" or "GATE CHECK: FAIL ...": read that line, because a
@@ -19,6 +25,7 @@ esac
 export PATH="/opt/homebrew/bin:$PATH"
 export GODOT_BIN="${GODOT_BIN:-$HOME/Applications/Godot_4.7.2.app/Contents/MacOS/Godot}"
 logs="artifacts/local/gate-check"
+allowed="$(cd "$(dirname "$0")" && pwd)/main-reds.txt"
 scratch_home="$PWD/artifacts/local/mac-home"
 mkdir -p "$logs" "$scratch_home"
 failed=0
@@ -36,8 +43,27 @@ step() {
   fi
 }
 
+old_reds() {
+  [ -r "$allowed" ] || { echo "cannot read $allowed"; return 1; }
+  [ -s "$logs/sketch-fast.log" ] || { echo "no Godot run log at $logs/sketch-fast.log"; return 1; }
+  bad=0
+  for t in $(sed -n 's/.*base-red (red on the merge base too; not this PR): //p' "$logs/sketch-fast.log" | tr ',' ' '); do
+    name=$(basename "$t" .gd)
+    if ! sed 's/#.*//' "$allowed" | tr -d ' \t' | grep -qx "$name"; then
+      bad=1
+      echo "$name is red here and on the previous gate tip, and is not in main-reds.txt: run it on main; red there, add it to that file with the commit; green there, this sweep broke it"
+    fi
+  done
+  return "$bad"
+}
+
+if [ "$only" = reds ]; then
+  if old_reds; then echo "GATE CHECK: PASS (old reds only)"; exit 0; else echo "GATE CHECK: FAIL (a red that is not old)"; exit 1; fi
+fi
 if [ "$only" = all ]; then
   step sketch-fast env HOME="$scratch_home" SMOKE_SLOTS=3 npm run sketch:fast -- --base "$base"
+  step old-reds old_reds
+  cat "$logs/old-reds.log" | cut -c1-240
 fi
 step sketch-lint npm run sketch:lint
 step node-tests npm test
