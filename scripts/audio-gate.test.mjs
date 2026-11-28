@@ -1,9 +1,43 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { promisify } from "node:util";
+import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
+
+const execFileAsync = promisify(execFile);
+const SELF_URL = new URL(import.meta.url);
+const WORKER_FLAG = "audioGateTestWorker";
+const AUDIO_GATE_URL = new URL("./audio-gate.mjs", import.meta.url).href;
+
+if (!isMainThread && workerData?.[WORKER_FLAG] === true && parentPort) {
+  const mod = await import(workerData.url);
+  // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Node worker_threads MessagePort, not window.postMessage
+  parentPort.postMessage(await mod[workerData.name](...workerData.args));
+}
+
+function callAudioGateInWorker(exportName, args) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(SELF_URL, {
+      workerData: { [WORKER_FLAG]: true, url: AUDIO_GATE_URL, name: exportName, args },
+      execArgv: [],
+    });
+    let settled = false;
+    worker.once("message", (value) => {
+      settled = true;
+      resolve(value);
+    });
+    worker.once("error", (err) => {
+      settled = true;
+      reject(err);
+    });
+    worker.once("exit", (code) => {
+      if (!settled && code !== 0) reject(new Error(`worker exited with code ${code}`));
+    });
+  });
+}
 import {
   bankIds,
   cueFindings,
@@ -13,9 +47,7 @@ import {
   defaultJobs,
   hasFfmpeg,
   judge,
-  measureFiles,
   measureFilesAsync,
-  measureGame,
   measureGameAsync,
   missingInputs,
   oggLongestPage,
@@ -37,497 +69,525 @@ import {
 } from "./audio-gate.mjs";
 import { scan } from "./placeholder-gate.mjs";
 
-function project(files) {
-  const dir = mkdtempSync(path.join(os.tmpdir(), "audio-gate-"));
-  for (const [rel, data] of Object.entries(files)) {
-    mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
-    writeFileSync(path.join(dir, rel), data);
+if (isMainThread) {
+  function project(files) {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "audio-gate-"));
+    for (const [rel, data] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+      writeFileSync(path.join(dir, rel), data);
+    }
+    return dir;
   }
-  return dir;
-}
 
-function sineWav(frames, amplitude, hz = 1000, rate = 48000) {
-  const data = Buffer.alloc(frames * 4);
-  for (let f = 0; f < frames; f++) {
-    const v = Math.round(Math.sin((2 * Math.PI * hz * f) / rate) * amplitude * 32767);
-    data.writeInt16LE(v, f * 4);
-    data.writeInt16LE(v, f * 4 + 2);
+  function sineWav(frames, amplitude, hz = 1000, rate = 48000) {
+    const data = Buffer.alloc(frames * 4);
+    for (let f = 0; f < frames; f++) {
+      const v = Math.round(Math.sin((2 * Math.PI * hz * f) / rate) * amplitude * 32767);
+      data.writeInt16LE(v, f * 4);
+      data.writeInt16LE(v, f * 4 + 2);
+    }
+    const head = Buffer.alloc(44);
+    head.write("RIFF", 0);
+    head.writeUInt32LE(36 + data.length, 4);
+    head.write("WAVEfmt ", 8);
+    head.writeUInt32LE(16, 16);
+    head.writeUInt16LE(1, 20);
+    head.writeUInt16LE(2, 22);
+    head.writeUInt32LE(rate, 24);
+    head.writeUInt32LE(rate * 4, 28);
+    head.writeUInt16LE(4, 32);
+    head.writeUInt16LE(16, 34);
+    head.write("data", 36);
+    head.writeUInt32LE(data.length, 40);
+    return Buffer.concat([head, data]);
   }
-  const head = Buffer.alloc(44);
-  head.write("RIFF", 0);
-  head.writeUInt32LE(36 + data.length, 4);
-  head.write("WAVEfmt ", 8);
-  head.writeUInt32LE(16, 16);
-  head.writeUInt16LE(1, 20);
-  head.writeUInt16LE(2, 22);
-  head.writeUInt32LE(rate, 24);
-  head.writeUInt32LE(rate * 4, 28);
-  head.writeUInt16LE(4, 32);
-  head.writeUInt16LE(16, 34);
-  head.write("data", 36);
-  head.writeUInt32LE(data.length, 40);
-  return Buffer.concat([head, data]);
-}
 
-test("cueKey makes files, theme folders and clip ids comparable", () => {
-  assert.equal(cueKey("euro-brindle-p3-s2801.wav"), "euro_brindle_p3");
-  assert.equal(cueKey("boss-mind-s2402-129bpm.mp3"), "boss_mind");
-  assert.equal(cueKey("brindle-p2-furnace"), "brindle_p2_furnace");
-  assert.equal(cueKey("foreman_presence.wav"), "foreman_presence");
-});
-
-test("the cue list covers all 17 special WAVs and the boss cues", () => {
-  assert.equal(specialCues().length, 17);
-  const ids = cueList().map((c) => c.id);
-  for (const id of [
-    "splitter_break_split",
-    "linker_spawn",
-    "stinger_boss_defeated",
-    "hype_drop",
-    "euro-mind-final",
-    "brindle",
-  ])
-    assert.ok(ids.includes(id), id);
-});
-
-test("a cue is present when the bank, a theme or a file can play it", () => {
-  const wired = wiredSet({
-    bank: 'const TRIM_DB := {"boss_phase": -4.0}\n\tmatch id:\n\t\t"foreman_tell":\n',
-    manifests: [{ theme: "brindle", clips: { calm: {} } }, { theme: "euro_waking_final" }],
-    files: ["/x/assets/sfx/linker_break.ogg"],
+  test("cueKey makes files, theme folders and clip ids comparable", () => {
+    assert.equal(cueKey("euro-brindle-p3-s2801.wav"), "euro_brindle_p3");
+    assert.equal(cueKey("boss-mind-s2402-129bpm.mp3"), "boss_mind");
+    assert.equal(cueKey("brindle-p2-furnace"), "brindle_p2_furnace");
+    assert.equal(cueKey("foreman_presence.wav"), "foreman_presence");
   });
-  const cues = [
-    { id: "boss_phase", type: "sound", group: "boss" },
-    { id: "foreman_tell", type: "sound", group: "special" },
-    { id: "linker_break", type: "sound", group: "special" },
-    { id: "brindle", type: "track", group: "boss" },
-    { id: "euro-waking-final", type: "track", group: "boss" },
-    { id: "hype_drop", type: "sound", group: "boss" },
-    { id: "mind-final", type: "track", group: "boss" },
-  ];
-  const missing = missingCues(cues, wired, ["/renders/mind-final-s2701.mp3"]);
-  assert.deepEqual(
-    missing.map((f) => f.what),
-    [
-      "sound hype_drop has no audio in the game or the render folders",
-      "track mind-final rendered (mind-final-s2701.mp3) but not in the game",
-    ],
-  );
-  assert.ok(bankIds('"a_b": 1, "c"').has("a_b"));
-});
 
-test("cue findings need the game's sound bank and feed the placeholder gate", () => {
-  const none = project({ "src/core/park_defs.gd": "" });
-  const game = project({
-    "src/presentation/sfx_bank.gd": '"boss_arena_in" "boss_phase" "stinger_boss_defeated"',
+  test("the cue list covers all 17 special WAVs and the boss cues", () => {
+    assert.equal(specialCues().length, 17);
+    const ids = cueList().map((c) => c.id);
+    for (const id of [
+      "splitter_break_split",
+      "linker_spawn",
+      "stinger_boss_defeated",
+      "hype_drop",
+      "euro-mind-final",
+      "brindle",
+    ])
+      assert.ok(ids.includes(id), id);
   });
-  try {
-    assert.deepEqual(cueFindings(none), []);
-    assert.equal(cueFindings(game).length, cueList().length - 3);
-    const audio = scan(game).filter((f) => f.kind === "audio");
-    assert.equal(audio.length, cueList().length - 3);
-  } finally {
-    rmSync(none, { recursive: true, force: true });
-    rmSync(game, { recursive: true, force: true });
-  }
-});
 
-test("a wrong project or music path never reads as a pass", () => {
-  const empty = project({ "README.md": "" });
-  try {
+  test("a cue is present when the bank, a theme or a file can play it", () => {
+    const wired = wiredSet({
+      bank: 'const TRIM_DB := {"boss_phase": -4.0}\n\tmatch id:\n\t\t"foreman_tell":\n',
+      manifests: [{ theme: "brindle", clips: { calm: {} } }, { theme: "euro_waking_final" }],
+      files: ["/x/assets/sfx/linker_break.ogg"],
+    });
+    const cues = [
+      { id: "boss_phase", type: "sound", group: "boss" },
+      { id: "foreman_tell", type: "sound", group: "special" },
+      { id: "linker_break", type: "sound", group: "special" },
+      { id: "brindle", type: "track", group: "boss" },
+      { id: "euro-waking-final", type: "track", group: "boss" },
+      { id: "hype_drop", type: "sound", group: "boss" },
+      { id: "mind-final", type: "track", group: "boss" },
+    ];
+    const missing = missingCues(cues, wired, ["/renders/mind-final-s2701.mp3"]);
+    assert.deepEqual(
+      missing.map((f) => f.what),
+      [
+        "sound hype_drop has no audio in the game or the render folders",
+        "track mind-final rendered (mind-final-s2701.mp3) but not in the game",
+      ],
+    );
+    assert.ok(bankIds('"a_b": 1, "c"').has("a_b"));
+  });
+
+  test("cue findings need the game's sound bank and feed the placeholder gate", () => {
+    const none = project({ "src/core/park_defs.gd": "" });
+    const game = project({
+      "src/presentation/sfx_bank.gd": '"boss_arena_in" "boss_phase" "stinger_boss_defeated"',
+    });
+    try {
+      assert.deepEqual(cueFindings(none), []);
+      assert.equal(cueFindings(game).length, cueList().length - 3);
+      const audio = scan(game).filter((f) => f.kind === "audio");
+      assert.equal(audio.length, cueList().length - 3);
+    } finally {
+      rmSync(none, { recursive: true, force: true });
+      rmSync(game, { recursive: true, force: true });
+    }
+  });
+
+  test("a wrong project or music path never reads as a pass", () => {
+    const empty = project({ "README.md": "" });
+    try {
+      const args = parseArgs([
+        "--project",
+        empty,
+        "--music",
+        path.join(empty, "nope"),
+        "--cues-only",
+      ]);
+      assert.deepEqual(
+        missingInputs(args, []).map((f) => f.what),
+        ["no src/presentation/sfx_bank.gd; cues not checked", "music folder not found"],
+      );
+      assert.equal(missingInputs({ ...args, cuesOnly: false }, [{ clips: {} }]).length, 3);
+      assert.notEqual(run(args).findings.length, 0);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+
+  test("parseEbur128 reads the summary, not the running lines", () => {
+    const stderr =
+      "[Parsed_ebur128_0] t: 1 M: -20 S: -20 I: -19.0 LUFS\nSummary:\n\n  Integrated loudness:\n    I:         -16.2 LUFS\n\n  True peak:\n    Peak:       -2.9 dBFS\n";
+    assert.deepEqual(parseEbur128(stderr), { lufs: -16.2, truePeak: -2.9 });
+    assert.deepEqual(parseEbur128("nothing"), { lufs: null, truePeak: null });
+  });
+
+  test("seamStep passes a whole-cycle loop and catches a wrap that clicks", () => {
+    const loop = (frames, cut = frames) => {
+      const s = new Float32Array(frames * 2);
+      for (let f = 0; f < frames; f++)
+        s[f * 2] = s[f * 2 + 1] = Math.sin((2 * Math.PI * f) / 48) * 0.5;
+      return { s, cut };
+    };
+    const clean = loop(4800);
+    assert.equal(seamStep(clean.s, 4800, 0).ok, true);
+    const click = loop(4800 + 12);
+    assert.equal(seamStep(click.s, 4812, 0).ok, false);
+    assert.equal(seamStep(clean.s, 4800, 480).ok, true);
+  });
+
+  test("parseArgs takes repeated music folders, a loop pattern and --jobs", () => {
     const args = parseArgs([
-      "--project",
-      empty,
       "--music",
-      path.join(empty, "nope"),
+      "a",
+      "--music=b",
+      "--loops",
+      "seam",
+      "--jobs=4",
+      "--json",
       "--cues-only",
     ]);
-    assert.deepEqual(
-      missingInputs(args, []).map((f) => f.what),
-      ["no src/presentation/sfx_bank.gd; cues not checked", "music folder not found"],
-    );
-    assert.equal(missingInputs({ ...args, cuesOnly: false }, [{ clips: {} }]).length, 3);
-    assert.notEqual(run(args).findings.length, 0);
-  } finally {
-    rmSync(empty, { recursive: true, force: true });
-  }
-});
-
-test("parseEbur128 reads the summary, not the running lines", () => {
-  const stderr =
-    "[Parsed_ebur128_0] t: 1 M: -20 S: -20 I: -19.0 LUFS\nSummary:\n\n  Integrated loudness:\n    I:         -16.2 LUFS\n\n  True peak:\n    Peak:       -2.9 dBFS\n";
-  assert.deepEqual(parseEbur128(stderr), { lufs: -16.2, truePeak: -2.9 });
-  assert.deepEqual(parseEbur128("nothing"), { lufs: null, truePeak: null });
-});
-
-test("seamStep passes a whole-cycle loop and catches a wrap that clicks", () => {
-  const loop = (frames, cut = frames) => {
-    const s = new Float32Array(frames * 2);
-    for (let f = 0; f < frames; f++)
-      s[f * 2] = s[f * 2 + 1] = Math.sin((2 * Math.PI * f) / 48) * 0.5;
-    return { s, cut };
-  };
-  const clean = loop(4800);
-  assert.equal(seamStep(clean.s, 4800, 0).ok, true);
-  const click = loop(4800 + 12);
-  assert.equal(seamStep(click.s, 4812, 0).ok, false);
-  assert.equal(seamStep(clean.s, 4800, 480).ok, true);
-});
-
-test("parseArgs takes repeated music folders, a loop pattern and --jobs", () => {
-  const args = parseArgs([
-    "--music",
-    "a",
-    "--music=b",
-    "--loops",
-    "seam",
-    "--jobs=4",
-    "--json",
-    "--cues-only",
-  ]);
-  assert.deepEqual(args.music, [path.resolve("a"), path.resolve("b")]);
-  assert.ok(args.loops.test("x-seam.wav"));
-  assert.equal(args.jobs, 4);
-  assert.equal(args.json && args.cuesOnly, true);
-  assert.equal(parseArgs(["--jobs", "2"]).jobs, 2);
-  assert.equal(parseArgs([]).jobs, defaultJobs());
-  assert.ok(defaultJobs() >= 1 && defaultJobs() <= 16);
-  assert.equal(resolveJobs(undefined), defaultJobs());
-  assert.throws(() => parseArgs(["--jobs", "0"]));
-  assert.throws(() => parseArgs(["--jobs=-2"]));
-  assert.throws(() => parseArgs(["--jobs=1.5"]));
-  assert.throws(() => parseArgs(["--jobs=abc"]));
-  assert.throws(() => parseArgs(["--nope"]));
-});
-
-test("report lists each kind and never passes with findings", () => {
-  assert.equal(report([]), "audio gate: PASS");
-  const text = report([{ kind: "unchecked", where: "ffmpeg", what: "not found" }]);
-  assert.match(text, /Not checked: 1/);
-  assert.match(text, /FAIL/);
-});
-
-test(
-  "judge measures loudness, true peak and seams through ffmpeg",
-  { skip: !hasFfmpeg() && "no ffmpeg" },
-  () => {
-    const dir = project({
-      "on-target-loop.wav": sineWav(48000 * 12, 0.158),
-      "loud-click-loop.wav": sineWav(48000 * 12 + 12, 0.5),
-    });
-    try {
-      const good = judge("on-target", decode(path.join(dir, "on-target-loop.wav")), 48000, {
-        loop: true,
-      });
-      assert.deepEqual(good.found, []);
-      assert.ok(Math.abs(good.row.lufs + 16) < 0.3, String(good.row.lufs));
-      const bad = judge("loud", decode(path.join(dir, "loud-click-loop.wav")), 48000, {
-        loop: true,
-      });
-      assert.deepEqual(bad.found.map((f) => f.kind).sort(), ["loudness", "seam"]);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  },
-);
-
-test("a clip whose length or loudness differs from its manifest is stale", () => {
-  const t = { name: "spillway/calm", frames: 988672, measuredLufs: -16 };
-  assert.deepEqual(staleAgainstManifest(t, 988672, -15.9), []);
-  assert.deepEqual(
-    staleAgainstManifest(t, 988673, -16).map((f) => f.kind),
-    ["stale"],
-  );
-  assert.deepEqual(
-    staleAgainstManifest(t, 988672, -14.2).map((f) => f.kind),
-    ["stale"],
-  );
-  assert.deepEqual(
-    staleAgainstManifest({ name: "old/calm", frames: null, measuredLufs: null }, 5, -3),
-    [],
-  );
-});
-
-test("STEMS.sha256 rejects a stale, an unlisted and a re-encoded stem and names each", () => {
-  const dir = project({
-    "spillway/calm.drums.ogg": "fresh drums",
-    "spillway/calm.bass.ogg": "fresh bass",
-    "spillway/calm.other.ogg": "fresh other",
+    assert.deepEqual(args.music, [path.resolve("a"), path.resolve("b")]);
+    assert.ok(args.loops.test("x-seam.wav"));
+    assert.equal(args.jobs, 4);
+    assert.equal(args.json && args.cuesOnly, true);
+    assert.equal(parseArgs(["--jobs", "2"]).jobs, 2);
+    assert.equal(parseArgs([]).jobs, defaultJobs());
+    assert.ok(defaultJobs() >= 1 && defaultJobs() <= 16);
+    assert.equal(resolveJobs(undefined), defaultJobs());
+    assert.throws(() => parseArgs(["--jobs", "0"]));
+    assert.throws(() => parseArgs(["--jobs=-2"]));
+    assert.throws(() => parseArgs(["--jobs=1.5"]));
+    assert.throws(() => parseArgs(["--jobs=abc"]));
+    assert.throws(() => parseArgs(["--nope"]));
   });
-  const named = ["spillway/calm.drums.ogg", "spillway/calm.bass.ogg", "spillway/calm.other.ogg"];
-  const list = path.join(dir, "STEMS.sha256");
-  try {
-    assert.equal(stemHashMismatches(list, dir, named), null, "no list is not a pass");
-    assert.equal(writeStemHashes(list, dir, named), 3);
-    assert.deepEqual(stemHashMismatches(list, dir, named), [], "the good pack passes");
-    writeFileSync(path.join(dir, "spillway/calm.bass.ogg"), "an older mix under the same name");
-    const bad = stemHashMismatches(list, dir, named);
-    assert.deepEqual(
-      bad.map((r) => r.file),
-      ["spillway/calm.bass.ogg"],
-      "the planted stale Ogg is named and nothing else",
-    );
-    assert.match(bad[0].why, /sha256 differs/);
-    const unlisted = stemHashMismatches(list, dir, [...named, "spillway/build.drums.ogg"]);
-    assert.deepEqual(
-      unlisted.map((r) => r.file),
-      ["spillway/calm.bass.ogg"],
-      "a named file that is not on disk is not this check's finding",
-    );
-    writeFileSync(path.join(dir, "spillway/build.drums.ogg"), "new, never hashed");
-    assert.ok(
-      stemHashMismatches(list, dir, [...named, "spillway/build.drums.ogg"]).some(
-        (r) => r.file === "spillway/build.drums.ogg" && /not listed/.test(r.why),
-      ),
-    );
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
 
-const hasLibvorbis = () =>
-  hasFfmpeg() &&
-  /libvorbis/.test(String(spawnSync("ffmpeg", ["-hide_banner", "-encoders"]).stdout));
-
-test(
-  "the gate flags a stale pack and an unhashed one, and passes the good pack",
-  { skip: !hasLibvorbis() && "no ffmpeg with libvorbis" },
-  () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "audio-gate-stale-"));
-    const music = path.join(dir, "assets/music_ace/zone");
-    mkdirSync(music, { recursive: true });
-    const tone = (file, seconds, level) =>
-      spawnSync("ffmpeg", [
-        "-v",
-        "error",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        `sine=frequency=440:duration=${seconds}:sample_rate=44100`,
-        "-af",
-        `volume=${level}`,
-        "-ac",
-        "2",
-        "-c:a",
-        "libvorbis",
-        file,
-      ]);
-    try {
-      for (const stem of ["drums", "bass", "other"])
-        tone(path.join(music, `calm.${stem}.ogg`), 12, 0.02);
-      const manifest = {
-        theme: "zone",
-        rate: 44100,
-        level_db: 0,
-        stems: ["drums", "bass", "other"],
-        clips: {
-          calm: {
-            files: { drums: "calm.drums.ogg", bass: "calm.bass.ogg", other: "calm.other.ogg" },
-          },
-        },
-      };
-      const write = (clip) =>
-        writeFileSync(
-          path.join(music, "manifest.json"),
-          JSON.stringify({ ...manifest, clips: { calm: { ...manifest.clips.calm, ...clip } } }),
-        );
-      write({});
-      const base = parseArgs(["--project", dir]);
-      const kinds = () =>
-        run(base)
-          .findings.filter((f) => f.kind === "stale" || f.where.endsWith("STEMS.sha256"))
-          .map((f) => f.kind);
-      assert.deepEqual(kinds(), ["unchecked"], "no hash list: unchecked, never a pass");
-      writeStemHashes(
-        path.join(dir, "assets/music_ace", "STEMS.sha256"),
-        path.join(dir, "assets/music_ace"),
-        ["zone/calm.drums.ogg", "zone/calm.bass.ogg", "zone/calm.other.ogg"],
-      );
-      const measured = run(base).rows[0].lufs;
-      write({ measured: { lufs: measured } });
-      assert.deepEqual(kinds(), [], "the good pack: hashes match, loudness matches its manifest");
-      write({ measured: { lufs: measured + 2 } });
-      assert.deepEqual(kinds(), ["stale"], "a manifest cut from a louder mix flags the clip");
-      write({ measured: { lufs: measured } });
-      tone(path.join(music, "calm.bass.ogg"), 12, 0.02);
-      assert.ok(kinds().includes("stale"), "a re-encoded stem differs from the hash list");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  },
-);
-
-function oggOf(granules, rate = 44100) {
-  const page = (granule, body) => {
-    const head = Buffer.alloc(27 + 1);
-    head.write("OggS", 0, "latin1");
-    head.writeBigInt64LE(BigInt(granule), 6);
-    head[26] = 1;
-    head[27] = body.length;
-    return Buffer.concat([head, body]);
-  };
-  const id = Buffer.alloc(30);
-  id.write("\x01vorbis", 0, "latin1");
-  id[11] = 2;
-  id.writeUInt32LE(rate, 12);
-  return Buffer.concat([
-    page(0, id),
-    ...granules.map((g) => page(g, Buffer.from("OggS is not a page here"))),
-  ]);
-}
-
-test("a packed Ogg stored in one-second pages is named, a short-paged one passes", () => {
-  const long = oggOf([44100, 88200, 132300]);
-  const short = oggOf(Array.from({ length: 150 }, (_, i) => (i + 1) * 882));
-  assert.equal(oggLongestPage(long), 1);
-  assert.equal(oggLongestPage(short), 0.02);
-  assert.equal(oggLongestPage(Buffer.from("fresh drums")), null, "not an Ogg is not judged");
-  assert.equal(
-    oggLongestPage(long.subarray(0, 40)),
-    null,
-    "a file cut off inside its first page is not judged, and does not throw",
-  );
-  const manifest = (pack, files) => ({ dir: pack, clips: { calm: { files } } });
-  const dir = project({
-    "assets/music_ace/spillway/calm.drums.ogg": short,
-    "assets/music_ace/spillway/calm.bass.ogg": long,
+  test("report lists each kind and never passes with findings", () => {
+    assert.equal(report([]), "audio gate: PASS");
+    const text = report([{ kind: "unchecked", where: "ffmpeg", what: "not found" }]);
+    assert.match(text, /Not checked: 1/);
+    assert.match(text, /FAIL/);
   });
-  try {
-    const found = pageFindings(dir, [
-      manifest("spillway", {
-        drums: "calm.drums.ogg",
-        bass: "calm.bass.ogg",
-        other: "calm.other.ogg",
-      }),
-    ]);
+
+  test(
+    "judge measures loudness, true peak and seams through ffmpeg",
+    { skip: !hasFfmpeg() && "no ffmpeg" },
+    () => {
+      const dir = project({
+        "on-target-loop.wav": sineWav(48000 * 12, 0.158),
+        "loud-click-loop.wav": sineWav(48000 * 12 + 12, 0.5),
+      });
+      try {
+        const good = judge("on-target", decode(path.join(dir, "on-target-loop.wav")), 48000, {
+          loop: true,
+        });
+        assert.deepEqual(good.found, []);
+        assert.ok(Math.abs(good.row.lufs + 16) < 0.3, String(good.row.lufs));
+        const bad = judge("loud", decode(path.join(dir, "loud-click-loop.wav")), 48000, {
+          loop: true,
+        });
+        assert.deepEqual(bad.found.map((f) => f.kind).sort(), ["loudness", "seam"]);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
+  test("a clip whose length or loudness differs from its manifest is stale", () => {
+    const t = { name: "spillway/calm", frames: 988672, measuredLufs: -16 };
+    assert.deepEqual(staleAgainstManifest(t, 988672, -15.9), []);
     assert.deepEqual(
-      found.map((f) => [f.kind, f.where]),
-      [["pages", "spillway/calm.bass.ogg"]],
-      "the long-paged stem is named; the short one and the absent one are not",
+      staleAgainstManifest(t, 988673, -16).map((f) => f.kind),
+      ["stale"],
     );
-    assert.match(found[0].what, /repage\.py apply/);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
+    assert.deepEqual(
+      staleAgainstManifest(t, 988672, -14.2).map((f) => f.kind),
+      ["stale"],
+    );
+    assert.deepEqual(
+      staleAgainstManifest({ name: "old/calm", frames: null, measuredLufs: null }, 5, -3),
+      [],
+    );
+  });
 
-test(
-  "measureGameAsync, measureFilesAsync and runAsync match sync metering bit-for-bit across workers",
-  { skip: !hasFfmpeg() && "no ffmpeg" },
-  async () => {
+  test("STEMS.sha256 rejects a stale, an unlisted and a re-encoded stem and names each", () => {
     const dir = project({
-      "src/presentation/sfx_bank.gd": "",
-      "assets/music_ace/alpha/long_clean.a.wav": sineWav(48000 * 13, 0.08, 1000, 48000),
-      "assets/music_ace/alpha/long_clean.b.wav": sineWav(48000 * 13, 0.078, 1000, 48000),
-      "assets/music_ace/alpha/short_hot.wav": sineWav(48000 * 2, 0.99, 440, 48000),
-      "assets/music_ace/alpha/loud_click.wav": sineWav(48000 * 12 + 12, 0.5, 1000, 48000),
-      "assets/music_ace/beta/clean_loop.wav": sineWav(48000 * 11, 0.158, 1000, 48000),
-      "assets/music_ace/beta/stale_len.wav": sineWav(48000 * 3, 0.158, 500, 48000),
-      "loose/one-loop.wav": sineWav(48000 * 11, 0.158, 1000, 48000),
-      "loose/two-click-loop.wav": sineWav(48000 * 2 + 12, 0.95, 1000, 48000),
-      "loose/three-stinger.wav": sineWav(48000 * 1, 0.1, 440, 48000),
+      "spillway/calm.drums.ogg": "fresh drums",
+      "spillway/calm.bass.ogg": "fresh bass",
+      "spillway/calm.other.ogg": "fresh other",
     });
+    const named = ["spillway/calm.drums.ogg", "spillway/calm.bass.ogg", "spillway/calm.other.ogg"];
+    const list = path.join(dir, "STEMS.sha256");
     try {
-      writeFileSync(
-        path.join(dir, "assets/music_ace/alpha/manifest.json"),
-        JSON.stringify({
-          theme: "alpha",
-          rate: 48000,
-          level_db: 0,
-          clips: {
-            long_clean: {
-              files: { a: "long_clean.a.wav", b: "long_clean.b.wav" },
-              loop: true,
-              sample_count: 48000 * 13,
-            },
-            short_hot: {
-              files: { full: "short_hot.wav" },
-              loop: false,
-            },
-            missing_one: {
-              files: { full: "does_not_exist.wav" },
-              loop: true,
-            },
-            loud_click: {
-              files: { full: "loud_click.wav" },
-              loop: true,
-            },
-          },
-        }),
-      );
-      writeFileSync(
-        path.join(dir, "assets/music_ace/beta/manifest.json"),
-        JSON.stringify({
-          theme: "beta",
-          rate: 48000,
-          level_db: 0,
-          clips: {
-            clean_loop: {
-              files: { full: "clean_loop.wav" },
-              loop: true,
-              sample_count: 48000 * 11,
-            },
-            stale_len: {
-              files: { full: "stale_len.wav" },
-              loop: false,
-              sample_count: 48000 * 3 + 7,
-            },
-            missing_two: {
-              files: { full: "also_missing.wav" },
-              loop: false,
-            },
-          },
-        }),
-      );
-
-      const manifests = readManifests(dir);
-      const syncGame = measureGame(manifests);
-      const asyncGame4 = await measureGameAsync(manifests, { jobs: 4 });
-      const asyncGame1 = await measureGameAsync(manifests, { jobs: 1 });
-      assert.deepEqual(asyncGame4, syncGame);
-      assert.deepEqual(asyncGame1, syncGame);
+      assert.equal(stemHashMismatches(list, dir, named), null, "no list is not a pass");
+      assert.equal(writeStemHashes(list, dir, named), 3);
+      assert.deepEqual(stemHashMismatches(list, dir, named), [], "the good pack passes");
+      writeFileSync(path.join(dir, "spillway/calm.bass.ogg"), "an older mix under the same name");
+      const bad = stemHashMismatches(list, dir, named);
       assert.deepEqual(
-        asyncGame4.rows.map((r) => r.name),
-        syncGame.rows.map((r) => r.name),
+        bad.map((r) => r.file),
+        ["spillway/calm.bass.ogg"],
+        "the planted stale Ogg is named and nothing else",
       );
-      assert.ok(asyncGame4.found.some((f) => f.kind === "peak"));
-      assert.ok(asyncGame4.found.some((f) => f.kind === "loudness"));
-      assert.ok(asyncGame4.found.some((f) => f.kind === "seam"));
-      assert.ok(asyncGame4.found.some((f) => f.kind === "stale"));
-      assert.ok(asyncGame4.found.some((f) => f.kind === "unchecked"));
-
-      const looseFiles = [
-        path.join(dir, "loose/one-loop.wav"),
-        path.join(dir, "loose/two-click-loop.wav"),
-        path.join(dir, "loose/three-stinger.wav"),
-      ];
-      const syncFiles = measureFiles(looseFiles, /loop/i);
-      const asyncFiles = await measureFilesAsync(looseFiles, /loop/i, { jobs: 3 });
-      assert.deepEqual(asyncFiles, syncFiles);
-
-      const args = parseArgs(["--project", dir, "--music", path.join(dir, "loose"), "--jobs=4"]);
-      const syncRun = run(args);
-      const asyncRun = await runAsync(args);
-      assert.deepEqual(asyncRun, syncRun);
-
-      const cli = spawnSync(
-        process.execPath,
-        [
-          path.join(import.meta.dirname, "audio-gate.mjs"),
-          "--project",
-          dir,
-          "--music",
-          path.join(dir, "loose"),
-          "--jobs=4",
-          "--json",
-        ],
-        { encoding: "utf8" },
+      assert.match(bad[0].why, /sha256 differs/);
+      const unlisted = stemHashMismatches(list, dir, [...named, "spillway/build.drums.ogg"]);
+      assert.deepEqual(
+        unlisted.map((r) => r.file),
+        ["spillway/calm.bass.ogg"],
+        "a named file that is not on disk is not this check's finding",
       );
-      assert.equal(cli.status, 1, cli.stderr);
-      assert.deepEqual(JSON.parse(cli.stdout), { rows: syncRun.rows, findings: syncRun.findings });
+      writeFileSync(path.join(dir, "spillway/build.drums.ogg"), "new, never hashed");
+      assert.ok(
+        stemHashMismatches(list, dir, [...named, "spillway/build.drums.ogg"]).some(
+          (r) => r.file === "spillway/build.drums.ogg" && /not listed/.test(r.why),
+        ),
+      );
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  },
-);
+  });
+
+  const hasLibvorbis = () =>
+    hasFfmpeg() &&
+    /libvorbis/.test(String(spawnSync("ffmpeg", ["-hide_banner", "-encoders"]).stdout));
+
+  test(
+    "the gate flags a stale pack and an unhashed one, and passes the good pack",
+    { skip: !hasLibvorbis() && "no ffmpeg with libvorbis" },
+    async () => {
+      const dir = mkdtempSync(path.join(os.tmpdir(), "audio-gate-stale-"));
+      const music = path.join(dir, "assets/music_ace/zone");
+      mkdirSync(music, { recursive: true });
+      const tone = (file, seconds, level) =>
+        execFileAsync("ffmpeg", [
+          "-v",
+          "error",
+          "-y",
+          "-f",
+          "lavfi",
+          "-i",
+          `sine=frequency=440:duration=${seconds}:sample_rate=44100`,
+          "-af",
+          `volume=${level}`,
+          "-ac",
+          "2",
+          "-c:a",
+          "libvorbis",
+          file,
+        ]);
+      try {
+        await Promise.all(
+          ["drums", "bass", "other"].map((stem) =>
+            tone(path.join(music, `calm.${stem}.ogg`), 12, 0.02),
+          ),
+        );
+        const manifest = {
+          theme: "zone",
+          rate: 44100,
+          level_db: 0,
+          stems: ["drums", "bass", "other"],
+          clips: {
+            calm: {
+              files: { drums: "calm.drums.ogg", bass: "calm.bass.ogg", other: "calm.other.ogg" },
+            },
+          },
+        };
+        const write = (clip) =>
+          writeFileSync(
+            path.join(music, "manifest.json"),
+            JSON.stringify({ ...manifest, clips: { calm: { ...manifest.clips.calm, ...clip } } }),
+          );
+        write({});
+        const base = parseArgs(["--project", dir]);
+        const staleKinds = (res) =>
+          res.findings
+            .filter((f) => f.kind === "stale" || f.where.endsWith("STEMS.sha256"))
+            .map((f) => f.kind);
+        const first = run(base);
+        assert.deepEqual(staleKinds(first), ["unchecked"], "no hash list: unchecked, never a pass");
+        writeStemHashes(
+          path.join(dir, "assets/music_ace", "STEMS.sha256"),
+          path.join(dir, "assets/music_ace"),
+          ["zone/calm.drums.ogg", "zone/calm.bass.ogg", "zone/calm.other.ogg"],
+        );
+        const measured = first.rows[0].lufs;
+        write({ measured: { lufs: measured } });
+        assert.deepEqual(
+          staleKinds(run(base)),
+          [],
+          "the good pack: hashes match, loudness matches its manifest",
+        );
+        write({ measured: { lufs: measured + 2 } });
+        assert.deepEqual(
+          staleKinds(run(base)),
+          ["stale"],
+          "a manifest cut from a louder mix flags the clip",
+        );
+        write({ measured: { lufs: measured } });
+        await tone(path.join(music, "calm.bass.ogg"), 12, 0.02);
+        assert.ok(
+          staleKinds(run(base)).includes("stale"),
+          "a re-encoded stem differs from the hash list",
+        );
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
+  function oggOf(granules, rate = 44100) {
+    const page = (granule, body) => {
+      const head = Buffer.alloc(27 + 1);
+      head.write("OggS", 0, "latin1");
+      head.writeBigInt64LE(BigInt(granule), 6);
+      head[26] = 1;
+      head[27] = body.length;
+      return Buffer.concat([head, body]);
+    };
+    const id = Buffer.alloc(30);
+    id.write("\x01vorbis", 0, "latin1");
+    id[11] = 2;
+    id.writeUInt32LE(rate, 12);
+    return Buffer.concat([
+      page(0, id),
+      ...granules.map((g) => page(g, Buffer.from("OggS is not a page here"))),
+    ]);
+  }
+
+  test("a packed Ogg stored in one-second pages is named, a short-paged one passes", () => {
+    const long = oggOf([44100, 88200, 132300]);
+    const short = oggOf(Array.from({ length: 150 }, (_, i) => (i + 1) * 882));
+    assert.equal(oggLongestPage(long), 1);
+    assert.equal(oggLongestPage(short), 0.02);
+    assert.equal(oggLongestPage(Buffer.from("fresh drums")), null, "not an Ogg is not judged");
+    assert.equal(
+      oggLongestPage(long.subarray(0, 40)),
+      null,
+      "a file cut off inside its first page is not judged, and does not throw",
+    );
+    const manifest = (pack, files) => ({ dir: pack, clips: { calm: { files } } });
+    const dir = project({
+      "assets/music_ace/spillway/calm.drums.ogg": short,
+      "assets/music_ace/spillway/calm.bass.ogg": long,
+    });
+    try {
+      const found = pageFindings(dir, [
+        manifest("spillway", {
+          drums: "calm.drums.ogg",
+          bass: "calm.bass.ogg",
+          other: "calm.other.ogg",
+        }),
+      ]);
+      assert.deepEqual(
+        found.map((f) => [f.kind, f.where]),
+        [["pages", "spillway/calm.bass.ogg"]],
+        "the long-paged stem is named; the short one and the absent one are not",
+      );
+      assert.match(found[0].what, /repage\.py apply/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test(
+    "measureGameAsync, measureFilesAsync and runAsync match sync metering bit-for-bit across workers",
+    { skip: !hasFfmpeg() && "no ffmpeg" },
+    async () => {
+      const cleanLoop11s = sineWav(48000 * 11, 0.158, 1000, 48000);
+      const dir = project({
+        "src/presentation/sfx_bank.gd": "",
+        "assets/music_ace/alpha/long_clean.a.wav": sineWav(48000 * 13, 0.08, 1000, 48000),
+        "assets/music_ace/alpha/long_clean.b.wav": sineWav(48000 * 13, 0.078, 1000, 48000),
+        "assets/music_ace/alpha/short_hot.wav": sineWav(48000 * 2, 0.99, 440, 48000),
+        "assets/music_ace/alpha/loud_click.wav": sineWav(48000 * 12 + 12, 0.5, 1000, 48000),
+        "assets/music_ace/beta/clean_loop.wav": cleanLoop11s,
+        "assets/music_ace/beta/stale_len.wav": sineWav(48000 * 3, 0.158, 500, 48000),
+        "loose/one-loop.wav": cleanLoop11s,
+        "loose/two-click-loop.wav": sineWav(48000 * 2 + 12, 0.95, 1000, 48000),
+        "loose/three-stinger.wav": sineWav(48000 * 1, 0.1, 440, 48000),
+      });
+      try {
+        writeFileSync(
+          path.join(dir, "assets/music_ace/alpha/manifest.json"),
+          JSON.stringify({
+            theme: "alpha",
+            rate: 48000,
+            level_db: 0,
+            clips: {
+              long_clean: {
+                files: { a: "long_clean.a.wav", b: "long_clean.b.wav" },
+                loop: true,
+                sample_count: 48000 * 13,
+              },
+              short_hot: {
+                files: { full: "short_hot.wav" },
+                loop: false,
+              },
+              missing_one: {
+                files: { full: "does_not_exist.wav" },
+                loop: true,
+              },
+              loud_click: {
+                files: { full: "loud_click.wav" },
+                loop: true,
+              },
+            },
+          }),
+        );
+        writeFileSync(
+          path.join(dir, "assets/music_ace/beta/manifest.json"),
+          JSON.stringify({
+            theme: "beta",
+            rate: 48000,
+            level_db: 0,
+            clips: {
+              clean_loop: {
+                files: { full: "clean_loop.wav" },
+                loop: true,
+                sample_count: 48000 * 11,
+              },
+              stale_len: {
+                files: { full: "stale_len.wav" },
+                loop: false,
+                sample_count: 48000 * 3 + 7,
+              },
+              missing_two: {
+                files: { full: "also_missing.wav" },
+                loop: false,
+              },
+            },
+          }),
+        );
+
+        const manifests = readManifests(dir);
+        const looseFiles = [
+          path.join(dir, "loose/one-loop.wav"),
+          path.join(dir, "loose/two-click-loop.wav"),
+          path.join(dir, "loose/three-stinger.wav"),
+        ];
+        const args = parseArgs(["--project", dir, "--music", path.join(dir, "loose"), "--jobs=4"]);
+
+        const [syncGame, asyncGame4, asyncGame1, syncFiles, asyncFiles, syncRun, asyncRun, cli] =
+          await Promise.all([
+            callAudioGateInWorker("measureGame", [manifests]),
+            measureGameAsync(manifests, { jobs: 4 }),
+            callAudioGateInWorker("measureGameAsync", [manifests, { jobs: 1 }]),
+            callAudioGateInWorker("measureFiles", [looseFiles, /loop/i]),
+            measureFilesAsync(looseFiles, /loop/i, { jobs: 3 }),
+            callAudioGateInWorker("run", [args]),
+            runAsync(args),
+            execFileAsync(
+              process.execPath,
+              [
+                path.join(import.meta.dirname, "audio-gate.mjs"),
+                "--project",
+                dir,
+                "--music",
+                path.join(dir, "loose"),
+                "--jobs=4",
+                "--json",
+              ],
+              { encoding: "utf8" },
+            ).then(
+              (res) => ({ status: 0, stdout: res.stdout, stderr: res.stderr }),
+              (err) => ({ status: err.code, stdout: err.stdout ?? "", stderr: err.stderr ?? "" }),
+            ),
+          ]);
+
+        assert.deepEqual(asyncGame4, syncGame);
+        assert.deepEqual(asyncGame1, syncGame);
+        assert.deepEqual(
+          asyncGame4.rows.map((r) => r.name),
+          syncGame.rows.map((r) => r.name),
+        );
+        assert.ok(asyncGame4.found.some((f) => f.kind === "peak"));
+        assert.ok(asyncGame4.found.some((f) => f.kind === "loudness"));
+        assert.ok(asyncGame4.found.some((f) => f.kind === "seam"));
+        assert.ok(asyncGame4.found.some((f) => f.kind === "stale"));
+        assert.ok(asyncGame4.found.some((f) => f.kind === "unchecked"));
+
+        assert.deepEqual(asyncFiles, syncFiles);
+        assert.deepEqual(asyncRun, syncRun);
+
+        assert.equal(cli.status, 1, cli.stderr);
+        assert.deepEqual(JSON.parse(cli.stdout), {
+          rows: syncRun.rows,
+          findings: syncRun.findings,
+        });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+}

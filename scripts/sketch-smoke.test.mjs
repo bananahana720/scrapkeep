@@ -1765,6 +1765,10 @@ test("testFixedFps parses opt-in fixed-fps markers from the first five lines and
   assert.equal(smoke.batchable("# smoke: fixed-fps=90\nextends SceneTree\n"), true);
   assert.equal(smoke.batchable("# header\n\nextends SceneTree\n"), true);
   assert.equal(smoke.batchable("# smoke: solo fixed-fps=90\nextends SceneTree\n"), false);
+  assert.equal(
+    smoke.batchable('extends SceneTree\nfunc f():\n\tmesh.take_over_path("res://a.tres")\n'),
+    false,
+  );
 });
 
 test("splitBatch captures outside lines and batchHasOutsideError catches exit leaks", () => {

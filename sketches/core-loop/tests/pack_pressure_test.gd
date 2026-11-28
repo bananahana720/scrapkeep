@@ -1,4 +1,4 @@
-# smoke: solo (the world 1 pack pressure experiments: presets, identity defaults, the curved lead, churned silt, silt boils)
+# the world 1 pack pressure experiments: presets, identity defaults, the curved lead, churned silt, silt boils
 extends SceneTree
 
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
