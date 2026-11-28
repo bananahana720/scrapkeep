@@ -53,7 +53,7 @@ const LaunchTake := preload("res://src/presentation/launch_take.gd")
 const Opening := preload("res://src/presentation/opening.gd")
 const MENU_PATHS := [
 	"res://src/world/camp_hub.gd",
-	"res://src/ui/camp_enemy_picker.gd",
+	"",
 	"res://src/ui/workshop.gd",
 	"res://src/ui/pause_menu.gd",
 ]
@@ -401,6 +401,8 @@ func _menu_step_once() -> void:
 
 func _menu_script(step: int) -> Script:
 	var path: String = MENU_PATHS[step]
+	if path == "":
+		return null
 	if _menu_requested == step:
 		_menu_requested = -1
 		var threaded: Script = ResourceLoader.load_threaded_get(path)
@@ -425,7 +427,7 @@ func _step_menu_modules_later() -> void:
 		if _menu_wait > 0:
 			return
 		_menu_requested = _menu_step
-		if ResourceLoader.load_threaded_request(MENU_PATHS[_menu_step], "", false) != OK:
+		if MENU_PATHS[_menu_step] == "" or ResourceLoader.load_threaded_request(MENU_PATHS[_menu_step], "", false) != OK:
 			_menu_requested = -1
 			_menu_step_once()
 			_menu_wait = MENU_MODULES_FRAMES_APART
