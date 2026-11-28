@@ -6,27 +6,29 @@ import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { isMain, parseCliArgs } from "./cli.mjs";
-import { REPO_ROOT } from "./git.mjs";
-import { walkSync } from "./walk.mjs";
+import { git, REPO_ROOT } from "./git.mjs";
 
 const READS_ARGV1 = [
   "scripts/gate/display-run.test.mjs",
   "scripts/lib/cli.mjs",
   "scripts/lib/cli.test.mjs",
+  "server/index.js",
+  "tests/expedition-balance.mjs",
 ];
 
-function scriptsReadingArgv1(root) {
+function filesReadingArgv1(root) {
+  const listed = git(["ls-files", "-z", "--", "*.mjs", "*.cjs", "*.js"], { cwd: root, trim: false })
+    .split("\0")
+    .filter(Boolean)
+    .sort();
+  assert.ok(listed.length > 0, `git ls-files listed no .mjs, .cjs or .js file in ${root}`);
   const found = [];
-  let seen = 0;
-  const skipped = (entry) => entry.name === "node_modules" || entry.name.startsWith(".");
-  for (const entry of walkSync(path.join(root, "scripts"), { sort: true, prune: skipped })) {
-    if (!/\.(mjs|cjs|js)$/.test(entry.name)) continue;
-    seen += 1;
-    const text = readFileSync(entry.full, "utf8");
-    assert.notEqual(text, "", `${entry.rel} read as empty`);
-    if (/process\s*\.\s*argv\s*\[\s*1\s*\]/.test(text)) found.push(`scripts/${entry.rel}`);
+  for (const rel of listed) {
+    const text = readFileSync(path.join(root, rel), "utf8");
+    assert.notEqual(text, "", `${rel} read as empty`);
+    if (/process\s*\.\s*argv\s*\[\s*1\s*\]/.test(text)) found.push(rel);
   }
-  return { found, seen };
+  return { found, seen: listed.length };
 }
 
 test("isMain resolves direct paths, symlinks, missing argv1, and non-existent fallback", () => {
@@ -103,8 +105,8 @@ test("parseCliArgs parses flags, values, multi values, inline = syntax, position
 });
 
 test("only the shared helper decides whether a script is the one being run", () => {
-  const { found, seen } = scriptsReadingArgv1(REPO_ROOT);
-  assert.ok(seen > 150, `walked only ${seen} script files under scripts/`);
+  const { found, seen } = filesReadingArgv1(REPO_ROOT);
+  assert.ok(seen > 200, `walked only ${seen} tracked .mjs, .cjs and .js files`);
   assert.deepEqual(
     found,
     READS_ARGV1,
@@ -112,38 +114,47 @@ test("only the shared helper decides whether a script is the one being run", () 
   );
 });
 
-test("the search for scripts that read process.argv[1] sees every spelling this repository has used", () => {
+test("the search for files that read process.argv[1] sees every spelling this repository has used", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-argv1-"));
   try {
-    const scripts = path.join(dir, "scripts");
-    for (const folder of ["gate", "node_modules", ".cache"])
-      mkdirSync(path.join(scripts, folder), { recursive: true });
+    assert.throws(() => filesReadingArgv1(dir), /git ls-files .* failed/);
+    git(["init", "-q"], { cwd: dir });
+    assert.throws(() => filesReadingArgv1(dir), /listed no \.mjs, \.cjs or \.js file/);
+    for (const folder of ["scripts/gate", "node_modules", ".agents/hooks", "tools"])
+      mkdirSync(path.join(dir, folder), { recursive: true });
     const spellings = {
-      "a.mjs":
+      "scripts/a.mjs":
         "if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();\n",
-      "b.mjs": "if (realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();\n",
-      "gate/c.mjs": "if (import.meta.url === pathToFileURL(process.argv[ 1 ]).href) main();\n",
-      "d.js": "if (process.argv[1]?.endsWith('d.js')) main();\n",
-      "e.cjs": "if (process.argv[1] === __filename) main();\n",
-      "node_modules/skipped.mjs": "process.argv[1];\n",
-      ".cache/skipped.mjs": "process.argv[1];\n",
-      "clean.mjs": "if (isMain(import.meta.url)) main();\n",
-      "notes.md": "process.argv[1]\n",
+      "scripts/b.mjs":
+        "if (realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();\n",
+      "scripts/gate/c.mjs":
+        "if (import.meta.url === pathToFileURL(process.argv[ 1 ]).href) main();\n",
+      "scripts/d.js": "if (process.argv[1]?.endsWith('d.js')) main();\n",
+      "scripts/e.cjs": "if (process.argv[1] === __filename) main();\n",
+      ".agents/hooks/f.mjs": "if (process.argv[1] === fileURLToPath(import.meta.url)) main();\n",
+      "tools/g.mjs": "if (process.argv[1]) main();\n",
+      "scripts/clean.mjs": "if (isMain(import.meta.url)) main();\n",
+      "scripts/notes.md": "process.argv[1]\n",
     };
-    for (const [rel, text] of Object.entries(spellings))
-      writeFileSync(path.join(scripts, rel), text);
-    assert.deepEqual(scriptsReadingArgv1(dir), {
+    for (const [rel, text] of Object.entries(spellings)) writeFileSync(path.join(dir, rel), text);
+    writeFileSync(path.join(dir, "node_modules/untracked.mjs"), "process.argv[1];\n");
+    writeFileSync(path.join(dir, "tools/untracked.mjs"), "process.argv[1];\n");
+    git(["add", "--", ...Object.keys(spellings)], { cwd: dir });
+    assert.deepEqual(filesReadingArgv1(dir), {
       found: [
+        ".agents/hooks/f.mjs",
         "scripts/a.mjs",
         "scripts/b.mjs",
         "scripts/d.js",
         "scripts/e.cjs",
         "scripts/gate/c.mjs",
+        "tools/g.mjs",
       ],
-      seen: 6,
+      seen: 8,
     });
-    writeFileSync(path.join(scripts, "empty.mjs"), "");
-    assert.throws(() => scriptsReadingArgv1(dir), /empty\.mjs read as empty/);
+    writeFileSync(path.join(dir, "scripts/empty.mjs"), "");
+    git(["add", "--", "scripts/empty.mjs"], { cwd: dir });
+    assert.throws(() => filesReadingArgv1(dir), /scripts\/empty\.mjs read as empty/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

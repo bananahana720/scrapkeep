@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "../../scripts/lib/cli.mjs";
 import { gitOptional } from "../../scripts/lib/git.mjs";
 
 const LIVE_SAVE_SEGMENT =
@@ -475,9 +475,6 @@ function main() {
   process.stdout.write(JSON.stringify(result) + "\n");
 }
 
-if (
-  process.argv[1] &&
-  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
-) {
+if (isMain(import.meta.url)) {
   main();
 }
