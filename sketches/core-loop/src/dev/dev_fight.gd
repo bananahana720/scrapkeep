@@ -74,7 +74,8 @@ func spawn(kind: String, count := 1, affix := "") -> String:
 		return "!no affix '%s' (%s, %s)" % [affix, ", ".join(EliteAffixes.IDS), EliteAffixes.PLATED]
 	count = clampi(count, 1, MAX_COUNT)
 	var ball: Vector3 = c.player.ball_position()
-	var centre := ball + c.heading() * AHEAD
+	var forward: Vector3 = c.heading()
+	var centre := ball + forward * AHEAD
 	var clearance := BIG_CLEARANCE if kind in BIG_KINDS else MOB_CLEARANCE
 	for i in count:
 		var at := centre
