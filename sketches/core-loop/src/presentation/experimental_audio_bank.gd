@@ -246,15 +246,3 @@ static func load_pbr_mask(mask_id: String) -> Texture2D:
 	if loaded != null:
 		_texture_cache[mask_id] = loaded
 	return loaded
-
-
-static func pitted_iron_mask() -> Texture2D:
-	return load_pbr_mask("pitted_iron")
-
-
-static func slag_crust_mask() -> Texture2D:
-	return load_pbr_mask("slag_crust")
-
-
-static func corrosive_brine_mask() -> Texture2D:
-	return load_pbr_mask("corrosive_brine")
