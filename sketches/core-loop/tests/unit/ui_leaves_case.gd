@@ -4,7 +4,7 @@ const LOWER_DIRS: Array[String] = [
 	"res://src/core", "res://src/build", "res://src/combat", "res://src/boss", "res://src/movement", "res://src/world",
 ]
 const UI_DIR := "res://src/ui/"
-const UI_LEAVES: Array[String] = ["glyphs.gd", "word_budget.gd"]
+const UI_LEAVES: Array[String] = ["glyphs.gd", "word_budget.gd", "why_callout.gd"]
 const FLOW_PATH := "res://src/core/flow.gd"
 
 
@@ -46,7 +46,7 @@ func run(t) -> void:
 	t.check("word_budget.gd lives in src/core", FileAccess.file_exists("res://src/core/word_budget.gd"))
 	for name in UI_LEAVES:
 		var leaf: String = UI_DIR + name
-		var quoted := "\"" + leaf.replace(".", "\\.") + "\""
+		var quoted := "[\"']" + leaf.replace(".", "\\.") + "[\"']"
 		for root in LOWER_DIRS:
 			t.eq("no %s names %s" % [root, leaf], _matching_files(root, quoted), [])
 
