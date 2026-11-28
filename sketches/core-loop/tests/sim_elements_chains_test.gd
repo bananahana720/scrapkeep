@@ -42,15 +42,19 @@ class FakeScrap extends RefCounted:
 		return total
 
 
+class FakeDrops extends RefCounted:
+	var ids: Array[String] = []
+
+	func drop_consumable(cons_id: String, _at: Vector3) -> void:
+		ids.append(cons_id)
+
+
 class FakeCombat extends RefCounted:
 	var strikes: Array[Dictionary] = []
-	var consumables: Array[String] = []
+	var consumables := FakeDrops.new()
 
 	func strike(enemy: Node3D, kind: String, force: float, part := "", source := "", _impact := "") -> void:
 		strikes.append({"enemy": enemy, "kind": kind, "force": force, "part": part, "source": source})
-
-	func drop_consumable(cons_id: String, _at: Vector3) -> void:
-		consumables.append(cons_id)
 
 
 class FakeEnemy extends Node3D:

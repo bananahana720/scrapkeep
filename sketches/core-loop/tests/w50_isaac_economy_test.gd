@@ -372,7 +372,7 @@ func _check_new_actives() -> void:
 
 func _check_isaac_consumables_and_trade_contracts() -> void:
 	var run = _game.ctx.run
-	_combat._clear_consumables_runtime()
+	_combat.consumables.reset()
 	run.clear_consumables()
 	run.expand_consumable_belt(2)
 
@@ -385,7 +385,7 @@ func _check_isaac_consumables_and_trade_contracts() -> void:
 	var rerolls_before: int = shop.rerolls_left
 	var cogs_before: int = run.cogs
 	run.add_consumable(Consumables.SCRAP_DICE)
-	var dice_res: Dictionary = _combat.use_consumable()
+	var dice_res: Dictionary = _combat.consumables.use_consumable()
 	var before_tiers: Array = dice_res.get("before_tiers", [])
 	var after_tiers: Array = dice_res.get("after_tiers", [])
 	var tiers_non_decreasing := before_tiers.size() > 0 and before_tiers.size() == after_tiers.size()
@@ -401,7 +401,7 @@ func _check_isaac_consumables_and_trade_contracts() -> void:
 	run.clear_consumables()
 	run.bonus_cores = 0
 	run.add_consumable(Consumables.DUPLICATOR_SPOOL)
-	var dup_res: Dictionary = _combat.use_consumable()
+	var dup_res: Dictionary = _combat.consumables.use_consumable()
 	_t.check("duplicator_spool arms 12 s clone window",
 		bool(dup_res.get("armed", false)) and Consumables.duplicator_armed(run)
 		and is_equal_approx(float(dup_res.get("duration_s", 0.0)), 12.0))
@@ -413,7 +413,7 @@ func _check_isaac_consumables_and_trade_contracts() -> void:
 
 	# Planted negative control: expired duplicator window (> 12 s) clones nothing.
 	run.add_consumable(Consumables.DUPLICATOR_SPOOL)
-	_combat.use_consumable()
+	_combat.consumables.use_consumable()
 	Consumables.step_w50(_game.ctx, 12.5)
 	var expired_clone := Consumables.try_clone_pickup(_game.ctx, _combat, "core", 1, _player.ball_position())
 	_t.check("planted: expired duplicator_spool window clones nothing",
@@ -425,7 +425,7 @@ func _check_isaac_consumables_and_trade_contracts() -> void:
 	rack.charges = 2
 	var echo_before: int = rack.echo_fires
 	run.add_consumable(Consumables.OVERLOAD_FUSE)
-	var fuse_res: Dictionary = _combat.use_consumable()
+	var fuse_res: Dictionary = _combat.consumables.use_consumable()
 	_t.check("overload_fuse arms 0.75x single echo", bool(fuse_res.get("armed", false)) and Consumables.overload_armed(run))
 	rack.press()
 	var after_first_echo: int = rack.echo_fires
@@ -440,7 +440,7 @@ func _check_isaac_consumables_and_trade_contracts() -> void:
 	ult_e.max_hp = 500.0
 	ult_e.set_physics_process(false)
 	run.add_consumable(Consumables.OVERLOAD_FUSE)
-	_combat.use_consumable()
+	_combat.consumables.use_consumable()
 	var ult1 := Consumables.echo_ultimate(_game.ctx, _combat, 40.0, _player.ball_position(), 8.0)
 	var ult2 := Consumables.echo_ultimate(_game.ctx, _combat, 40.0, _player.ball_position(), 8.0)
 	_t.check("overload_fuse Ultimate echo deals 0.75x item_proc strictly once",
