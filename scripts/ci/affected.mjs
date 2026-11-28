@@ -11,7 +11,7 @@ const GODOT_PATTERN = /^sketches\/core-loop\//;
 const NODE_PATTERN =
   /^(package\.json|package-lock\.json|scripts\/|tests\/|tools\/|src\/|server\/|project-guide\/handoff\/sitting-kit\/|\.github\/workflows\/)/;
 const DOCS_PATTERN =
-  /(\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.agents\/skills\/|^\.claude\/skills\/|^scripts\/(?:check-docs|check-project|check-skills|brief-check|wave-state|known-failing|gate\/weekly))/;
+  /(\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.(?:agents|claude|codex)\/|^scripts\/(?:check-docs|check-project|check-skills|check-agents\.mjs|brief-check|wave-state|known-failing|gate\/weekly))/;
 const WORKFLOW_PATTERN = /^(\.github\/workflows\/|scripts\/ci\/)/;
 
 export function classifyAffected(changedFiles, { full = false } = {}) {

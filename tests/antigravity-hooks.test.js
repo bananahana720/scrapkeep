@@ -320,3 +320,79 @@ test("defaultInspectProjectGodot fast-paths clean project.godot without spawning
     rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test("denies macOS live Godot save paths across shell quoting, escapes, %20, casing, and file-write tools while allowing artifacts/local scratch paths", () => {
+  for (const cmd of [
+    'rm -rf "$HOME/Library/Application Support/godot/app_userdata/core-loop/save.json"',
+    "rm -rf '/Users/andrew/Library/Application Support/Godot/app_userdata/core-loop/save.json'",
+    "rm -rf ~/Library/Application\\ Support/godot/app_userdata/core-loop/save.json",
+    'cat ~/Library/"Application Support"/Godot/app_userdata/core-loop/profile.json',
+    "cat ~/Library/'Application Support'/godot/app_userdata/core-loop/profile.json",
+    "open file:///Users/andrew/Library/Application%20Support/godot/app_userdata/core-loop/save.json",
+    "cat /Users/andrew/Library/Application Support/godot/app_userdata/core-loop/save.json",
+    'cat "artifacts/local/../../../Users/andrew/Library/Application Support/godot/app_userdata/core-loop/save.json"',
+    'cat "$HOME/artifacts/local/x/Library/Application Support/godot/app_userdata/core-loop/save.json"',
+    'cp "artifacts/local/run/Library/Application Support/godot/app_userdata/core-loop/a" "~/Library/Application Support/godot/app_userdata/core-loop/b"',
+    'rm -rf "/Users/andrew/Library/Application Support/godot/app_userdata/core-loop/artifacts/local/x"',
+  ]) {
+    const res = evaluateHook({
+      toolCall: { name: "run_command", args: { CommandLine: cmd } },
+      cwd: root,
+    });
+    assert.equal(res.decision, "deny", `Expected deny for macOS live save cmd: ${cmd}`);
+  }
+
+  for (const [toolName, key] of [
+    ["edit_file", "Path"],
+    ["write_file", "Path"],
+    ["write_to_file", "TargetFile"],
+    ["replace_file_content", "TargetFile"],
+    ["multi_replace_file_content", "AbsolutePath"],
+  ]) {
+    for (const targetPath of [
+      "/Users/andrew/Library/Application Support/godot/app_userdata/core-loop/settings.cfg",
+      "/Users/andrew/Library/Application Support/Godot/app_userdata/core-loop/profile.json",
+      "/Users/andrew/Library/Application%20Support/godot/app_userdata/core-loop/save.json",
+    ]) {
+      const res = evaluateHook({
+        toolCall: { name: toolName, args: { [key]: targetPath } },
+        cwd: root,
+      });
+      assert.equal(
+        res.decision,
+        "deny",
+        `Expected deny for ${toolName} (${key}) on macOS live save: ${targetPath}`,
+      );
+    }
+  }
+
+  for (const cmd of [
+    'cat "artifacts/local/verify-game/run1/Library/Application Support/Godot/app_userdata/core-loop/profile.json"',
+    "cat artifacts/local/verify-game/run1/Library/Application\\ Support/godot/app_userdata/core-loop/profile.json",
+    'HOME=/repo/artifacts/local/home ls "/repo/artifacts/local/home/Library/Application Support/godot/app_userdata/core-loop"',
+  ]) {
+    const res = evaluateHook({
+      toolCall: { name: "run_command", args: { CommandLine: cmd } },
+      cwd: root,
+    });
+    assert.equal(res.decision, "allow", `Expected allow for macOS scratch save cmd: ${cmd}`);
+  }
+
+  for (const scratchPath of [
+    path.join(
+      root,
+      "artifacts/local/verify-game/run1/Library/Application Support/Godot/app_userdata/core-loop/profile.json",
+    ),
+    "artifacts/local/test-home/Library/Application Support/godot/app_userdata/core-loop/settings.cfg",
+  ]) {
+    const res = evaluateHook({
+      toolCall: { name: "edit_file", args: { Path: scratchPath } },
+      cwd: root,
+    });
+    assert.equal(
+      res.decision,
+      "allow",
+      `Expected allow for macOS scratch file edit: ${scratchPath}`,
+    );
+  }
+});

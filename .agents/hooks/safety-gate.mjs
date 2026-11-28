@@ -3,7 +3,10 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const LIVE_SAVE_SEGMENT = /\.local\/share\/godot\/app_userdata\/core-loop(?:\b|\/|$)/;
+const LIVE_SAVE_SEGMENT =
+  /(?:\.local\/share\/godot\/app_userdata\/core-loop|Library\/Application Support\/godot\/app_userdata\/core-loop)(?:\b|\/|$)/i;
+const LIVE_SAVE_SEGMENT_GLOBAL =
+  /(?:\.local\/share\/godot\/app_userdata\/core-loop|Library\/Application Support\/godot\/app_userdata\/core-loop)(?:\b|\/|$)/gi;
 const SCRATCH_ARTIFACTS_PREFIX = /(?:^|\/)artifacts\/local\//;
 const PARENT_TRAVERSAL = /(?:^|\/)\.\.(?:\/|$)/;
 const SHELL_EXPANSION = /[{}*$?[\]`\\'"]/;
@@ -60,28 +63,57 @@ function tokenize(segment) {
   return tokens;
 }
 
+function splitShellWords(text) {
+  return String(text).match(/(?:"(?:\\.|[^"])*"|'[^']*'|\\.|[^\s"'])+/g) ?? [];
+}
+
+function normalizeForLiveSaveMatch(text) {
+  return String(text).replace(/\\ /g, " ").replace(/%20/gi, " ").replace(/["']/g, "");
+}
+
+function unwrapScratchPart(part) {
+  let cleaned = part;
+  if (
+    cleaned.length >= 2 &&
+    ((cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+      (cleaned.startsWith("'") && cleaned.endsWith("'")))
+  ) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  return cleaned.replace(/\\ /g, " ");
+}
+
 function isAllowedScratchSavePath(part) {
-  if (PARENT_TRAVERSAL.test(part) || SHELL_EXPANSION.test(part) || part.startsWith("~")) {
+  const cleaned = unwrapScratchPart(part);
+  if (PARENT_TRAVERSAL.test(cleaned) || SHELL_EXPANSION.test(cleaned) || cleaned.startsWith("~")) {
     return false;
   }
-  const scratchMatch = SCRATCH_ARTIFACTS_PREFIX.exec(part);
+  const scratchMatch = SCRATCH_ARTIFACTS_PREFIX.exec(cleaned);
   if (!scratchMatch) return false;
-  const liveMatch = LIVE_SAVE_SEGMENT.exec(part);
+  const liveMatch = LIVE_SAVE_SEGMENT.exec(cleaned);
   if (!liveMatch) return true;
   return scratchMatch.index < liveMatch.index;
 }
 
-function touchesLiveSavePath(text) {
+function touchesLiveSavePath(text, { isFilePath = false } = {}) {
   const str = String(text);
-  if (!LIVE_SAVE_SEGMENT.test(str)) return false;
-  for (const token of tokenize(str)) {
-    for (const part of token.split(/[=<>|;&()]+/).filter(Boolean)) {
-      if (!LIVE_SAVE_SEGMENT.test(part)) continue;
-      if (isAllowedScratchSavePath(part)) continue;
-      return true;
+  const normalizedFull = normalizeForLiveSaveMatch(str);
+  const totalMatches = normalizedFull.match(LIVE_SAVE_SEGMENT_GLOBAL)?.length ?? 0;
+  if (totalMatches === 0) return false;
+  if (isFilePath) {
+    return !isAllowedScratchSavePath(str);
+  }
+  let allowedMatches = 0;
+  for (const word of splitShellWords(str)) {
+    for (const part of word.split(/[=<>|;&()]+/).filter(Boolean)) {
+      const partMatches =
+        normalizeForLiveSaveMatch(part).match(LIVE_SAVE_SEGMENT_GLOBAL)?.length ?? 0;
+      if (partMatches === 0) continue;
+      if (!isAllowedScratchSavePath(part)) return true;
+      allowedMatches += partMatches;
     }
   }
-  return false;
+  return allowedMatches < totalMatches;
 }
 
 function parseGitInvocation(segment) {
@@ -300,9 +332,9 @@ export function evaluateHook(payload, { inspectProjectGodot = defaultInspectProj
     const targetPath = String(
       args.Path ?? args.path ?? args.AbsolutePath ?? args.TargetFile ?? args.target_file ?? "",
     );
-    if (touchesLiveSavePath(targetPath)) {
+    if (touchesLiveSavePath(targetPath, { isFilePath: true })) {
       return deny(
-        "Blocked by AGENTS.md: never modify Andrew's live Godot saves under ~/.local/share/godot/app_userdata/core-loop. Use artifacts/local/ instead.",
+        "Blocked by AGENTS.md: never modify Andrew's live Godot saves under ~/.local/share/godot/app_userdata/core-loop or ~/Library/Application Support/godot/app_userdata/core-loop. Use artifacts/local/ instead.",
       );
     }
     if (
@@ -326,7 +358,7 @@ export function evaluateHook(payload, { inspectProjectGodot = defaultInspectProj
     }
     if (touchesLiveSavePath(cmd)) {
       return deny(
-        "Blocked by AGENTS.md: never access or modify Andrew's live Godot saves under ~/.local/share/godot/app_userdata/core-loop. Set XDG_DATA_HOME/HOME under artifacts/local/.",
+        "Blocked by AGENTS.md: never access or modify Andrew's live Godot saves under ~/.local/share/godot/app_userdata/core-loop or ~/Library/Application Support/godot/app_userdata/core-loop. Set XDG_DATA_HOME/HOME under artifacts/local/.",
       );
     }
 
