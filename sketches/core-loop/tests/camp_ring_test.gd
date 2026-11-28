@@ -5,7 +5,8 @@ const Profile := preload("res://src/core/profile.gd")
 const Records := preload("res://src/world/camp_records.gd")
 const SurvivalCount := preload("res://src/world/survival_count.gd")
 const CampRing := preload("res://src/world/camp_ring.gd")
-const Picker := preload("res://src/ui/camp_enemy_picker.gd")
+const Sandbox := preload("res://src/world/camp_sandbox.gd")
+const MetRecord := preload("res://src/core/met_record.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The camp ring (camp_ring.gd): the best count per pilot in the camp's records, and the ring
@@ -81,7 +82,7 @@ func _ring() -> void:
 	_t.check("nothing starts outside the yard", not ring.running(), "plaza")
 	await _put(game, yard + Vector3.UP * 1.5)
 	sandbox.met_override = []
-	var met_before: Array = Picker.met_kinds(game.ctx.profile)
+	var met_before: Array = MetRecord.met_kinds(game.ctx.profile, Sandbox.kinds())
 	ring.begin()
 	# The gap between counts is the rule's; a short one keeps the test short.
 	var short: Dictionary = SurvivalCount.RULE.duplicate(true)
@@ -91,7 +92,7 @@ func _ring() -> void:
 	var first: Array = SurvivalCount.new(1, "ring").pack(1)
 	await _frames(int(ceil(first.size() * 0.4 * 60.0)) + 20)
 	_t.eq("count 1's machines climb in, met or not", sandbox.live_count(), first.size())
-	_t.eq("standing a machine in the ring is not meeting it", Picker.met_kinds(game.ctx.profile), met_before)
+	_t.eq("standing a machine in the ring is not meeting it", MetRecord.met_kinds(game.ctx.profile, Sandbox.kinds()), met_before)
 	var fenced := true
 	for enemy in sandbox.live:
 		fenced = fenced and Vector2(enemy.global_position.x - yard.x, enemy.global_position.z - yard.z).length() < 21.5

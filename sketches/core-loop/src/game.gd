@@ -45,6 +45,7 @@ const SettingsStore := preload("res://src/ui/settings_store.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
+const MetRecord := preload("res://src/core/met_record.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
@@ -384,7 +385,7 @@ func _menu_step_once() -> void:
 			hub.setup(self)
 			hub.camp_store = ctx.profile
 		1:
-			script.watch(self)
+			MetRecord.watch(self)
 		2:
 			add_child(script.new())
 		3:
