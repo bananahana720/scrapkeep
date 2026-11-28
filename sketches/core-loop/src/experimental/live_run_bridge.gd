@@ -113,10 +113,6 @@ var _live_site: Dictionary = {}
 var live_actors: Node3D = null
 
 
-static func _reset() -> void:
-	ExperimentalAudioBank._reset()
-
-
 static func is_enabled(args: Variant = null, env: Variant = null) -> bool:
 	var arg_list: PackedStringArray = PackedStringArray()
 	if args == null:
