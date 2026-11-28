@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import "./lib/cli.test.mjs";
+import { cwdDecidesRepository } from "./lib/git.mjs";
 import "./lib/game-defs.test.mjs";
 import "./lib/git.test.mjs";
 import "./lib/walk.test.mjs";
@@ -37,11 +38,14 @@ import {
   lintL16,
   lintL17,
   lintL18,
+  lintPreloadedTestSupport,
   lintSketch,
+  lintTrackedUids,
   parseBatchDriverRefs,
   parseBatchDriverVars,
-  parseTuning,
   parseLintArgs,
+  parseTuning,
+  preloadedTestSupportFiles,
   readBaselineAt,
   stronglyConnectedComponents,
 } from "./sketch-lint.mjs";
@@ -1139,6 +1143,149 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
   );
 });
 
+test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, failing, and live tree)", () => {
+  const testFiles = [
+    {
+      path: "sketches/core-loop/tests/sample_test.gd",
+      text: [
+        'extends "res://tools/runner.gd"',
+        'const Helper := preload("res://tests/support/helper.gd")',
+        '# const Ignored := preload("res://tools/commented.gd")',
+        "",
+      ].join("\n"),
+    },
+    {
+      path: "sketches/core-loop/tests/support/helper.gd",
+      text: [
+        "extends RefCounted",
+        "static var _cached := {}",
+        "static func reset_for_tests() -> void:",
+        "\t_cached.clear()",
+        "",
+      ].join("\n"),
+    },
+  ];
+  const toolFiles = [
+    {
+      path: "sketches/core-loop/tools/runner.gd",
+      text: 'const Shared := preload("res://tools/shared_state.gd")\n',
+    },
+    {
+      path: "sketches/core-loop/tools/shared_state.gd",
+      text: [
+        "extends RefCounted",
+        "static var flag := false",
+        "static func reset_for_tests() -> void:",
+        "\tflag = false",
+        "",
+      ].join("\n"),
+    },
+    {
+      path: "sketches/core-loop/tools/unused_tool.gd",
+      text: "extends RefCounted\nstatic var unreached := 0\n",
+    },
+    {
+      path: "sketches/core-loop/tools/commented.gd",
+      text: "extends RefCounted\nstatic var commented_only := 0\n",
+    },
+  ];
+  const reached = preloadedTestSupportFiles(testFiles, toolFiles, "sketches/core-loop");
+  assert.deepEqual(
+    reached.map((file) => file.rel),
+    ["tests/support/helper.gd", "tools/runner.gd", "tools/shared_state.gd"],
+  );
+
+  const emptyRefs = parseBatchDriverRefs("extends RefCounted\n");
+  const failing = lintPreloadedTestSupport(
+    testFiles,
+    toolFiles,
+    "sketches/core-loop",
+    emptyRefs,
+    new Set(),
+  );
+  assert.deepEqual(
+    failing.map((item) => item.key),
+    [
+      "sketches/core-loop/tests/support/helper.gd:_cached",
+      "sketches/core-loop/tools/shared_state.gd:flag",
+    ],
+  );
+
+  const driver = [
+    'const Helper := preload("res://tests/support/helper.gd")',
+    'const Shared := preload("res://tools/shared_state.gd")',
+    "",
+  ].join("\n");
+  const wiredRefs = parseBatchDriverRefs(driver);
+  const wiredVars = parseBatchDriverVars(driver);
+  assert.deepEqual(
+    lintPreloadedTestSupport(testFiles, toolFiles, "sketches/core-loop", wiredRefs, wiredVars),
+    [],
+  );
+
+  const noTools = lintPreloadedTestSupport(
+    testFiles,
+    [],
+    "sketches/core-loop",
+    wiredRefs,
+    wiredVars,
+  );
+  assert.deepEqual(
+    noTools.map((item) => `${item.rule} ${item.path}`),
+    ["L14 sketches/core-loop/tools"],
+  );
+  assert.match(noTools[0].message, /sketches\/core-loop\/tools/);
+
+  const noSupport = lintPreloadedTestSupport(
+    [testFiles[0]],
+    toolFiles,
+    "sketches/core-loop",
+    wiredRefs,
+    wiredVars,
+  );
+  assert.deepEqual(
+    noSupport.map((item) => `${item.rule} ${item.path}`),
+    ["L14 sketches/core-loop/tests/support"],
+  );
+  assert.match(noSupport[0].message, /sketches\/core-loop\/tests\/support/);
+
+  const neither = lintPreloadedTestSupport(
+    [{ path: "sketches/core-loop/tests/plain_test.gd", text: "extends SceneTree\n" }],
+    toolFiles,
+    "sketches/core-loop",
+    wiredRefs,
+    wiredVars,
+  );
+  assert.deepEqual(
+    neither.map((item) => `${item.rule} ${item.path}`),
+    ["L14 sketches/core-loop/tools", "L14 sketches/core-loop/tests/support"],
+  );
+
+  const liveDriver = readFileSync(path.join(sketchDir, "tools", "test_batch_driver.gd"), "utf8");
+  const liveRefs = parseBatchDriverRefs(liveDriver);
+  for (const rel of [
+    "tools/bot_profile.gd",
+    "tools/skill_band.gd",
+    "tools/traversal_line.gd",
+    "tools/bot_fairness.gd",
+    "tests/support/content_registry.gd",
+    "tests/support/cosmetic_art.gd",
+    "tests/support/teardown_noise.gd",
+  ]) {
+    assert.ok(liveRefs.has(rel), `expected ${rel} in driver refs`);
+  }
+  const raw = lintSketch("core-loop").filter((item) => item.rule === "L14");
+  const toolOrSupport = raw
+    .map((item) => item.key)
+    .filter(
+      (key) =>
+        key.startsWith("sketches/core-loop/tools/") ||
+        key.startsWith("sketches/core-loop/tests/support/"),
+    )
+    .sort();
+  assert.deepEqual(toolOrSupport, []);
+});
+
 test("L15 passes the checked-out core-loop tests tree against baseline and blocks a second 60 Hz literal in find_in_fight_test.gd", () => {
   const baseline = JSON.parse(
     readFileSync(new URL("./sketch-lint.baseline.json", import.meta.url), "utf8"),
@@ -1446,6 +1593,56 @@ test("L18 flags a script with no uid file and a uid file with no script, naming 
     ],
   );
   assert.equal(BASELINE_RULES.L18.shape, "keys");
+
+  const emptyFolders = [
+    "sketches/core-loop/addons",
+    "sketches/core-loop/src",
+    "sketches/core-loop/tests",
+    "sketches/core-loop/tools",
+  ];
+  for (const input of [[], ["sketches/core-loop/src/notes.md"]]) {
+    const emptyFindings = lintL18(input, emptyFolders);
+    assert.equal(emptyFindings.length, 1);
+    assert.equal(emptyFindings[0].rule, "L18");
+    for (const folder of emptyFolders) {
+      assert.ok(emptyFindings[0].message.includes(folder), folder);
+    }
+  }
+
+  const repoRoot = path.resolve(sketchDir, "..", "..");
+  const gitDirRun = spawnSync("git", ["rev-parse", "--git-dir"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  assert.equal(gitDirRun.status, 0, gitDirRun.stderr);
+  const gitDir = gitDirRun.stdout.trim();
+  assert.ok(gitDir.length > 0);
+
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-l18-"));
+  const prevGitDir = process.env.GIT_DIR;
+  try {
+    const run = (cwd, ...args) => {
+      const ran = spawnSync("git", args, { cwd, encoding: "utf8", env: cwdDecidesRepository() });
+      assert.equal(ran.status, 0, ran.stderr);
+    };
+    const scratchSrc = path.join(tmp, "sketches", "core-loop", "src");
+    mkdirSync(scratchSrc, { recursive: true });
+    writeFileSync(path.join(scratchSrc, "missing_uid.gd"), "extends RefCounted\n");
+    run(tmp, "init", "-q");
+    run(tmp, "add", "sketches/core-loop/src/missing_uid.gd");
+    run(tmp, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "missing uid");
+
+    process.env.GIT_DIR = path.resolve(repoRoot, gitDir);
+    const hooked = lintTrackedUids("sketches/core-loop", tmp);
+    assert.deepEqual(
+      hooked.map((item) => `${item.rule} ${item.path}`),
+      ["L18 sketches/core-loop/src/missing_uid.gd"],
+    );
+  } finally {
+    if (prevGitDir === undefined) delete process.env.GIT_DIR;
+    else process.env.GIT_DIR = prevGitDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });
 
 test("readBaselineAt throws when a blob-less clone cannot fetch the base copy, and returns {} when the commit has no baseline file", () => {

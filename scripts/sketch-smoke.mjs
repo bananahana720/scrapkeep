@@ -65,6 +65,7 @@ import {
 } from "./lib/machine-lock.mjs";
 import { runProcess } from "./lib/proc.mjs";
 import { runnerReceiptFileName, runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 export {
   BATCH_MAX_MS,
@@ -164,17 +165,11 @@ export function noMatchMessage(sketch, globs) {
   return `sketch:smoke found no test in ${sketch} matching ${globs.join(", ")}`;
 }
 
-function git(args) {
-  const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  if (result.status !== 0 || result.error) return null;
-  return result.stdout.trim();
-}
-
 function gitState() {
-  const status = git(["status", "--porcelain"]);
+  const status = gitOptional(["status", "--porcelain"], { cwd: root });
   return {
-    head: git(["rev-parse", "HEAD"]),
-    tree: git(["rev-parse", "HEAD^{tree}"]),
+    head: gitOptional(["rev-parse", "HEAD"], { cwd: root }),
+    tree: gitOptional(["rev-parse", "HEAD^{tree}"], { cwd: root }),
     clean: status === null ? null : status === "",
     dirty_paths: status === null ? null : status.split("\n").filter(Boolean).slice(0, 20),
   };

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -7,6 +7,7 @@ import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { defaultInspectProjectGodot, evaluateHook } from "../.agents/hooks/safety-gate.mjs";
+import { git as runGit } from "../scripts/lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const hookScript = path.join(root, ".agents/hooks/safety-gate.mjs");
@@ -76,21 +77,11 @@ describe("antigravity-hooks", { concurrency: CONCURRENCY }, () => {
     const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-hook-"));
     const sub = path.join(tmp, "repo");
     try {
-      const git = (...args) => {
-        const r = spawnSync("git", args, {
+      const git = (...args) =>
+        runGit(["-c", "user.name=Test", "-c", "user.email=test@example.invalid", ...args], {
           cwd: sub,
-          encoding: "utf8",
-          env: {
-            ...process.env,
-            GIT_AUTHOR_NAME: "Test",
-            GIT_AUTHOR_EMAIL: "test@example.invalid",
-            GIT_COMMITTER_NAME: "Test",
-            GIT_COMMITTER_EMAIL: "test@example.invalid",
-          },
+          trim: false,
         });
-        assert.equal(r.status, 0, r.stderr);
-        return r.stdout;
-      };
       mkdirSync(path.join(sub, "sketches/core-loop"), { recursive: true });
       git("init", "-q");
       writeFileSync(

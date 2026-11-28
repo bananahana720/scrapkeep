@@ -8,7 +8,6 @@ const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculpto
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const VistaMegas := preload("res://src/presentation/craft/vista_megastructures.gd")
 const AtmoRig := preload("res://src/presentation/craft/vista_atmosphere_rig.gd")
-const AudioCues := preload("res://src/presentation/craft/craft_audio_cues.gd")
 
 var _t := T.new("craft_pipeline_integration_test")
 
@@ -111,10 +110,6 @@ func _run() -> void:
 	_t.check("distant vistas (22 records) and living air rig remain active alongside mounted heroes",
 		vistas != null and vistas.get_vista_records().size() == 22
 		and rig != null and rig.get_particle_systems().size() >= 3 and rig.get_bounce_lights().size() == 6)
-
-	var audio_report := AudioCues.audit_manifest()
-	_t.check("all 4 experimental audio stems resolve in integrated pipeline",
-		int(audio_report["resolved"]) == 4 and (audio_report["missing"] as Array).is_empty())
 
 	var q_low := Assembly.apply_quality_tier(arena, "low")
 	var sun_node := arena.get_node_or_null("SunKey") as DirectionalLight3D

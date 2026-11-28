@@ -10,6 +10,18 @@ static var _physics_end := 0
 static var _pending := false
 static var _monitors := {}
 
+
+static func reset_for_tests() -> void:
+	enabled = false
+	_stack.clear()
+	_totals.clear()
+	_samples.clear()
+	_tick_start = 0
+	_tick_count = 0
+	_physics_end = 0
+	_pending = false
+	_monitors.clear()
+
 class Scope:
 	extends RefCounted
 	var recorder

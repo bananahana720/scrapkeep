@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
   copyFileSync,
@@ -47,6 +46,7 @@ import {
 import { pool, runProcess, stateEnv } from "./proc.mjs";
 import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
 import { checkImportStamp, REIMPORT_HINT } from "../import-stamp.mjs";
+import { gitOptional } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = resolveGodotBinary({ requireExplicit: true });
@@ -359,9 +359,7 @@ async function runTable() {
   const label = opts.label ?? "run-" + stamp;
   const outDir = path.join(outRoot, label);
   const runsFile = path.join(outDir, "runs.ndjson");
-  const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], {
-    encoding: "utf8",
-  }).stdout.trim();
+  const commit = gitOptional(["rev-parse", "HEAD"], { cwd: root }) ?? "";
   const libraryLabel = opts.library ? path.basename(opts.library) : null;
   const libraryDigest = opts.library
     ? hashString(read(path.join(opts.library, "index.json")))

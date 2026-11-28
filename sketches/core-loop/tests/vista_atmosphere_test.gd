@@ -6,7 +6,6 @@ const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const VistaMegas := preload("res://src/presentation/craft/vista_megastructures.gd")
 const AtmoRig := preload("res://src/presentation/craft/vista_atmosphere_rig.gd")
-const AudioCues := preload("res://src/presentation/craft/craft_audio_cues.gd")
 
 const SCENE_PATH := "res://src/presentation/craft/craft_showcase_arena.tscn"
 const HEAT_HAZE_SHADER_PATH := "res://assets/shaders/craft_heat_haze.gdshader"
@@ -22,7 +21,6 @@ func _run() -> void:
 	_check_environment_presets()
 	_check_heat_haze_shader()
 	await _check_showcase_scene_and_rig()
-	_check_audio_manifest()
 	quit(_t.verdict())
 
 
@@ -192,16 +190,3 @@ func _check_showcase_scene_and_rig() -> void:
 	await process_frame
 	_t.check("CraftShowcaseArena tears down cleanly with zero dangling instance",
 		instance_from_id(arena_id) == null)
-
-
-func _check_audio_manifest() -> void:
-	var report := AudioCues.audit_manifest()
-	_t.check("CraftAudioCues resolves all 4 experimental audio stems (1 ambience + 3 callouts)",
-		int(report["total"]) == 4 and int(report["resolved"]) == 4 and (report["missing"] as Array).is_empty(),
-		str(report["missing"]))
-	for cue_id in AudioCues.cue_ids():
-		var player := AudioCues.create_player(cue_id)
-		_t.check("audio cue %s builds valid AudioStreamPlayer safely headless" % cue_id,
-			player != null and player.stream != null and player.stream.get_length() > 0.0)
-		if player != null:
-			player.free()

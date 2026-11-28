@@ -56,10 +56,6 @@ const VALID_TRIGGERS: Array[StringName] = [
 @export var audio_tell: String = ""
 
 
-static func reset() -> void:
-	pass
-
-
 static func slot_label(slot_value: int) -> StringName:
 	return SLOT_NAMES.get(slot_value, &"unknown")
 

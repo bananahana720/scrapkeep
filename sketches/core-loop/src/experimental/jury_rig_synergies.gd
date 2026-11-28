@@ -14,7 +14,6 @@ const BAND_COOL: StringName = &"cool"
 const BAND_HOT: StringName = &"hot"
 const BAND_REDLINE: StringName = &"redline"
 
-const HEAT_MAX := 100.0
 const HEAT_OVERDRIVE_CAP := 120.0
 const HEAT_HOT_AT := 40.0
 const HEAT_REDLINE_AT := 80.0
@@ -65,10 +64,6 @@ var _last_band: StringName = BAND_COOL
 var _in_dispatch := false
 var _active_dispatch_queue: Array[Dictionary] = []
 var _pending_band_changes: Array[Dictionary] = []
-
-
-static func reset() -> void:
-	pass
 
 
 static func catalogue() -> Array[Resource]:

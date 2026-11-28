@@ -1,8 +1,8 @@
 import { createServer } from "node:http";
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { git } from "../../../scripts/lib/git.mjs";
 
 // npm run sitting-kit: serves the Sitting Kit page on localhost and keeps Andrew's verdicts on disk.
 // GET  /                 the page (index.html and the files beside it)
@@ -29,13 +29,13 @@ const TYPES = {
 const SERVED = new Set(["index.html", "areas.js", "README.md"]);
 
 export function readBuild(cwd = repo) {
-  const git = (...args) => execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  const read = (...args) => git(args, { cwd, stdio: ["ignore", "pipe", "ignore"] });
   try {
     return {
-      sha: git("rev-parse", "HEAD"),
-      short: git("rev-parse", "--short=8", "HEAD"),
-      subject: git("log", "-1", "--format=%s"),
-      dirty: git("status", "--porcelain").length > 0,
+      sha: read("rev-parse", "HEAD"),
+      short: read("rev-parse", "--short=8", "HEAD"),
+      subject: read("log", "-1", "--format=%s"),
+      dirty: read("status", "--porcelain").length > 0,
     };
   } catch {
     return { sha: "", short: "unknown", subject: "", dirty: false };

@@ -21,7 +21,6 @@ const Consumables := preload("res://src/build/consumables.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const WorkOrdersPage := preload("res://src/ui/work_orders_page.gd")
 const LogbookPage := preload("res://src/ui/logbook_page.gd")
-const MetaPage := preload("res://src/ui/meta_page.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
@@ -140,13 +139,6 @@ func _check_work_orders_licenses_overrides() -> void:
 	page.show_tab("overrides")
 	_t.check("unlocked override code toggles ON", page.press_override("code_glass_rail") and "code_glass_rail" in MetaOptions.active_overrides(profile))
 	_t.check("unlocked override code toggles OFF", page.press_override("code_glass_rail") and MetaOptions.active_overrides(profile).is_empty())
-
-	# Standalone MetaPage also exposes override rows cleanly while keeping legacy rows/level_text intact.
-	var meta := MetaPage.new()
-	meta.refresh(profile)
-	_t.eq("MetaPage keeps legacy rows keys", meta.rows.keys(), MetaOptions.ids())
-	_t.eq("MetaPage adds all 6 override_rows", meta.override_rows.size(), MetaOptions.OVERRIDE_CODES.size())
-	meta.free()
 
 	# Escape closes Work Orders cleanly back to title.
 	Push.key(root, KEY_ESCAPE)

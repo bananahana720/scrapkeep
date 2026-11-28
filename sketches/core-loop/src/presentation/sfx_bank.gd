@@ -9,7 +9,6 @@ const SetDirector := preload("res://src/presentation/set_director.gd")
 const RATE := Harmony.RATE
 
 const EVENT_DIR := "res://assets/audio/event_set/"
-const FILE_RATE := 48000
 const EVENT_CUES := [
 	"achievement_chime", "armor_shed", "boost_whoosh", "boss_arena_in", "boss_phase", "boss_weak_hit",
 	"callout_chime", "crit_ping", "dash_whoosh", "death", "found_chime", "hit_thwack", "hop", "hurt",
@@ -591,10 +590,6 @@ static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedF
 		_theme = 0
 	_lock.unlock()
 	return _cache_get(_samples, key)
-
-
-static func baked_at(id: String, step: int, shift := 0, theme := 0) -> bool:
-	return _plain(id, step, shift, theme) or _cache_has(_samples, _key_at(id, step, shift, theme))
 
 
 static func cached_at(id: String, step: int, shift := 0, theme := 0) -> bool:

@@ -37,7 +37,6 @@ const META_SETPIECE_KIND := "setpiece_kind"
 const META_COVER_SLOT_INDEX := "cover_slot_index"
 
 const BALL_COLLIDER_RADIUS_M := 1.0
-const GROWN_HEFT_ENVELOPE_RADIUS_M := 2.1
 const MIN_TRAVERSAL_CLEARANCE_M := 4.2
 const MIN_COVER_SLOT_SPACING_M := 4.5
 const HARD_COVER_MIN_HEIGHT_M := 2.0

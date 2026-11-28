@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import { isMain } from "./lib/cli.mjs";
+import { git } from "./lib/git.mjs";
 
-function git(cwd, args) {
-  const r = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
-  if (r.error || r.status === null || r.status > 1) {
-    throw new Error(`git ${args.join(" ")} failed: ${r.error?.message ?? r.stderr}`);
+const BUFFER = 256 * 1024 * 1024;
+
+function grep(top, args) {
+  try {
+    return git(args, { cwd: top, trim: false, maxBuffer: BUFFER });
+  } catch (error) {
+    if (error.status === 1) return error.stdout;
+    throw error;
   }
-  return r.stdout;
 }
 
 function needles(top, rel) {
@@ -43,7 +46,11 @@ export function badPaths(files, cwd = process.cwd()) {
   const inside = rels.filter((r) => !outside(r));
   const tracked = new Set(
     inside.length
-      ? git(top, ["--literal-pathspecs", "ls-files", "-z", "--", ...inside]).split("\0")
+      ? git(["--literal-pathspecs", "ls-files", "-z", "--", ...inside], {
+          cwd: top,
+          trim: false,
+          maxBuffer: BUFFER,
+        }).split("\0")
       : [],
   );
   return files.flatMap((f, i) => {
@@ -55,7 +62,7 @@ export function badPaths(files, cwd = process.cwd()) {
 }
 
 function resolve(files, cwd) {
-  const top = realpathSync(git(cwd, ["rev-parse", "--show-toplevel"]).trim());
+  const top = realpathSync(git(["rev-parse", "--show-toplevel"], { cwd }));
   const base = realpathSync(cwd);
   const rels = files.map((f) =>
     path.relative(top, path.resolve(base, f)).split(path.sep).join("/"),
@@ -73,7 +80,7 @@ export function findMentions(files, cwd = process.cwd()) {
     const hits = new Set();
     for (const n of needles(top, rel)) {
       const args = ["grep", "-n", "-I", "-F", ...(n.word ? ["-w"] : []), "-e", n.text];
-      for (const line of git(top, args).split("\n")) {
+      for (const line of grep(top, args).split("\n")) {
         const m = line.match(/^([^:]+):(\d+):(.*)$/);
         if (m && !skip.has(m[1])) hits.add(`${m[1]}:${m[2]}: ${m[3].trim().slice(0, 160)}`);
       }

@@ -139,8 +139,8 @@ func _run() -> void:
 	for i in ceili(HOLD_SECONDS * Engine.physics_ticks_per_second):
 		_latch(w)
 		await physics_frame
-	t.check("latched and engaged: the bar does not drain over %.0f s" % HOLD_SECONDS, w._posture.posture >= HOLD_START - 0.01
-			and not w._posture.staggered, "posture %.2f from %.2f" % [w._posture.posture, HOLD_START])
+	t.check("latched and engaged: the bar does not drain over %.0f s" % HOLD_SECONDS, w.posture() >= HOLD_START - 0.01
+			and not w._posture.staggered, "posture %.2f from %.2f" % [w.posture(), HOLD_START])
 
 	# Unlatched: the generic rule, and the bar drains.
 	_unlatch()
@@ -151,16 +151,16 @@ func _run() -> void:
 	w._posture.idle = 0.0
 	for i in ceili(HOLD_SECONDS * Engine.physics_ticks_per_second):
 		await physics_frame
-	t.check("unlatched: the bar drains", w._posture.posture < HOLD_START - 1.0, "posture %.2f" % w._posture.posture)
+	t.check("unlatched: the bar drains", w.posture() < HOLD_START - 1.0, "posture %.2f" % w.posture())
 
 	# The camper: no hits, the bar never fills.
 	w._posture.posture = 0.0
 	var staggers: int = w._posture.staggers
 	for i in ceili(CAMPER_SECONDS * Engine.physics_ticks_per_second):
 		await physics_frame
-	t.check("the camper never breaks it", w._posture.staggers == staggers and w._posture.posture == 0.0
+	t.check("the camper never breaks it", w._posture.staggers == staggers and w.posture() == 0.0
 			and w._posture.chunks == 4, "staggers %d, posture %.2f, chunks %d" % [w._posture.staggers - staggers,
-			w._posture.posture, w._posture.chunks])
+			w.posture(), w._posture.chunks])
 
 	# A heavier ball's bolt pays its heft share more (the grant lands the run at about heft 1.7).
 	game.run.grant_start_mass((Run.HEFT_CLASS_AT[GROWN] - Run.HEFT_CLASS_AT[REFERENCE]) / Run.HEFT_PER_MASS)

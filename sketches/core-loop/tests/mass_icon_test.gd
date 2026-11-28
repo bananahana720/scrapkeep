@@ -2,7 +2,7 @@ extends SceneTree
 
 const Icons := preload("res://src/ui/icons.gd")
 
-# The cog means money and nothing else: in the four UI files that once drew it for mass
+# The cog means money and nothing else: in the three UI files that once drew it for mass
 # too, res_scrap stands only where cogs are meant, res_mass stands where mass is meant,
 # and in the run summary (summary_rows.gd, which shows the scrap and not the cogs) no chip
 # shares the cog's or the heap's glyph.
@@ -16,10 +16,6 @@ const FILES := {
 	"res://src/ui/growth_sheet.gd": {
 		"cog": ['draw_texture_rect(Icons.texture("res_scrap"), Rect2(rect.get_center()'],
 		"mass": ['"scrap": {"at": Vector2(90.0, 84.0), "icon": "res_mass"'],
-	},
-	"res://src/ui/callouts.gd": {
-		"cog": [],
-		"mass": ['"callout_scrap": {"before": ["res_mass"]'],
 	},
 	"res://src/ui/summary_rows.gd": {
 		"cog": [],

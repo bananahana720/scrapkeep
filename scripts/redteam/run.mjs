@@ -20,6 +20,7 @@ import {
   sweepSeed,
   waveSeed,
 } from "./lib.mjs";
+import { gitOptional } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const sketch = path.join(root, "sketches/core-loop");
@@ -88,9 +89,7 @@ const outDir = path.join(
 );
 const jobsDir = path.join(outDir, "jobs");
 mkdirSync(jobsDir, { recursive: true });
-const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], {
-  encoding: "utf8",
-}).stdout.trim();
+const commit = gitOptional(["rev-parse", "HEAD"], { cwd: root }) ?? "";
 const JOB_TIMEOUT = (opts.quick ? 10 : 40) * 60_000;
 const log = (line) => console.log(`[${((Date.now() - started) / 60000).toFixed(1)}m] ${line}`);
 

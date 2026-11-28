@@ -623,15 +623,6 @@ func _place(model: Node3D, at: Vector3, yaw: float, size: Vector3) -> void:
 	model.scale = size
 
 
-func use_poster(id: String) -> void:
-	if not POSTERS.has(id):
-		return
-	poster = id
-	cast_hero(hero_id)
-	_sync_dressing()
-	_frame()
-
-
 func _build_skyline() -> void:
 	for row in SKYLINE:
 		var model := visual_scene(row[1])

@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -17,6 +16,7 @@ import {
 } from "./sound-levels-receipt.mjs";
 import { hasFfmpeg } from "../audio-gate.mjs";
 import { receiptRow } from "../world1-bands.mjs";
+import { git as runGit } from "../lib/git.mjs";
 
 const SELF_URL = new URL(import.meta.url);
 const WORKER_FLAG = "soundReceiptsTestWorker";
@@ -121,15 +121,12 @@ if (isMainThread) {
     const repo = mkdtempSync(path.join(os.tmpdir(), "sound-recipes-git-"));
     try {
       const git = (...args) =>
-        spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
-          cwd: repo,
-          encoding: "utf8",
-        });
+        runGit(["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: repo });
       git("init", "-q");
       writeFileSync(path.join(repo, "a.txt"), "one");
       git("add", "a.txt");
       git("commit", "-q", "-m", "one");
-      const head = git("rev-parse", "HEAD").stdout.trim();
+      const head = git("rev-parse", "HEAD");
       let ran = 0;
       const r = produce({
         cwd: repo,

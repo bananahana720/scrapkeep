@@ -1,7 +1,6 @@
 extends Node3D
 
 
-const Palette := preload("res://src/core/palette.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const EnvTags := preload("res://src/experimental/env_tags.gd")

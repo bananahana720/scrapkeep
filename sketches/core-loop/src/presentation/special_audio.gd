@@ -6,7 +6,6 @@ const SpecialCues := preload("res://src/combat/special_cues.gd")
 
 const CAP := 2
 const DROP_DB := -3.0
-const PRESENCE_DB := -14.0
 const PRESENCE_UNIT_SIZE := 12.0
 const PRESENCE_MAX_DISTANCE := 70.0
 
