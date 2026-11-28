@@ -87,6 +87,7 @@ const BotProfile := preload("res://tools/bot_profile.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const BotFairness := preload("res://tools/bot_fairness.gd")
+const RampFlipper := preload("res://src/combat/ramp_flipper.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -257,6 +258,8 @@ func _reset() -> void:
 	SkillBand.reset_for_tests()
 	TraversalLine.reset_for_tests()
 	BotFairness.reset_for_tests()
+	RampFlipper._shared.clear()
+	RampFlipper._warned_asset = false
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"

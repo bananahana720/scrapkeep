@@ -79,6 +79,7 @@ const BotProfile := preload("res://tools/bot_profile.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const BotFairness := preload("res://tools/bot_fairness.gd")
+const RampFlipper := preload("res://src/combat/ramp_flipper.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -505,6 +506,12 @@ func _run() -> void:
 	var fairness_after := BotFairness.config()
 	t.check("BotFairness.reset_for_tests reloads config cleanly",
 		not fairness_after.is_empty() and not is_same(fairness_before, fairness_after))
+
+	t.check("RampFlipper._parts populates _shared before reset", not RampFlipper._parts().is_empty())
+	RampFlipper._warned_asset = true
+	driver._reset()
+	t.check("RampFlipper cache and warning reset cleanly",
+		RampFlipper._shared.is_empty() and not RampFlipper._warned_asset)
 
 	quit(t.verdict())
 

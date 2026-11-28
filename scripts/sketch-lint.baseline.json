@@ -140,8 +140,6 @@
     "sketches/core-loop/src/combat/projectile.gd:_shell_material",
     "sketches/core-loop/src/combat/projectile.gd:_shell_mesh",
     "sketches/core-loop/src/combat/prop_crew.gd:_shared",
-    "sketches/core-loop/src/combat/ramp_flipper.gd:_shared",
-    "sketches/core-loop/src/combat/ramp_flipper.gd:_warned_asset",
     "sketches/core-loop/src/combat/reactor_relic.gd:_shared",
     "sketches/core-loop/src/combat/reactor_relic.gd:_warned_asset",
     "sketches/core-loop/src/combat/rivet_kit.gd:_cap_unit",
