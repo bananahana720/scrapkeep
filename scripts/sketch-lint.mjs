@@ -24,6 +24,7 @@ export const BASELINE_RULES = {
   L16: { shape: "keys" },
   ...Object.fromEntries(WORD_RULES.map((rule) => [rule, { shape: "count" }])),
   L18: { shape: "keys" },
+  L19: { shape: "keys" },
 };
 const UID_FOLDERS = ["addons", "src", "tests", "tools"];
 const MAX_QUARANTINE = 0;
@@ -1237,6 +1238,133 @@ export function lintL18(paths, folders = UID_FOLDERS) {
   return findings;
 }
 
+const SOURCE_READER = "tests/support/source_scan.gd";
+const scriptRootLiteral = /"res:\/\/(?:src|tools|tests)(?:\/[^"]*)?"/;
+const scriptPathLiteral = /"res:\/\/(?:src|tools|tests)\/[^"]*\.gd"/;
+const anyLiteral = /"[^"]*"/g;
+const textRead = /\bFileAccess\s*\.\s*(?:get_file_as_string|open)\s*\(([^)]*)/g;
+const folderList = /\bDirAccess\s*\.\s*(?:open|get_files_at|get_directories_at)\s*\(([^)]*)/g;
+const scriptNameFilter = /\.ends_with\(\s*"\.gd"\s*\)|\.get_extension\(\)\s*==\s*"gd"/;
+const literalBinding =
+  /^(?:static\s+)?(?:const|var)\s+([A-Za-z_]\w*)\s*(?::\s*[\w[\]]+\s*)?:?=\s*(\[[^\]]*\]?|"[^"]*")/;
+const literalLoop = /^for\s+([A-Za-z_]\w*)\s+in\s+([A-Za-z_]\w*|\[[^\]]*\]?)/;
+const funcDecl = /^(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/;
+
+function joinList(raw, index, value) {
+  for (
+    let next = index + 1;
+    value.startsWith("[") && !value.includes("]") && next < raw.length;
+    next++
+  )
+    value += raw[next];
+  return value;
+}
+
+function readScopes(text) {
+  const raw = text.split("\n");
+  const global = new Map();
+  let local = new Map();
+  let fn = null;
+  const scopes = new Map();
+  for (let index = 0; index < raw.length; index++) {
+    const topLevel = /^\S/.test(raw[index]);
+    const code = raw[index].trim();
+    if (topLevel) {
+      local = new Map();
+      const decl = code.match(funcDecl);
+      fn = decl
+        ? {
+            name: decl[1],
+            params: decl[2]
+              .split(",")
+              .map((param) => param.trim().match(/^[A-Za-z_]\w*/)?.[0])
+              .filter(Boolean),
+          }
+        : null;
+    }
+    const bound = code.match(literalBinding);
+    if (bound) (topLevel ? global : local).set(bound[1], joinList(raw, index, bound[2]));
+    const loop = code.match(literalLoop);
+    if (loop) {
+      const value = loop[2].startsWith("[")
+        ? joinList(raw, index, loop[2])
+        : (local.get(loop[2]) ?? global.get(loop[2]));
+      if (value) local.set(loop[1], value);
+    }
+    scopes.set(index + 1, { names: new Map([...global, ...local]), fn });
+  }
+  return scopes;
+}
+
+function handReads(file, rel, text) {
+  if (rel === SOURCE_READER || !rel.startsWith("tests/")) return [];
+  if (!text.includes("FileAccess") && !text.includes("DirAccess")) return [];
+  const lines = codeLines(text);
+  const scopes = readScopes(text);
+  const resolve = (line, arg) =>
+    arg.replace(/\b[A-Za-z_]\w*\b/g, (word) => scopes.get(line.number).names.get(word) ?? word);
+  const picksScripts = lines.some((line) => scriptNameFilter.test(line.code));
+  const builtFromListing = (arg) =>
+    (arg.match(anyLiteral) ?? []).every(
+      (literal) => scriptRootLiteral.test(literal) && !/\.\w+"$/.test(literal),
+    );
+  const args = (line, pattern) =>
+    [...line.code.matchAll(pattern)].map((match) => ({
+      bare: match[1].trim(),
+      arg: resolve(line, match[1]),
+    }));
+  const throughParam = new Map();
+  for (const line of lines) {
+    const fn = scopes.get(line.number).fn;
+    for (const { bare } of args(line, textRead))
+      if (fn && fn.params.includes(bare))
+        throughParam.set(fn.name, [...(throughParam.get(fn.name) ?? []), line]);
+  }
+  const reads = new Set();
+  for (const line of lines) {
+    for (const { arg } of args(line, textRead))
+      if (
+        !/\bWRITE\b/.test(arg) &&
+        (scriptPathLiteral.test(arg) || (picksScripts && builtFromListing(arg)))
+      )
+        reads.add(line);
+    for (const [name, sites] of throughParam) {
+      const call = new RegExp(String.raw`(?:^|[^\w.])${name}\s*\(([^)]*)`, "g");
+      if (args(line, call).some(({ arg }) => scriptPathLiteral.test(arg)))
+        for (const site of sites) reads.add(site);
+    }
+  }
+  if (reads.size === 0) return [];
+  const lists = picksScripts
+    ? lines.filter((line) =>
+        args(line, folderList).some(
+          ({ arg }) => scriptRootLiteral.test(arg) && builtFromListing(arg),
+        ),
+      )
+    : [];
+  const message =
+    "reads script source by hand; read script source through tests/support/source_scan.gd";
+  return [...new Set([...lists, ...reads])]
+    .sort((a, b) => a.number - b.number)
+    .map((line) => finding("L19", file, line.number, message));
+}
+
+export function lintL19(files, relative) {
+  const reader = `${relative}/${SOURCE_READER}`;
+  if (!files.some((file) => file.path === reader))
+    return [
+      finding(
+        "L19",
+        reader,
+        1,
+        "the shared source reader is not among the test scripts read, so L19 checked nothing; restore tests/support/source_scan.gd",
+      ),
+    ];
+  return files.flatMap((file) =>
+    handReads(file.path, file.path.slice(relative.length + 1), file.text),
+  );
+}
+
 export function lintTrackedUids(relative, repoRoot = root) {
   const folders = UID_FOLDERS.map((folder) => `${relative}/${folder}`);
   const paths = git(["ls-files", "--", ...folders], { cwd: repoRoot })
@@ -1275,6 +1403,7 @@ export function lintSketch(sketch) {
       findings.push(...lintL13(file.path, rel, file.text));
     }
   }
+  if (sketch === "core-loop") findings.push(...lintL19(testFiles, relative));
   for (const file of sources(path.join(directory, "tests"), new Set([".py", ".sh"]))) {
     findings.push(...lintL17(file.path, file.text));
   }
