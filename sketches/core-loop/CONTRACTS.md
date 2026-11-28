@@ -718,7 +718,7 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 - **The counter.** Opens when `should_open_counter(shop.inside, near_moss, speed)` holds (in reach, under `PULL_UP` 4 m/s, re-armed after leaving reach). It parks the ball with `player.set_frozen(true)` and releases it on leave, a retry or leaving play. `counter.acted(fact, record)` carries every verb's result record with its `LOOT_ROWS` fact; a refusal of any verb is `shop_refused`.
 - **Sound.** Shop facts play their `LOOT_ROWS` stand-in through `presentation.audio.play(fact, 0, pitch, "UI", row.sound)` when that method exists. A talk beat's pitch is its babble `root` relative to D3.
 - **Words.** The calm-screen budget is 40 words per screen, counted by `word_budget.gd` over the workshop layer. The fight HUD budget (25) is unchanged.
-- **Tests.** `ui_workshop_pick_test`, `ui_workshop_shop_test` and `ui_workshop_bay_test`; the input helper is `tests/workshop/push.gd`.
+- **Tests.** `ui_workshop_pick_test`, `ui_workshop_shop_test` and `ui_workshop_bay_test`; the input helper is `tests/support/push.gd`.
 
 ## Pause menu and help (v2 W10)
 

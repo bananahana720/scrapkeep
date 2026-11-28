@@ -9,7 +9,7 @@ const Profile := preload("res://src/core/profile.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Worlds := preload("res://src/core/worlds.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 

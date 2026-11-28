@@ -5,7 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The settings page from the title and from the pause menu (alpha R12, S3), on the real

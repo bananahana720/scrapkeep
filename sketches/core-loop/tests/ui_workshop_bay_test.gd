@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Bay := preload("res://src/world/bay.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # The workshop screens in Moss's real bay (v2 W8), armed as in play, through world's own
 # hooks: stage 1's Warden gates (world-one builds open the pick at the stage-1 visit), the barge docked, the ball rolled into the cradle.

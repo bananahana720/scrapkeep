@@ -1267,7 +1267,7 @@ func _ending() -> void:
 
 
 func _customize() -> void:
-	const Push := preload("res://tests/workshop/push.gd")
+	const Push := preload("res://tests/support/push.gd")
 	seed(SEED)
 	game = Game.new()
 	game.test_mode = true

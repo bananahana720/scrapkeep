@@ -13,7 +13,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const Screens := preload("res://src/ui/screens.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The six-pilot roster (wave 15): the rows in the order the kit units landed, nothing

@@ -9,7 +9,7 @@ const ClassCard := preload("res://src/ui/class_card.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 
