@@ -144,6 +144,37 @@ process.exit(res.interrupted ?? 1);
   }
 });
 
+test("proc: an onChild that throws stops the child and leaves no signal listener", async () => {
+  const before = { int: process.listenerCount("SIGINT"), term: process.listenerCount("SIGTERM") };
+  let pgid = 0;
+  try {
+    await assert.rejects(
+      runProcess("/bin/sh", ["-c", "sleep 30 & wait"], {
+        timeoutMs: 20000,
+        forwardSignals: true,
+        onChild: (child) => {
+          pgid = child.pid;
+          throw new Error("onChild failed");
+        },
+      }),
+      /onChild failed/,
+    );
+    assert.deepEqual(
+      { int: process.listenerCount("SIGINT"), term: process.listenerCount("SIGTERM") },
+      before,
+    );
+    assert.ok(pgid > 0);
+    await waitGroupDead(pgid, 1500);
+    assert.equal(groupLive(pgid), false);
+  } finally {
+    if (pgid > 0) {
+      try {
+        process.kill(-pgid, "SIGKILL");
+      } catch {}
+    }
+  }
+});
+
 test("proc: pool preserves order, respects width, and invokes onDone", async () => {
   assert.deepEqual(await pool([], 4), []);
   let active = 0;
