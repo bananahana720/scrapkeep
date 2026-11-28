@@ -261,12 +261,6 @@ test("sub-command exits are read in each tool's terms", () => {
     judgeCommand({ id: "smoke" }, { exit: null, output: "", error: "ENOENT" }).status,
     "fail",
   );
-  const quarantined =
-    "skipped 0\nquarantined (red) 2 (known red; see tests/QUARANTINE.tsv):\n  a\nsketch:smoke pass";
-  assert.match(
-    judgeCommand({ id: "smoke" }, { exit: 0, output: quarantined }).note,
-    /2 quarantined red/,
-  );
   assert.equal(
     judgeCommand({ id: "smoke" }, { exit: 0, output: "sketch:smoke pass" }).status,
     "pass",

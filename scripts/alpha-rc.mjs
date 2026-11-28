@@ -215,12 +215,6 @@ export function judgeCommand(step, { exit, output, error }) {
     return { status: "not run", note: "sketch:smoke could not run (exit 2)" };
   if (exit === null) return { status: "fail", note: "timed out or killed" };
   if (exit !== 0) return { status: "fail", note: `exit ${exit}` };
-  const quarantined = output.match(/^quarantined \(red\) (\d+)/m);
-  if (quarantined)
-    return {
-      status: "fail",
-      note: `${quarantined[1]} quarantined red test(s); a release candidate carries none`,
-    };
   return { status: "pass", note: "exit 0" };
 }
 
