@@ -3,7 +3,6 @@ extends Control
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const UiProfile := preload("res://src/ui/ui_profile.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
 
@@ -29,7 +28,6 @@ var shown := 0
 var last_title := ""
 var cards := false
 var profile = null
-var storage_dir := ""
 var last_style := ""
 var cards_shown := 0
 var now_ms: Callable = Callable(Time, "get_ticks_msec")
@@ -148,8 +146,6 @@ func show_discovery(title: String, category: String, detail := "", kicker := "Ne
 	var key := id if id != "" else "%s:%s" % [category, title]
 	if cards:
 		style = "auto"
-		if profile == null and storage_dir != "":
-			profile = UiProfile.new(storage_dir)
 		if _queue.any(func(item: Array): return item[6] == key):
 			return
 		if every_time:
