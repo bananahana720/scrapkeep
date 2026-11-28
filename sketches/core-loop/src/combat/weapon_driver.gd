@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Pattern := preload("res://src/combat/pattern.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
 const BUFFER_S := 0.10

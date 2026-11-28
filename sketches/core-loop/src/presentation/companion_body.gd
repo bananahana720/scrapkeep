@@ -3,7 +3,7 @@ extends Node3D
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 const MODEL_DIR := "res://assets/models/companion/assembled/"
 const PART_DIR := "res://assets/models/companion/"

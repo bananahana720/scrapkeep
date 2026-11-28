@@ -3,7 +3,7 @@ extends RefCounted
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 const TINT := &"tint"
 const INK := &"ink_colour"

@@ -2,7 +2,7 @@ extends SceneTree
 
 const Warden := preload("res://src/combat/warden.gd")
 const Reactor := preload("res://src/combat/warden_reactor.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W1-67, the Wardens escalate (gameplay critique finding 5). The pulse cycle shrinks by the stage's

@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The module harness drives the default table's stub-family bosses to victory through

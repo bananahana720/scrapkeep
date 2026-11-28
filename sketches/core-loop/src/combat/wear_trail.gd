@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 
 const NODE_ID := "r_run_gun"

@@ -10,7 +10,7 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
 const HULL := Vector3(9.0, 5.0, 14.0)

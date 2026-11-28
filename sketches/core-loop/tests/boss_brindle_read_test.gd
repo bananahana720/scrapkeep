@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 
 # Brindle's fight reads on the same plate, ring and audio as a Warden's. In the arena,
 # entered through the spine's own seam (flow.enter_boss), the HUD mounts the boss plate on

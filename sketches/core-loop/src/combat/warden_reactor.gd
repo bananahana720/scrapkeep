@@ -5,7 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Run := preload("res://src/core/run_state.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 static var _sheet_shader: Shader
 
@@ -25,7 +25,7 @@ const LANE_TELL_ALPHA := 0.2
 const LANE_PAST_CORE := 2.0
 const MOUNTED_POSTURE := {"sheet_ram_breaks": 3, "heft_curve": 1.0}
 
-class DamPosture extends "res://src/combat/boss_posture.gd":
+class DamPosture extends "res://src/core/boss_posture.gd":
 	var mounted_warden: WeakRef
 	func judge(hit: Dictionary) -> Dictionary:
 		var result := super.judge(hit)
@@ -50,7 +50,7 @@ class DamPosture extends "res://src/combat/boss_posture.gd":
 			stagger_left = 0.0
 			shatter_frame = frame
 
-class FlumePosture extends "res://src/combat/boss_posture.gd":
+class FlumePosture extends "res://src/core/boss_posture.gd":
 	var mounted_warden: WeakRef
 	var line_held := false
 	func judge(hit: Dictionary) -> Dictionary:

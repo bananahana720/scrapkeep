@@ -2,7 +2,7 @@ extends "res://src/combat/counter.gd"
 
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 const IslandEdge := preload("res://src/combat/island_edge.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const FLIGHT := 1.1
 const RING_RADIUS := 2.6

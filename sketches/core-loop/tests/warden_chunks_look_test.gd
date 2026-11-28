@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Intent := preload("res://src/movement/intent.gd")

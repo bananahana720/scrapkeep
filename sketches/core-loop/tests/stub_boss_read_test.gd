@@ -2,7 +2,7 @@ extends SceneTree
 
 const SpineWorlds := preload("res://tests/spine_worlds_test.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
 
 # World two's boss, the Waking (waking.gd), runs the stub's fight (a posture Warden on a flat
