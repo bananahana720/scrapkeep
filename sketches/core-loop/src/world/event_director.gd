@@ -16,7 +16,7 @@ enum { WAITING, ANNOUNCED, ARMED, LIVE, COOLDOWN, DONE }
 enum { SQUALL_CALM, SQUALL_WARNING, SQUALL_LIVE }
 
 const PHASE_NAMES := ["waiting", "announced", "armed", "live", "cooldown", "done"]
-const PARTICIPATORY := ["scrap_stampede", "surge_run", "hold_the_relay"]
+const PARTICIPATORY := EventKinds.PARTICIPATORY
 const OFFER_LEAD := 4.0
 const FIRST_OFFER := Vector2(6.0, 10.0)
 const OFFER_GAP := Vector2(16.0, 24.0)

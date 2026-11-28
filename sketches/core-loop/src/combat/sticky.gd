@@ -6,7 +6,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
-const CONTACT_REACH := 0.6
+const CONTACT_REACH := preload("res://src/core/devices.gd").STICKY_CONTACT_REACH
 const ARC_POINTS := 16
 const FLIGHT_SPEED := 22.0
 const FLIGHT_MIN := 0.35

@@ -338,7 +338,7 @@ const LINE_MAX_CAUGHT := 3
 
 const STICKY_THROW_MIN := 10.0
 const STICKY_FUSE := 1.2
-const STICKY_MAX_LIVE := 3
+const STICKY_MAX_LIVE := preload("res://src/core/devices.gd").STICKY_CAP
 const MINI_COUNT := 3
 const MINI_DAMAGE := 5.3
 const MINI_RADIUS := 1.5
