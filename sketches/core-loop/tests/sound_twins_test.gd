@@ -10,6 +10,7 @@ const SpecialCues := preload("res://src/combat/special_cues.gd")
 const Affixes := preload("res://src/combat/elite_affixes.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Hud := preload("res://src/ui/hud.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 # UI principle P9 (UA-07): every sound the player must act on has a visible twin. The judgement
@@ -37,6 +38,7 @@ const T := preload("res://tests/support/t.gd")
 var _t := T.new("sound_twins_test")
 
 const TABLES := ["ROWS", "UI_ROWS", "LOOT_ROWS", "WORLD_ROWS", "THREAT_ROWS", "LINE_ROWS", "STATE_ROWS", "ACTIVITY_ROWS"]
+const FUNC := "(?m)^(?:static )?func (\\w+)"
 const SKIP_FILES := ["sfx_bank.gd", "mix_rows.gd", "event_kinds.gd", "rows.gd", "sound_twins.gd"]
 
 
@@ -61,26 +63,9 @@ static func bank_cues() -> Array:
 	return out
 
 
-static func _source_files(dir := "res://src") -> Array:
-	var out: Array = []
-	for f in DirAccess.get_files_at(dir):
-		if f.ends_with(".gd"):
-			out.append(dir + "/" + f)
-	for d in DirAccess.get_directories_at(dir):
-		out.append_array(_source_files(dir + "/" + d))
-	out.sort()
-	return out
-
-
-static func _matches(pattern: String, text: String) -> Array:
-	var re := RegEx.new()
-	re.compile(pattern)
-	return re.search_all(text)
-
-
 # The facts, as {fact id: cue heard}. relay is the list's RELAY dictionary: it names which shared
 # rows get their call sites enumerated.
-static func universe(relay: Dictionary) -> Dictionary:
+static func universe(t, relay: Dictionary) -> Dictionary:
 	var out := {}
 	var bank := bank_cues()
 	var tables: Dictionary = (load("res://src/core/event_kinds.gd") as GDScript).get_script_constant_map()
@@ -116,12 +101,13 @@ static func universe(relay: Dictionary) -> Dictionary:
 	var tele_cue := Rows.heard(tables["ROWS"]["boss_attack_telegraphed"])
 	var cued_cue := Rows.heard(tables["ROWS"]["attack_cued"])
 	var seen_pressure := {}
-	for path in _source_files():
-		var base: String = path.get_file()
+	var sources := SourceScan.sources(t, ["res://src"])
+	for path in sources:
+		var base: String = String(path).get_file()
 		if base in SKIP_FILES:
 			continue
-		var text := FileAccess.get_file_as_string(path)
-		var found := scan_text(base, text, relay, bank_set)
+		var text: String = sources[path]
+		var found := scan_text(t, base, text, relay, bank_set)
 		for id in found:
 			var hit: Dictionary = found[id]
 			match hit["kind"]:
@@ -136,7 +122,7 @@ static func universe(relay: Dictionary) -> Dictionary:
 				_:
 					out[id] = hit["key"]
 		for pattern in ["pressure_cue\\.emit\\(\"([a-z_0-9]+)\"", "_on_pressure_cue\\(\"([a-z_0-9]+)\""]:
-			for m in _matches(pattern, text):
+			for m in SourceScan.search(t, text, pattern):
 				if not seen_pressure.has(m.get_string(1)):
 					seen_pressure[m.get_string(1)] = true
 					out["pressure:%s" % m.get_string(1)] = m.get_string(1)
@@ -152,15 +138,15 @@ static func universe(relay: Dictionary) -> Dictionary:
 # The call sites in one file's text, keyed on the enclosing function and what the line names, never
 # on a count across the file, so adding a call elsewhere changes no other id. Returns
 # {id: {"kind", "key"}}. A repeat inside one function gets "#2". Pure, so a test can feed it text.
-static func scan_text(base: String, text: String, relay: Dictionary, bank_set: Dictionary) -> Dictionary:
+static func scan_text(t, base: String, text: String, relay: Dictionary, bank_set: Dictionary) -> Dictionary:
 	var hits: Array = []
 	var add := func(pattern: String, kind: String, key: String, tag_pattern: String) -> void:
-		for m in _matches(pattern, text):
+		for m in SourceScan.search(t, text, pattern):
 			var tag := ""
 			if tag_pattern != "":
 				var rest := text.substr(m.get_end(), 90).get_slice("\n", 0)
-				var tm := RegEx.create_from_string(tag_pattern).search(rest)
-				tag = tm.get_string(1) if tm != null else ""
+				var tms := SourceScan.search(t, rest, tag_pattern)
+				tag = tms[0].get_string(1) if not tms.is_empty() else ""
 			hits.append([m.get_start(), kind, key, tag if m.get_group_count() == 0 else m.get_string(1)])
 	if relay.has("ROWS:boss_attack_telegraphed"):
 		add.call("_publish\\(\"boss_attack_telegraphed\",\\s*\\[|boss_attack_telegraphed\\.emit\\(", "tele", "", "^\\s*\"?([A-Za-z_0-9]+)")
@@ -174,14 +160,14 @@ static func scan_text(base: String, text: String, relay: Dictionary, bank_set: D
 			add.call("\\b%s\\.emit\\(" % key, "sig", key, "")
 	add.call("warn_sound = \"([a-z_0-9]+)\"", "warn", "", "")
 	for pattern in ["(?m)^const [A-Z_0-9]+ := \"([a-z_0-9]+)\"", "play\\([^\\n]*\"SFX\", \"([a-z_0-9]+)\"\\)", "\\bplay\\(\"([a-z_0-9]+)\"", "(?:one_shot|player)\\(\"([a-z_0-9]+)\""]:
-		for m in _matches(pattern, text):
+		for m in SourceScan.search(t, text, pattern):
 			if bank_set.has(m.get_string(1)):
 				hits.append([m.get_start(), "site", m.get_string(1), ""])
 	var out := {}
 	if hits.is_empty():
 		return out
 	var funcs: Array = []
-	for m in _matches("(?m)^(?:static )?func (\\w+)", text):
+	for m in SourceScan.search(t, text, FUNC):
 		funcs.append([m.get_start(), m.get_string(1)])
 	hits.sort_custom(func(a, b): return a[0] < b[0])
 	for hit in hits:
@@ -214,17 +200,18 @@ static func scan_text(base: String, text: String, relay: Dictionary, bank_set: D
 
 
 # Every "<signal>.emit(" and world_fact.emit("<kind>" in res://src: {name: ["file:function", ...]}.
-static func emit_index() -> Dictionary:
+static func emit_index(t) -> Dictionary:
 	var index := {}
-	for path in _source_files():
-		if path.get_file() in SKIP_FILES:
+	var sources := SourceScan.sources(t, ["res://src"])
+	for path in sources:
+		if String(path).get_file() in SKIP_FILES:
 			continue
-		var text := FileAccess.get_file_as_string(path)
-		var ms := _matches("(\\w+)\\.emit\\(\"?(\\w*)", text)
+		var text: String = sources[path]
+		var ms := SourceScan.search(t, text, "(\\w+)\\.emit\\(\"?(\\w*)")
 		if ms.is_empty():
 			continue
 		var funcs: Array = []
-		for m in _matches("(?m)^(?:static )?func (\\w+)", text):
+		for m in SourceScan.search(t, text, FUNC):
 			funcs.append([m.get_start(), m.get_string(1)])
 		for m in ms:
 			var fn := "top"
@@ -246,12 +233,12 @@ static func emit_index() -> Dictionary:
 # park files' telegraph, land and music forms; the roster units those files name or the roster
 # marks world 1; the scanned call sites in the files that are world 1's own (Twins.WORLD1_FILES);
 # and every table fact the emit index shows a firing site for. Returns {fact: site text}.
-static func world1(facts: Dictionary, index: Dictionary) -> Dictionary:
+static func world1(t, facts: Dictionary, index: Dictionary) -> Dictionary:
 	var out := {}
 	var park_text := ""
 	var land: Dictionary = (load("res://src/world/event_director.gd") as GDScript).get_script_constant_map()["PARK_LAND_FACTS"]
 	for file in ["park_dam.json", "park_flume.json"]:
-		var raw := FileAccess.get_file_as_string("res://src/world/park/" + file)
+		var raw := SourceScan.text(t, "res://src/world/park/" + file)
 		park_text += raw
 		var data: Dictionary = JSON.parse_string(raw)
 		for row in data["event_rows"]:
@@ -302,7 +289,7 @@ static func function_body(text: String, fn: String) -> Array:
 
 
 # Why a twin does not hold, or "". The token must be a real drawing line inside the named function.
-static func twin_problem(row: Dictionary, toasts: Array) -> String:
+func twin_problem(row: Dictionary, toasts: Array) -> String:
 	for field in ["script", "fn", "token", "what"]:
 		if String(row.get(field, "")) == "":
 			return "no %s" % field
@@ -314,7 +301,7 @@ static func twin_problem(row: Dictionary, toasts: Array) -> String:
 		return "token \"%s\" is a signal hookup, not the drawing line" % token
 	if token.length() < 12:
 		return "token \"%s\" is too short to point at a drawing call" % token
-	var body := function_body(FileAccess.get_file_as_string(path), String(row["fn"]))
+	var body := function_body(SourceScan.text(_t, path), String(row["fn"]))
 	if body.is_empty():
 		return "%s has no function %s" % [path, row["fn"]]
 	var found := false
@@ -341,14 +328,14 @@ static func twin_problem(row: Dictionary, toasts: Array) -> String:
 
 # An open row names "file:function" and a "pattern" that function must contain, so the row is tied to
 # the code that plays the sound and not to a line number.
-static func open_problems(row: Dictionary) -> Array:
+func open_problems(row: Dictionary) -> Array:
 	var plays := String(row.get("plays", ""))
 	var path := "res://" + plays.get_slice(":", 0)
 	var fn := plays.get_slice(":", 1)
 	if plays.count(":") != 1 or not FileAccess.file_exists(path):
 		return ["open row %s: \"plays\" must be file:function and name a real file (%s)" % [row.get("fact", "?"), plays]]
 	var found := false
-	for line in function_body(FileAccess.get_file_as_string(path), fn):
+	for line in function_body(SourceScan.text(_t, path), fn):
 		if String(row.get("pattern", "")) != "" and String(line).contains(String(row["pattern"])):
 			found = true
 	if not found:
@@ -358,7 +345,7 @@ static func open_problems(row: Dictionary) -> Array:
 
 # Every problem with a classification of the universe, and the counts. data holds ACT, OPEN, RELAY
 # and NOT_ACT as in sound_twins.gd; pins holds open, untraced and danger.
-static func audit(facts: Dictionary, data: Dictionary, pins: Dictionary, danger: Array, toasts: Array, w1 := {}) -> Dictionary:
+func audit(facts: Dictionary, data: Dictionary, pins: Dictionary, danger: Array, toasts: Array, w1 := {}) -> Dictionary:
 	var errors: Array = []
 	var kind_of := {}
 	var traced := {}
@@ -445,9 +432,9 @@ func _pins() -> Dictionary:
 
 func _initialize() -> void:
 	var toasts: Array = Hud.toast_kinds()
-	var facts := universe(Twins.RELAY)
-	var index := emit_index()
-	var w1 := world1(facts, index)
+	var facts := universe(_t, Twins.RELAY)
+	var index := emit_index(_t)
+	var w1 := world1(_t, facts, index)
 	var danger: Array = SfxBank.DANGER_SOUNDS
 	var result := audit(facts, _data(), _pins(), danger, toasts, w1)
 	for e in result["errors"]:
@@ -526,8 +513,8 @@ func _initialize() -> void:
 	var relay := {"WORLD_ROWS:arena_wave": "x", "WORLD_ROWS:arena_locked": "x"}
 	var source_a := "func alpha():\n\tctx.events.world_fact.emit(\"arena_wave\", c)\n\nfunc beta():\n\tctx.events.world_fact.emit(\"arena_locked\", c)\n"
 	var source_b := "func newcomer():\n\tctx.events.world_fact.emit(\"arena_locked\", c)\n\nfunc alpha():\n\tctx.events.world_fact.emit(\"arena_locked\", c)\n\nfunc beta():\n\tctx.events.world_fact.emit(\"arena_wave\", c)\n"
-	var ids_a := scan_text("x.gd", source_a, relay, {}).keys()
-	var ids_b := scan_text("x.gd", source_b, relay, {}).keys()
+	var ids_a := scan_text(_t, "x.gd", source_a, relay, {}).keys()
+	var ids_b := scan_text(_t, "x.gd", source_b, relay, {}).keys()
 	_t.eq("planted: call sites in a made-up source take their function's name", ids_a, ["emit:arena_wave@x.gd:alpha", "emit:arena_locked@x.gd:beta"])
 	_t.check("planted: swapping two call sites and adding another moves only the ids that moved", ids_b.has("emit:arena_wave@x.gd:beta") and ids_b.has("emit:arena_locked@x.gd:alpha") and ids_b.has("emit:arena_locked@x.gd:newcomer") and not ids_b.has("emit:arena_wave@x.gd:alpha"), str(ids_b))
 	var swapped_facts := {}

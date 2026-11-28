@@ -3,6 +3,7 @@ extends SceneTree
 const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The profile layer is read only by the game, the UI and core (P2-4). Movement, combat, build,
@@ -20,13 +21,11 @@ func _initialize() -> void:
 	_t.check("scan self-check: a planted ctx.profile read is caught", _hits(re, "var x = ctx.profile.has_pilot(id)\n").size() == 1, "planted line")
 	_t.check("scan self-check: a planted preload is caught", _hits(re, "const P := preload(\"res://src/core/profile.gd\")\n").size() == 1, "planted preload")
 	_t.check("scan self-check: camera profiles and progress variables pass", _hits(re, "var profile := PROFILES[k]\nvar progress := 0.5\n").is_empty(), "bare words")
-	var files := 0
-	for dir in DIRS:
-		for path in _gd_files("res://" + dir):
-			files += 1
-			var hits := _hits(re, FileAccess.get_file_as_string(path))
-			_t.check("P2-4 %s has no profile-layer reference" % path, hits.is_empty(), "hits %s" % [hits])
-	_t.check("P2-4 the scan saw files", files > 20, "%d files" % files)
+	var sources := SourceScan.sources(_t, DIRS.map(func(dir: String) -> String: return "res://" + dir))
+	for path in sources:
+		var hits := _hits(re, sources[path])
+		_t.check("P2-4 %s has no profile-layer reference" % path, hits.is_empty(), "hits %s" % [hits])
+	_t.check("P2-4 the scan saw files", sources.size() > 20, "%d files" % sources.size())
 	var pilots: Array = []
 	for def in ClassDef.all():
 		pilots.append(def.id)
@@ -42,17 +41,4 @@ func _hits(re: RegEx, text: String) -> Array:
 		n += 1
 		if re.search(line) != null:
 			out.append("%d: %s" % [n, line.strip_edges()])
-	return out
-
-
-func _gd_files(dir: String) -> Array:
-	var out: Array = []
-	var d := DirAccess.open(dir)
-	if d == null:
-		return out
-	for f in d.get_files():
-		if f.ends_with(".gd"):
-			out.append(dir.path_join(f))
-	for sub in d.get_directories():
-		out.append_array(_gd_files(dir.path_join(sub)))
 	return out
