@@ -10,6 +10,8 @@ const TARN_COLOR := Palette.RUST
 const TALLY_COLOR := Palette.LEDGER
 const CANNON_COLOR := Palette.ANCIENT
 const SABLE_SCREEN := Color("a8c8f0")
+const SABLE_ID := "pylon_engineer"
+const KEST_ID := "demolitions_caster"
 
 @export var id := ""
 @export var display_name := ""

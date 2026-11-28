@@ -413,8 +413,8 @@ static func fire_w50(cid: String, ctx, combat, at: Vector3) -> Dictionary:
 		DUPLICATOR_SPOOL:
 			st["duplicator_armed"] = true
 			st["duplicator_left"] = DUPLICATOR_WINDOW_S
-			if combat != null and combat.has_method("post_consumable_buff"):
-				combat.post_consumable_buff("consumable_duplicator_spool", icon_of(cid), row["color"], DUPLICATOR_WINDOW_S)
+			if combat != null and combat.get("consumables") != null:
+				combat.consumables.post_consumable_buff("consumable_duplicator_spool", icon_of(cid), row["color"], DUPLICATOR_WINDOW_S)
 			if combat != null and combat.get("effects") != null:
 				combat.effects.ring(at, 4.0, row.get("color", Palette.AMBER))
 			return {"duration_s": DUPLICATOR_WINDOW_S, "armed": true}
@@ -472,8 +472,8 @@ static func try_clone_pickup(ctx, combat, kind: String, payload, at := Vector3.Z
 	match kind:
 		"consumable":
 			var cid := String(payload)
-			if not ctx.run.add_consumable(cid) and combat != null and combat.has_method("drop_consumable"):
-				combat.drop_consumable(cid, at + Vector3(3.2, 0.0, 0.0))
+			if not ctx.run.add_consumable(cid) and combat != null and combat.get("consumables") != null:
+				combat.consumables.drop_consumable(cid, at + Vector3(3.2, 0.0, 0.0))
 		"core":
 			ctx.run.add_core("duplicator_spool", at)
 		"part":

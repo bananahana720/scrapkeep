@@ -12,7 +12,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
-const Combat := preload("res://src/combat/combat.gd")
+const CannonKit := preload("res://src/combat/cannon_kit.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -136,24 +136,24 @@ func _check_table() -> void:
 # Proc depth 1: only the player's own landing lays a wake; the wake lane (item_proc) never does. The
 # planted control gives the wake lane the landing tag and the one-per-cause count runs away.
 func _check_proc_guard() -> void:
-	_t.check("a rush landing lays a wake", Combat.wake_follows("drop_or_slam", "cannon_rush_wake"), "")
-	_t.check("an item_proc lane lays none", not Combat.wake_follows("item_proc", "cannon_rush_wake"), "")
-	_t.check("the plain rush lays none", not Combat.wake_follows("drop_or_slam", "cannon_rush"), "")
+	_t.check("a rush landing lays a wake", CannonKit.wake_follows("drop_or_slam", "cannon_rush_wake"), "")
+	_t.check("an item_proc lane lays none", not CannonKit.wake_follows("item_proc", "cannon_rush_wake"), "")
+	_t.check("the plain rush lays none", not CannonKit.wake_follows("drop_or_slam", "cannon_rush"), "")
 	_t.eq("a real wake chain is one lane", _wakes_after(5, "item_proc"), 1)
 	_t.check("a planted landing-tagged repeat loops and is caught", _wakes_after(5, "drop_or_slam") > 1, "wakes %d" % _wakes_after(5, "drop_or_slam"))
 	var end := Vector3(3.0, 0.0, 0.0)
-	_t.check("walking needs the walking mutation", not Combat.walk_extends("cannon_lane", {"end": end, "at": 0.0}, 0.5)
-		and not Combat.walk_extends("", {"end": end, "at": 0.0}, 0.5), "")
-	_t.check("walking needs an open link", not Combat.walk_extends("cannon_lane_walk", {}, 0.5), "")
-	_t.check("the window is closed at exactly 2 s and shut after", Combat.walk_extends("cannon_lane_walk", {"end": end, "at": 0.0}, Combat.WALK_WINDOW)
-		and not Combat.walk_extends("cannon_lane_walk", {"end": end, "at": 0.0}, Combat.WALK_WINDOW + 0.01), "")
+	_t.check("walking needs the walking mutation", not CannonKit.walk_extends("cannon_lane", {"end": end, "at": 0.0}, 0.5)
+		and not CannonKit.walk_extends("", {"end": end, "at": 0.0}, 0.5), "")
+	_t.check("walking needs an open link", not CannonKit.walk_extends("cannon_lane_walk", {}, 0.5), "")
+	_t.check("the window is closed at exactly 2 s and shut after", CannonKit.walk_extends("cannon_lane_walk", {"end": end, "at": 0.0}, CannonKit.WALK_WINDOW)
+		and not CannonKit.walk_extends("cannon_lane_walk", {"end": end, "at": 0.0}, CannonKit.WALK_WINDOW + 0.01), "")
 
 
 func _wakes_after(depth: int, tag: String) -> int:
 	var wakes := 0
 	var source := "drop_or_slam"
 	for i in depth:
-		if not Combat.wake_follows(source, "cannon_rush_wake"):
+		if not CannonKit.wake_follows(source, "cannon_rush_wake"):
 			break
 		wakes += 1
 		source = tag
@@ -179,21 +179,21 @@ func _as_cannon() -> void:
 	_game.camera.snap(Vector3(0.0, 0.0, -1.0))
 	_game.camera.pitch = 0.0
 	_player.kit.slamming = false
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 
 
 func _equip_walk() -> void:
 	_as_cannon()
 	_player.abilities.swap(AbilityState.WEAPON, "cannon_lane_walk")
 	_player.refit()
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 
 
 func _equip_wake() -> void:
 	_as_cannon()
 	_player.abilities.swap(AbilityState.SMASH, "cannon_rush_wake")
 	_player.refit()
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 
 
 func _flat(v: Vector3) -> Vector3:
@@ -210,12 +210,12 @@ func _end_of(h) -> Vector3:
 
 # The lanes the cannon has committed so far, in order.
 func _lanes(source: String = "") -> Array:
-	return _combat._cannon.filter(func(e): return e["family"] == "lane" and (source == "" or e["source"] == source))
+	return _combat.cannon._cannon.filter(func(e): return e["family"] == "lane" and (source == "" or e["source"] == source))
 
 
 func _fire_walk() -> Dictionary:
-	_combat._fire_cannon_lane(_combat.active_weapon())
-	return _combat._cannon.back()
+	_combat.cannon.fire_cannon_lane(_combat.active_weapon())
+	return _combat.cannon._cannon.back()
 
 
 # --- Walking Lane -----------------------------------------------------------------------
@@ -246,30 +246,30 @@ func _check_walk_chain() -> void:
 	_t.check("it is committed geometry drawn before the strike, in the pilot colour, never HAZARD",
 		h1.warn_seconds >= Hazard.MIN_WARN and is_equal_approx(h1.warn_seconds, MindAttacks.LANE_WARN)
 		and h1.color == ClassDef.CANNON_COLOR and h1.color != Palette.HAZARD, "warn %.2f" % h1.warn_seconds)
-	_t.check("one link is open after it", not _combat._walk.is_empty() and _combat._walk["end"] == _end_of(h1), str(_combat._walk))
+	_t.check("one link is open after it", not _combat.cannon._walk.is_empty() and _combat.cannon._walk["end"] == _end_of(h1), str(_combat.cannon._walk))
 	var end1 := _end_of(h1)
 	_combat._clock += 1.5
 	var second := _fire_walk()
 	var h2 = _lane(second)
 	_t.check("a call inside 2 s starts where the last lane ended",
 		_flat(h2.centre).distance_to(_flat(end1)) < 0.01, "starts %s, last ended %s" % [h2.centre, end1])
-	_t.near("and runs 6 m further", h2.length, Combat.WALK_REACH, 0.001)
+	_t.near("and runs 6 m further", h2.length, CannonKit.WALK_REACH, 0.001)
 	_t.check("along the same aim", h2.heading.dot(h1.heading) > 0.9999, "dot %.5f" % h2.heading.dot(h1.heading))
 	_t.check("each link is its own committed lane in the pilot colour",
 		second["source"] == "weapon" and h2.warn_seconds >= Hazard.MIN_WARN and h2.color == ClassDef.CANNON_COLOR and h2.color != Palette.HAZARD
 		and _lanes().size() == 2, "%d lanes" % _lanes().size())
-	_t.check("the walk resets after two links", _combat._walk.is_empty(), str(_combat._walk))
+	_t.check("the walk resets after two links", _combat.cannon._walk.is_empty(), str(_combat.cannon._walk))
 	# The third call starts fresh at the ball. Planted control: an un-reset walk would extend from link 2's end.
 	var end2 := _end_of(h2)
 	_combat._clock += 0.5
 	_t.check("planted: an un-reset walk would extend a third call past link 2",
-		Combat.walk_extends("cannon_lane_walk", {"end": end2, "at": _combat._clock - 0.5}, _combat._clock), "")
+		CannonKit.walk_extends("cannon_lane_walk", {"end": end2, "at": _combat._clock - 0.5}, _combat._clock), "")
 	var third := _fire_walk()
 	var h3 = _lane(third)
 	_t.check("a third call does not extend: it starts at the ball and runs the full lane",
 		_flat(h3.centre).distance_to(_flat(ball)) < 0.01 and _flat(h3.centre).distance_to(_flat(end2)) > 5.0
 		and is_equal_approx(h3.length, reach - MindAttacks.LANE_HALF), "starts %s, link 2 ended %s" % [h3.centre, end2])
-	_t.check("and opens a fresh chain", not _combat._walk.is_empty() and _combat._walk["end"] == _end_of(h3), str(_combat._walk))
+	_t.check("and opens a fresh chain", not _combat.cannon._walk.is_empty() and _combat.cannon._walk["end"] == _end_of(h3), str(_combat.cannon._walk))
 	_t.check("the ball's velocity is untouched", _player.state.velocity == velocity, "%s vs %s" % [_player.state.velocity, velocity])
 
 
@@ -283,19 +283,19 @@ func _check_walk_march_overdrive() -> void:
 	run.parts.clear()
 	run.add_part(Relics.part_of("walking_lane"), "test")
 	build.sync_relics()
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 	var w1_first := _fire_walk()
 	_combat._clock += 0.5
 	var w1_second := _fire_walk()
 	var w1_h2 = _lane(w1_second)
-	_t.near("World 1 walking_lane walked length stays WALK_REACH", w1_h2.length, Combat.WALK_REACH, 0.001)
+	_t.near("World 1 walking_lane walked length stays WALK_REACH", w1_h2.length, CannonKit.WALK_REACH, 0.001)
 	_t.near("World 1 walking_lane walked damage stays baseline", float(w1_second["damage"]), float(w1_first["damage"]), 0.001)
 	_t.near("World 1 walking_lane records 1.0 overdrive", float(_combat.last_shot["overdrive"]), 1.0, 0.001)
 
 	run.parts.clear()
 	run.add_part(Relics.part_of("march_lane"), "test")
 	build.sync_relics()
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 	var m_first := _fire_walk()
 	var m_h1 = _lane(m_first)
 	_t.near("World 2 march_lane first link stays baseline damage", float(m_first["damage"]), float(w1_first["damage"]), 0.001)
@@ -306,19 +306,19 @@ func _check_walk_march_overdrive() -> void:
 	var m_h2 = _lane(m_second)
 	_t.check("World 2 march_lane second link still starts where link 1 ended",
 		_flat(m_h2.centre).distance_to(_flat(m_end1)) < 0.01, "starts %s, last ended %s" % [m_h2.centre, m_end1])
-	_t.near("World 2 march_lane overdrives walked reach by 1.3x", m_h2.length, Combat.WALK_REACH * march_od, 0.001)
+	_t.near("World 2 march_lane overdrives walked reach by 1.3x", m_h2.length, CannonKit.WALK_REACH * march_od, 0.001)
 	_t.near("World 2 march_lane overdrives walked damage by 1.3x", float(m_second["damage"]), float(m_first["damage"]) * march_od, 0.001)
 	_t.near("World 2 march_lane records 1.3 overdrive on walked shot", float(_combat.last_shot["overdrive"]), march_od, 0.001)
-	_t.check("World 2 march_lane resets the chain after two links", _combat._walk.is_empty(), str(_combat._walk))
+	_t.check("World 2 march_lane resets the chain after two links", _combat.cannon._walk.is_empty(), str(_combat.cannon._walk))
 
 	run.parts.clear()
 	_player.abilities.swap(AbilityState.WEAPON, "cannon_lane_walk")
 	_player.refit()
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 	var p_first := _fire_walk()
 	_combat._clock += 0.5
 	var p_second := _fire_walk()
-	_t.near("planted: removing march_lane drops walked length back to WALK_REACH", _lane(p_second).length, Combat.WALK_REACH, 0.001)
+	_t.near("planted: removing march_lane drops walked length back to WALK_REACH", _lane(p_second).length, CannonKit.WALK_REACH, 0.001)
 	_t.near("planted: removing march_lane drops walked damage back to baseline", float(p_second["damage"]), float(p_first["damage"]), 0.001)
 	_t.near("planted: removing march_lane drops recorded overdrive back to 1.0", float(_combat.last_shot["overdrive"]), 1.0, 0.001)
 
@@ -328,18 +328,18 @@ func _check_walk_window() -> void:
 	var ball: Vector3 = _player.ball_position()
 	var first := _fire_walk()
 	var end1 := _end_of(_lane(first))
-	_combat._clock += Combat.WALK_WINDOW - 0.001
+	_combat._clock += CannonKit.WALK_WINDOW - 0.001
 	var edge := _fire_walk()
 	_t.check("a call just inside 2 s still walks", _flat(_lane(edge).centre).distance_to(_flat(end1)) < 0.01, "%s" % _lane(edge).centre)
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 	first = _fire_walk()
 	end1 = _end_of(_lane(first))
-	_combat._clock += Combat.WALK_WINDOW + 0.05
+	_combat._clock += CannonKit.WALK_WINDOW + 0.05
 	var late := _fire_walk()
 	var h = _lane(late)
 	_t.check("a call after 2 s starts fresh at the ball",
 		_flat(h.centre).distance_to(_flat(ball)) < 0.01 and _flat(h.centre).distance_to(_flat(end1)) > 5.0, "%s" % h.centre)
-	_t.check("and a fresh link is open for the next call", not _combat._walk.is_empty() and _combat._walk["at"] == _combat._clock, str(_combat._walk))
+	_t.check("and a fresh link is open for the next call", not _combat.cannon._walk.is_empty() and _combat.cannon._walk["at"] == _combat._clock, str(_combat.cannon._walk))
 
 
 func _check_walk_plain() -> void:
@@ -351,26 +351,26 @@ func _check_walk_plain() -> void:
 	_t.check("the plain cannon_lane never walks: both lanes start at the ball",
 		_flat(_lane(a).centre).distance_to(_flat(ball)) < 0.01 and _flat(_lane(b).centre).distance_to(_flat(ball)) < 0.01
 		and is_equal_approx(_lane(b).length, _lane(a).length), "%s and %s" % [_lane(a).centre, _lane(b).centre])
-	_t.check("and keeps no link", _combat._walk.is_empty(), str(_combat._walk))
+	_t.check("and keeps no link", _combat.cannon._walk.is_empty(), str(_combat.cannon._walk))
 
 
 # A stage entry, an attempt and a run start leave no walk or wake behind.
 func _check_walk_reset() -> void:
 	_equip_walk()
 	_fire_walk()
-	_t.check("a link is open", not _combat._walk.is_empty(), "")
+	_t.check("a link is open", not _combat.cannon._walk.is_empty(), "")
 	_combat._on_stage_entered(1, true)
-	_t.check("a stage entry or retry clears the walk and the lanes", _combat._walk.is_empty() and _combat._cannon.is_empty(),
-		"walk %s, lanes %d" % [_combat._walk, _combat._cannon.size()])
+	_t.check("a stage entry or retry clears the walk and the lanes", _combat.cannon._walk.is_empty() and _combat.cannon._cannon.is_empty(),
+		"walk %s, lanes %d" % [_combat.cannon._walk, _combat.cannon._cannon.size()])
 	_fire_walk()
-	_combat._free_cannon()
-	_t.check("a run reset clears the walk", _combat._walk.is_empty(), str(_combat._walk))
+	_combat.cannon.free_cannon()
+	_t.check("a run reset clears the walk", _combat.cannon._walk.is_empty(), str(_combat.cannon._walk))
 	_equip_walk()
 	_fire_walk()
-	_combat._wake = {"from": Vector3.ZERO, "until": INF}
+	_combat.cannon._wake = {"from": Vector3.ZERO, "until": INF}
 	_combat._start_attempt()
-	_t.check("an attempt start clears the walk and the wake", _combat._walk.is_empty() and _combat._wake.is_empty(),
-		"walk %s, wake %s" % [_combat._walk, _combat._wake])
+	_t.check("an attempt start clears the walk and the wake", _combat.cannon._walk.is_empty() and _combat.cannon._wake.is_empty(),
+		"walk %s, wake %s" % [_combat.cannon._walk, _combat.cannon._wake])
 
 
 # End to end: press-hold-release fire through the real tick fires cannon_lane's pattern.
@@ -407,40 +407,40 @@ func _check_wake_lane() -> void:
 	var velocity: Vector3 = _player.state.velocity
 	var start: Vector3 = _player.ball_position()
 	_player.kit.slamming = true
-	_combat._track_wake()
-	_t.check("the slam's start is recorded", not _combat._wake.is_empty() and _combat._wake["from"] == start, str(_combat._wake))
+	_combat.cannon._track_wake()
+	_t.check("the slam's start is recorded", not _combat.cannon._wake.is_empty() and _combat.cannon._wake["from"] == start, str(_combat.cannon._wake))
 	var landing: Vector3 = _combat.floor_at(start + Vector3(9.0, 0.0, 0.0) + Vector3.UP)
 	_player.body().global_position = landing + Vector3.UP
 	_combat._clock += 0.5
 	_player.kit.slamming = false
-	_combat._track_wake()
-	_combat._on_cannon_slammed(landing, 1.0, 1.0)
-	_t.eq("a landing commits the rush and one lane", _combat._cannon.map(func(e): return e["family"]), ["rush", "lane"])
-	var rush: Dictionary = _combat._cannon[0]
-	var wake: Dictionary = _combat._cannon[1]
+	_combat.cannon._track_wake()
+	_combat.cannon.on_cannon_slammed(landing, 1.0, 1.0)
+	_t.eq("a landing commits the rush and one lane", _combat.cannon._cannon.map(func(e): return e["family"]), ["rush", "lane"])
+	var rush: Dictionary = _combat.cannon._cannon[0]
+	var wake: Dictionary = _combat.cannon._cannon[1]
 	var h = _lane(wake)
 	_t.check("the rush ring is the plain landing", rush["source"] == "drop_or_slam" and is_equal_approx(rush["damage"], Weapons.RUSH_DAMAGE),
 		"%s %.1f" % [rush["source"], rush["damage"]])
 	_t.eq("the wake is an item_proc lane", wake["source"], "item_proc")
-	_t.near("at half the lane's damage", float(wake["damage"]), Weapons.LANE_DAMAGE * Combat.WAKE_DAMAGE, 0.0001)
-	_t.near("half is 0.5", Combat.WAKE_DAMAGE, 0.5, 0.0001)
+	_t.near("at half the lane's damage", float(wake["damage"]), Weapons.LANE_DAMAGE * CannonKit.WAKE_DAMAGE, 0.0001)
+	_t.near("half is 0.5", CannonKit.WAKE_DAMAGE, 0.5, 0.0001)
 	_t.check("it starts at the landing", _flat(h.centre).distance_to(_flat(landing)) < 0.01, "%s vs %s" % [h.centre, landing])
 	var travel := _flat(start - landing).normalized()
 	_t.check("and runs back along the rush's travel line", h.heading.dot(travel) > 0.9999, "heading %s, travel %s" % [h.heading, travel])
 	_t.check("with the lane's own telegraph and pilot colour, never HAZARD",
 		is_equal_approx(h.warn_seconds, MindAttacks.LANE_WARN) and h.warn_seconds >= Hazard.MIN_WARN and h.color == ClassDef.CANNON_COLOR and h.color != Palette.HAZARD,
 		"warn %.2f" % h.warn_seconds)
-	_t.check("the start is spent", _combat._wake.is_empty(), str(_combat._wake))
-	_t.check("the wake never opens a walk", _combat._walk.is_empty(), str(_combat._walk))
+	_t.check("the start is spent", _combat.cannon._wake.is_empty(), str(_combat.cannon._wake))
+	_t.check("the wake never opens a walk", _combat.cannon._walk.is_empty(), str(_combat.cannon._walk))
 	_t.check("the ball's velocity is untouched", _player.state.velocity == velocity, "%s vs %s" % [_player.state.velocity, velocity])
 	# One repeat only: striking the wake lays nothing, and the item_proc lane is no landing.
-	var count: int = _combat._cannon.size()
+	var count: int = _combat.cannon._cannon.size()
 	var enemy: Node3D = _combat.spawn_enemy("chaser", _flat(landing) + travel * 4.0 + Vector3.UP * (landing.y + 1.0))
 	enemy.process_mode = Node.PROCESS_MODE_DISABLED
-	var before: int = _combat._cannon_count
-	_combat._cannon_strike(wake, h, [enemy])
-	_t.check("the wake's strike lays no further lane", _combat._cannon.size() == count and _combat._cannon_count == before
-		and _combat._walk.is_empty() and _combat._wake.is_empty(), "%d entries, was %d" % [_combat._cannon.size(), count])
+	var before: int = _combat.cannon.cannon_count
+	_combat.cannon._cannon_strike(wake, h, [enemy])
+	_t.check("the wake's strike lays no further lane", _combat.cannon._cannon.size() == count and _combat.cannon.cannon_count == before
+		and _combat.cannon._walk.is_empty() and _combat.cannon._wake.is_empty(), "%d entries, was %d" % [_combat.cannon._cannon.size(), count])
 	_t.check("the strike is an item_proc hit", wake["struck"].size() == 1, "%d struck" % wake["struck"].size())
 
 
@@ -448,43 +448,43 @@ func _check_wake_edges() -> void:
 	_equip_wake()
 	var landing: Vector3 = _combat.floor_at(_player.ball_position() + Vector3.UP)
 	# No recorded start: nothing laid.
-	_combat._on_cannon_slammed(landing, 1.0, 1.0)
-	_t.eq("a landing with no recorded slam lays only the rush", _combat._cannon.map(func(e): return e["family"]), ["rush"])
+	_combat.cannon.on_cannon_slammed(landing, 1.0, 1.0)
+	_t.eq("a landing with no recorded slam lays only the rush", _combat.cannon._cannon.map(func(e): return e["family"]), ["rush"])
 	# A start gone stale: nothing laid.
-	_combat._free_cannon()
-	_combat._wake = {"from": landing + Vector3(9.0, 0.0, 0.0), "until": _combat._clock - 0.1}
-	_combat._on_cannon_slammed(landing, 1.0, 1.0)
-	_t.eq("a stale start lays only the rush", _combat._cannon.map(func(e): return e["family"]), ["rush"])
-	_t.check("and is dropped", _combat._wake.is_empty(), str(_combat._wake))
+	_combat.cannon.free_cannon()
+	_combat.cannon._wake = {"from": landing + Vector3(9.0, 0.0, 0.0), "until": _combat._clock - 0.1}
+	_combat.cannon.on_cannon_slammed(landing, 1.0, 1.0)
+	_t.eq("a stale start lays only the rush", _combat.cannon._cannon.map(func(e): return e["family"]), ["rush"])
+	_t.check("and is dropped", _combat.cannon._wake.is_empty(), str(_combat.cannon._wake))
 	# A straight drop: the lane goes back along the aim.
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 	_player.kit.slamming = true
-	_combat._track_wake()
+	_combat.cannon._track_wake()
 	_player.kit.slamming = false
-	_combat._track_wake()
-	_t.check("a slam that ended is held for the grace", float(_combat._wake["until"]) == _combat._clock + Combat.WAKE_GRACE, str(_combat._wake))
-	_combat._on_cannon_slammed(_combat.floor_at(_player.ball_position() + Vector3.UP), 1.0, 1.0)
+	_combat.cannon._track_wake()
+	_t.check("a slam that ended is held for the grace", float(_combat.cannon._wake["until"]) == _combat._clock + CannonKit.WAKE_GRACE, str(_combat.cannon._wake))
+	_combat.cannon.on_cannon_slammed(_combat.floor_at(_player.ball_position() + Vector3.UP), 1.0, 1.0)
 	var lanes := _lanes("item_proc")
 	_t.check("a straight drop lays its wake back along the aim", lanes.size() == 1 and _lane(lanes[0]).heading.dot(-_combat.aim_heading()) > 0.9999,
 		"%d lanes" % lanes.size())
 	# A later slam overwrites a slam that never landed.
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 	_player.kit.slamming = true
-	_combat._track_wake()
-	var first: Vector3 = _combat._wake["from"]
+	_combat.cannon._track_wake()
+	var first: Vector3 = _combat.cannon._wake["from"]
 	_player.kit.slamming = false
-	_combat._track_wake()
+	_combat.cannon._track_wake()
 	_player.body().global_position += Vector3(5.0, 0.0, 0.0)
 	_player.kit.slamming = true
-	_combat._track_wake()
-	_t.check("a new slam replaces one that never landed", _flat(_combat._wake["from"]).distance_to(_flat(first)) > 4.0, "%s vs %s" % [_combat._wake["from"], first])
+	_combat.cannon._track_wake()
+	_t.check("a new slam replaces one that never landed", _flat(_combat.cannon._wake["from"]).distance_to(_flat(first)) > 4.0, "%s vs %s" % [_combat.cannon._wake["from"], first])
 	_player.kit.slamming = false
 	# Planted control: the landing event of a depth-2 chain would lay a second lane; the guard stops it.
-	_combat._free_cannon()
-	_combat._wake = {"from": landing + Vector3(9.0, 0.0, 0.0), "until": INF}
-	_combat._on_cannon_slammed(landing, 1.0, 1.0)
+	_combat.cannon.free_cannon()
+	_combat.cannon._wake = {"from": landing + Vector3(9.0, 0.0, 0.0), "until": INF}
+	_combat.cannon.on_cannon_slammed(landing, 1.0, 1.0)
 	var wake := _lanes("item_proc")
-	_combat._on_cannon_slammed(landing, 1.0, 1.0)
+	_combat.cannon.on_cannon_slammed(landing, 1.0, 1.0)
 	_t.eq("one start lays exactly one wake", wake.size(), 1)
 	_t.eq("a second landing on the spent start lays no second wake", _lanes("item_proc").size(), 1)
 
@@ -495,15 +495,15 @@ func _check_wake_plain() -> void:
 	_t.eq("an unswapped cannon smash is cannon_rush", _player.abilities.id_of(AbilityState.SMASH), "cannon_rush")
 	var start: Vector3 = _player.ball_position()
 	_player.kit.slamming = true
-	_combat._track_wake()
-	_t.check("the plain rush records no start", _combat._wake.is_empty(), str(_combat._wake))
+	_combat.cannon._track_wake()
+	_t.check("the plain rush records no start", _combat.cannon._wake.is_empty(), str(_combat.cannon._wake))
 	var landing: Vector3 = _combat.floor_at(start + Vector3(9.0, 0.0, 0.0) + Vector3.UP)
 	_player.kit.slamming = false
-	_combat._on_cannon_slammed(landing, 1.0, 1.0)
-	_t.eq("the plain rush lays only its ring", _combat._cannon.map(func(e): return e["family"]), ["rush"])
+	_combat.cannon.on_cannon_slammed(landing, 1.0, 1.0)
+	_t.eq("the plain rush lays only its ring", _combat.cannon._cannon.map(func(e): return e["family"]), ["rush"])
 	# Planted control: forcing a start on the plain rush still lays nothing, since the row carries no mutation.
-	_combat._free_cannon()
-	_combat._wake = {"from": start, "until": INF}
-	_combat._on_cannon_slammed(landing, 1.0, 1.0)
-	_t.eq("a planted start on the plain rush lays nothing", _combat._cannon.map(func(e): return e["family"]), ["rush"])
-	_t.check("a rush landing never walks the weapon lane", _combat._walk.is_empty(), str(_combat._walk))
+	_combat.cannon.free_cannon()
+	_combat.cannon._wake = {"from": start, "until": INF}
+	_combat.cannon.on_cannon_slammed(landing, 1.0, 1.0)
+	_t.eq("a planted start on the plain rush lays nothing", _combat.cannon._cannon.map(func(e): return e["family"]), ["rush"])
+	_t.check("a rush landing never walks the weapon lane", _combat.cannon._walk.is_empty(), str(_combat.cannon._walk))

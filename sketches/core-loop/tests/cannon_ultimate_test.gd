@@ -74,7 +74,7 @@ func _run() -> void:
 
 func _reset(id := "cannon_fire_mission") -> void:
 	_ult._abort("stage")
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 	_combat._exposed.clear()
 	for enemy in get_nodes_in_group("enemy"):
 		enemy.remove_from_group("enemy")
@@ -118,11 +118,11 @@ func _tick() -> void:
 	_ult.step(DT)
 	if _ult._ride != null:
 		_body.global_position = _ult._ride.point_at(_ult._ride.time)
-	for entry in _combat._cannon:
+	for entry in _combat.cannon._cannon:
 		for h in entry["hazards"]:
 			if not _live.has(h.get_instance_id()) and _combat._clock >= float(entry["options"].get("live_at", INF)):
 				_live[h.get_instance_id()] = _combat._clock
-	_combat.step_cannon(DT)
+	_combat.cannon.step_cannon(DT)
 
 
 func _finish_ride() -> void:
@@ -197,7 +197,7 @@ func _cases() -> void:
 	var scheduled: float = _ult._cannon_due
 	_ult.bail()
 	_t.eq("bail does not land", _landed.size(), 0)
-	_t.check("bail keeps committed calls", not _combat._cannon.is_empty())
+	_t.check("bail keeps committed calls", not _combat.cannon._cannon.is_empty())
 	for i in 200:
 		_tick()
 	_t.check("bailed calls keep the original beat", not _live.is_empty() and _live.values().all(func(at): return absf(float(at) - scheduled) <= DT), str(_live))
@@ -246,19 +246,19 @@ func _cases() -> void:
 	_t.near("class V damage follows the heft table", (hp - foe.hp) / class_one, 1.6, 0.001)
 	foe.kind = "mind_fixture"
 	_t.near("boss takes half set-piece damage", _combat.cannon_set_piece_hit(foe, 60.0, HOME, true, false, {}), 30.0)
-	_combat._cannon_expose(foe, 2.5, "ram")
+	_combat.cannon_expose(foe, 2.5, "ram")
 	_t.check("exposure has a visible mark", foe.has_node("CannonExposure"))
 	_combat._clock += 2.499
-	_combat._step_cannon_exposure()
+	_combat.step_cannon_exposure()
 	_t.check("mark lasts the full exposure window", _combat._exposed.has(foe.get_instance_id()))
 	_combat._clock += 0.0011
-	_combat._step_cannon_exposure()
+	_combat.step_cannon_exposure()
 	_t.check("mark ends at the window", not _combat._exposed.has(foe.get_instance_id()))
-	_t.eq("Recital starts at lane", _combat._recital_index, 0)
+	_t.eq("Recital starts at lane", _combat.cannon._recital_index, 0)
 	for family in MindAttacks.FAMILIES:
-		_combat._cannon_recital(family, target)
+		_combat.cannon._cannon_recital(family, target)
 	_t.check("ordered family hits discover Recital", _combat.discovered.has("cannon_recital"))
-	_t.eq("Recital resets after its completion", _combat._recital_index, 0)
+	_t.eq("Recital resets after its completion", _combat.cannon._recital_index, 0)
 	var node_ids: Array = UpgradeTree.nodes("remembered_cannon").map(func(node): return node["id"])
 	_t.check("movement ops stay in the Cannon tree", node_ids.size() == 30 and node_ids.all(func(id): return String(id).begins_with("c_")))
 	_t.check("no Cannon movement node enters another pilot tree", UpgradeTree.TREES.keys().all(func(id): return id == "remembered_cannon" or UpgradeTree.nodes(id).all(func(node): return not node_ids.has(node["id"]))))
