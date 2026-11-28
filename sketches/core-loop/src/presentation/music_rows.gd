@@ -241,8 +241,8 @@ static func stem_file(manifest_file: String, file: String) -> String:
 	return manifest_file.get_base_dir().path_join(file)
 
 
-static func pack_on_disk(manifest_path: String, sidecar_dir := "") -> bool:
-	var path := resolve_manifest(manifest_path, sidecar_dir)
+static func pack_on_disk(manifest: String, sidecar_dir := "") -> bool:
+	var path := resolve_manifest(manifest, sidecar_dir)
 	if path == "":
 		return false
 	var m = JSON.parse_string(FileAccess.get_file_as_string(path))

@@ -92,7 +92,7 @@ func run(t) -> void:
 	var bus_const_allowed := ["res://src/presentation/mix_rows.gd"]
 	var ace_root_allowed := ["res://src/presentation/music_rows.gd"]
 	var bus_const_re := RegEx.new()
-	bus_const_re.compile("(?m)^[ \\t]*const\\s+[A-Za-z0-9_]+\\s*(?::\\s*(?:String|StringName)\\s*)?:?=\\s*&?\"(?:Master|Music|SFX|UI|Ambient|StingerMusic)\"")
+	bus_const_re.compile("(?m)^[ \\t]*const\\s+[A-Za-z0-9_]+\\s*(?::\\s*(?:String|StringName)\\s*)?:?=\\s*&?[\"'](?:Master|Music|SFX|UI|Ambient|StingerMusic)[\"']")
 
 	var src_files: Array[String] = []
 	_gd_files("res://src", src_files)
