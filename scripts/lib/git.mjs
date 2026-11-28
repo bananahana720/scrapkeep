@@ -4,6 +4,19 @@ import { fileURLToPath } from "node:url";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
+const REPOSITORY_VARIABLES = [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_COMMON_DIR",
+  "GIT_INDEX_FILE",
+  "GIT_PREFIX",
+];
+
+export function cwdDecidesRepository(env = process.env) {
+  const out = { ...env };
+  for (const name of REPOSITORY_VARIABLES) delete out[name];
+  return out;
+}
 
 export function git(
   args,
@@ -11,6 +24,7 @@ export function git(
 ) {
   const ran = spawn("git", args, {
     cwd,
+    env: cwdDecidesRepository(),
     encoding: "utf8",
     maxBuffer,
     ...(stdio ? { stdio } : {}),
@@ -29,6 +43,7 @@ export function gitOptional(
 ) {
   const ran = spawn("git", args, {
     cwd,
+    env: cwdDecidesRepository(),
     encoding: "utf8",
     maxBuffer,
     ...(stdio ? { stdio } : {}),
@@ -59,6 +74,7 @@ export function gitState(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
 export function cleanHead(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
   const tracked = spawn("git", ["status", "--porcelain", "--untracked-files=no"], {
     cwd,
+    env: cwdDecidesRepository(),
     encoding: "utf8",
     maxBuffer: DEFAULT_MAX_BUFFER,
   });
@@ -78,7 +94,7 @@ export function cleanHead(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
       "sketches/core-loop/src",
       "sketches/core-loop/assets",
     ],
-    { cwd, encoding: "utf8", maxBuffer: DEFAULT_MAX_BUFFER },
+    { cwd, env: cwdDecidesRepository(), encoding: "utf8", maxBuffer: DEFAULT_MAX_BUFFER },
   );
   if (loose.error) throw loose.error;
   if (loose.status !== 0) throw new Error(`git status failed: ${loose.stderr}`);

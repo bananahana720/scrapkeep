@@ -15,8 +15,10 @@ import {
   shuffleFiles,
 } from "./node-tests.mjs";
 import { selectStage1NodeTests } from "../sketch-fast.mjs";
+import { git } from "../lib/git.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const here = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(here, "..", "..");
 
 test("selectShardFiles partitions files cleanly across shards with and without shuffle", () => {
   const input = [
@@ -105,10 +107,22 @@ test("shuffleFiles is deterministic per seed and preserves exact file set", () =
   assert.deepEqual([...s1].sort(), input);
 });
 
-test("discoverTestFiles scans the three scopes, skips nested tests/ and excluded entries", () => {
+function fixtureRepo(tracked, untracked = []) {
   const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-node-tests-"));
-  try {
-    for (const rel of [
+  git(["init", "-q"], { cwd: tmp });
+  for (const rel of [...tracked, ...untracked]) {
+    const full = path.join(tmp, rel);
+    mkdirSync(path.dirname(full), { recursive: true });
+    writeFileSync(full, "\n", "utf8");
+  }
+  if (tracked.length > 0) git(["add", "--", ...tracked], { cwd: tmp });
+  return tmp;
+}
+
+test("discoverTestFiles lists the three scopes from git, skips nested tests/ and excluded entries, and names each untracked file it runs", () => {
+  const tmp = fixtureRepo(
+    [
+      ".gitignore",
       "tests/alpha.test.js",
       "tests/helper.js",
       "tests/legacy/leads.test.js",
@@ -118,22 +132,56 @@ test("discoverTestFiles scans the three scopes, skips nested tests/ and excluded
       "scripts/nested/not-a-test.mjs",
       "project-guide/handoff/sitting-kit/serve.test.mjs",
       "project-guide/handoff/sitting-kit/sub/ignored.test.mjs",
-    ]) {
-      const full = path.join(tmp, rel);
-      mkdirSync(path.dirname(full), { recursive: true });
-      writeFileSync(full, "\n", "utf8");
-    }
+    ],
+    ["scripts/new.test.mjs", "scripts/scratch/ignored.test.mjs"],
+  );
+  try {
+    writeFileSync(path.join(tmp, ".gitignore"), "scripts/scratch/\n", "utf8");
+    rmSync(path.join(tmp, "scripts/top.test.mjs"));
+    const lines = [];
     const files = discoverTestFiles(tmp, {
       excluded: { "scripts/nested/skip-me.test.mjs": "fixture exclusion reason" },
+      log: (line) => lines.push(line),
     });
     assert.deepEqual(files, [
       "project-guide/handoff/sitting-kit/serve.test.mjs",
       "scripts/nested/deep.test.mjs",
+      "scripts/new.test.mjs",
       "scripts/top.test.mjs",
       "tests/alpha.test.js",
     ]);
+    assert.deepEqual(lines, ["node-tests: running untracked scripts/new.test.mjs"]);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("discoverTestFiles fails when git cannot list the files or lists none", () => {
+  const plain = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-node-tests-"));
+  const empty = fixtureRepo([], ["scripts/untracked.test.mjs"]);
+  try {
+    assert.throws(
+      () => discoverTestFiles(plain, { log: assert.fail }),
+      /git ls-files .* failed: .*not a git repository/i,
+    );
+    assert.throws(() => discoverTestFiles(empty, { log: assert.fail }), /lists no tracked files/);
+  } finally {
+    rmSync(plain, { recursive: true, force: true });
+    rmSync(empty, { recursive: true, force: true });
+  }
+});
+
+test("the runner refuses --test-name-pattern and names the form that works", () => {
+  for (const arg of [["--test-name-pattern=cold launch"], ["--test-name-pattern", "x"]]) {
+    const ran = spawnSync(
+      process.execPath,
+      [path.join(here, "node-tests.mjs"), ...arg, "--dry-run"],
+      {
+        encoding: "utf8",
+      },
+    );
+    assert.equal(ran.status, 2);
+    assert.match(ran.stderr, /node --test --test-name-pattern=<pattern> <file>/);
   }
 });
 

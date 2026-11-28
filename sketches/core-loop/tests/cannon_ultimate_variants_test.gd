@@ -69,7 +69,7 @@ func _cases() -> void:
 	_t.near("Mortar's plate warns for one beat", entry["hazards"][0].warn_seconds, float(_ult.leg_state()["beat_length"]))
 	for i in ceili(float(_ult.leg_state()["beat_length"]) / DT):
 		_combat._clock += DT
-		_combat._step_cannon(DT)
+		_combat.step_cannon(DT)
 	_t.check("Mortar plate exposes its target", _combat._exposed.has(foe.get_instance_id()))
 	_ult._leg = 1
 	var hp: float = foe.hp

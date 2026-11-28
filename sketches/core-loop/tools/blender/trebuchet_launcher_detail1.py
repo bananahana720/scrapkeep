@@ -3,8 +3,8 @@ frame's origin, authored from gap list A (units/rc-trebuchet_launcher/gaps_A.md)
 rows on the girders and the top beam (A1, A2), oxide foot plates (A3), gear and flywheel teeth (A4, A5), the sphere's
 cradle ring (A7), plinth feet (A8), the guy cables' turnbuckles and anchor plates (A12, the Highdraft habit), base-beam
 bolts (A13) and the piston collar (A14). Colours from trebuchet_launcher.TONES only. Frame only: the arm moves, so nothing
-here sits on it. Class "detail" (1500 tris, 3000 verts, 1 draw); the game drops it by distance (LAYER_RANGE in
-tools/w12_side_trebuchet_launcher.gd).
+here sits on it. Class "detail" (1500 tris, 3000 verts, 1 draw). No game code loads it yet; its row in
+assets/registry.d/trebuchet_launcher.json records the draw distance it is meant to get.
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/trebuchet_launcher_detail1.py [-- --out-dir DIR]
 """
 import math

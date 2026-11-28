@@ -96,7 +96,7 @@ func _physics_process(_delta: float) -> bool:
 		else:
 			# 2026-10-04: the default table now takes the alpha ruleset (it keeps five synergies), so the
 			# control for "every row fires" runs with the synergy filter off, the unfiltered rule.
-			Synergies.table = null  # the codex cards were declared under the alpha filter, so only the live rule is checked
+			Synergies.set_table(null)  # the codex cards were declared under the alpha filter, so only the live rule is checked
 			_default_cuts()
 			_queue = FIRING_SITES.keys()
 		return false

@@ -3,6 +3,7 @@ extends SceneTree
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
@@ -183,7 +184,7 @@ func _moment_shot(vfx, id: String) -> void:
 			var crit := id == "moment_crit"
 			var force := 30.0 if crit else 10.0
 			vfx.glyph(ROW_KIND, at, 0.4, clampf(0.8 + force * 0.03, 0.8, 1.6), 0.14)
-			var colour: Color = EventKinds.juice(ROW_KIND)["crit"]["color"] if crit else copper
+			var colour: Color = EventJuice.juice(ROW_KIND)["crit"]["color"] if crit else copper
 			vfx.play_fx(ROW_KIND, at, colour, "crit" if crit else "")
 		_:
 			var shown: Color = tint if tint.a > 0.0 else copper

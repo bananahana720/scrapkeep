@@ -3,7 +3,6 @@ extends Node
 const AppShell := preload("res://src/core/app_shell.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
-const Terrain := preload("res://src/world/terrain.gd")
 const Director := preload("res://src/world/director.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const ArmourMarks := preload("res://src/presentation/armour_marks.gd")
@@ -80,7 +79,7 @@ static func hook(ctx_ref) -> void:
 
 
 func _on_stage_entered(stage: int, _retry: bool) -> void:
-	if SimClock.ticks and not Terrain.threaded_in_bot_runs:
+	if SimClock.ticks and not SimClock.threaded_in_bot_runs:
 		return
 	for row in ctx.stages.DEFS:
 		if row["stage"] == stage:

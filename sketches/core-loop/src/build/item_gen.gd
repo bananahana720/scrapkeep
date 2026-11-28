@@ -2,6 +2,7 @@ extends RefCounted
 
 const Triggers := preload("res://src/build/triggers.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PartDef := preload("res://src/build/part_def.gd")
 
 
 const PREFIX := "gen"
@@ -12,7 +13,7 @@ const RARITY := {
 	"relic": {"color": Palette.AMBER, "weight": TIER_WEIGHTS["relic"], "stamp": "RELIC", "rung": 2, "tier": 3, "affix": 2.0},
 	"evolved": {"color": Palette.ANCIENT, "weight": TIER_WEIGHTS["evolved"], "stamp": "EVOLVED", "rung": 3, "tier": 3, "affix": 2.0},
 }
-const RARITIES := ["common", "rare", "relic", "evolved"]
+const RARITIES := PartDef.RARITIES
 const RARITY_ALIASES := {"uncommon": "common", "rare_plus": "relic", "evolution": "evolved"}
 const LEGACY_TIER := {"uncommon": 2}
 const ELEMENTS := ["", "frost", "arc", "kinetic"]

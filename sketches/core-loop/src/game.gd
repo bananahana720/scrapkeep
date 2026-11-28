@@ -40,7 +40,7 @@ const Combat := preload("res://src/combat/combat.gd")
 const Build := preload("res://src/build/build.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
 const Bindings := preload("res://src/core/bindings.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
@@ -536,11 +536,11 @@ func sitting_save_guard() -> void:
 
 
 func open_board_items() -> void:
-	Parts.opened_items = {}
-	if bot_driven or ctx.profile == null:
-		return
-	for id in ShiftBoard.opened_items(ctx.profile):
-		Parts.opened_items[id] = true
+	var opened := {}
+	if not bot_driven and ctx.profile != null:
+		for id in ShiftBoard.opened_items(ctx.profile):
+			opened[id] = true
+	Parts.set_opened_items(opened)
 
 
 func _apply_player_run_options(class_id: String) -> void:

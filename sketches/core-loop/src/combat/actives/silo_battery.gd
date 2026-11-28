@@ -114,9 +114,9 @@ func _land() -> void:
 			for enemy in inside:
 				if enemy.is_dead():
 					continue
-				combat._hit(enemy, KIND, dmg, enemy.global_position - at, KNOCK, "", SOURCE, IMPACT)
+				combat.deal_hit(enemy, KIND, dmg, enemy.global_position - at, KNOCK, "", SOURCE, IMPACT)
 				if jumps > 0:
-					combat._chain(enemy, enemy.global_position, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
+					combat.chain_hit(enemy, enemy.global_position, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
 						"chain_falloff": CHAIN_FALLOFF, "color": ActiveFx.peak(COLOR), "kind": KIND, "knock": KNOCK, "source": SOURCE})
 	clear()
 

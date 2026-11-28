@@ -7,7 +7,6 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const PilotStory := preload("res://src/core/pilot_story.gd")
-const WhyCallout := preload("res://src/ui/why_callout.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 
@@ -406,7 +405,7 @@ func _call_holds(row: Dictionary) -> bool:
 
 func _fight() -> bool:
 	var flow = _game.flow
-	return WhyCallout.warden_fight_live(flow) or (flow.state_name() == "boss" and flow.boss_active)
+	return flow.warden_fight_live() or (flow.state_name() == "boss" and flow.boss_active)
 
 
 func _pilot_free(class_id: String) -> bool:

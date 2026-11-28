@@ -248,7 +248,7 @@ func _warden(enemy: Node3D) -> bool:
 
 
 func _boss(enemy: Node3D) -> bool:
-	return combat._target_class(enemy) == "boss"
+	return combat.target_class_of(enemy) == "boss"
 
 
 func _enemies() -> Array:
@@ -276,7 +276,7 @@ func slam_force(punch: float) -> float:
 
 func punch_dir(target: Node3D) -> Vector3:
 	var d := _flat(target.global_position - ctx.player.ball_position())
-	return d.normalized() if d.length() > 0.01 else _flat(combat._flat_aim()).normalized()
+	return d.normalized() if d.length() > 0.01 else _flat(combat.aim_heading()).normalized()
 
 
 func punch_force() -> float:
@@ -296,7 +296,7 @@ func geometry(_fraction: float) -> Dictionary:
 		var at: Vector3 = kit.anchor_body.global_position
 		var to: Vector3 = at + punch_dir(kit.anchor_body) * ARROW_LENGTH
 		return ctx.player.yours({"kind": "line", "from": at, "to": to, "full_to": to, "width": 1.0, "fill": 1.0})
-	var anchor: Vector3 = kit.anchor if kit.hooked else ball + combat._flat_aim() * ctx.player.grapple_range()
+	var anchor: Vector3 = kit.anchor if kit.hooked else ball + combat.aim_heading() * ctx.player.grapple_range()
 	var stop := haul_stop(anchor)
 	return ctx.player.yours({"kind": "line", "from": ball, "to": stop, "full_to": stop, "width": 1.0, "fill": 1.0})
 
@@ -416,7 +416,7 @@ func _step_rail_grind(delta: float) -> void:
 		return
 	var ball: Vector3 = player.ball_position()
 	var vel: Vector3 = player.planar_velocity()
-	var heading := vel.normalized() if vel.length() > 0.5 else _flat(combat._flat_aim()).normalized()
+	var heading := vel.normalized() if vel.length() > 0.5 else _flat(combat.aim_heading()).normalized()
 	var hit := RideRail.find_nearest_rail(map_rails(), ball, heading, Weapons.RIVET_RAIL_SNAP_RADIUS)
 	if not hit.is_empty():
 		_start_rail_ride(hit, "sprint")
@@ -463,7 +463,7 @@ func _punch(target: Node3D, force: float, mult: float, dir: Vector3) -> void:
 	elif _boss(target):
 		combat.strike(target, "ram", ram_force(punch * Ultimate.BOSS_MULT), "", "special")
 	else:
-		combat._hit(target, "ram", ram_force(punch), dir, Weapons.LINE_PUNCH_KNOCK, "", "special", "overdrive")
+		combat.deal_hit(target, "ram", ram_force(punch), dir, Weapons.LINE_PUNCH_KNOCK, "", "special", "overdrive")
 	last_punch = {"id": target.get_instance_id(), "clock": _clock, "punch": punch, "dir": dir}
 	_punches += 1
 	if _punches == LINE_TRUE_PUNCHES:
@@ -525,8 +525,8 @@ func _on_cc_ignored(_kind: String) -> void:
 
 func _heading() -> Vector3:
 	if combat.ultimate != null:
-		return combat.ultimate.ride_heading(combat._flat_aim())
-	return combat._flat_aim()
+		return combat.ultimate.ride_heading(combat.aim_heading())
+	return combat.aim_heading()
 
 
 func beam_dir(aim: Vector3, heading := Vector3.ZERO) -> Vector3:
@@ -570,7 +570,7 @@ func select(shape: Dictionary) -> Array:
 	var picks: Array = []
 	var boxes := _cell_boxes(shape)
 	for enemy in _enemies():
-		if _in_shape(shape, enemy.global_position, combat._hull(enemy), boxes):
+		if _in_shape(shape, enemy.global_position, combat.hull_radius(enemy), boxes):
 			picks.append(enemy)
 	var origin: Vector3 = shape["origin"]
 	if shape["kind"] == "line":
@@ -1027,7 +1027,7 @@ func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 				bounds = bounds.expand(vertex)
 	var margin := 0.0
 	for enemy in _enemies():
-		margin = maxf(margin, combat._hull(enemy))
+		margin = maxf(margin, combat.hull_radius(enemy))
 	bounds = bounds.grow(margin)
 	var box := BoxShape3D.new()
 	box.size = bounds.size
@@ -1266,11 +1266,11 @@ func _clear_beams() -> void:
 func _beam_hit(enemy: Node3D, damage: float, from: Vector3) -> void:
 	_cut[enemy.get_instance_id()] = true
 	if _warden(enemy):
-		combat._ult_hit(enemy, "runner", damage, from, false)
+		combat.ult_hit(enemy, "runner", damage, from, false)
 	elif _boss(enemy):
 		combat.strike(enemy, "runner", damage * Ultimate.BOSS_MULT, "", "special")
 	else:
-		combat._hit(enemy, "runner", damage, enemy.global_position - from, 0.0, "", "special")
+		combat.deal_hit(enemy, "runner", damage, enemy.global_position - from, 0.0, "", "special")
 
 
 func _peak_beat(beat: int) -> bool:
@@ -1456,12 +1456,12 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 	shape["strict_angle"] = true
 	for enemy in select(shape):
 		if _warden(enemy) or _boss(enemy):
-			dealt += combat._ult_hit(enemy, "slam", damage, at, true)
+			dealt += combat.ult_hit(enemy, "slam", damage, at, true)
 		else:
 			if enemy.has_method("_on_slammed"):
 				enemy._on_slammed(at, 1.0, 1.0)
 			var falloff := clampf(1.0 - _flat(enemy.global_position - at).length() / reach, 0.0, 1.0)
-			combat._hit(enemy, "slam", slam_force(damage), heading, Ultimate.LANDING_KNOCK * falloff * pins, "", "special", "slam")
+			combat.deal_hit(enemy, "slam", slam_force(damage), heading, Ultimate.LANDING_KNOCK * falloff * pins, "", "special", "slam")
 			dealt += damage
 		hits += 1
 	_draw_shape("rivet_breach", shape)
@@ -1619,7 +1619,7 @@ func drive_step(ball: Vector3) -> int:
 		elif _boss(enemy):
 			combat.strike(enemy, "ram", ram_force(damage * Ultimate.BOSS_MULT), "", "special")
 		else:
-			combat._hit(enemy, "ram", ram_force(damage), (outward + heading).normalized(), Weapons.DRIVE_KNOCK * float(_knob("ult_pins", 1.0)), "", "special", "overdrive")
+			combat.deal_hit(enemy, "ram", ram_force(damage), (outward + heading).normalized(), Weapons.DRIVE_KNOCK * float(_knob("ult_pins", 1.0)), "", "special", "overdrive")
 		rams += 1
 	return rams
 
@@ -1639,7 +1639,7 @@ func _discover(id: String, after: String, at: Vector3) -> void:
 func _step_cards() -> void:
 	for id in _cards.keys():
 		var entry: Dictionary = _cards[id]
-		var codex = combat._codex()
+		var codex = combat.run_codex()
 		var frame := Engine.get_physics_frames()
 		var known: bool = String(entry["after"]) == "" or (codex != null and codex.known(entry["after"]))
 		if frame > _card_frame and frame > int(entry["queued"]) and known:

@@ -9,6 +9,7 @@ const Density := preload("res://src/presentation/density.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const WarningBound := preload("res://src/combat/warning_bound.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd")
@@ -32,7 +33,7 @@ const ParkProps := preload("res://src/presentation/park_props.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Projectile := preload("res://src/combat/projectile.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
 const Synergies := preload("res://src/build/synergies.gd")
@@ -55,7 +56,6 @@ const QuietGun := preload("res://src/presentation/quiet_gun.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
-const Terrain := preload("res://src/world/terrain.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -197,6 +197,7 @@ func _reset() -> void:
 	PickQuiet.reset_for_tests()
 	UiFonts.reset_for_tests()
 	Parts.reset_for_tests()
+	PartOffers.reset_for_tests()
 	WarningBound.reset_for_tests()
 	DigScenery.reset_for_tests()
 	ArenaWakingDress.reset_for_tests()
@@ -226,7 +227,6 @@ func _reset() -> void:
 	HazardHits.reset_for_tests()
 	ParkTerrain.reset_for_tests()
 	StageMap.reset_for_tests()
-	Terrain.reset_for_tests()
 	Screens.reset_for_tests()
 	ArenaMindDress.reset_for_tests()
 	HighdraftScenery.reset_for_tests()
@@ -272,10 +272,11 @@ func _reset() -> void:
 	ContentRegistry.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
+	SimClock.threaded_in_bot_runs = false
 	Glyphs.device = "kbm"
 	SettingsPages.last_page = 0
 	StageLocks.active = true
-	Synergies.table = null
+	Synergies.reset_for_tests()
 	EnemyMotion.headless_idle = false
 	EnemyClips.headless = false
 	Enemy.rim_color = Palette.ARC

@@ -3,7 +3,7 @@ extends SceneTree
 # SQ3 pack stagger window (W13-INTEGRATION-3.md, SQ3): every ordinary pack kind built on
 # counter.gd shares one interrupt window, with impact resistance as the per-kind dial.
 # For each built Fleet kind on counter.gd, one at a time, in its warning:
-# - a real ram knock (combat._hit) is logged with the speed it left on the unit; when it
+# - a real ram knock (combat.deal_hit) is logged with the speed it left on the unit; when it
 #   is at or over the unit's interrupt speed the attack breaks and the unit staggers on
 #   that tick, for STAGGER_WINDOW, the same frame count on every kind within one tick;
 # - a knock under the interrupt speed staggers nothing (the negative control);
@@ -138,7 +138,7 @@ func _probe(kind: String) -> Dictionary:
 	await _roll()
 	var ram: Dictionary = EventKinds.impact("ram")
 	var before := _ball_speed()
-	_game.combat._hit(enemy, "ram", 1.0, Vector3.RIGHT, float(ram["knock"]), "", "", "ram")
+	_game.combat.deal_hit(enemy, "ram", 1.0, Vector3.RIGHT, float(ram["knock"]), "", "", "ram")
 	row["knock"] = float(enemy._knocked_speed())
 	await physics_frame
 	var after := _ball_speed()
@@ -163,7 +163,7 @@ func _probe(kind: String) -> Dictionary:
 		low.hp = 100000.0
 		if await _to_warn(low):
 			var soft: float = float(row["interrupt_speed"]) * 0.5 * float(low.weight)
-			_game.combat._hit(low, "ram", 1.0, Vector3.RIGHT, soft, "", "", "ram")
+			_game.combat.deal_hit(low, "ram", 1.0, Vector3.RIGHT, soft, "", "", "ram")
 			row["soft_knock"] = float(low._knocked_speed())
 			await physics_frame
 			row["soft_staggered"] = low.stunned()

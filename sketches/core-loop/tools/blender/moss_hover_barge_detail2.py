@@ -2,7 +2,7 @@
 authored from gap list C (the FLUX image-to-image re-imagining of the pass-1 render): a dense rivet row along the top of
 the hull side, round copper bosses, wheel spokes, long axle spindles and a dark trim line under the coping. Nothing
 sits inside the 62 x 42 deck rectangle; colours are the base recipe's TONES. Class "detail" (1500 tris, 3000 verts,
-1 draw); it drops out nearer than detail1 (LAYER_RANGE in tools/w12_side_moss_hover_barge.gd).
+1 draw); it drops out nearer than detail1 (its shell row in ROWS, src/presentation/recipe_props.gd).
 
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/moss_hover_barge_detail2.py [-- --out-dir DIR]
 """

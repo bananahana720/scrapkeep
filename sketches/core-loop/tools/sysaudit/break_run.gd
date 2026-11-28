@@ -1,6 +1,7 @@
 extends "res://tools/bot_run.gd"
 
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 
 
@@ -345,15 +346,15 @@ func _draft() -> void:
 		var roll := rng.randi_range(0, 9)
 		var picks: Array = []
 		if roll < 6:
-			picks = Parts.roll_gate(rng, Parts.gate_rarities(rng.randi_range(0, 2)), class_id, parts, 2, rng.randi_range(1, 3))
+			picks = PartOffers.roll_gate(rng, PartOffers.gate_rarities(rng.randi_range(0, 2)), class_id, parts, 2, rng.randi_range(1, 3), {}, Parts.offer_ops())
 			if not picks.is_empty():
 				picks = [picks[rng.randi_range(0, picks.size() - 1)]]
 		elif roll < 8:
-			picks = Parts.roll(rng, Parts.SOURCE_RARITIES["fabricator"], class_id, parts, 1)
+			picks = Parts.roll(rng, PartOffers.SOURCE_RARITIES["fabricator"], class_id, parts, 1)
 		elif roll < 9:
-			picks = Parts.roll(rng, Parts.SOURCE_RARITIES["vault"], class_id, parts, 1)
+			picks = Parts.roll(rng, PartOffers.SOURCE_RARITIES["vault"], class_id, parts, 1)
 		else:
-			picks = [Parts.milestone_for("event_%d" % rng.randi(), parts)]
+			picks = [PartOffers.milestone_for("event_%d" % rng.randi(), parts)]
 		for part_id in picks:
 			parts.append(part_id)
 			run.add_part(part_id, "fuzz")

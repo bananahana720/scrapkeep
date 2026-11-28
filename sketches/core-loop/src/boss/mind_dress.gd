@@ -7,6 +7,8 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const QuietGun := preload("res://src/presentation/quiet_gun.gd")
+const World23ChunkCraft := preload("res://src/presentation/world23_chunk_craft.gd")
 
 const BASE := "res://assets/models/bosses/boss_mind_base.glb"
 const KIT := "res://assets/models/bosses/boss_mind_kit.glb"
@@ -75,7 +77,7 @@ static func settle() -> void:
 
 
 static func attach(owner_module):
-	preload("res://src/presentation/quiet_gun.gd").attach(owner_module)
+	QuietGun.attach(owner_module)
 	var _read := [_take(base_path), _take(kit_path)]
 	var base_scene := BossModel.load_scene(base_path)
 	var kit_scene := BossModel.load_scene(kit_path)
@@ -137,7 +139,7 @@ func _physics_process(delta: float) -> void:
 		if open != _open:
 			_open = open
 			BossModel.play(_lens_anim, "stagger_open", not open)
-		var charging: bool = warden._charging
+		var charging: bool = warden.is_charging()
 		if charging != _charging:
 			_charging = charging
 			BossModel.play(_pulse_anim, "pulse_warn" if charging else "pulse")
@@ -231,18 +233,17 @@ func _attach_takeover_panel() -> void:
 
 
 static func build_takeover_panel() -> Node3D:
-	var craft := preload("res://src/presentation/world23_chunk_craft.gd")
 	var holder := Node3D.new()
 	holder.name = TAKEOVER_NODE
 	holder.position = Vector3(0.0, 0.0, 1.78)
 	var bezel := MeshInstance3D.new()
 	bezel.name = "Bezel"
-	bezel.mesh = craft.get_takeover_bezel_mesh()
+	bezel.mesh = World23ChunkCraft.get_takeover_bezel_mesh()
 	bezel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	holder.add_child(bezel)
 	var plate := MeshInstance3D.new()
 	plate.name = "Plate"
-	plate.mesh = craft.get_takeover_plate_mesh()
+	plate.mesh = World23ChunkCraft.get_takeover_plate_mesh()
 	plate.position = Vector3(0.0, 0.0, 0.06)
 	var plate_mat := StandardMaterial3D.new()
 	plate_mat.albedo_color = Palette.KINDNESS

@@ -14,14 +14,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  expiredLine,
-  expiredQuarantine,
-  quarantineNote,
-  quarantineRecord,
-  readQuarantineEntries,
-  spawnCollect,
-} from "./sketch-smoke.mjs";
+import { spawnCollect } from "./sketch-smoke.mjs";
 import {
   ROOT_FILES_ALLOWED,
   SKILL_LINK,
@@ -51,7 +44,6 @@ import {
   runGodotBatch,
   scriptErrorCount,
   splitBatch,
-  takeBatch,
   takeBatchPacked,
   testFixedFps,
   testTimeoutMs,
@@ -83,7 +75,6 @@ export {
   placeholderIncrease,
   removedChecks,
   splitBatch,
-  takeBatch,
   takeBatchPacked,
 };
 
@@ -204,6 +195,12 @@ export function resolveNamedTests(allTests, patterns) {
     .sort();
 }
 
+export function unmatchedTestPatterns(allTests, patterns) {
+  return patterns.filter((pattern) => resolveNamedTests(allTests, [pattern]).length === 0);
+}
+
+const VALUE_FLAGS = new Set(["--base", "--budget", "--receipt", "--width", "--pre"]);
+
 export function parseArgs(argv) {
   const options = {
     base: "origin/main",
@@ -223,10 +220,11 @@ export function parseArgs(argv) {
   let explicitBaseCheck = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--base" && argv[i + 1]) options.base = argv[++i];
+    if (arg === "--base" && argv[i + 1] && !argv[i + 1].startsWith("-")) options.base = argv[++i];
     else if (arg === "--budget" && argv[i + 1]) options.budgetS = Number(argv[++i]);
     else if (arg === "--dry-run") options.dryRun = true;
-    else if (arg === "--receipt" && argv[i + 1]) options.receipt = argv[++i];
+    else if (arg === "--receipt" && argv[i + 1] && !argv[i + 1].startsWith("-"))
+      options.receipt = argv[++i];
     else if (arg === "--width" && argv[i + 1]) options.width = Number(argv[++i]);
     else if (arg === "--base-check") explicitBaseCheck = true;
     else if (arg === "--no-base-check") explicitBaseCheck = false;
@@ -263,6 +261,13 @@ export function parseArgs(argv) {
       }
       options.seed = Math.trunc(Number(raw)) >>> 0;
     } else if (arg === "--pre" && argv[i + 1]) options.pre.push(argv[++i].replace(/^#/, ""));
+    else if (VALUE_FLAGS.has(arg)) throw new Error(`${arg} requires a value`);
+    else {
+      throw new Error(
+        `unknown argument "${arg}"; pass each flag and each value as its own argument, ` +
+          "one --test <name> per test",
+      );
+    }
   }
   options.baseCheck = explicitBaseCheck ?? options.tests.length === 0;
   if (!Number.isFinite(options.budgetS) || options.budgetS <= 0)
@@ -967,7 +972,13 @@ function sourceOf(sketchDir, test) {
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2));
+  let options;
+  try {
+    options = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(`sketch:fast: ${error.message}`);
+    process.exit(2);
+  }
   const startedAt = new Date().toISOString();
   const started = Date.now();
   const sketchDir = path.join(root, SKETCH);
@@ -1207,11 +1218,12 @@ async function main() {
   let selection;
   let lanePlan;
   if (namedMode) {
-    const matched = resolveNamedTests(index.tests, options.tests);
-    if (matched.length === 0) {
-      console.error(`sketch:fast: no tests/*.gd matched ${options.tests.join(", ")}`);
+    const unmatched = unmatchedTestPatterns(index.tests, options.tests);
+    if (unmatched.length > 0) {
+      console.error(`sketch:fast: no tests/*.gd matched ${unmatched.join(", ")}`);
       process.exit(2);
     }
+    const matched = resolveNamedTests(index.tests, options.tests);
     const picked = new Map(matched.map((test) => [test, { tier: 0, why: "named (--test)" }]));
     selection = { picked, hubs: [], unmapped: [], shards: new Map() };
     lanePlan = plan({
@@ -1380,18 +1392,6 @@ async function main() {
     finish();
   }
 
-  const quarantineEntries = readQuarantineEntries(sketchDir);
-  const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
-  const expired = expiredQuarantine(quarantineEntries);
-  for (const entry of expired) log(expiredLine(entry));
-  if (
-    !stage("quarantine", expired.length === 0, {
-      note: expired.length
-        ? `${expired.length} expired: ${expired.map((entry) => entry.test).join(", ")}`
-        : `${quarantineEntries.length} rows, none expired`,
-    })
-  )
-    finish();
   const runBootHere = shouldRunBoot(options);
   if (!runBootHere && lanePlan.parallel.length + lanePlan.solo.length === 0) {
     stage("tests", true, {
@@ -1638,7 +1638,6 @@ async function main() {
   }
 
   async function handle(result) {
-    const quarantined = quarantine.has(path.posix.basename(result.test, ".gd"));
     results.push({
       test: result.test,
       ok: result.ok,
@@ -1647,18 +1646,11 @@ async function main() {
       failing: (result.checks ?? []).length,
       ms: result.ms,
       reason: result.reason,
-      quarantined,
     });
     log(
-      `${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s${quarantined ? " (quarantined)" : ""}`,
+      `${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s`,
     );
-    if (!result.ok && quarantined) {
-      const entry = quarantineEntries.find(
-        (row) => row.test === path.posix.basename(result.test, ".gd"),
-      );
-      log(`  ${quarantineNote(entry)}`);
-    }
-    if (result.ok || quarantined || result.killed) return;
+    if (result.ok || result.killed) return;
     const { kind, newChecks, ledger, ledgerRuns } = await confirm(result);
     log(
       `  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`,
@@ -1774,14 +1766,6 @@ async function main() {
     );
   }
   receipt.results = results;
-  receipt.quarantined = results
-    .filter((row) => row.quarantined)
-    .map((row) =>
-      quarantineRecord(
-        quarantineEntries.find((entry) => entry.test === path.posix.basename(row.test, ".gd")),
-        { ok: row.ok, exit: row.exit, signal: row.signal, failing: row.failing },
-      ),
-    );
   receipt.flaky = flaky;
   receipt.ledger_flaky = ledgerFlaky;
   receipt.base_red = baseRed;

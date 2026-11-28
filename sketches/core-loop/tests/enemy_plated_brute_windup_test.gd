@@ -150,7 +150,7 @@ func _cuts() -> void:
 	_warn(enemy)
 	await _frames(45)
 	var before: Transform3D = enemy.reaction_pivot.transform
-	_game.combat._hit(enemy, "ram", 1.0, Vector3.RIGHT, 12.0)
+	_game.combat.deal_hit(enemy, "ram", 1.0, Vector3.RIGHT, 12.0)
 	await _frames(3)
 	_t.check("WB-6 ram composition", enemy.reaction_pivot.transform != before and _pad(enemy, 0).y > 0.0,
 		"real combat ram tips the reaction pivot while pads remain raised")

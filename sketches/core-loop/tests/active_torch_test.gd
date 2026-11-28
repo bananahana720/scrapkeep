@@ -114,7 +114,7 @@ func _run() -> void:
 	var off_side := _enemy(side * 5.0)
 	var plated := _enemy(aim * 9.0 + side * 0.3, 40.0)
 	var heavy := _enemy(aim * 11.0, 119.0)
-	var hull: float = _combat._hull(front)
+	var hull: float = _combat.hull_radius(front)
 	var edge := WIDTH_HALF * (1.0 + FORGIVENESS) + hull
 	var edge_in := _enemy(aim * 3.5 + side * (edge - 0.1))
 	var edge_out := _enemy(aim * 3.5 - side * (edge + 0.4))

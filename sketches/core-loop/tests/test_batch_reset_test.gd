@@ -27,6 +27,7 @@ const Density := preload("res://src/presentation/density.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const WarningBound := preload("res://src/combat/warning_bound.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd")
@@ -48,7 +49,7 @@ const ParkProps := preload("res://src/presentation/park_props.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Projectile := preload("res://src/combat/projectile.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
 const Synergies := preload("res://src/build/synergies.gd")
@@ -63,7 +64,6 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
-const Terrain := preload("res://src/world/terrain.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
@@ -132,7 +132,7 @@ func _run() -> void:
 	Glyphs.device = "pad"
 	SettingsPages.last_page = 2
 	StageLocks.active = false
-	Synergies.table = AlphaDefs
+	Synergies.set_table(AlphaDefs)
 	EnemyMotion.headless_idle = true
 	EnemyClips.headless = true
 	Enemy.rim_color = Color.RED
@@ -168,10 +168,10 @@ func _run() -> void:
 	var fake_hud := _FakeHud.new()
 	PickQuiet.hush(_FakeHost.new(fake_hud))
 	t.check("PickQuiet.hush marks hud quiet and raises holds", fake_hud.is_quiet and PickQuiet._total == 1)
-	Parts.maker_nudge_on = false
-	Parts.answer_nudge_on = false
-	Parts.seams = {"spawner.extend_cloak": true}
-	Parts.opened_items = {"strike_pocket": true}
+	PartOffers.maker_nudge_on = false
+	PartOffers.answer_nudge_on = false
+	Parts.set_seams({"spawner.extend_cloak": true})
+	Parts.set_opened_items({"strike_pocket": true})
 	WarningBound.test_pad_scale = 0.0
 	WarningBound.test_skip_hazard_merge = true
 	DigScenery.stone_dir = "res://missing_stone/"
@@ -215,7 +215,7 @@ func _run() -> void:
 	StageMap.surface_shader_path = "res://assets/materials/__missing_workshop__.gdshader"
 	StageMap._surface_materials["fake"] = StandardMaterial3D.new()
 	StageMap._surface_warnings["fake"] = true
-	Terrain.threaded_in_bot_runs = true
+	SimClock.threaded_in_bot_runs = true
 	Screens._ready_announced = true
 	ArenaMindDress.dir = "res://assets/models/__missing_mind__/"
 	ArenaMindDress._sky_material = null
@@ -282,7 +282,7 @@ func _run() -> void:
 		and not GraphicsPreset._target_server_active and GraphicsPreset._lighting.is_empty()
 		and GraphicsPreset._dressing_hosts.is_empty() and GraphicsPreset._worlds.is_empty())
 	t.check("PickQuiet clears holds and restores hud", PickQuiet._holds.is_empty() and PickQuiet._total == 0 and not fake_hud.is_quiet)
-	t.check("Parts resets nudges, seams and opened_items", Parts.maker_nudge_on and Parts.answer_nudge_on
+	t.check("Parts resets nudges, seams and opened_items", PartOffers.maker_nudge_on and PartOffers.answer_nudge_on
 		and Parts.seams.is_empty() and Parts.opened_items.is_empty())
 	t.check("WarningBound resets test overrides", is_equal_approx(WarningBound.test_pad_scale, 1.0) and not WarningBound.test_skip_hazard_merge)
 	t.check("DigScenery resets all three dirs", DigScenery.stone_dir == DigScenery.STONE_DIR
@@ -319,7 +319,7 @@ func _run() -> void:
 	t.check("StageMap resets shader path, material cache and warnings",
 		StageMap.surface_shader_path == StageMap.SURFACE_SHADER_PATH
 		and StageMap._surface_materials.is_empty() and StageMap._surface_warnings.is_empty())
-	t.check("Terrain.threaded_in_bot_runs resets to false", not Terrain.threaded_in_bot_runs)
+	t.check("SimClock.threaded_in_bot_runs resets to false", not SimClock.threaded_in_bot_runs)
 	t.check("Screens._ready_announced resets to false", not Screens._ready_announced)
 	t.check("ArenaMindDress resets dir, sky material, panorama task and kit cache",
 		ArenaMindDress.dir == ArenaMindDress.DIR and ArenaMindDress._sky_material == null

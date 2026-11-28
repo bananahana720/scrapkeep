@@ -79,3 +79,11 @@ test("an empty include filter fails for every park file", () => {
   const { problems } = checkPreset({ sketch, presetText: broken, presetName: "Linux x64" });
   assert.ok(problems.length >= 30);
 });
+
+test("a missing project folder fails the check and names the folder", () => {
+  const missing = path.join(root, "artifacts/local/no-such-sketch");
+  assert.deepEqual(checkPreset({ sketch: missing, presetText, presetName: "Linux x64" }), {
+    problems: [`project folder ${missing} not found`],
+    files: [],
+  });
+});

@@ -1,6 +1,6 @@
 # Dev Console Command Reference
 
-In-game console sources live under `sketches/core-loop/src/dev/` (`sketches/core-loop/src/dev/dev_console.gd`, `sketches/core-loop/src/dev/dev_commands.gd`, `sketches/core-loop/src/dev/dev_fight.gd`, `sketches/core-loop/src/dev/dev_lens.gd`, `sketches/core-loop/src/dev/dev_look.gd`, plus `DevInspect`, `DevAgent`, `DevOverlay`, and `DevSession`). Separate chained commands with `;`.
+In-game console sources live under `sketches/core-loop/src/dev/` (`sketches/core-loop/src/dev/dev_console.gd`, `sketches/core-loop/src/dev/dev_commands.gd`, `sketches/core-loop/src/dev/dev_fight.gd`, `sketches/core-loop/src/dev/dev_lens.gd`, `sketches/core-loop/src/dev/dev_look.gd`, plus `DevCapture` for stills, QA packs and sheets, `DevInspect`, `DevAgent`, `DevOverlay`, and `DevSession`). Separate chained commands with `;`.
 
 ## Flow, time, and navigation
 

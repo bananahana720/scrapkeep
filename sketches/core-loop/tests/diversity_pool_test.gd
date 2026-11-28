@@ -47,7 +47,7 @@ func _initialize() -> void:
 
 
 func _tricks() -> void:
-	Synergies.table = AlphaDefs
+	Synergies.set_table(AlphaDefs)
 	for key in ["glacier_hull", "storm_lattice", "thermal_shock", "linked_spiral"]:
 		var maker: String = Synergies.ROWS[key]["maker"]
 		var pieces: Array = AlphaDefs.PARTS.filter(func(id): return Parts.maker_of(id) == maker and Parts.def(id).class_id == "")
@@ -55,11 +55,11 @@ func _tricks() -> void:
 		_t.check("%s wakes on two alpha pieces of %s" % [key, maker], pieces.size() >= 2 and key in Synergies.active(Parts.maker_counts(pieces.slice(0, 2)))
 			and not key in Synergies.active(Parts.maker_counts(pieces.slice(0, 1))), "pieces %s" % [pieces])
 	_t.eq("all fourteen tricks are live on the alpha table", Synergies.ROWS.keys().all(func(k): return AlphaDefs.synergy_in_play(k)), true)
-	Synergies.table = ParkDefs
+	Synergies.set_table(ParkDefs)
 	for key in ["glacier_hull", "storm_lattice", "thermal_shock", "linked_spiral"]:
 		_t.check("%s is live on the park launch table" % key, ParkDefs.synergy_in_play(key) and Synergies.in_play(key), "")
 	_t.eq("all fourteen tricks are live on the park launch table", Synergies.ROWS.keys().all(func(k): return ParkDefs.synergy_in_play(k)), true)
-	Synergies.table = null
+	Synergies.set_table(null)
 
 
 func _patterns() -> void:

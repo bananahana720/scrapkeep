@@ -197,7 +197,7 @@ func _throw() -> Dictionary:
 # Springs a charge with an enemy's hull `gap` metres from it. True when it goes off.
 func _springs(charge: Dictionary, gap: float) -> bool:
 	var probe: Node3D = _combat.spawn_enemy("chaser", Vector3(300.0, 20.0, 300.0))
-	var hull: float = _combat._hull(probe)
+	var hull: float = _combat.hull_radius(probe)
 	charge["stuck"] = true
 	charge["arm"] = 0.0
 	charge["fuse"] = 100.0

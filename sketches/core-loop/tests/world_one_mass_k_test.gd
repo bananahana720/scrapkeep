@@ -197,7 +197,7 @@ func _hit_tests() -> void:
 func _reaches(charge: Dictionary) -> bool:
 	_clear_enemies()
 	var probe: Node3D = _combat.spawn_enemy("chaser", Vector3(300.0, 20.0, 300.0))
-	var hull: float = _combat._hull(probe)
+	var hull: float = _combat.hull_radius(probe)
 	var reach: float = float(charge["radius"]) * (1.0 + AbilityState.FORGIVENESS) + hull
 	var centre: Vector3 = probe.global_position
 	var hits := []
@@ -205,7 +205,7 @@ func _reaches(charge: Dictionary) -> bool:
 		_struck.clear()
 		var shot: Dictionary = charge.duplicate()
 		shot["pos"] = centre - Vector3(offset, 0.0, 0.0)
-		_combat._detonate(shot)
+		_combat.detonate(shot)
 		hits.append(_struck.any(func(s): return s[0] == probe and s[1] == "sticky"))
 	_clear_enemies()
 	return hits[0] and not hits[1]

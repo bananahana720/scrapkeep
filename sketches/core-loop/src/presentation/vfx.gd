@@ -1,6 +1,7 @@
 extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
@@ -82,8 +83,7 @@ var _found_wired := false
 var _fusion_wired := false
 var _bursts := {}
 var _burst_next := {}
-var _fx := {}
-var _fx_next := {}
+var _fx := FxLibrary.Pools.new()
 var _roll: GPUParticles3D
 var _pips: Array = []
 var _pip_mat: Material
@@ -335,7 +335,7 @@ func play_fusion(key: String, at: Vector3, radius := 4.5) -> Dictionary:
 	glyph("fusion_glyph", at + Vector3.UP * 0.22, 0.9, maxf(2.8, radius), life * 0.92, Vector3.UP, String(shapes[1]), accent, "P4")
 	burst(String(sig["burst"]), at + Vector3.UP * 0.5, accent if String(sig["burst"]) != "debris" else Palette.CHARCOAL, int(sig["burst_count"]))
 	for fx_id in sig["fx"]:
-		if _fx.has(fx_id):
+		if _fx.has(String(fx_id)):
 			_fire_fx(String(fx_id), "enemy_struck", 16, at + Vector3.UP * 0.6, primary)
 	spawned["fusion_" + canonical] = int(spawned.get("fusion_" + canonical, 0)) + 1
 	return sig
@@ -902,18 +902,8 @@ func burst(kind: String, at: Vector3, color: Color, count: int) -> void:
 
 
 func _build_fx() -> void:
-	for id in FxLibrary.SPECS:
-		if FxLibrary.SPECS[id].get("owner", "vfx") != "vfx":
-			continue
-		var pool: Array = []
-		for i in int(FxLibrary.SPECS[id]["pool"]):
-			var p := FxLibrary.build(id)
-			p.name = "%s_%d" % [p.name, i]
-			root.add_child(p)
-			pool.append(p)
-		_fx[id] = pool
-		_fx_next[id] = 0
-	_roll = _fx["roll_dust"][0]
+	_fx = FxLibrary.pools(root, "vfx")
+	_roll = _fx.list("roll_dust")[0]
 	_roll.set_instance_shader_parameter(FxLibrary.TINT, FxLibrary.colour("roll_dust", "rolling"))
 
 
@@ -928,11 +918,8 @@ func play_fx(kind: String, at: Vector3, tint := Color.TRANSPARENT, variant := ""
 
 
 func _fire_fx(id: String, kind: String, count: int, at: Vector3, tint := Color.TRANSPARENT, toward := Vector3.ZERO) -> void:
-	var pool: Array = _fx[id]
-	var p: GPUParticles3D = pool[_fx_next[id]]
-	_fx_next[id] = (_fx_next[id] + 1) % pool.size()
-	FxLibrary.fire(p, id, kind, count, at, tint, toward)
-	spawned["fx_" + id] = spawned.get("fx_" + id, 0) + 1
+	if _fx.fire(id, kind, count, at, tint, toward) != null:
+		spawned["fx_" + id] = spawned.get("fx_" + id, 0) + 1
 
 
 func _on_world_fact_fx(kind: String, at: Vector3) -> void:
@@ -943,15 +930,13 @@ func _on_world_fact_fx(kind: String, at: Vector3) -> void:
 
 
 func stop_embers() -> void:
-	for id in ["cache_ember", "cache_wisp"]:
-		for p: GPUParticles3D in _fx[id]:
-			p.emitting = false
+	_fx.stop(["cache_ember", "cache_wisp"])
 
 
 func _roll_dust() -> void:
 	if _roll == null:
 		return
-	var row := EventKinds.juice("rolling")
+	var row := EventJuice.juice("rolling")
 	var speed: float = player.planar_velocity().length()
 	var floor_speed: float = row["min_speed"]
 	var on: bool = player.state.grounded and speed >= floor_speed
@@ -979,7 +964,7 @@ func _emit_pops() -> void:
 
 
 func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
-	var row := EventKinds.juice("enemy_killed")
+	var row := EventJuice.juice("enemy_killed")
 	scale *= 1.0 + MIGHT_GLYPH * might
 	if root == null or not root.is_inside_tree():
 		return
@@ -997,7 +982,7 @@ func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
 
 
 func shift_over_kill(at: Vector3, scale := 1.0, pilot := Color.TRANSPARENT) -> void:
-	var row := EventKinds.juice("enemy_killed")
+	var row := EventJuice.juice("enemy_killed")
 	scale *= 1.0 + MIGHT_GLYPH * might
 	if root == null or not root.is_inside_tree():
 		return
@@ -1077,7 +1062,7 @@ func chain_pips() -> int:
 
 func _draw_pips(delta: float) -> void:
 	_pip_pop = maxf(0.0, _pip_pop - delta * 5.0)
-	var top := float(EventKinds.juice("enemy_killed").get("chain_cap", 7))
+	var top := float(EventJuice.juice("enemy_killed").get("chain_cap", 7))
 	var charge := clampf(_chain_rung / top, 0.0, 1.0)
 	var pip_tint := EventKinds.color("enemy_killed").lerp(EventKinds.color("part_gained"), minf(charge * 1.6, 1.0)).lerp(Palette.LEDGER_CREAM, maxf(0.0, charge - 0.7) * 2.0)
 	if _pip_mat is ShaderMaterial:

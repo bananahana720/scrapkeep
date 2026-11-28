@@ -1,14 +1,8 @@
 extends RefCounted
 
 
-const ENV_TAGS: Array[StringName] = [
-	&"electrified",
-	&"burning",
-	&"slag_coated",
-	&"magnetic",
-	&"coolant_brittle",
-	&"soaked_conductive",
-]
+const EventDirector := preload("res://src/world/event_director.gd")
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 
 const DEFAULT_ELITE_PATHS: Array[String] = [
 	"res://src/experimental/resources/director/elite_over_plated_juggernaut.tres",
@@ -28,48 +22,6 @@ const RAM_BREAK_SPEED_RATIO := 0.85
 const RAM_PLATE_MULT := 1.5
 const WEAK_TAG_PLATE_MULT := 2.0
 const PLATE_SHATTER_SCRAP := 14
-
-
-static func make_env_tag_payload(
-		tag: StringName,
-		origin: Vector3,
-		radius_m: float,
-		source_id: String,
-		intensity: float,
-		ttl_s: float) -> Dictionary:
-	return {
-		"tag": tag,
-		"origin": origin,
-		"radius_m": maxf(0.1, radius_m),
-		"source_id": source_id,
-		"intensity": maxf(0.0, intensity),
-		"ttl_s": maxf(0.1, ttl_s),
-	}
-
-
-static func is_valid_env_tag_payload(payload: Dictionary) -> bool:
-	if not (payload.has("tag") and payload.has("origin") and payload.has("radius_m") \
-			and payload.has("source_id") and payload.has("intensity") and payload.has("ttl_s")):
-		return false
-	var tag_name: StringName = StringName(payload["tag"])
-	if not ENV_TAGS.has(tag_name):
-		return false
-	if not (payload["origin"] is Vector3):
-		return false
-	if float(payload["radius_m"]) <= 0.0 or float(payload["ttl_s"]) <= 0.0 or float(payload["intensity"]) < 0.0:
-		return false
-	return String(payload["source_id"]) != ""
-
-
-static func never_brake(accel: Vector3, velocity: Vector3) -> Vector3:
-	var flat := Vector3(velocity.x, 0.0, velocity.z)
-	if flat.length() < 0.5:
-		return accel
-	var along := flat.normalized()
-	var against := accel.dot(along)
-	if against < 0.0:
-		accel -= along * against
-	return accel
 
 
 static func load_default_pool() -> Array:
@@ -254,32 +206,6 @@ class RefurbishedInstance extends RefCounted:
 			return 1.0
 		return float(def.get("aura_pack_rest_scale", 1.0))
 
-	static func _make_tag(
-			tag: StringName,
-			at: Vector3,
-			radius_m: float,
-			source_id: String,
-			intensity: float,
-			ttl_s: float) -> Dictionary:
-		return {
-			"tag": tag,
-			"origin": at,
-			"radius_m": maxf(0.1, radius_m),
-			"source_id": source_id,
-			"intensity": maxf(0.0, intensity),
-			"ttl_s": maxf(0.1, ttl_s),
-		}
-
-	static func _never_brake_local(accel: Vector3, velocity: Vector3) -> Vector3:
-		var flat := Vector3(velocity.x, 0.0, velocity.z)
-		if flat.length() < 0.5:
-			return accel
-		var along := flat.normalized()
-		var against := accel.dot(along)
-		if against < 0.0:
-			accel -= along * against
-		return accel
-
 	func apply_hit(
 			damage: float,
 			hit_speed_mps: float,
@@ -327,13 +253,14 @@ class RefurbishedInstance extends RefCounted:
 				out["plates_broken"] = int(out["plates_broken"]) + 1
 				out["scrap_spilled"] = int(out["scrap_spilled"]) + PLATE_SHATTER_SCRAP
 				var shatter_tag: StringName = StringName(def.get("shatter_tag", &"slag_coated"))
-				out["env_tags"].append(_make_tag(
+				out["env_tags"].append(EnvTags.make_payload(
 					shatter_tag,
 					hit_at,
 					float(def.get("shatter_radius_m", 5.0)),
 					"%s:plate_%d" % [instance_id, int(plate["slot"])],
 					0.85,
-					float(def.get("shatter_ttl_s", 3.0))
+					float(def.get("shatter_ttl_s", 3.0)),
+					EnvTags.BOUNDS_ELITE
 				))
 				if phase == &"telegraph" or phase == &"execute":
 					stagger_left = maxf(stagger_left, float(def.get("stagger_on_brace_break_s", 2.0)))
@@ -347,13 +274,14 @@ class RefurbishedInstance extends RefCounted:
 		if bool(def.get("backfires_on_strip", false)) and not stripped_backfire_fired and intact_plate_count() == 0:
 			stripped_backfire_fired = true
 			out["backfire_friendly_fire"] = true
-			out["env_tags"].append(_make_tag(
+			out["env_tags"].append(EnvTags.make_payload(
 				&"electrified",
 				origin,
 				float(def.get("ability_radius_m", 11.0)),
 				"%s:backfire" % instance_id,
 				1.25,
-				3.0
+				3.0,
+				EnvTags.BOUNDS_ELITE
 			))
 
 		if remaining > 0.0 and intact_plate_count() == 0:
@@ -416,22 +344,24 @@ class RefurbishedInstance extends RefCounted:
 					phase_timer = float(def["execute_s"])
 					var primary_tag: StringName = StringName(def["ability_tag"])
 					var emit_at := tell_target if def["telegraph_kind"] == &"projectile" else origin
-					out["env_tags"].append(_make_tag(
+					out["env_tags"].append(EnvTags.make_payload(
 						primary_tag,
 						emit_at,
 						float(def["ability_radius_m"]),
 						"%s:ability" % instance_id,
 						float(def["ability_intensity"]),
-						float(def["ability_ttl_s"])
+						float(def["ability_ttl_s"]),
+						EnvTags.BOUNDS_ELITE
 					))
 					if def.has("secondary_tag") and StringName(def["secondary_tag"]) != &"":
-						out["env_tags"].append(_make_tag(
+						out["env_tags"].append(EnvTags.make_payload(
 							StringName(def["secondary_tag"]),
 							emit_at,
 							float(def["ability_radius_m"]) * 0.85,
 							"%s:ability#secondary" % instance_id,
 							float(def["ability_intensity"]) * 0.8,
-							float(def["ability_ttl_s"])
+							float(def["ability_ttl_s"]),
+							EnvTags.BOUNDS_ELITE
 						))
 					out["facts"].append({
 						"kind": "elite_execute",
@@ -465,5 +395,5 @@ class RefurbishedInstance extends RefCounted:
 			var lateral := inward - tangent * inward.dot(tangent)
 			var boost_scale := 0.0 if speed >= cruise_mps * 1.65 else 1.0
 			var boost := tangent * (pull * 0.35 * float(def.get("slingshot_bonus", 1.35)) * boost_scale)
-			return _never_brake_local(lateral * pull * 0.65 + boost, ball_vel)
+			return EventDirector.never_brake(lateral * pull * 0.65 + boost, ball_vel)
 		return inward * pull

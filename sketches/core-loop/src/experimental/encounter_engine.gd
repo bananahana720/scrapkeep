@@ -1,6 +1,7 @@
 extends RefCounted
 
 
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 
 const DEFAULT_CATALOG_PATH := "res://src/experimental/resources/director/spillway_encounter_catalog.tres"
@@ -579,11 +580,11 @@ func _step_random(delta: float, run_ctx: Dictionary, result: Dictionary) -> void
 				active_random["phase"] = &"live"
 				active_random["timer_s"] = float(spec["contest_s"])
 				var at: Vector3 = active_random["origin"]
-				result["env_tags"].append(RefurbishedElites.make_env_tag_payload(
-					&"burning", at, float(spec["impact_radius_m"]), String(active_random["id"]), 0.9, 3.5
+				result["env_tags"].append(EnvTags.make_payload(
+					&"burning", at, float(spec["impact_radius_m"]), String(active_random["id"]), 0.9, 3.5, EnvTags.BOUNDS_ELITE
 				))
-				result["env_tags"].append(RefurbishedElites.make_env_tag_payload(
-					&"slag_coated", at, float(spec["impact_radius_m"]) * 0.8, String(active_random["id"]) + "#slag", 0.75, 4.0
+				result["env_tags"].append(EnvTags.make_payload(
+					&"slag_coated", at, float(spec["impact_radius_m"]) * 0.8, String(active_random["id"]) + "#slag", 0.75, 4.0, EnvTags.BOUNDS_ELITE
 				))
 				result["cover_spawned"].append({
 					"id": String(active_random["id"]) + "_cover",

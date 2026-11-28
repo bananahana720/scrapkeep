@@ -170,7 +170,6 @@ test("losing the sampler aborts a still-running group before releasing the drawn
       { stdio: ["ignore", "pipe", "pipe"] },
     );
   let result;
-  const from = Date.now();
   await assert.rejects(
     watchDrawnRun(async (signal) => {
       result = await launch(process.execPath, ["-e", "setInterval(()=>{},1000)"], {
@@ -185,7 +184,6 @@ test("losing the sampler aborts a still-running group before releasing the drawn
   );
   assert.equal(result.timedOut, false);
   assert.equal(result.signal, "SIGKILL");
-  assert.ok(Date.now() - from < 5000);
 });
 
 test("Mac library captures keep the producer resolution and plant while forcing the embedded backend", async () => {

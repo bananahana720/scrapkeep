@@ -135,7 +135,7 @@ func _take(picks: Array) -> bool:
 	for id in picks:
 		tree.open_checkpoint()
 		ok = tree.pick(id) and ok
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 	return ok
 
 

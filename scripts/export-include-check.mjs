@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { isMain } from "./lib/cli.mjs";
 import { REPO_ROOT } from "./lib/git.mjs";
@@ -62,6 +62,7 @@ function walk(dir) {
 }
 
 export function checkPreset({ sketch, presetText, presetName = "Linux x64" }) {
+  if (!existsSync(sketch)) return { problems: [`project folder ${sketch} not found`], files: [] };
   const block = new RegExp(
     `\\[preset\\.\\d+\\]\\s*\\nname="${presetName}"[\\s\\S]*?(?=\\n\\[preset\\.\\d+\\.options\\])`,
   ).exec(presetText);

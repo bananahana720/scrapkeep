@@ -77,7 +77,7 @@ func _fly(rocket: Dictionary, delta: float) -> bool:
 	var pos: Vector3 = rocket["pos"]
 	var target = rocket["target"]
 	if target == null or not is_instance_valid(target) or target.is_dead():
-		target = combat._nearest(pos, SEEK_REACH, [])
+		target = combat.nearest_enemy(pos, SEEK_REACH, [])
 		rocket["target"] = target
 	var vel: Vector3 = rocket["vel"]
 	var speed := minf(vel.length() + ACCEL * delta, MAX_SPEED)
@@ -116,11 +116,11 @@ func _burst(rocket: Dictionary, struck) -> void:
 	combat.effects.ring(at, BLAST_RADIUS, ActiveFx.peak(COLOR))
 	ctx.break_props(at, BLAST_RADIUS, "scrap_rocket")
 	if struck != null:
-		combat._hit(struck, KIND, dmg, push, KNOCK, "", SOURCE)
+		combat.deal_hit(struck, KIND, dmg, push, KNOCK, "", SOURCE)
 	for enemy in combat.nearest_enemies(at, BLAST_RADIUS, 16):
 		if enemy != struck and not enemy.is_dead():
-			combat._hit(enemy, KIND, dmg * SPLASH, enemy.global_position - at, KNOCK * 0.6, "", SOURCE)
+			combat.deal_hit(enemy, KIND, dmg * SPLASH, enemy.global_position - at, KNOCK * 0.6, "", SOURCE)
 	var jumps := pattern_level("chain_arc")
 	if struck != null and jumps > 0:
-		combat._chain(struck, at, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
+		combat.chain_hit(struck, at, {"damage": dmg, "chain_jumps": jumps, "chain_range": CHAIN_RANGE,
 			"chain_falloff": CHAIN_FALLOFF, "color": ActiveFx.peak(COLOR), "kind": KIND, "knock": KNOCK, "source": SOURCE})

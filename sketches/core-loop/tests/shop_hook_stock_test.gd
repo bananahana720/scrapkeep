@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Shop := preload("res://src/build/shop.gd")
 
 # The shop's top hook on the park table (world 1 design pass, 9 Nov). The Spare Frame is that
@@ -95,7 +96,7 @@ func _check(deep: bool) -> void:
 		var id: String = hook.get("part_id", "")
 		hooks.append(id)
 		var on_shelf: bool = shop.shelf.any(func(entry): return entry["part_id"] == id)
-		if id == "" or Parts.rung_of(id) < Parts.RUNG_FLOOR or Parts.rarity_of(id) != "rare" or on_shelf or id in run.parts \
+		if id == "" or PartOffers.rung_of(id, Parts.def) < PartOffers.RUNG_FLOOR or Parts.rarity_of(id) != "rare" or on_shelf or id in run.parts \
 				or hook["odds"] != Parts.odds_for(Shop.TOP_FALLBACK, who) or not hook["locked"] \
 				or hook["needs_class"] != run.heft_class() + 1:
 			bad.append("stage %d: %s" % [stage, hook])

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
+const PartMutations := preload("res://src/build/part_mutations.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
@@ -195,7 +196,7 @@ func power() -> float:
 	var bolt_power: float = pattern.damage / base.damage * mod("weapon_damage") * rate * pattern.volley_size() * chain
 	var vent_power := 0.0
 	if "gatling_heart" in ids:
-		var grow: Dictionary = Parts.micro_mutation("gatling_heart")
+		var grow: Dictionary = PartMutations.micro_mutation("gatling_heart")
 		if float(POWER_CONTRACT["distance_m"]) <= float(grow.get("radius_m", 5.5)):
 			var every := float(maxi(1, int(grow.get("every_shots", 12))))
 			vent_power = (rate / every) * (float(grow.get("damage_base", 18.0)) * mod("weapon_damage") / base.damage)

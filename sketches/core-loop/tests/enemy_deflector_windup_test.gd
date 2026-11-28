@@ -161,7 +161,7 @@ func _watch_exit(enemy) -> void:
 func _interruptions() -> void:
 	var enemy = _spawn()
 	_half_warn(enemy)
-	_game.combat._hit(enemy, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "")
+	_game.combat.deal_hit(enemy, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "")
 	var peak := 0.0
 	for frame in 18:
 		await _frames(1)

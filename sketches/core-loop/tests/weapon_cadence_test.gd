@@ -1084,7 +1084,7 @@ func _run_live() -> void:
 		"plain=%.2f pierce=%.2f" % [float(plain_res["dealt"]), float(pierce_res["dealt"])])
 
 	# 3. Overdrive shortens Rivet floor to 0.125 s (0.20 / 1.6) and posts Overdrive row to BuffLedger.
-	combat._boost(Weapons.OVERDRIVE_SECONDS)
+	combat.add_overdrive(Weapons.OVERDRIVE_SECONDS)
 	var od_ctx: Dictionary = combat._weapon_step_context(Weapons.RAPID_LASER, combat._patterns[Weapons.RAPID_LASER], combat._rate(Weapons.RAPID_LASER))
 	_t.near("Overdrive rate_mult is 1.6 (0.125 s floor)", float(od_ctx["rate_mult"]), 1.6, 0.001)
 	var od_row: Dictionary = _find_buff(_game.ctx.buffs.active_rows(), "overdrive")
@@ -1294,7 +1294,7 @@ func _run_live() -> void:
 			combat._physics_process(DT)
 		var hp_before_line: float = line_dummy.hp
 		var line_shape := {"from": line_from, "to": line_from + line_dir * 12.0, "width": Weapons.LINE_WIDTH}
-		combat._fire_line(0.5, line_shape)
+		combat.fire_line(0.5, line_shape)
 		_t.eq("Detonation Line consumes open-window charge and marks window HIT",
 			[combat.sticky.live().size(), String(combat.weapon_driver.state_snapshot()["window"])],
 			[0, WeaponDriver.WINDOW_HIT])
@@ -1329,7 +1329,7 @@ func _run_live() -> void:
 	_game.player.set_physics_process(false)
 	combat._start_attempt()
 	var tarn_origin: Vector3 = _game.player.ball_position()
-	var tarn_spot: Vector3 = tarn_origin + combat._flat_aim() * 3.0
+	var tarn_spot: Vector3 = tarn_origin + combat.aim_heading() * 3.0
 	var tarn_dummy: Node3D = combat.spawn_enemy("chaser", tarn_spot)
 	tarn_dummy.set_physics_process(false)
 	tarn_dummy.hp = 500.0
@@ -1375,7 +1375,7 @@ func _run_live() -> void:
 	# Beat 3 at standstill deals 43.0 damage and 2.0x knock impulse (enough to throw into a pin)!
 	tarn_dummy.velocity = Vector3.ZERO
 	tarn_dummy.global_position = tarn_spot
-	var pin_victim: Node3D = combat.spawn_enemy("chaser", tarn_spot + combat._flat_aim() * 1.4)
+	var pin_victim: Node3D = combat.spawn_enemy("chaser", tarn_spot + combat.aim_heading() * 1.4)
 	pin_victim.set_physics_process(false)
 	pin_victim.hp = 200.0
 	pin_victim.max_hp = 200.0
@@ -1559,7 +1559,7 @@ func _run_live() -> void:
 		and not _game.player.indicator.shapes.has("cannon_paint")
 		and _game.player.state.velocity == vel_before_rail, str(paint_rail))
 	# Rail pierce chip against plated_brute: 50% chip vs 20% normal, outer plate still holds (full == false).
-	var c_brute: Node3D = combat.spawn_enemy("plated_brute", _game.player.ball_position() + combat._flat_aim() * 8.0)
+	var c_brute: Node3D = combat.spawn_enemy("plated_brute", _game.player.ball_position() + combat.aim_heading() * 8.0)
 	c_brute.set_physics_process(false)
 	c_brute.hp = 500.0
 	c_brute.max_hp = 500.0

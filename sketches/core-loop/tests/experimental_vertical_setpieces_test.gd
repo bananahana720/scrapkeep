@@ -1,6 +1,7 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 const ChunkSockets := preload("res://src/experimental/arena_chunk_socket.gd")
 const DynamicSetpieces := preload("res://src/experimental/dynamic_setpieces.gd")
 
@@ -238,7 +239,7 @@ func _check_em_crane_sweep_magnetic_and_cover_relocation() -> void:
 		var facts := setpieces.step(DT, ball_pos, Vector3(15.0, 0.0, 0.0), 2, [scrap_actor])
 		var active_crane_tags := 0
 		for atag in setpieces.active_env_tags():
-			if atag["tag"] == DynamicSetpieces.TAG_MAGNETIC:
+			if atag["tag"] == EnvTags.TAG_MAGNETIC:
 				active_crane_tags += 1
 		max_simultaneous_crane_tags = maxi(max_simultaneous_crane_tags, active_crane_tags)
 		for f in facts:
@@ -248,9 +249,9 @@ func _check_em_crane_sweep_magnetic_and_cover_relocation() -> void:
 					warn_duration = float(setpieces.snapshot()["crane"]["warn_elapsed"])
 				"env_tag_emitted":
 					var payload: Dictionary = f["payload"]
-					if payload["tag"] == DynamicSetpieces.TAG_MAGNETIC:
+					if payload["tag"] == EnvTags.TAG_MAGNETIC:
 						saw_magnetic_tag = true
-						t.eq("magnetic_payload_valid", DynamicSetpieces.validate_env_tag(payload), "")
+						t.eq("magnetic_payload_valid", "; ".join(EnvTags.validate_payload(payload, EnvTags.BOUNDS_SETPIECE)), "")
 				"cover_relocated":
 					saw_relocated = true
 
@@ -307,7 +308,7 @@ func _check_interactive_prop_pairings() -> void:
 	for f in drop_facts:
 		if String(f.get("kind", "")) == "crane_magnet_drop_crush":
 			saw_drop_crush = true
-		elif String(f.get("kind", "")) == "env_tag_emitted" and f["payload"]["tag"] == DynamicSetpieces.TAG_ELECTRIFIED:
+		elif String(f.get("kind", "")) == "env_tag_emitted" and f["payload"]["tag"] == EnvTags.TAG_ELECTRIFIED:
 			saw_elec_burst = true
 	t.check("pairing1_magnet_drop_crushed_enemy", saw_drop_crush and float(enemy_under["hp"]) == 35.0,
 		"enemy_hp=%.1f" % float(enemy_under["hp"]))
@@ -358,9 +359,9 @@ func _check_slag_pour_berm_cycle_and_cross_pillar_quench() -> void:
 		for f in step_facts:
 			if String(f.get("kind", "")) == "env_tag_emitted":
 				var tag: StringName = f["payload"]["tag"]
-				if tag == DynamicSetpieces.TAG_SLAG_COATED:
+				if tag == EnvTags.TAG_SLAG_COATED:
 					saw_slag_tag = true
-				elif tag == DynamicSetpieces.TAG_BURNING:
+				elif tag == EnvTags.TAG_BURNING:
 					saw_burn_tag = true
 
 	t.eq("furnace_entered_molten", String(setpieces.snapshot()["furnace"]["state"]), "molten_pour")
@@ -412,8 +413,8 @@ func _check_slag_pour_berm_cycle_and_cross_pillar_quench() -> void:
 	t.check("furnace_cycle2_trigger", setpieces.trigger_setpiece(fid, "player"), "cycle 2 triggered")
 	for _i in 60:
 		setpieces.step(DT, Vector3(30.0, 0.5, 30.0), Vector3.ZERO, 1)
-	var coolant_payload := DynamicSetpieces.make_env_tag(
-		DynamicSetpieces.TAG_COOLANT_BRITTLE, Vector3(0.0, 0.5, 0.0), 8.0, "exp_ecology:cryo_vent", 1.0, 2.0
+	var coolant_payload := EnvTags.make_payload(
+		EnvTags.TAG_COOLANT_BRITTLE, Vector3(0.0, 0.5, 0.0), 8.0, "exp_ecology:cryo_vent", 1.0, 2.0, EnvTags.BOUNDS_SETPIECE
 	)
 	var reaction_facts := setpieces.apply_external_tag(coolant_payload)
 	var saw_quench := false
@@ -486,8 +487,8 @@ func _check_compactor_vents_momentum_first() -> void:
 	t.check("compactor_crushes_stalled_enemy", saw_enemy_crush and float(stalled_enemy["hp"]) < 100.0, "enemy_hp=%.1f" % float(stalled_enemy["hp"]))
 	t.check("compactor_never_crushes_fast_ball", not saw_ball_crush and saw_ball_eject and fast_ram_held_clear,
 		"fast ball ejected cleanly with ram_layer held at 0")
-	var clamped_tag := DynamicSetpieces.make_env_tag(DynamicSetpieces.TAG_MAGNETIC, Vector3.ZERO, 5.0, "clamp_check", 0.0, 1.0)
-	t.eq("make_env_tag_clamps_positive_intensity", DynamicSetpieces.validate_env_tag(clamped_tag), "")
+	var clamped_tag := EnvTags.make_payload(EnvTags.TAG_MAGNETIC, Vector3.ZERO, 5.0, "clamp_check", 0.0, 1.0, EnvTags.BOUNDS_SETPIECE)
+	t.eq("EnvTags.make_payload clamps a positive intensity into setpiece bounds", "; ".join(EnvTags.validate_payload(clamped_tag, EnvTags.BOUNDS_SETPIECE)), "")
 
 	setpieces.teardown()
 	root.remove_child(setpieces)
@@ -516,7 +517,7 @@ func _check_moved_rotated_chunk_world_space_contract() -> void:
 	for _i in 60:
 		var facts := setpieces.step(DT, furnace_world + Vector3(30.0, 0.0, 30.0), Vector3.ZERO, 2)
 		for f in facts:
-			if String(f.get("kind", "")) == "env_tag_emitted" and f["payload"]["tag"] == DynamicSetpieces.TAG_SLAG_COATED:
+			if String(f.get("kind", "")) == "env_tag_emitted" and f["payload"]["tag"] == EnvTags.TAG_SLAG_COATED:
 				emitted_world_origin = f["payload"]["origin"]
 	t.check("moved_chunk_tag_origin_is_world_space",
 		emitted_world_origin.distance_to(furnace_world) < 0.5,
@@ -524,8 +525,8 @@ func _check_moved_rotated_chunk_world_space_contract() -> void:
 	t.check("moved_chunk_tags_at_world_point_finds_slag", setpieces.tags_at(furnace_world).size() >= 2,
 		"count=%d" % setpieces.tags_at(furnace_world).size())
 
-	var ext_coolant := DynamicSetpieces.make_env_tag(
-		DynamicSetpieces.TAG_COOLANT_BRITTLE, furnace_world, 8.0, "exp_ecology:remote_cryo", 1.0, 2.0
+	var ext_coolant := EnvTags.make_payload(
+		EnvTags.TAG_COOLANT_BRITTLE, furnace_world, 8.0, "exp_ecology:remote_cryo", 1.0, 2.0, EnvTags.BOUNDS_SETPIECE
 	)
 	var q_facts := setpieces.apply_external_tag(ext_coolant)
 	var quenched_moved := false

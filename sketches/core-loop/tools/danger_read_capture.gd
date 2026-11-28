@@ -141,7 +141,7 @@ func _run() -> void:
 		await _quiet()
 		if _wanted("slag"):
 			boss.jump_to_phase(2)
-			boss._next_lobber = INF
+			boss.suppress_lobbers()
 			var parked := 0
 			while parked < WAIT_TICKS and _flat_length(boss.ship.global_position - centre) > 0.3:
 				parked += 1
