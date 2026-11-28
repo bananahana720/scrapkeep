@@ -243,8 +243,8 @@ describe("resolveGodotBinary", () => {
       env: { GODOT_BIN: "/custom/godot" },
       platform: "darwin",
       homeDir: "/Users/someone",
-      existsFn: () => false,
-      whichFn: () => null,
+      exists: () => false,
+      which: () => null,
     });
     assert.equal(resolved, "/custom/godot");
   });
@@ -262,8 +262,8 @@ describe("resolveGodotBinary", () => {
       env: {},
       platform: "darwin",
       homeDir: "/Users/realuser",
-      existsFn: (p) => p === expected,
-      whichFn: () => null,
+      exists: (p) => p === expected,
+      which: () => null,
     });
     assert.equal(resolved, expected);
   });
@@ -274,8 +274,8 @@ describe("resolveGodotBinary", () => {
         resolveGodotBinary({
           env: {},
           platform: "linux",
-          existsFn: () => false,
-          whichFn: () => null,
+          exists: () => false,
+          which: () => null,
         }),
       /GODOT_BIN/,
     );

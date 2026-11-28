@@ -15,7 +15,6 @@ import {
   watch as watchFs,
   writeFileSync,
 } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
@@ -170,20 +169,8 @@ export function parseSize(sizeText = "1280x720") {
   return { width, height, text: `${width}x${height}` };
 }
 
-export function resolveGodotBinary({
-  env = process.env,
-  platform = process.platform,
-  homeDir = os.homedir(),
-  existsFn = existsSync,
-  whichFn = (name) => whichTool(name, env),
-} = {}) {
-  const found = resolveSharedGodotBinary({
-    env,
-    platform,
-    homeDir,
-    exists: existsFn,
-    which: whichFn,
-  });
+export function resolveGodotBinary(options = {}) {
+  const found = resolveSharedGodotBinary(options);
   if (!found) {
     throw new Error(
       `Could not locate Godot binary. Set GODOT_BIN or install Godot ${GODOT_VERSION} before running dev-console.`,
