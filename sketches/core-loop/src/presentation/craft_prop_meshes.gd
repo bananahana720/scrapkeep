@@ -749,26 +749,9 @@ static func salvage_wear_material(base_color: Color, edge_color: Color, emit_col
 	return mat
 
 
-static func _add_tri_col(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, col: Color, uv_scale := 0.5) -> void:
-	var nn := n.normalized()
-	if nn.length_squared() < 0.0001:
-		return
-	var p1 := b
-	var p2 := c
-	if (p1 - a).cross(p2 - a).dot(nn) > 0.0:
-		var tmp := p1
-		p1 = p2
-		p2 = tmp
-	for v in [a, p1, p2]:
-		st.set_color(col)
-		st.set_normal(nn)
-		st.set_uv(HeroSculptor.planar_uv(v, nn, uv_scale))
-		st.add_vertex(v)
-
-
 static func _add_quad_col(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, n: Vector3, col: Color, uv_scale := 0.5) -> void:
-	_add_tri_col(st, a, b, c, n, col, uv_scale)
-	_add_tri_col(st, a, c, d, n, col, uv_scale)
+	HeroSculptor.add_planar_tri(st, a, b, c, n, col, col, col, uv_scale)
+	HeroSculptor.add_planar_tri(st, a, c, d, n, col, col, col, uv_scale)
 
 
 static func _bevel_box_masked(st: SurfaceTool, center: Vector3, size: Vector3, bevel := 0.04, face_mask := Color(0.14, 0.24, 0.0, 1.0), edge_mask := Color(0.88, 0.06, 0.0, 1.0), uv_scale := 0.5, xf := Transform3D.IDENTITY) -> void:
@@ -808,7 +791,7 @@ static func _bevel_box_masked(st: SurfaceTool, center: Vector3, size: Vector3, b
 		for sy in [-1.0, 1.0]:
 			for sz in [-1.0, 1.0]:
 				var n: Vector3 = (xf.basis * Vector3(sx, sy, sz)).normalized()
-				_add_tri_col(st, xf * (center + Vector3(sx * h.x, sy * yi, sz * zi)), xf * (center + Vector3(sx * xi, sy * h.y, sz * zi)), xf * (center + Vector3(sx * xi, sy * yi, sz * h.z)), n, edge_mask, uv_scale)
+				HeroSculptor.add_planar_tri(st, xf * (center + Vector3(sx * h.x, sy * yi, sz * zi)), xf * (center + Vector3(sx * xi, sy * h.y, sz * zi)), xf * (center + Vector3(sx * xi, sy * yi, sz * h.z)), n, edge_mask, edge_mask, edge_mask, uv_scale)
 
 
 static func _bevel_cyl_masked(st: SurfaceTool, center: Vector3, r_bot: float, r_top: float, height: float, segs := 12, bevel := 0.03, body_mask := Color(0.16, 0.26, 0.0, 1.0), rim_mask := Color(0.90, 0.08, 0.0, 1.0), uv_scale := 0.5, xf := Transform3D.IDENTITY) -> void:
@@ -847,10 +830,10 @@ static func _bevel_cyl_masked(st: SurfaceTool, center: Vector3, r_bot: float, r_
 			_add_quad_col(st, p00, p10, p11, p01, fn, band_col, uv_scale)
 		var top_r: float = rings[-1][1]
 		var top_y: float = rings[-1][0]
-		_add_tri_col(st, xf * (center + Vector3(0.0, top_y, 0.0)), xf * (center + Vector3(c0 * top_r, top_y, s0 * top_r)), xf * (center + Vector3(c1 * top_r, top_y, s1 * top_r)), (xf.basis * Vector3.UP).normalized(), body_mask, uv_scale)
+		HeroSculptor.add_planar_tri(st, xf * (center + Vector3(0.0, top_y, 0.0)), xf * (center + Vector3(c0 * top_r, top_y, s0 * top_r)), xf * (center + Vector3(c1 * top_r, top_y, s1 * top_r)), (xf.basis * Vector3.UP).normalized(), body_mask, body_mask, body_mask, uv_scale)
 		var bot_r: float = rings[0][1]
 		var bot_y: float = rings[0][0]
-		_add_tri_col(st, xf * (center + Vector3(0.0, bot_y, 0.0)), xf * (center + Vector3(c1 * bot_r, bot_y, s1 * bot_r)), xf * (center + Vector3(c0 * bot_r, bot_y, s0 * bot_r)), (xf.basis * Vector3.DOWN).normalized(), cav_mask, uv_scale)
+		HeroSculptor.add_planar_tri(st, xf * (center + Vector3(0.0, bot_y, 0.0)), xf * (center + Vector3(c1 * bot_r, bot_y, s1 * bot_r)), xf * (center + Vector3(c0 * bot_r, bot_y, s0 * bot_r)), (xf.basis * Vector3.DOWN).normalized(), cav_mask, cav_mask, cav_mask, uv_scale)
 
 
 static func _bevel_ring_masked(st: SurfaceTool, center: Vector3, r_in: float, r_out: float, height: float, segs := 16, bevel := 0.02, body_mask := Color(0.24, 0.34, 0.0, 1.0), rim_mask := Color(0.88, 0.08, 0.0, 1.0), uv_scale := 0.5, xf := Transform3D.IDENTITY) -> void:
