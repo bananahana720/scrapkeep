@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const DevConsole := preload("res://src/dev/dev_console.gd")
+const DevCapture := preload("res://src/dev/dev_capture.gd")
 const DevOverlay := preload("res://src/dev/dev_overlay.gd")
 const DevLens := preload("res://src/dev/dev_lens.gd")
 const FrameRead := preload("res://src/presentation/frame_read.gd")
@@ -83,12 +84,12 @@ func _frame_reads() -> void:
 
 func _sheet_grids() -> void:
 	for n in range(1, 13):
-		var grid := DevConsole.sheet_grid(n)
+		var grid := DevCapture.sheet_grid(n)
 		_t.eq("sheet_grid(%d)" % n, grid, GRIDS[n])
 		_t.check("sheet_grid(%d) holds every tile" % n, grid.x * grid.y >= n and grid.x * (grid.y - 1) < n, str(grid))
-	_t.eq("the presets sheet is five by two", DevConsole.sheet_grid(DevConsole.sheet_ids("presets").size()), Vector2i(5, 2))
-	_t.eq("the camera sheet starts on the game camera", DevConsole.sheet_ids("cams")[0], "game")
-	_t.eq("the quality sheet has three levels", DevConsole.sheet_ids("quality").size(), 3)
+	_t.eq("the presets sheet is five by two", DevCapture.sheet_grid(DevCapture.sheet_ids("presets").size()), Vector2i(5, 2))
+	_t.eq("the camera sheet starts on the game camera", DevCapture.sheet_ids("cams")[0], "game")
+	_t.eq("the quality sheet has three levels", DevCapture.sheet_ids("quality").size(), 3)
 
 
 func _commands(console, overlay: DevOverlay) -> void:
