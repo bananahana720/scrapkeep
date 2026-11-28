@@ -101,6 +101,18 @@ test("walkSync and walkAsync sort by code unit (B < _ < a) and follow symlinked 
       (await walkAsync(dir, { sort: true, followSymlinks: true })).map((e) => e.rel),
       ["B", "_", "a", "log/inner.log"],
     );
+
+    mkdirSync(path.join(dir, "sub"));
+    writeFileSync(path.join(dir, "sub/deep.log"), "ok\n");
+    symlinkSync(path.join(dir, "sub"), path.join(dir, "sub/again"));
+    assert.deepEqual(
+      walkSync(dir, { sort: true, followSymlinks: true }).map((e) => e.rel),
+      ["B", "_", "a", "log/inner.log", "sub/deep.log"],
+    );
+    assert.deepEqual(
+      (await walkAsync(dir, { sort: true, followSymlinks: true })).map((e) => e.rel),
+      ["B", "_", "a", "log/inner.log", "sub/deep.log"],
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
     rmSync(target, { recursive: true, force: true });

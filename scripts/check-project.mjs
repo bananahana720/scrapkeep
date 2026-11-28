@@ -34,6 +34,7 @@ for (const key of [
   "godotTemplateVersion",
   "godotZipSha512",
   "godotBinSha256",
+  "godotTemplatesSha512",
   "sketchDir",
 ]) {
   assert.ok(

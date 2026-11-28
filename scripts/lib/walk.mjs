@@ -43,23 +43,25 @@ export function walkSync(
       const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
       let isDir = entry.isDirectory();
       let isFile = entry.isFile();
-      let linkKey = null;
+      let dirId = null;
       if (followSymlinks && entry.isSymbolicLink()) {
         const st = statSync(full, { throwIfNoEntry: false });
         if (st) {
           isDir = st.isDirectory();
           isFile = st.isFile();
-          if (isDir) linkKey = dirKey(st);
+          if (isDir) dirId = dirKey(st);
         }
+      } else if (followSymlinks && isDir) {
+        dirId = dirKey(statSync(full, { throwIfNoEntry: false }));
       }
       const item = { name: entry.name, rel, full, dir: isDir, file: isFile };
       if (isDir) {
         if (prune && prune(item)) continue;
-        if (linkKey && ancestors.has(linkKey)) continue;
+        if (dirId && ancestors.has(dirId)) continue;
         if (includeDirs && (!filter || filter(item))) out.push(item);
-        if (linkKey) ancestors.add(linkKey);
+        if (dirId) ancestors.add(dirId);
         visit(full, rel);
-        if (linkKey) ancestors.delete(linkKey);
+        if (dirId) ancestors.delete(dirId);
       } else {
         if (filesOnly && !isFile) continue;
         if (!filter || filter(item)) out.push(item);
@@ -93,23 +95,25 @@ export async function walkAsync(
       const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
       let isDir = entry.isDirectory();
       let isFile = entry.isFile();
-      let linkKey = null;
+      let dirId = null;
       if (followSymlinks && entry.isSymbolicLink()) {
         const st = await stat(full).catch(() => null);
         if (st) {
           isDir = st.isDirectory();
           isFile = st.isFile();
-          if (isDir) linkKey = dirKey(st);
+          if (isDir) dirId = dirKey(st);
         }
+      } else if (followSymlinks && isDir) {
+        dirId = dirKey(await stat(full).catch(() => null));
       }
       const item = { name: entry.name, rel, full, dir: isDir, file: isFile };
       if (isDir) {
         if (prune && prune(item)) continue;
-        if (linkKey && ancestors.has(linkKey)) continue;
+        if (dirId && ancestors.has(dirId)) continue;
         if (includeDirs && (!filter || filter(item))) out.push(item);
-        if (linkKey) ancestors.add(linkKey);
+        if (dirId) ancestors.add(dirId);
         await visit(full, rel);
-        if (linkKey) ancestors.delete(linkKey);
+        if (dirId) ancestors.delete(dirId);
       } else {
         if (filesOnly && !isFile) continue;
         if (!filter || filter(item)) out.push(item);
