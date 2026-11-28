@@ -34,6 +34,22 @@ DELETE = (
     "Keep whatever has a caller and name the caller in your report. Files that only call each other are dead together."
 )
 
+STANDING = (
+    "## Mistakes earlier units made\n\n"
+    "Each of these sent a unit back from review at least once. Check your work against every one before you hand in.\n"
+    "1. **A check that passes when it read nothing.** A test or tool you add or change must fail when it cannot read or compare its input: a folder that does not open, an empty file list, an empty read, a pattern that does not compile, a command that exits non-zero or prints nothing. "
+    "A Godot test that reads source to enforce a rule does every read through `sketches/core-loop/tests/support/source_scan.gd` (`SourceScan.matching` for the files that match, `SourceScan.captures` for what each match captured) and holds no `FileAccess`, `DirAccess` or `RegEx` of its own. "
+    "Write each such check as \"the files that match equal exactly this list\", and say in your report how the check fails on the code before your change.\n"
+    "2. **A pattern narrower than the language.** A pattern for a declaration must allow `static` and an annotation on the same line: start it with `(?m)^\\s*(?:static\\s+|@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*`.\n"
+    "3. **A forwarding copy left behind.** When you move a function or a constant, delete the old one and change its callers. Keep a one-line forwarder only for a caller outside the folders you may change, and name that caller.\n"
+    "4. **A test weakened in passing.** When a signature changes or gains an optional argument, read every test that calls it and confirm each still exercises what its label says.\n"
+    "5. **An edited record.** Never edit a dated record of past work, not even a path that moved: ledgers, receipts, wave memos, the survey files, entries in `sketches/core-loop/DESIGN-NOTES.md`, and dated specs such as `design-v3/SKILL-BAR.md`, `design-v3/FEEL-READABILITY.md`, `design-v3/pilots/*.md` and `research/comps/*.md`. Live pages you do keep current: `ARCHITECTURE.md`, `CONTRACTS.md`, `VISUAL-LANGUAGE.md` and every `SEAMS.md`.\n"
+    "6. **A stray file committed.** Stage files by name. Never `git add -A` or `git add .`: your checkout may hold an untracked `node_modules` link.\n"
+    "7. **A test filter that matched nothing or everything.** `npm run sketch:fast` refuses an argument it does not know. Each `--test` takes one pattern matched against the test file's name, and each is its own argument: `--test unit_suite_test --test boss_owners_test`.\n"
+    "8. **A grown list.** `scripts/sketch-lint.baseline.json` only shrinks. If it conflicts when you merge, keep the integration branch's blocks and remove only what `npm run sketch:lint` says no longer offends.\n"
+    "9. **Git started by hand in a script.** A Node script starts git through `scripts/lib/git.mjs`, which reads the repository of its `cwd` even inside a git hook."
+)
+
 HEAD = """You are the writer of unit {unit} of the Scrapkeep structure sweep. Scrapkeep is a Godot 4.7.2 GDScript game under `sketches/core-loop` with a Node toolchain under `scripts/`. The sweep removes duplicate code, dead code, wrong-way dependencies and facts kept in two places, without changing anything a player or a test can observe.
 
 ## Read first
@@ -54,6 +70,8 @@ Base commit: `{base}` (a pushed tip of `origin/entropy/gate`). Branch: `{branch}
 For every change: find every caller first, weigh at least two options, and take the one that leaves the least code and adds no new layer. If the cheapest option for one item still adds more code or indirection than the problem it removes is worth, leave that item and say so with the reason: a left item with a reason is a good result, a forced fix is not. When a new call or a new home replaces an old one, move every caller in the same commit and delete the old one; no forwarding copy stays behind. Add no code comments (the repo's rule in `CONTRIBUTING.md`, "Editing conventions"). No test may be deleted or weakened, except a test whose only subject is a file this brief has you delete. Never edit any `package.json`. Never change a line of a dated record of past work (a ledger, a receipt, a wave memo, a survey file, a snapshot kept verbatim, an entry in a notes log such as `sketches/core-loop/DESIGN-NOTES.md`): it keeps the names and paths it was written with, and a new fact goes in the page that describes the project today. Stage files by name, never with `git add -A` or `git add .`. Any check, guard, test or tool you add or change must fail, not pass, when it cannot read, find or compare its input (a folder that does not open, an empty file list, an empty read, a failed `git` call, a pattern that does not compile, a missing argument): cover each such case with a test and name them in your report. Never add an entry to `scripts/sketch-lint.baseline.json`; the lint fails when one of its lists grows against the base, so fix the offence instead. Before your final push, run `git fetch origin` and merge the pushed tip of `origin/entropy/gate` into your branch (a merge, never a rebase). If that tip is newer than your base, resolve any conflict by keeping both sides' intent, make any generated file again instead of picking a side, rerun every check on the merged head with that tip as the base, and name the tip's full SHA in your report. A unit that does not merge cleanly onto the integration branch goes back to its writer before its review. One commit for each part.
 
 Done looks like: {done}
+
+{standing}
 
 {flight}
 
@@ -82,7 +100,7 @@ GODOT_CHECKS = (
 UNITS = runpy.run_path(str(pathlib.Path(__file__).with_name(f"units-r{ROUND}.py")), init_globals=dict(BASE=BASE, DELETE=DELETE, NODE_CHECKS=NODE_CHECKS, GODOT_CHECKS=GODOT_CHECKS))["UNITS"]
 
 for unit, u in UNITS.items():
-    text = HEAD.format(unit=unit, base=BASE, long=LONG, **u)
+    text = HEAD.format(unit=unit, base=BASE, long=LONG, standing=STANDING, **u)
     path = OUT / f"r{ROUND}-{unit.lower()}.md"
     path.write_text(text)
     print(path.name, len(text.split()), "words")
