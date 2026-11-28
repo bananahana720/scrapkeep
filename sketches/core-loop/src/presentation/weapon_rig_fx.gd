@@ -3,7 +3,7 @@ extends Node3D
 
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const CraftedGear := preload("res://src/presentation/crafted_ball_gear.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")

@@ -1,6 +1,6 @@
 extends RefCounted
 
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const ROWS := {
 	"static_jam": {"target": "player", "effect": "jam", "anchor": "laid", "radius": 6.0, "height": 3.0,

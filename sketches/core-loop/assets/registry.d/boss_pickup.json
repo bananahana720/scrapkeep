@@ -5,7 +5,7 @@
    "path": "res://assets/models/bosses/boss_pickup.glb",
    "class": "prop",
    "ships": true,
-   "loader": "src/boss/boss.gd:440",
+   "loader": "src/boss/boss.gd:_spawn_pickup",
    "provenance": {
     "recipe": "tools/blender/bosses/boss_pickup.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",

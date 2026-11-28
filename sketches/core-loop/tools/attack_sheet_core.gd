@@ -10,7 +10,7 @@ const PATHS := {
 	"mind": "res://src/boss/mind.gd",
 	"hand": "res://src/combat/mind_hand.gd",
 	"wmind": "res://src/combat/warden_mind.gd",
-	"posture": "res://src/combat/boss_posture.gd",
+	"posture": "res://src/core/boss_posture.gd",
 	"mini": "res://src/combat/miniboss.gd",
 	"rec": "res://src/combat/telegraph_record.gd",
 	"events": "res://src/core/event_kinds.gd",

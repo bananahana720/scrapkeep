@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Director := preload("res://src/world/director.gd")
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Alpha := preload("res://src/core/alpha_defs.gd")
 const Stage := preload("res://src/core/stage_defs.gd")
@@ -54,7 +54,7 @@ func _director(seed_value: int, row: Dictionary, mode: String, terrain := false)
 
 
 func _cards() -> void:
-	var path := "res://src/world/director_cards.gd"
+	var path := "res://src/core/director_cards.gd"
 	_t.check("card source exists", ResourceLoader.exists(path))
 	if not ResourceLoader.exists(path):
 		return
@@ -204,7 +204,7 @@ func _calibration() -> void:
 
 
 func _sweeps() -> void:
-	var cards = load("res://src/world/director_cards.gd")
+	var cards = load("res://src/core/director_cards.gd")
 	for seed_value in SEEDS:
 		for row in Park.DEFS:
 			for mode in ["interval", "credit"]:

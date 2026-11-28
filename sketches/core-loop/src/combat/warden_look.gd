@@ -4,8 +4,8 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 const JAW_COUNT := 4
 const JAW_RADIUS := 3.1

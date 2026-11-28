@@ -98,7 +98,7 @@ The Dig's drill crew and the Highdraft's line cutter are planned enemy-side answ
 ## The posture fight and the boss contract
 
 The accepted Warden fight is posture; Hunt, Duel, drop and laps are historical alternatives.
-[Boss posture](../src/combat/boss_posture.gd) owns the pure rule.
+[Boss posture](../src/core/boss_posture.gd) owns the pure rule.
 Hits fill the bar to 100.
 The Warden then staggers for four seconds.
 Its health has four chunks.

@@ -5,7 +5,7 @@
    "path": "res://assets/models/world_three/enemy_line_cutter.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/line_cutter.gd:69",
+   "loader": "src/combat/line_cutter.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_three/enemy_line_cutter.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"

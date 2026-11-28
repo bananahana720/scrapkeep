@@ -5,7 +5,7 @@
    "path": "res://assets/models/world_one/enemy_boom_tender.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/boom_tender.gd:123",
+   "loader": "src/combat/boom_tender.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_boom_tender.py",
     "build_spec": "sketches/core-loop/design-v3/SPILLWAY-ROSTER.md, the boom tender; sheets docs/art/reference/enemies/boom_tender/"

@@ -8,7 +8,7 @@ const ModuleHarness := preload("res://tests/doubles/module_harness.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const WardenSwarm := preload("res://src/combat/warden_swarm.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 

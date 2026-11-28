@@ -6,7 +6,7 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 
 
 const FALLBACK := {

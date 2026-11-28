@@ -5,7 +5,7 @@
    "path": "res://assets/models/world_one/enemy_swatter.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/swatter.gd:66",
+   "loader": "src/combat/swatter.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_swatter.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",

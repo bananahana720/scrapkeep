@@ -7,7 +7,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Bars := preload("res://tests/support/defence_bars.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 
@@ -32,10 +32,10 @@ const MARK_SITES := [
 	{"mark": "attack lines and rings", "file": "res://src/combat/effects.gd", "material": MAT_LINE,
 		"colour": ["func _line(a", "_mesh.surface_set_color(color)"], "source": "the caller's colour (arc, ring, spark, beam, shockwave)", "tone": Palette.VERDIGRIS, "add": false},
 	{"mark": "trail", "file": "res://src/presentation/vfx.gd", "material": MAT_LINE,
-		"colour": ["func _draw_trail(", "mesh.surface_set_color("], "source": "SpeedTier.COLORS[tier] (src/movement/speed_tier.gd)",
+		"colour": ["func _draw_trail(", "mesh.surface_set_color("], "source": "SpeedTier.COLORS[tier] (src/core/speed_tier.gd)",
 		"tone": SpeedTier.COLORS[2], "add": true},
 	{"mark": "speed lines", "file": "res://src/presentation/vfx.gd", "material": MAT_LINE,
-		"colour": ["func _draw_lines(", "mesh.surface_set_color("], "source": "SpeedTier.COLORS[tier] (src/movement/speed_tier.gd)",
+		"colour": ["func _draw_lines(", "mesh.surface_set_color("], "source": "SpeedTier.COLORS[tier] (src/core/speed_tier.gd)",
 		"tone": SpeedTier.COLORS[1], "add": true},
 	{"mark": "aura motes", "file": "res://src/presentation/player_fx.gd", "material": MAT_LINE,
 		"colour": ["", "mm.set_instance_color(i, c.lerp(Color.WHITE"], "source": "heat_tint(part_color()): ELEMENT_COLORS, leaning to HEAT_COLOR", "tone": Palette.ARC, "add": false},

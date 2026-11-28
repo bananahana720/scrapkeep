@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Rules := preload("res://src/boss/boss_rules.gd")
-const Posture := preload("res://src/combat/boss_posture.gd")
+const Posture := preload("res://src/core/boss_posture.gd")
 
 const ID_PREFIX := "waking_floor_"
 const SPACING := 4.0

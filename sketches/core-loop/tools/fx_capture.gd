@@ -5,7 +5,7 @@ const Vfx := preload("res://src/presentation/vfx.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 

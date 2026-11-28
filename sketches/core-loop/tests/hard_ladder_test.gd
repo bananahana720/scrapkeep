@@ -5,7 +5,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 const Director := preload("res://src/world/director.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Game := preload("res://src/game.gd")

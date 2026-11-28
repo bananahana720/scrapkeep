@@ -1,6 +1,6 @@
 extends "res://src/combat/counter.gd"
 
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const IslandEdge := preload("res://src/combat/island_edge.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 const SwingArc := preload("res://src/combat/swing_arc.gd")
