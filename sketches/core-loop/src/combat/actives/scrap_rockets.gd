@@ -77,7 +77,7 @@ func _fly(rocket: Dictionary, delta: float) -> bool:
 	var pos: Vector3 = rocket["pos"]
 	var target = rocket["target"]
 	if target == null or not is_instance_valid(target) or target.is_dead():
-		target = combat._nearest(pos, SEEK_REACH, [])
+		target = combat.nearest_enemy(pos, SEEK_REACH, [])
 		rocket["target"] = target
 	var vel: Vector3 = rocket["vel"]
 	var speed := minf(vel.length() + ACCEL * delta, MAX_SPEED)

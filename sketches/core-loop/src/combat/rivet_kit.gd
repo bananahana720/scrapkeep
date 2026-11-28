@@ -248,7 +248,7 @@ func _warden(enemy: Node3D) -> bool:
 
 
 func _boss(enemy: Node3D) -> bool:
-	return combat._target_class(enemy) == "boss"
+	return combat.target_class_of(enemy) == "boss"
 
 
 func _enemies() -> Array:
@@ -276,7 +276,7 @@ func slam_force(punch: float) -> float:
 
 func punch_dir(target: Node3D) -> Vector3:
 	var d := _flat(target.global_position - ctx.player.ball_position())
-	return d.normalized() if d.length() > 0.01 else _flat(combat._flat_aim()).normalized()
+	return d.normalized() if d.length() > 0.01 else _flat(combat.aim_heading()).normalized()
 
 
 func punch_force() -> float:
@@ -296,7 +296,7 @@ func geometry(_fraction: float) -> Dictionary:
 		var at: Vector3 = kit.anchor_body.global_position
 		var to: Vector3 = at + punch_dir(kit.anchor_body) * ARROW_LENGTH
 		return ctx.player.yours({"kind": "line", "from": at, "to": to, "full_to": to, "width": 1.0, "fill": 1.0})
-	var anchor: Vector3 = kit.anchor if kit.hooked else ball + combat._flat_aim() * ctx.player.grapple_range()
+	var anchor: Vector3 = kit.anchor if kit.hooked else ball + combat.aim_heading() * ctx.player.grapple_range()
 	var stop := haul_stop(anchor)
 	return ctx.player.yours({"kind": "line", "from": ball, "to": stop, "full_to": stop, "width": 1.0, "fill": 1.0})
 
@@ -416,7 +416,7 @@ func _step_rail_grind(delta: float) -> void:
 		return
 	var ball: Vector3 = player.ball_position()
 	var vel: Vector3 = player.planar_velocity()
-	var heading := vel.normalized() if vel.length() > 0.5 else _flat(combat._flat_aim()).normalized()
+	var heading := vel.normalized() if vel.length() > 0.5 else _flat(combat.aim_heading()).normalized()
 	var hit := RideRail.find_nearest_rail(map_rails(), ball, heading, Weapons.RIVET_RAIL_SNAP_RADIUS)
 	if not hit.is_empty():
 		_start_rail_ride(hit, "sprint")
@@ -525,8 +525,8 @@ func _on_cc_ignored(_kind: String) -> void:
 
 func _heading() -> Vector3:
 	if combat.ultimate != null:
-		return combat.ultimate.ride_heading(combat._flat_aim())
-	return combat._flat_aim()
+		return combat.ultimate.ride_heading(combat.aim_heading())
+	return combat.aim_heading()
 
 
 func beam_dir(aim: Vector3, heading := Vector3.ZERO) -> Vector3:
@@ -570,7 +570,7 @@ func select(shape: Dictionary) -> Array:
 	var picks: Array = []
 	var boxes := _cell_boxes(shape)
 	for enemy in _enemies():
-		if _in_shape(shape, enemy.global_position, combat._hull(enemy), boxes):
+		if _in_shape(shape, enemy.global_position, combat.hull_radius(enemy), boxes):
 			picks.append(enemy)
 	var origin: Vector3 = shape["origin"]
 	if shape["kind"] == "line":
@@ -1027,7 +1027,7 @@ func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 				bounds = bounds.expand(vertex)
 	var margin := 0.0
 	for enemy in _enemies():
-		margin = maxf(margin, combat._hull(enemy))
+		margin = maxf(margin, combat.hull_radius(enemy))
 	bounds = bounds.grow(margin)
 	var box := BoxShape3D.new()
 	box.size = bounds.size

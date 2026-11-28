@@ -1329,7 +1329,7 @@ func _run_live() -> void:
 	_game.player.set_physics_process(false)
 	combat._start_attempt()
 	var tarn_origin: Vector3 = _game.player.ball_position()
-	var tarn_spot: Vector3 = tarn_origin + combat._flat_aim() * 3.0
+	var tarn_spot: Vector3 = tarn_origin + combat.aim_heading() * 3.0
 	var tarn_dummy: Node3D = combat.spawn_enemy("chaser", tarn_spot)
 	tarn_dummy.set_physics_process(false)
 	tarn_dummy.hp = 500.0
@@ -1375,7 +1375,7 @@ func _run_live() -> void:
 	# Beat 3 at standstill deals 43.0 damage and 2.0x knock impulse (enough to throw into a pin)!
 	tarn_dummy.velocity = Vector3.ZERO
 	tarn_dummy.global_position = tarn_spot
-	var pin_victim: Node3D = combat.spawn_enemy("chaser", tarn_spot + combat._flat_aim() * 1.4)
+	var pin_victim: Node3D = combat.spawn_enemy("chaser", tarn_spot + combat.aim_heading() * 1.4)
 	pin_victim.set_physics_process(false)
 	pin_victim.hp = 200.0
 	pin_victim.max_hp = 200.0
@@ -1559,7 +1559,7 @@ func _run_live() -> void:
 		and not _game.player.indicator.shapes.has("cannon_paint")
 		and _game.player.state.velocity == vel_before_rail, str(paint_rail))
 	# Rail pierce chip against plated_brute: 50% chip vs 20% normal, outer plate still holds (full == false).
-	var c_brute: Node3D = combat.spawn_enemy("plated_brute", _game.player.ball_position() + combat._flat_aim() * 8.0)
+	var c_brute: Node3D = combat.spawn_enemy("plated_brute", _game.player.ball_position() + combat.aim_heading() * 8.0)
 	c_brute.set_physics_process(false)
 	c_brute.hp = 500.0
 	c_brute.max_hp = 500.0

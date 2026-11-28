@@ -217,7 +217,7 @@ func step(delta: float) -> void:
 func _sentry_volley() -> void:
 	var picks: Array = []
 	for stake in nodes:
-		var target = combat._nearest(stake.global_position, SENTRY_REACH, [])
+		var target = combat.nearest_enemy(stake.global_position, SENTRY_REACH, [])
 		if target != null:
 			picks.append([stake.global_position.distance_to(target.global_position), stake, target])
 	picks.sort_custom(func(a, b): return a[0] < b[0])

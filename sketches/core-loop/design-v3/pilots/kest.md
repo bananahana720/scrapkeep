@@ -189,7 +189,7 @@ The arc is `RideRail.arc` (`src/world/ride_rail.gd:41-74`) ending at H, with `fl
 
 ### How it is built from what exists
 
-- **Volley charges** are ordinary sticky charges (`sticky.gd:6-10`) thrown from the mortar to points round B, armed for touch, on a 0.6 s fuse. Their damage is set at the throw: 12 x the heft multiplier, with no `_damage_mod` and no cloak crit. Source tag `ultimate`. They go off through `_detonate` (`combat.gd:2073-2101`), so Daisy Chain, Time Bomb, Demolition and Marked act on them.
+- **Volley charges** are ordinary sticky charges (`sticky.gd:6-10`) thrown from the mortar to points round B, armed for touch, on a 0.6 s fuse. Their damage is set at the throw: 12 x the heft multiplier, with no `damage_mod` and no cloak crit. Source tag `ultimate`. They go off through `_detonate` (`combat.gd:2073-2101`), so Daisy Chain, Time Bomb, Demolition and Marked act on them.
 - **Cloak (Call).** The cloak is held through the wind-up, the flight and the hold, as Nightfall holds it (`combat.gd:2189-2192`), and runs 1.5 s past the landing. Set-piece damage never calls `_cloak_shot()` (`combat.gd:2201-2209`), so it neither crits nor breaks the cloak. Her first throw after the landing does crit: the set piece ends in smoke.
 - **The stoop as an exit.** Volley charges thrown on the last beats are still live round B when she lands. Holding Space after recovery ends, Kest rocket-jumps off the nearest (`combat.gd:2107-2124`). With Blast Jumper (`kest.gd:28-29`) it happens without Space.
 - **Before B3 ships legs**, Windhover falls back to a high arc onto B with the volleys on its beats and no hang.

@@ -274,7 +274,7 @@ func _ball_flat() -> Vector3:
 
 
 func _aim_flat() -> Vector3:
-	return _combat._flat_aim()
+	return _combat.aim_heading()
 
 
 func _step_swaps(ticks: int, dt := 1.0 / 60.0) -> void:
