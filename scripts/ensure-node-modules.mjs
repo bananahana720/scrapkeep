@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, realpathSync, symlinkSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -91,16 +92,7 @@ export function parseEnsureArgs(argv) {
   return { worktree };
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const { worktree } = parseEnsureArgs(process.argv.slice(2));
     const result = ensureNodeModules(worktree, { log: (msg) => console.log(msg) });

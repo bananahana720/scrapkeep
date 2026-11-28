@@ -3,10 +3,12 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
+import { isMain } from "./lib/cli.mjs";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { walkSync } from "./lib/walk.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = REPO_ROOT;
 
 export const TARGET_LUFS = -16;
 export const LUFS_TOL = 0.5;
@@ -94,12 +96,9 @@ export function missingCues(cues, wired, delivered = []) {
 }
 
 export function walk(dir, ext) {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return walk(full, ext);
-    return ext.some((e) => entry.name.toLowerCase().endsWith(e)) ? [full] : [];
-  });
+  return walkSync(dir, {
+    filter: (entry) => ext.some((e) => entry.name.toLowerCase().endsWith(e)),
+  }).map((entry) => entry.full);
 }
 
 export function readManifests(project) {
@@ -769,9 +768,4 @@ if (!isMainThread && workerData?.[WORKER_FLAG] === true && parentPort) {
   });
 }
 
-if (
-  isMainThread &&
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
-  await main();
+if (isMainThread && isMain(import.meta.url)) await main();

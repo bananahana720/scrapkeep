@@ -103,12 +103,19 @@ test("parseArgs selects the bot tier with its own receipt label", () => {
 
 function copySmokeRuntime(dir) {
   mkdirSync(path.join(dir, "scripts/lib"), { recursive: true });
-  for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
+  for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs", "toolchain.json"])
     writeFileSync(
       path.join(dir, "scripts", module),
       readFileSync(new URL(`./${module}`, import.meta.url)),
     );
-  for (const module of ["godot-test-runner.mjs", "machine-lock.mjs", "proc.mjs", "receipt.mjs"])
+  for (const module of [
+    "cli.mjs",
+    "git.mjs",
+    "godot-test-runner.mjs",
+    "machine-lock.mjs",
+    "proc.mjs",
+    "receipt.mjs",
+  ])
     writeFileSync(
       path.join(dir, "scripts/lib", module),
       readFileSync(new URL(`./lib/${module}`, import.meta.url)),
@@ -1765,6 +1772,10 @@ test("testFixedFps parses opt-in fixed-fps markers from the first five lines and
   assert.equal(smoke.batchable("# smoke: fixed-fps=90\nextends SceneTree\n"), true);
   assert.equal(smoke.batchable("# header\n\nextends SceneTree\n"), true);
   assert.equal(smoke.batchable("# smoke: solo fixed-fps=90\nextends SceneTree\n"), false);
+  assert.equal(
+    smoke.batchable('extends SceneTree\nfunc f():\n\tmesh.take_over_path("res://a.tres")\n'),
+    false,
+  );
 });
 
 test("splitBatch captures outside lines and batchHasOutsideError catches exit leaks", () => {

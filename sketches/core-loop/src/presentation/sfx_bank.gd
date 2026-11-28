@@ -324,7 +324,7 @@ static func trim_db(id: String) -> float:
 	if id.begins_with(SET_ANSWER):
 		return SET_ANSWER_DB
 	if id.begins_with(SAY):
-		return TRIM_DB["babble"] + float(_caller(_said(id)[0]).get("db", 0.0))
+		return TRIM_DB["babble"] + float(_caller(parse_said(id)[0]).get("db", 0.0))
 	if id == "babble":
 		return TRIM_DB["babble"] + float(CALLERS[MOSS].get("db", 0.0))
 	if id.begins_with(ASSIST_STING):
@@ -647,7 +647,7 @@ static func _key_at(id: String, step: int, shift: int, theme: int) -> String:
 
 
 static func _gridded(id: String) -> bool:
-	return STINGER_BEATS.has(id) or id.begins_with(PILOT_QUOTE) or id.begins_with(SET_ANSWER) or (id.begins_with(SAY) and caller_on_grid(_said(id)[0]))
+	return STINGER_BEATS.has(id) or id.begins_with(PILOT_QUOTE) or id.begins_with(SET_ANSWER) or (id.begins_with(SAY) and caller_on_grid(parse_said(id)[0]))
 
 
 static func _hz(midi: float) -> float:
@@ -1254,7 +1254,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 	if id.begins_with(SET_ANSWER):
 		return Synth.render_score(SetDirector.answer_score(id.trim_prefix(SET_ANSWER)), 0.5)
 	if id.begins_with(SAY):
-		return _say(_said(id)[0], _said(id)[1])
+		return _say(parse_said(id)[0], parse_said(id)[1])
 	if _assist_parts(id).size() > 0:
 		return _assist_sting(_assist_parts(id))
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
@@ -1957,7 +1957,7 @@ static func _boil_rumble() -> PackedFloat32Array:
 		[_noise(0.06, 1700.0, 800.0, 40.0), Synth.seconds(0.72), 0.3]])
 
 
-static func _motif_score(id: String, at: int, instrument: String, gain: float, octave := 0) -> Array:
+static func motif_score(id: String, at: int, instrument: String, gain: float, octave := 0) -> Array:
 	var score: Array = []
 	for cell in Harmony.motif(id).get("cells", []):
 		score.append([at + int(cell[0]), int(cell[1]) + octave, int(cell[2]), instrument, gain])
@@ -1997,7 +1997,7 @@ static func tally_recipe(id: String, midi := -1, total := false) -> PackedFloat3
 
 static func kest_score(id: String) -> Array:
 	if id == "raid_kest_stinger" or id == "raid_kest_roll":
-		return _motif_score("kest", 0, "tom", 0.85).slice(0, 3)
+		return motif_score("kest", 0, "tom", 0.85).slice(0, 3)
 	if id == "raid_kest_boom" or id == "cable_kest_blast":
 		return [[0, 50, 4, "tom", 0.85], [0, 50, 4, "sub", 0.65]]
 	var note := 62
@@ -2007,8 +2007,8 @@ static func kest_score(id: String) -> Array:
 
 
 static func _sable_release() -> PackedFloat32Array:
-	var score := _motif_score("sable", 0, "mallet", 0.8)
-	score.append_array(_motif_score("sable", 0, "bell", 0.3, 12))
+	var score := motif_score("sable", 0, "mallet", 0.8)
+	score.append_array(motif_score("sable", 0, "bell", 0.3, 12))
 	for midi in [65, 69, 72, 76]:
 		score.append([6, midi + 12, 6, "bell", 0.3])
 	score.append_array([[6, 53, 6, "keys", 0.3], [6, 57, 6, "keys", 0.3], [6, 60, 6, "keys", 0.3], [6, 64, 6, "keys", 0.3],
@@ -2018,8 +2018,8 @@ static func _sable_release() -> PackedFloat32Array:
 
 static func _rivet_release() -> PackedFloat32Array:
 	var step := Synth.score_step
-	var score := _motif_score("rivet", 0, "clav", 0.8)
-	score.append_array(_motif_score("rivet", 0, "clav", 0.35, 12))
+	var score := motif_score("rivet", 0, "clav", 0.8)
+	score.append_array(motif_score("rivet", 0, "clav", 0.35, 12))
 	score.append_array([[4, 0, 8, "crash", 0.45], [4, 0, 2, "open_hat", 0.7], [4, 0, 2, "kick", 0.6]])
 	var parts: Array = [[Synth.render_score(score, 0.8), 0, 1.0]]
 	var hits := [0.0, 1.0, 2.0, 2.5, 3.0, 3.25, 3.5, 3.75]
@@ -2029,7 +2029,7 @@ static func _rivet_release() -> PackedFloat32Array:
 
 
 static func _kest_release() -> PackedFloat32Array:
-	var score := _motif_score("kest", 0, "tom", 0.85)
+	var score := motif_score("kest", 0, "tom", 0.85)
 	var cells: Array = Harmony.motif("kest")["cells"]
 	var last: Array = cells[cells.size() - 1]
 	score.append([int(last[0]), int(last[1]) - 12, 8, "sub808", 0.9])
@@ -2039,7 +2039,7 @@ static func _kest_release() -> PackedFloat32Array:
 
 static func _tarn_release() -> PackedFloat32Array:
 	var step := Synth.score_step
-	var score := _motif_score("tarn", 0, "reese", 0.8)
+	var score := motif_score("tarn", 0, "reese", 0.8)
 	score.append_array([[4, 45, 6, "sub808", 0.7], [4, 0, 2, "kick", 0.6], [4, 0, 8, "crash", 0.45]])
 	var parts: Array = [[Synth.render_score(score, 0.9), 0, 1.0]]
 	for at in [0, 2]:
@@ -2049,7 +2049,7 @@ static func _tarn_release() -> PackedFloat32Array:
 
 static func _tally_release() -> PackedFloat32Array:
 	var step := Synth.score_step
-	var score := _motif_score("tally", 0, "keys", 0.8)
+	var score := motif_score("tally", 0, "keys", 0.8)
 	score.append_array([[5, 86, 6, "bell", 0.4], [5, 50, 6, "sub808", 0.6], [5, 0, 2, "kick", 0.5]])
 	var parts: Array = [[Synth.render_score(score, 0.9), 0, 1.0]]
 	for i in 4:
@@ -2060,8 +2060,8 @@ static func _tally_release() -> PackedFloat32Array:
 
 static func _cannon_release() -> PackedFloat32Array:
 	var step := Synth.score_step
-	var score := _motif_score("cannon", 0, "chime", 0.7)
-	score.append_array(_motif_score("cannon", 0, "talk", 0.35, -12))
+	var score := motif_score("cannon", 0, "chime", 0.7)
+	score.append_array(motif_score("cannon", 0, "talk", 0.35, -12))
 	score.append_array([[0, 0, 2, "kick", 0.6], [4, 0, 2, "kick", 0.6], [4, 0, 8, "crash", 0.45], [4, 50, 6, "sub808", 0.6]])
 	var parts: Array = [[Synth.render_score(score, 1.6), 0, 1.0]]
 	parts.append([Synth.drum("snare"), int(2 * step), 0.6])
@@ -2097,8 +2097,8 @@ static func _break_free(id: String) -> PackedFloat32Array:
 
 
 static func _fleet_motif() -> PackedFloat32Array:
-	var score := _motif_score("fleet", 0, "brass", 0.6)
-	score.append_array(_motif_score("fleet", 0, "brass", 0.35, 12))
+	var score := motif_score("fleet", 0, "brass", 0.6)
+	score.append_array(motif_score("fleet", 0, "brass", 0.35, 12))
 	for stamp in Harmony.motif("fleet")["stamps"]:
 		score.append([int(stamp), 0, 2, "anvil", 0.9])
 		score.append([int(stamp), 0, 2, "kick", 0.55])
@@ -2299,7 +2299,7 @@ static func _sunken_bell() -> PackedFloat32Array:
 
 
 static func _ally_hum(class_id: String) -> PackedFloat32Array:
-	return Synth.render_score(_motif_score(class_id, 0, "chime", 0.7, 12), 1.4)
+	return Synth.render_score(motif_score(class_id, 0, "chime", 0.7, 12), 1.4)
 
 
 static func _ally_wake() -> PackedFloat32Array:
@@ -2349,8 +2349,8 @@ static func _lore_found() -> PackedFloat32Array:
 
 static func _pilot_unlocked(class_id: String) -> PackedFloat32Array:
 	var row := Harmony.motif_or_first(class_id)
-	var score := _motif_score(class_id, 0, row["voice"], 0.8)
-	score.append_array(_motif_score(class_id, 0, "bell", 0.25, 12))
+	var score := motif_score(class_id, 0, row["voice"], 0.8)
+	score.append_array(motif_score(class_id, 0, "bell", 0.25, 12))
 	return _cut(Synth.render_score(score, 0.4), 0.85, Synth.seconds(0.12))
 
 
@@ -2787,7 +2787,7 @@ static func say_id(speaker: String, text: String) -> String:
 	return "%s%s|%s" % [SAY, speaker, text]
 
 
-static func _said(id: String) -> Array:
+static func parse_said(id: String) -> Array:
 	var parts := id.trim_prefix(SAY).split("|", true, 1)
 	return [parts[0], parts[1] if parts.size() > 1 else ""]
 

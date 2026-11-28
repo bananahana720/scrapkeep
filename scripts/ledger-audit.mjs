@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { coveredFiles, ROWS as MODEL_ROWS, syncCommit } from "./gate/model-receipts.mjs";
+import { isMain } from "./lib/cli.mjs";
 import { primStandIns, scan as scanPlaceholders } from "./placeholder-gate.mjs";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -219,16 +220,7 @@ export function formatLedgerAudit(report) {
   return lines.join("\n");
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   const argv = process.argv.slice(2);
   const json = argv.includes("--json");
   const strict = argv.includes("--strict");

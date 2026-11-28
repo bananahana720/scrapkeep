@@ -1,6 +1,9 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
+const Enemy := preload("res://src/combat/enemy.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -8,14 +11,13 @@ const Icons := preload("res://src/ui/icons.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-const GRAVITY := 26.0
 const BLAST_RADIUS := 3.6
 const DAMAGE := 12.0
 const SHOVE := 5.0
 const HIT_RADIUS := 0.9
 const RETURN_FLIGHT := 0.9
 const COVER_CLEAR_SECONDS := 0.15
-const COVER_MASK := 1
+const COVER_MASK := PhysicsLayers.WORLD_MASK
 const COVER_SEAT_BAND := 0.25
 const RIM_SIZE := 3.6
 const RIM_PING := "vault_rise"
@@ -59,7 +61,7 @@ var _rim_clock := 0.0
 
 static func lob_velocity(from: Vector3, to: Vector3, seconds: float) -> Vector3:
 	var v := (to - from) / seconds
-	v.y += 0.5 * GRAVITY * seconds
+	v.y += 0.5 * Enemy.GRAVITY * seconds
 	return v
 
 
@@ -75,7 +77,7 @@ func setup(target_ref, terrain_ref, root_ref: Node, live_ref: Callable, from: Ve
 	landing = to
 	flight = seconds
 	launch = lob_velocity(from, to, seconds)
-	add_to_group("enemy_shot")
+	add_to_group(Groups.ENEMY_SHOT)
 	position = from
 	if _shell_mesh == null:
 		_shell_mesh = SphereMesh.new()
@@ -88,7 +90,7 @@ func setup(target_ref, terrain_ref, root_ref: Node, live_ref: Callable, from: Ve
 	add_child(mesh)
 	_build_rim()
 	ring = Telegraph.ring(root_ref, terrain_ref, Threat.Type.PROJECTILE, to, BLAST_RADIUS)
-	ring.set_flight(from, Threat.lob_bump(GRAVITY, seconds))
+	ring.set_flight(from, Threat.lob_bump(Enemy.GRAVITY, seconds))
 
 
 func bat() -> bool:
@@ -107,7 +109,7 @@ func bat() -> bool:
 	if is_instance_valid(ring):
 		ring.queue_free()
 	ring = Telegraph.ring(world_root, terrain, Threat.Type.PROJECTILE, to, BLAST_RADIUS, 3.5, Palette.AMBER)
-	ring.set_flight(origin, Threat.lob_bump(GRAVITY, flight))
+	ring.set_flight(origin, Threat.lob_bump(Enemy.GRAVITY, flight))
 	return true
 
 
@@ -116,7 +118,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var before := position
 	_age = minf(_age + delta, flight)
-	position = origin + launch * _age + Vector3.DOWN * 0.5 * GRAVITY * _age * _age
+	position = origin + launch * _age + Vector3.DOWN * 0.5 * Enemy.GRAVITY * _age * _age
 	if covered and not returned and _age < flight and _age > COVER_CLEAR_SECONDS and _burst_on_cover(before):
 		return
 	_step_rim(delta)

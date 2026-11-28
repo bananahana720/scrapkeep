@@ -70,6 +70,8 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     jsFiles: [],
     hasSketch: true,
     hasDocsOrPkg: true,
+    hasSkills: false,
+    hasBriefs: false,
     hasKnownFailing: false,
   });
 
@@ -78,6 +80,8 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     jsFiles: ["scripts/ci/affected.mjs"],
     hasSketch: false,
     hasDocsOrPkg: false,
+    hasSkills: false,
+    hasBriefs: false,
     hasKnownFailing: false,
   });
 
@@ -88,6 +92,8 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     jsFiles: [],
     hasSketch: false,
     hasDocsOrPkg: true,
+    hasSkills: false,
+    hasBriefs: false,
     hasKnownFailing: true,
   });
 
@@ -96,6 +102,24 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     jsFiles: [],
     hasSketch: false,
     hasDocsOrPkg: false,
+    hasSkills: false,
+    hasBriefs: false,
+    hasKnownFailing: false,
+  });
+
+  const skillsAndBriefs = planHookChecks(
+    [
+      ".agents/skills/scrapkeep-verify/SKILL.md",
+      "sketches/core-loop/design-v3/sound/briefs/w1.json",
+    ],
+    (f) => existing.has(f),
+  );
+  assert.deepEqual(skillsAndBriefs, {
+    jsFiles: [],
+    hasSketch: true,
+    hasDocsOrPkg: true,
+    hasSkills: true,
+    hasBriefs: true,
     hasKnownFailing: false,
   });
 });
@@ -160,6 +184,8 @@ test("executeHookPlan runs all planned checks strictly with zero skipped checks 
       jsFiles: ["scripts/a.mjs"],
       hasSketch: true,
       hasDocsOrPkg: true,
+      hasSkills: true,
+      hasBriefs: true,
       hasKnownFailing: true,
     },
     {
@@ -179,9 +205,11 @@ test("executeHookPlan runs all planned checks strictly with zero skipped checks 
     "sketch:lint",
     "check:project",
     "check:docs",
+    "check:skills",
+    "check:briefs",
     "known-failing",
   ]);
-  assert.equal(ran.length, 6);
+  assert.equal(ran.length, 8);
 
   const missingBins = executeHookPlan(
     {

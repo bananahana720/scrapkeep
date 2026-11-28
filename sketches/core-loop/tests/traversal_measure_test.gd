@@ -5,6 +5,7 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const RunLog := preload("res://src/core/run_log.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
@@ -515,7 +516,7 @@ func _start_contact() -> void:
 	_ball.add_child(shape)
 	_ball.collision_layer = 0
 	_ball.collision_mask = 0
-	_ball.set_collision_mask_value(ParkRecipes.WORLD_LAYER, true)
+	_ball.set_collision_mask_value(PhysicsLayers.WORLD_LAYER, true)
 	_ball.contact_monitor = true
 	_ball.max_contacts_reported = 8
 	_ball.physics_material_override = PhysicsMaterial.new()

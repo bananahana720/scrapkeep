@@ -25,7 +25,6 @@ const Secrets := preload("res://src/core/secrets.gd")
 const PilotStory := preload("res://src/core/pilot_story.gd")
 const AmbushAltar := preload("res://src/world/ambush_altar.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
-const FindKit := preload("res://src/world/find_kit.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
@@ -43,6 +42,8 @@ const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
 const POCKET_KIT := "res://assets/models/world_one/pocket_kit.glb"
 const POCKET_PARTS := ["PocketBlock", "PocketPost"]
+const FIND_KIT := "res://assets/models/world_one/find_kit.glb"
+const FIND_PARTS := ["FindBoardFrame", "FindBoard", "FindAerial", "FindSeep"]
 const POCKET_BLOCK := Vector3(4.0, 3.0, 4.0)
 const SITE_VIEW_END_M := 420.0
 const PROP_VIEW_END_M := 360.0
@@ -1124,7 +1125,7 @@ func _seep_tell(s: Site) -> void:
 	var wet := _find_wet
 	for k in FIND_SEEP_STREAKS.size():
 		var streak: Vector3 = FIND_SEEP_STREAKS[k]
-		var mark: Node3D = FindKit.part("FindSeep", s.wall)
+		var mark: Node3D = ModelKit.part(FIND_KIT, FIND_PARTS, "FindSeep", s.wall)
 		if mark != null:
 			mark.position = Vector3(streak.x, streak.y, 0.52)
 			mark.scale = Vector3(streak.z, WALL_HEIGHT * 0.8, 1.0)
@@ -1176,7 +1177,7 @@ func _dress_door(s: Site) -> void:
 
 
 func _radio_tell(s: Site) -> void:
-	var aerial: Node3D = FindKit.part("FindAerial", s)
+	var aerial: Node3D = ModelKit.part(FIND_KIT, FIND_PARTS, "FindAerial", s)
 	if aerial != null:
 		aerial.position = Vector3(WALL_HALF_W + 0.5, WALL_HEIGHT, -1.0)
 	else:
@@ -1211,8 +1212,8 @@ func _hang_room_log(s: Site, room_id: String) -> void:
 func _hang_board(s: Site, site_name: String, title: String, text: String) -> void:
 	s.name = site_name
 	var board_z := -WALL_DEPTH + 0.06
-	var frame: Node3D = FindKit.part("FindBoardFrame", s)
-	var board: Node3D = FindKit.part("FindBoard", s)
+	var frame: Node3D = ModelKit.part(FIND_KIT, FIND_PARTS, "FindBoardFrame", s)
+	var board: Node3D = ModelKit.part(FIND_KIT, FIND_PARTS, "FindBoard", s)
 	if frame != null and board != null:
 		frame.position = Vector3(0.0, ROOM_LOG_HEIGHT, board_z - 0.04)
 		board.position = frame.position

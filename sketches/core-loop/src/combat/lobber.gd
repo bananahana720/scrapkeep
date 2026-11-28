@@ -24,7 +24,7 @@ const CLUSTER_MAX_DIST := 14.0
 const CHAIN_BLAST_RADIUS := 7.0
 const CHAIN_BLAST_DAMAGE := 40.0
 const CHAIN_BAT_MIN_SPEED := 14.0
-const COVER_MASK := 1
+const COVER_MASK := PhysicsLayers.WORLD_MASK
 
 signal fired(origin: Vector3, landing: Vector3, flight: float)
 signal released(ring: Dictionary)
@@ -264,7 +264,7 @@ func _fire_cluster() -> void:
 	var bungs: Array = []
 	var before_ids := {}
 	if is_inside_tree():
-		for s in get_tree().get_nodes_in_group("enemy_shot"):
+		for s in get_tree().get_nodes_in_group(Groups.ENEMY_SHOT):
 			before_ids[s.get_instance_id()] = true
 	var dist := _cluster_dist
 	if target != null:
@@ -278,7 +278,7 @@ func _fire_cluster() -> void:
 		var landing := Vector3(aim.x, Telegraph.ground_under(terrain, aim), aim.z)
 		fired.emit(muzzle_point(), landing, CLUSTER_FLIGHT)
 	if is_inside_tree():
-		for s in get_tree().get_nodes_in_group("enemy_shot"):
+		for s in get_tree().get_nodes_in_group(Groups.ENEMY_SHOT):
 			if not before_ids.has(s.get_instance_id()) and s.get("lobber") == self:
 				bungs.append(s)
 	shots += 1
@@ -367,7 +367,7 @@ class ClusterWatcher extends Node:
 			FxLibrary.burst(_root, "brass_spark", at, 12)
 			FxLibrary.burst(_root, "spark_core", at, 12, Palette.AMBER)
 		var combat = _target.get("combat") if _target != null and "combat" in _target else null
-		for enemy in get_tree().get_nodes_in_group("enemy"):
+		for enemy in get_tree().get_nodes_in_group(GROUP):
 			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 				continue
 			var offset: Vector3 = enemy.global_position - at
@@ -384,7 +384,7 @@ class ClusterWatcher extends Node:
 
 
 func _shell_ring() -> Dictionary:
-	var shells := get_tree().get_nodes_in_group("enemy_shot")
+	var shells := get_tree().get_nodes_in_group(Groups.ENEMY_SHOT)
 	for i in range(shells.size() - 1, -1, -1):
 		var shell = shells[i]
 		if shell.get("lobber") == self and is_instance_valid(shell.get("ring")):

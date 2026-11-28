@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
@@ -360,7 +361,7 @@ func _deal_proc(enemy: Node3D, damage: float, dir: Vector3, knock: float) -> voi
 
 
 func _live_enemies(override: Array = []) -> Array:
-	var raw: Array = override if not override.is_empty() else (get_tree().get_nodes_in_group("enemy") if get_tree() != null else [])
+	var raw: Array = override if not override.is_empty() else (get_tree().get_nodes_in_group(Groups.ENEMY) if get_tree() != null else [])
 	var out: Array = []
 	for enemy in raw:
 		if not is_instance_valid(enemy):

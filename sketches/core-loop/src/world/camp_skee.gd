@@ -2,12 +2,12 @@ extends Node3D
 
 
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Records := preload("res://src/world/camp_records.gd")
 
 const PIECE := "camp_skee_lane"
 const BALLS := 9
-const BALL_LAYER := 2
 
 const CUPS := {
 	"cup_10": {"points": 10, "radius": 2.0, "word": "CLUNK!"},
@@ -120,9 +120,9 @@ func _profile():
 func _sensor(socket: String, radius: float) -> Area3D:
 	var area := Area3D.new()
 	area.name = "Sensor_" + socket
-	area.collision_layer = 0
-	area.collision_mask = 0
-	area.set_collision_mask_value(BALL_LAYER, true)
+	area.collision_layer = PhysicsLayers.NONE
+	area.collision_mask = PhysicsLayers.NONE
+	area.set_collision_mask_value(PhysicsLayers.BALL_LAYER, true)
 	area.monitorable = false
 	var shape := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()

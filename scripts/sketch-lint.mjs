@@ -1,18 +1,28 @@
-import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { ALPHA_MAPS, PARK_MAPS, PILOT_IDS } from "./lib/game-defs.mjs";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { isMain } from "./lib/cli.mjs";
+import { walkSync } from "./lib/walk.mjs";
 import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = REPO_ROOT;
 const BASELINE_FILE = path.join(root, "scripts", "sketch-lint.baseline.json");
-const BASELINED_RULES = ["L1", "L2", "L3", "L4", "L16"];
+export const BASELINE_RULES = {
+  L1: { shape: "keys" },
+  L2: { shape: "keys" },
+  L3: { shape: "keys" },
+  L4: { shape: "keys" },
+  L11: { shape: "count" },
+  L14: {
+    shape: "keys",
+    keyOf: (item) => item.key ?? item.path,
+    fileOf: (key) => key.split(":")[0],
+  },
+  L15: { shape: "count" },
+  L16: { shape: "keys" },
+  ...Object.fromEntries(WORD_RULES.map((rule) => [rule, { shape: "count" }])),
+};
 const MAX_QUARANTINE = 0;
 const QUARANTINE_HEADER = "test\towner\treason\tadded\tdeadline";
 const TEST_FOLDERS = new Set(["unit", "support", "doubles", "fixtures", "trees", "workshop"]);
@@ -434,55 +444,7 @@ export const ID_COMPARE_OWNERS = new Set([
   "src/core/slice_defs.gd",
 ]);
 
-export const CANONICAL_IDS = [
-  "park_dam",
-  "park_flume",
-  "park_pit",
-  "park_sinkhole",
-  "park_islands",
-  "park_crown",
-  "spillway",
-  "reach",
-  "dig",
-  "dig_deep",
-  "highdraft",
-  "highdraft_crown",
-  "pylon_engineer",
-  "runner_gunner",
-  "demolitions_caster",
-  "tarn",
-  "tally",
-  "remembered_cannon",
-  "line_splicer",
-];
-
-export const ID_COMPARE_LEGACY = {
-  "src/boss/mind.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
-  "src/combat/combat.gd": { sites: 8, why: "pre-MG-16 pilot branches" },
-  "src/combat/kest_kit.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
-  "src/combat/rivet_kit.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
-  "src/combat/tarn_claw.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
-  "src/core/pilot_story.gd": { sites: 7, why: "pre-MG-16 pilot story branches" },
-  "src/game.gd": { sites: 1, why: "pre-MG-16 pilot check" },
-  "src/movement/player_ball.gd": { sites: 4, why: "pre-MG-16 pilot/map branches" },
-  "src/presentation/audio.gd": { sites: 1, why: "pre-MG-16 park prefix check" },
-  "src/presentation/dig_scenery.gd": { sites: 3, why: "pre-MG-16 dig map checks" },
-  "src/presentation/grapple_rig.gd": { sites: 2, why: "pre-MG-16 pilot match arms" },
-  "src/presentation/hero_assets.gd": { sites: 1, why: "pre-MG-16 pilot check" },
-  "src/presentation/park_props.gd": { sites: 1, why: "pre-MG-16 park prefix check" },
-  "src/presentation/pilot_antics.gd": { sites: 6, why: "pre-MG-16 pilot match arms" },
-  "src/presentation/player_fx.gd": { sites: 1, why: "pre-MG-16 pilot check" },
-  "src/presentation/quiet_gun.gd": { sites: 1, why: "pre-MG-16 pilot check" },
-  "src/presentation/sfx_bank.gd": { sites: 3, why: "pre-MG-16 map check and pilot match arms" },
-  "src/presentation/world_look.gd": { sites: 1, why: "pre-MG-16 park prefix check" },
-  "src/ui/class_preview.gd": { sites: 10, why: "pre-MG-16 pilot match arms" },
-  "src/ui/ending_sequence.gd": {
-    sites: 7,
-    why: "pre-MG-16 pilot ending branches and park prefix checks",
-  },
-  "src/world/director.gd": { sites: 2, why: "pre-MG-16 park prefix checks" },
-  "src/world/terrain.gd": { sites: 2, why: "pre-MG-16 park prefix checks" },
-};
+export const CANONICAL_IDS = [...PARK_MAPS, ...ALPHA_MAPS, ...PILOT_IDS, "line_splicer"];
 
 export const ID_FAMILY_PREFIXES = ["park_"];
 
@@ -532,13 +494,17 @@ export function idMatchArms(text) {
   return arms;
 }
 
-export function lintL11(file, rel, text, allowed = ID_COMPARE_LEGACY, owners = ID_COMPARE_OWNERS) {
+export function lintL11(file, rel, text, allowed = null, owners = ID_COMPARE_OWNERS) {
   if (owners.has(rel) || rel.startsWith("src/dev/")) return [];
   const arms = idMatchArms(text);
   const sites = codeLines(text).filter(
     (line) => rawIdCompare.test(line.raw) || rawIdPrefix.test(line.raw) || arms.has(line.number),
   );
-  const listed = allowed[rel]?.sites ?? 0;
+  const baseMessage =
+    "raw map or pilot ID branch (string or StringName compare, match arm, or begins_with) outside owning table (MG-16); query the owning def/capability instead of branching on ID strings";
+  if (allowed === null) return sites.map((line) => finding("L11", file, line.number, baseMessage));
+  const entry = allowed[rel] ?? allowed[file];
+  const listed = typeof entry === "number" ? entry : (entry?.sites ?? 0);
   if (sites.length === listed) return [];
   if (sites.length === 0) {
     return [
@@ -546,53 +512,66 @@ export function lintL11(file, rel, text, allowed = ID_COMPARE_LEGACY, owners = I
         "L11",
         file,
         1,
-        "ID_COMPARE_LEGACY lists a file with no raw map/pilot ID comparison left: remove the entry",
+        "L11 baseline lists a file with no raw map/pilot ID comparison left: remove the entry",
       ),
     ];
   }
   const message =
     listed === 0
-      ? "raw map or pilot ID branch (string or StringName compare, match arm, or begins_with) outside owning table (MG-16); query the owning def/capability instead of branching on ID strings"
-      : `${sites.length} raw map/pilot ID branches, ID_COMPARE_LEGACY lists ${listed}; move branching to owning table fields (MG-16)`;
+      ? baseMessage
+      : `${sites.length} raw map/pilot ID branches, L11 baseline allows ${listed}; move branching to owning table fields (MG-16)`;
   return sites.map((line) => finding("L11", file, line.number, message));
 }
 
 export function applyBaseline(findings, baseline, exists) {
   const kept = [];
-  const offending = new Map();
-  const words = new Map();
+  const keySets = new Map();
+  const offendingKeys = new Set();
+  const counted = new Map();
+  for (const [rule, spec] of Object.entries(BASELINE_RULES)) {
+    if (spec.shape === "keys") keySets.set(rule, new Set(baseline[rule] ?? []));
+    else counted.set(rule, new Map());
+  }
   for (const item of findings) {
-    if (WORD_RULES.includes(item.rule)) {
-      const key = `${item.rule} ${item.path}`;
-      if (!words.has(key)) words.set(key, []);
-      words.get(key).push(item);
+    const spec = BASELINE_RULES[item.rule];
+    if (!spec) {
+      kept.push(item);
       continue;
     }
-    const listed = baseline[item.rule] ?? [];
-    if (BASELINED_RULES.includes(item.rule) && listed.includes(item.path)) {
-      offending.set(`${item.rule} ${item.path}`, true);
+    if (spec.shape === "keys") {
+      const key = spec.keyOf ? spec.keyOf(item) : item.path;
+      if (keySets.get(item.rule).has(key)) {
+        offendingKeys.add(`${item.rule}\0${key}`);
+      } else {
+        kept.push(item);
+      }
     } else {
-      kept.push(item);
+      const byFile = counted.get(item.rule);
+      if (!byFile.has(item.path)) byFile.set(item.path, []);
+      byFile.get(item.path).push(item);
     }
   }
-  for (const rule of BASELINED_RULES) {
-    for (const file of baseline[rule] ?? []) {
-      if (offending.has(`${rule} ${file}`)) continue;
-      kept.push(
-        finding(
-          "BASELINE",
-          file,
-          1,
-          `${rule} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`,
-        ),
-      );
+  for (const [rule, spec] of Object.entries(BASELINE_RULES)) {
+    if (spec.shape === "keys") {
+      for (const key of baseline[rule] ?? []) {
+        if (offendingKeys.has(`${rule}\0${key}`)) continue;
+        const file = spec.fileOf ? spec.fileOf(key) : key;
+        const label = key === file ? rule : `${rule} (${key})`;
+        kept.push(
+          finding(
+            "BASELINE",
+            file,
+            1,
+            `${label} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`,
+          ),
+        );
+      }
+      continue;
     }
-  }
-  for (const rule of WORD_RULES) {
     const listed = baseline[rule] ?? {};
-    for (const [key, items] of words) {
-      if (!key.startsWith(`${rule} `)) continue;
-      const allowed = listed[items[0].path] ?? 0;
+    const byFile = counted.get(rule);
+    for (const [file, items] of byFile) {
+      const allowed = listed[file] ?? 0;
       if (items.length > allowed) {
         kept.push(
           ...items.map((item) => ({
@@ -603,8 +582,8 @@ export function applyBaseline(findings, baseline, exists) {
       }
     }
     for (const [file, allowed] of Object.entries(listed)) {
-      const now = words.get(`${rule} ${file}`)?.length ?? 0;
-      if (now === 0)
+      const now = byFile.get(file)?.length ?? 0;
+      if (now === 0) {
         kept.push(
           finding(
             "BASELINE",
@@ -613,7 +592,7 @@ export function applyBaseline(findings, baseline, exists) {
             `${rule} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`,
           ),
         );
-      else if (now < allowed)
+      } else if (now < allowed) {
         kept.push(
           finding(
             "BASELINE",
@@ -622,6 +601,7 @@ export function applyBaseline(findings, baseline, exists) {
             `${rule} fell to ${now} from ${allowed}: lower the baseline to ${now}`,
           ),
         );
+      }
     }
   }
   return kept;
@@ -629,18 +609,18 @@ export function applyBaseline(findings, baseline, exists) {
 
 export function baselineFrom(findings) {
   const baseline = {};
-  for (const rule of BASELINED_RULES) {
-    baseline[rule] = [
-      ...new Set(findings.filter((item) => item.rule === rule).map((item) => item.path)),
-    ].sort();
-  }
-  for (const rule of WORD_RULES) {
-    const counts = {};
-    for (const item of findings.filter((entry) => entry.rule === rule))
-      counts[item.path] = (counts[item.path] ?? 0) + 1;
-    baseline[rule] = Object.fromEntries(
-      Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)),
-    );
+  for (const [rule, spec] of Object.entries(BASELINE_RULES)) {
+    const mine = findings.filter((item) => item.rule === rule);
+    if (spec.shape === "keys") {
+      const keyOf = spec.keyOf ?? ((item) => item.path);
+      baseline[rule] = [...new Set(mine.map(keyOf))].sort();
+    } else {
+      const counts = {};
+      for (const item of mine) counts[item.path] = (counts[item.path] ?? 0) + 1;
+      baseline[rule] = Object.fromEntries(
+        Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)),
+      );
+    }
   }
   return baseline;
 }
@@ -800,323 +780,6 @@ export function lintL13(file, rel, text, allowed = L13_ALLOWED) {
   );
 }
 
-export const L14_STATIC_VAR_BASELINE = new Set([
-  "src/boss/arena.gd:_ahead_bowl",
-  "src/boss/arena.gd:_looks_warm",
-  "src/boss/boss.gd:_pickup_materials",
-  "src/boss/boss.gd:_pickup_mesh",
-  "src/boss/requisition.gd:_ahead",
-  "src/boss/requisition.gd:_ahead_reads",
-  "src/boss/requisition.gd:_dressing",
-  "src/build/accretion.gd:_layout",
-  "src/build/accretion.gd:_part_meshes",
-  "src/build/panel_shell.gd:_meshes",
-  "src/build/panel_shell.gd:_sockets",
-  "src/build/parts.gd:_all_rows",
-  "src/build/parts.gd:_answering_by_class",
-  "src/build/parts.gd:_defs",
-  "src/build/parts.gd:_maker_of",
-  "src/build/parts.gd:_rows",
-  "src/combat/anchor_crew.gd:_shared",
-  "src/combat/anchor_crew.gd:_warned_asset",
-  "src/combat/ballast_heavy.gd:_shared",
-  "src/combat/bola_thrower.gd:_shared",
-  "src/combat/bola_thrower.gd:_warned_asset",
-  "src/combat/bolts.gd:_outline_shader",
-  "src/combat/boom_tender.gd:_shared",
-  "src/combat/burrower.gd:_shared",
-  "src/combat/catch_trap.gd:_shared",
-  "src/combat/chaser.gd:_shared",
-  "src/combat/chaser.gd:_warned_asset",
-  "src/combat/combat.gd:_arc_mark_mesh",
-  "src/combat/combat.gd:_exposure_material",
-  "src/combat/combat.gd:_exposure_mesh",
-  "src/combat/combat.gd:_ink_mesh",
-  "src/combat/deflector.gd:_shared",
-  "src/combat/deflector.gd:_warned_asset",
-  "src/combat/dispatcher.gd:_asset_warned",
-  "src/combat/dispatcher.gd:_body_shape",
-  "src/combat/dispatcher.gd:_column_shapes",
-  "src/combat/dispatcher.gd:_deck_shape",
-  "src/combat/dispatcher.gd:_mast_charcoal",
-  "src/combat/dispatcher.gd:_mast_meshes",
-  "src/combat/dispatcher.gd:_mast_rust",
-  "src/combat/dispatcher.gd:_model_checked",
-  "src/combat/dispatcher.gd:_packed_model",
-  "src/combat/dispatcher.gd:_pod_mat",
-  "src/combat/dispatcher.gd:_pod_mesh",
-  "src/combat/dispatcher.gd:_shared",
-  "src/combat/dispatcher.gd:_sockets",
-  "src/combat/dispatcher.gd:_special_cues",
-  "src/combat/dispatcher.gd:_special_cues_checked",
-  "src/combat/dispatcher.gd:_warmed",
-  "src/combat/drill_crew.gd:_shared",
-  "src/combat/drill_crew.gd:_warned_asset",
-  "src/combat/enemy.gd:_attack_serial",
-  "src/combat/enemy.gd:_frame_mask",
-  "src/combat/enemy.gd:_plate_shaders",
-  "src/combat/enemy.gd:_ring_out_kept",
-  "src/combat/enemy.gd:_variables_by_script",
-  "src/combat/enemy_casting.gd:_warned",
-  "src/combat/foreman.gd:_asset_warned",
-  "src/combat/foreman.gd:_shared",
-  "src/combat/foreman.gd:_sockets",
-  "src/combat/foreman.gd:_sync_ring_material",
-  "src/combat/foreman.gd:_sync_ring_mesh",
-  "src/combat/gap_net.gd:_shared",
-  "src/combat/gyro_jammer.gd:_shared",
-  "src/combat/hooker.gd:_shared",
-  "src/combat/hooker.gd:_warned_asset",
-  "src/combat/jolt_layer.gd:_shared",
-  "src/combat/kite_drone.gd:_shared",
-  "src/combat/kite_drone.gd:_warned_asset",
-  "src/combat/lamp_swarm.gd:_painted",
-  "src/combat/lamp_swarm.gd:_shared",
-  "src/combat/lamp_swarm.gd:_warned_asset",
-  "src/combat/line_cutter.gd:_shared",
-  "src/combat/lobber.gd:_shared",
-  "src/combat/lobber.gd:_warned_asset",
-  "src/combat/mag_trapper.gd:_shared",
-  "src/combat/mag_trapper.gd:_warned_asset",
-  "src/combat/mind_hand.gd:_rim_masks",
-  "src/combat/mind_hand.gd:_warned_models",
-  "src/combat/miniboss.gd:_asset_warned",
-  "src/combat/miniboss.gd:_shared",
-  "src/combat/monster_heft.gd:_doc",
-  "src/combat/netcaster.gd:_net_shader",
-  "src/combat/netcaster.gd:_shared",
-  "src/combat/netcaster.gd:_warned_asset",
-  "src/combat/pit_jaw.gd:_shared",
-  "src/combat/plated_brute.gd:_mask",
-  "src/combat/plated_brute.gd:_shared",
-  "src/combat/plated_brute.gd:_warned_asset",
-  "src/combat/projectile.gd:_rim_quad",
-  "src/combat/projectile.gd:_shell_material",
-  "src/combat/projectile.gd:_shell_mesh",
-  "src/combat/prop_crew.gd:_shared",
-  "src/combat/ramp_flipper.gd:_shared",
-  "src/combat/ramp_flipper.gd:_warned_asset",
-  "src/combat/reactor_relic.gd:_shared",
-  "src/combat/reactor_relic.gd:_warned_asset",
-  "src/combat/rivet_kit.gd:_cap_unit",
-  "src/combat/rivet_kit.gd:_convex_cache",
-  "src/combat/rivet_kit.gd:_convex_lock",
-  "src/combat/rivet_kit.gd:_convex_searching",
-  "src/combat/rivet_kit.gd:_strip_unit",
-  "src/combat/rivet_kit.gd:convex_searches",
-  "src/combat/rivet_kit.gd:convex_searches_on_main",
-  "src/combat/rogue.gd:_model_warned",
-  "src/combat/roster.gd:ROWS",
-  "src/combat/roster.gd:SPECIALS",
-  "src/combat/roster_dig.gd:_shared_capsule",
-  "src/combat/splitter.gd:_parts",
-  "src/combat/swarm_remnant.gd:_asset_warned",
-  "src/combat/swarm_remnant.gd:_shared",
-  "src/combat/swatter.gd:_shared",
-  "src/combat/swatter.gd:_warned_asset",
-  "src/combat/threat_grammar.gd:_stripes",
-  "src/combat/vault.gd:_asset_warned",
-  "src/combat/vault.gd:_shared",
-  "src/combat/warden.gd:_drivers_requested",
-  "src/combat/warden.gd:warned_variants",
-  "src/combat/warden_look.gd:_seam_shader",
-  "src/combat/warden_reactor.gd:_line_reference",
-  "src/combat/warden_reactor.gd:_sheet_shader",
-  "src/combat/winch_drone.gd:_shared",
-  "src/combat/winch_drone.gd:_warned_asset",
-  "src/core/ability_state.gd:KEYS",
-  "src/core/beacon.gd:_packed_models",
-  "src/core/beacon.gd:_roster_dig",
-  "src/core/beacon.gd:_shared_lantern_bulb",
-  "src/core/beacon.gd:_shared_mast_bulb",
-  "src/core/beacon.gd:_shared_mast_cyl",
-  "src/core/beacon.gd:_shared_mast_mat",
-  "src/core/beacon.gd:_shared_torus",
-  "src/core/beacon.gd:_slot_materials",
-  "src/core/build_stamp.gd:_stamp",
-  "src/core/palette.gd:_checkers",
-  "src/core/palette.gd:_grain_normal",
-  "src/core/palette.gd:_grain_rough",
-  "src/core/palette.gd:_grime",
-  "src/core/palette.gd:_look_textures",
-  "src/core/palette.gd:_oxide",
-  "src/core/palette.gd:_painted_textures",
-  "src/core/palette.gd:_slot_materials",
-  "src/core/palette.gd:_wear",
-  "src/core/radio_takes.gd:_doc",
-  "src/core/shift_variants.gd:_forced",
-  "src/core/thread_guard.gd:_lock",
-  "src/core/trees/cannon.gd:NODES_WORLD_ONE",
-  "src/core/trees/kest.gd:NODES_WORLD_ONE",
-  "src/core/trees/rivet.gd:NODES_WORLD_ONE",
-  "src/core/trees/sable.gd:NODES_WORLD_ONE",
-  "src/core/trees/tally.gd:NODES_WORLD_ONE",
-  "src/core/trees/tarn.gd:NODES_WORLD_ONE",
-  "src/presentation/ace_sequencer.gd:_kept",
-  "src/presentation/ace_sequencer.gd:_kept_lock",
-  "src/presentation/ace_sequencer.gd:_kept_order",
-  "src/presentation/ambient_life.gd:_painted",
-  "src/presentation/arena_bowl_dress.gd:_ahead",
-  "src/presentation/arena_bowl_dress.gd:_reading",
-  "src/presentation/arena_bowl_dress.gd:_requested",
-  "src/presentation/arena_mind_dress.gd:_kit_ahead",
-  "src/presentation/arena_mind_dress.gd:_panorama_out",
-  "src/presentation/arena_mind_dress.gd:_panorama_task",
-  "src/presentation/audio.gd:_cannon_streams",
-  "src/presentation/bake_look.gd:_lift",
-  "src/presentation/bake_look.gd:_ramp",
-  "src/presentation/bake_look.gd:_twins",
-  "src/presentation/bake_warm.gd:_firsts_done",
-  "src/presentation/bake_warm.gd:_glows",
-  "src/presentation/bake_warm.gd:_held",
-  "src/presentation/bake_warm.gd:_kept",
-  "src/presentation/bake_warm.gd:_loading",
-  "src/presentation/bake_warm.gd:_stood",
-  "src/presentation/bake_warm.gd:_warm",
-  "src/presentation/ball_looks.gd:CUTAWAY_SHADER",
-  "src/presentation/ball_looks.gd:_canopy_material",
-  "src/presentation/ball_looks.gd:_enamels",
-  "src/presentation/ball_looks.gd:_inside",
-  "src/presentation/ball_looks.gd:_platings",
-  "src/presentation/ball_looks.gd:_shaders",
-  "src/presentation/codex_style.gd:_icons",
-  "src/presentation/companion_body.gd:_painted_materials",
-  "src/presentation/companion_body.gd:_warned_empty_mesh",
-  "src/presentation/craft/craft_lookdev.gd:_cache",
-  "src/presentation/craft/craft_lookdev.gd:_unmasked_cache",
-  "src/presentation/crafted_ball_gear.gd:_mesh_cache",
-  "src/presentation/crew_lamp_field.gd:_lens",
-  "src/presentation/deck_fx.gd:_cache",
-  "src/presentation/deck_fx.gd:_notch_sos",
-  "src/presentation/deck_fx.gd:_snare_bp_sos",
-  "src/presentation/deck_fx.gd:_viking_click_hp_sos",
-  "src/presentation/density.gd:_live",
-  "src/presentation/density.gd:last_published",
-  "src/presentation/enemy_clips.gd:_libraries",
-  "src/presentation/enemy_motion.gd:_enemy_script",
-  "src/presentation/enemy_motion.gd:_live_tags",
-  "src/presentation/enemy_motion.gd:_tag_material",
-  "src/presentation/enemy_motion.gd:_tag_mesh",
-  "src/presentation/enemy_motion.gd:motion_scale",
-  "src/presentation/flourish_player.gd:reduced_motion",
-  "src/presentation/foley_audio.gd:_streams",
-  "src/presentation/fx_library.gd:_meshes",
-  "src/presentation/fx_library.gd:_shaders",
-  "src/presentation/graphics_preset.gd:_target_server_active",
-  "src/presentation/harpoon_physics_rig.gd:_body_mesh",
-  "src/presentation/harpoon_physics_rig.gd:_cable_ink_mat",
-  "src/presentation/harpoon_physics_rig.gd:_core_mesh",
-  "src/presentation/harpoon_physics_rig.gd:_ink_mat",
-  "src/presentation/harpoon_physics_rig.gd:_jaw_mesh",
-  "src/presentation/harpoon_physics_rig.gd:_metal_mat",
-  "src/presentation/harpoon_physics_rig.gd:_spool_mat",
-  "src/presentation/harpoon_physics_rig.gd:_spool_mesh",
-  "src/presentation/highdraft_finishes.gd:_pieces",
-  "src/presentation/highdraft_finishes.gd:_warned_aerial",
-  "src/presentation/highdraft_fx.gd:MOTE_COUNTS",
-  "src/presentation/highdraft_fx.gd:STREAK_COUNTS",
-  "src/presentation/highdraft_fx.gd:preferred",
-  "src/presentation/ink_outline.gd:_shaders",
-  "src/presentation/jolt_layer_audio.gd:_streams",
-  "src/presentation/landmark_proxy.gd:_materials",
-  "src/presentation/music_engine.gd:_park_tasks",
-  "src/presentation/music_engine.gd:_park_warm",
-  "src/presentation/music_engine.gd:_park_warm_lock",
-  "src/presentation/music_engine.gd:_rest_lock",
-  "src/presentation/music_engine.gd:_stinger_tasks",
-  "src/presentation/park_props.gd:_cache_owner",
-  "src/presentation/park_props.gd:_far_sources",
-  "src/presentation/park_props.gd:_material",
-  "src/presentation/park_props.gd:_meshes",
-  "src/presentation/park_props.gd:_requested",
-  "src/presentation/park_props.gd:_stand_ins_lock",
-  "src/presentation/phase_music.gd:_on_disk",
-  "src/presentation/pilot_antics.gd:reduced_motion",
-  "src/presentation/recipe_props.gd:_pieces",
-  "src/presentation/set_dressing.gd:_broken_rock",
-  "src/presentation/set_dressing.gd:_route_warned",
-  "src/presentation/sfx_bank.gd:_cache_lock",
-  "src/presentation/sfx_bank.gd:_file_present",
-  "src/presentation/sfx_bank.gd:_lock",
-  "src/presentation/sfx_bank.gd:_rendered",
-  "src/presentation/sfx_bank.gd:_samples",
-  "src/presentation/sfx_bank.gd:_shift",
-  "src/presentation/sfx_bank.gd:_streams",
-  "src/presentation/sfx_bank.gd:_theme",
-  "src/presentation/sfx_bank.gd:_voice_clips",
-  "src/presentation/sfx_bank.gd:_voice_tts",
-  "src/presentation/sfx_bank.gd:bake_cancel",
-  "src/presentation/sfx_bank.gd:unknown_callers",
-  "src/presentation/site_markers.gd:_materials",
-  "src/presentation/site_markers.gd:_meshes",
-  "src/presentation/spillway_scenery.gd:_prop_materials",
-  "src/presentation/spillway_scenery.gd:_prop_shaders",
-  "src/presentation/spillway_scenery.gd:_prop_warnings",
-  "src/presentation/spillway_scenery.gd:flow_scale",
-  "src/presentation/synth.gd:_lock",
-  "src/presentation/synth.gd:_notes",
-  "src/presentation/synth.gd:score_step",
-  "src/presentation/title_intro_player.gd:_finishes",
-  "src/presentation/tune_moments.gd:_available",
-  "src/presentation/weapon_rig_fx.gd:_mesh_cache",
-  "src/presentation/work_machines.gd:_painted",
-  "src/presentation/work_machines.gd:_rows",
-  "src/presentation/work_machines.gd:_scenes",
-  "src/presentation/world_fx/world_fx.gd:preferred",
-  "src/presentation/world_fx/world_fx_cable.gd:_shader",
-  "src/presentation/world_fx/world_fx_kit.gd:_materials",
-  "src/presentation/world_fx/world_fx_kit.gd:reduced_motion",
-  "src/presentation/world_fx/world_fx_sound.gd:_streams",
-  "src/presentation/world_fx/world_fx_word.gd:_hushed",
-  "src/presentation/world_fx/world_fx_word.gd:_live",
-  "src/ui/ability_bar.gd:reduced_motion",
-  "src/ui/aim_reticle.gd:reduced_motion",
-  "src/ui/boss_plate.gd:reduced_motion",
-  "src/ui/caller_tile.gd:reduced_motion",
-  "src/ui/class_card.gd:reduced_motion",
-  "src/ui/class_preview.gd:reduced_motion",
-  "src/ui/ending_sequence.gd:_highdraft_skies",
-  "src/ui/icons.gd:_cache",
-  "src/ui/icons.gd:_from_file",
-  "src/ui/moss_bubble.gd:reduced_motion",
-  "src/ui/radio_dial.gd:_fits",
-  "src/ui/reward_view.gd:reduced_motion",
-  "src/ui/ui_tokens.gd:reduced_motion",
-  "src/ui/wordmark.gd:_texture",
-  "src/world/activities.gd:_find_wet",
-  "src/world/activities.gd:_interior_block",
-  "src/world/activities.gd:_parts",
-  "src/world/activities.gd:_shared_graphs",
-  "src/world/activities.gd:_wall",
-  "src/world/activity_view.gd:_shared",
-  "src/world/director.gd:_parks",
-  "src/world/events/natural.gd:_marks_job",
-  "src/world/events/natural.gd:_plans",
-  "src/world/model_kit.gd:_flat",
-  "src/world/model_kit.gd:_kits",
-  "src/world/park/park_recipes.gd:_anchor_fit",
-  "src/world/park/park_recipes.gd:_anchor_fit_lock",
-  "src/world/park/park_recipes.gd:_anchor_fit_read",
-  "src/world/park/park_recipes.gd:_anchor_hull_lock",
-  "src/world/park/park_recipes.gd:_anchor_hulls",
-  "src/world/park/park_recipes.gd:_anchor_meshes",
-  "src/world/park/park_recipes.gd:_beam_roots",
-  "src/world/park/park_recipes.gd:_budgets",
-  "src/world/park/park_recipes.gd:_ends",
-  "src/world/park/park_recipes.gd:_origins",
-  "src/world/park/park_recipes.gd:_origins_lock",
-  "src/world/park/park_recipes.gd:_origins_read",
-  "src/world/park/park_recipes.gd:_tiles",
-  "src/world/park/park_schema.gd:_registry_ids",
-  "src/world/park/park_schema.gd:_registry_lock",
-  "src/world/park/park_schema.gd:_registry_read",
-  "src/world/park/park_terrain.gd:_patch_noise",
-  "src/world/park/regions.gd:_maps",
-  "src/world/radio_cache.gd:_parts",
-  "src/world/rescue_site.gd:_shared",
-  "src/world/rescue_site.gd:_warned",
-]);
-
 const staticVarDecl = /^static\s+var\s+([A-Za-z_]\w*)\b/;
 const gdFuncDecl = /^(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(/;
 const resetFuncName = /^_?reset/i;
@@ -1157,14 +820,7 @@ function resetMethodText(text) {
   return kept.join("\n");
 }
 
-export function lintL14(
-  file,
-  rel,
-  text,
-  driverRefs,
-  baseline = L14_STATIC_VAR_BASELINE,
-  driverVars = new Set(),
-) {
+export function lintL14(file, rel, text, driverRefs, baseline = null, driverVars = new Set()) {
   if (!text.includes("static") || !/\bstatic\s+var\b/.test(text)) return [];
   const registered = driverRefs.has(rel);
   const resetBody = registered ? resetMethodText(text) : "";
@@ -1173,120 +829,46 @@ export function lintL14(
     const match = line.code.match(staticVarDecl);
     if (!match) continue;
     const varName = match[1];
-    const key = `${rel}:${varName}`;
-    if (baseline.has(key)) continue;
+    const relKey = `${rel}:${varName}`;
+    const key = `${file}:${varName}`;
+    if (baseline && (baseline.has(key) || baseline.has(relKey))) continue;
     const clearedInReset =
       registered &&
-      (driverVars.has(key) ||
+      (driverVars.has(relKey) ||
         new RegExp(`\\b${varName}\\b\\s*(?:=|\\.clear\\(|\\.erase\\()`).test(resetBody));
     if (clearedInReset) continue;
-    out.push(
-      finding(
+    out.push({
+      ...finding(
         "L14",
         file,
         line.number,
         `mutable static var ${varName} is not reset per-variable: register ${rel} in sketches/core-loop/tools/test_batch_driver.gd _reset() and clear ${varName} in the script's reset method`,
       ),
-    );
+      key,
+    });
   }
   return out;
 }
 
-export const L15_HZ_BASELINE = {
-  "tests/active_torch_test.gd": 2,
-  "tests/activities_camp_test.gd": 1,
-  "tests/audio_momentum_test.gd": 1,
-  "tests/body_run_warning_test.gd": 5,
-  "tests/bot_hands_flag_test.gd": 1,
-  "tests/bot_relay_stake_test.gd": 4,
-  "tests/camera_aim_rest_test.gd": 1,
-  "tests/camera_glance_test.gd": 1,
-  "tests/camera_tight_test.gd": 1,
-  "tests/camp_ring_test.gd": 1,
-  "tests/cannon_ultimate_test.gd": 1,
-  "tests/cast_motion_test.gd": 1,
-  "tests/combat_codex_test.gd": 1,
-  "tests/companion_drivers_test.gd": 1,
-  "tests/dam_gates_test.gd": 1,
-  "tests/damage_numbers_test.gd": 1,
-  "tests/destructibles_hooks_test.gd": 2,
-  "tests/destructibles_test.gd": 1,
-  "tests/device_caps_test.gd": 1,
-  "tests/dig_combat_test.gd": 1,
-  "tests/dig_fx_test.gd": 1,
-  "tests/discovery_skill_bar_test.gd": 1,
-  "tests/dress_arb_yard_test.gd": 3,
-  "tests/durability_test.gd": 6,
-  "tests/elite_affix_test.gd": 1,
-  "tests/enemies_bughunt_test.gd": 2,
-  "tests/enemy_axis_errors_test.gd": 1,
-  "tests/enemy_clips_test.gd": 7,
-  "tests/enemy_counters_test.gd": 1,
-  "tests/enemy_gait_test.gd": 2,
-  "tests/enemy_linker_test.gd": 1,
-  "tests/enemy_pit_jaw_test.gd": 1,
-  "tests/enemy_tenacity_test.gd": 1,
-  "tests/entrance_closeup_test.gd": 1,
-  "tests/field_tips_test.gd": 3,
-  "tests/find_in_fight_test.gd": 1,
-  "tests/grapple_muts_test.gd": 1,
-  "tests/highdraft_fx_test.gd": 5,
-  "tests/int_arena_standdown_test.gd": 2,
-  "tests/jolt_layer_test.gd": 1,
-  "tests/kest_kit_test.gd": 2,
-  "tests/kest_set_piece_test.gd": 1,
-  "tests/line_skill_hook_test.gd": 1,
-  "tests/look_frames_test.gd": 2,
-  "tests/music_params_trace_game_test.gd": 2,
-  "tests/park_recipes_tunnels_test.gd": 1,
-  "tests/pilot_antics_test.gd": 1,
-  "tests/pocket_kinds_test.gd": 1,
-  "tests/reach_secret_test.gd": 1,
-  "tests/regen_rolling_test.gd": 1,
-  "tests/rivet_kit_test.gd": 1,
-  "tests/sable_kit_test.gd": 1,
-  "tests/shot_bits_live_test.gd": 1,
-  "tests/sim_elements_chains_test.gd": 1,
-  "tests/skill_bar_select_test.gd": 1,
-  "tests/spillway_roster_test.gd": 1,
-  "tests/stand_crew_test.gd": 4,
-  "tests/step5_enemy_boss_craft_test.gd": 6,
-  "tests/tally_set_piece_test.gd": 1,
-  "tests/tarn_claw_drag_test.gd": 1,
-  "tests/telegraph_timing_swarm_test.gd": 1,
-  "tests/ui_objective_board_test.gd": 1,
-  "tests/ultimate_set_piece_test.gd": 1,
-  "tests/w45_exploration_test.gd": 3,
-  "tests/w45_neon_hardening_test.gd": 1,
-  "tests/w45_plate_seat_test.gd": 1,
-  "tests/w45_tarn_relics_test.gd": 1,
-  "tests/w47_h1_heroes_test.gd": 1,
-  "tests/w47_h2_heroes_test.gd": 1,
-  "tests/w50_isaac_relics_test.gd": 1,
-  "tests/wall_grip_test.gd": 4,
-  "tests/weapon_cadence_test.gd": 1,
-  "tests/weapon_driver_test.gd": 1,
-  "tests/works_surge_test.gd": 1,
-  "tests/world_one_mass_s_test.gd": 2,
-  "tests/world_one_stree_test.gd": 1,
-};
-
 const physicsTestSignal = /\b(?:physics_frame|_physics_process)\b/;
 const hardcoded60Hz = /\b1\.0\s*\/\s*60(?:\.0)?\b|\*\s*60\.0\b/g;
 
-export function lintL15(file, rel, text, baseline = L15_HZ_BASELINE) {
+export function lintL15(file, rel, text, baseline = null) {
   if (!text.includes("60") || !physicsTestSignal.test(text)) return [];
   const lines = codeLines(text);
   if (!lines.some((line) => physicsTestSignal.test(line.raw))) return [];
   const sites = lines.flatMap((line) =>
     (line.raw.replace(/#.*$/, "").match(hardcoded60Hz) ?? []).map(() => line),
   );
-  const listed = baseline[rel] ?? 0;
+  const baseMessage =
+    "hardcoded 60 Hz physics frame literal in a 90 Hz physics test; derive ticks from Engine.physics_ticks_per_second instead";
+  if (baseline === null) return sites.map((line) => finding("L15", file, line.number, baseMessage));
+  const listed = baseline[rel] ?? baseline[file] ?? 0;
   if (sites.length <= listed) return [];
   const message =
     listed === 0
-      ? "hardcoded 60 Hz physics frame literal in a 90 Hz physics test; derive ticks from Engine.physics_ticks_per_second instead"
-      : `${sites.length} hardcoded 60 Hz physics frame literals, L15_HZ_BASELINE allows ${listed}; derive ticks from Engine.physics_ticks_per_second instead`;
+      ? baseMessage
+      : `${sites.length} hardcoded 60 Hz physics frame literals, L15 baseline allows ${listed}; derive ticks from Engine.physics_ticks_per_second instead`;
   return sites.map((line) => finding("L15", file, line.number, message));
 }
 
@@ -1476,19 +1058,8 @@ export function lintL16(files) {
   return findings.sort((a, b) => a.path.localeCompare(b.path));
 }
 
-function walk(directory, base = directory) {
-  const entries = [];
-  if (!existsSync(directory)) return entries;
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const full = path.join(directory, entry.name);
-    entries.push({
-      rel: path.relative(base, full).split(path.sep).join("/"),
-      dir: entry.isDirectory(),
-      full,
-    });
-    if (entry.isDirectory()) entries.push(...walk(full, base));
-  }
-  return entries;
+function walk(directory) {
+  return walkSync(directory, { includeDirs: true });
 }
 
 function sources(directory, extensions) {
@@ -1539,9 +1110,7 @@ export function lintSketch(sketch) {
     findings.push(...lintL11(file.path, rel, file.text));
     findings.push(...lintL12(file.path, rel, file.text));
     findings.push(...lintL13(file.path, rel, file.text));
-    findings.push(
-      ...lintL14(file.path, rel, file.text, driverRefs, L14_STATIC_VAR_BASELINE, driverVars),
-    );
+    findings.push(...lintL14(file.path, rel, file.text, driverRefs, null, driverVars));
   }
   findings.push(...lintL16(srcFiles));
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
@@ -1601,12 +1170,13 @@ function main() {
   if (options.writeBaseline) {
     const baseline = baselineFrom(raw);
     writeFileSync(BASELINE_FILE, JSON.stringify(baseline, null, 2) + "\n");
-    for (const rule of BASELINED_RULES)
-      console.log(`${rule} ${baseline[rule].length} baseline paths`);
-    for (const rule of WORD_RULES)
-      console.log(
-        `${rule} ${Object.values(baseline[rule]).reduce((a, b) => a + b, 0)} baseline offences in ${Object.keys(baseline[rule]).length} files`,
-      );
+    for (const [rule, spec] of Object.entries(BASELINE_RULES)) {
+      if (spec.shape === "keys") console.log(`${rule} ${baseline[rule].length} baseline entries`);
+      else
+        console.log(
+          `${rule} ${Object.values(baseline[rule]).reduce((a, b) => a + b, 0)} baseline offences in ${Object.keys(baseline[rule]).length} files`,
+        );
+    }
     return;
   }
   const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
@@ -1631,14 +1201,16 @@ function main() {
       `words: ${raw.words.total} player strings read; offences before baseline ${byRule}`,
     );
   }
-  const wordBaseline = WORD_RULES.map(
-    (rule) => `${rule}=${Object.values(baseline[rule] ?? {}).reduce((a, b) => a + b, 0)}`,
-  ).join(" ");
-  const baselined = `${BASELINED_RULES.map((rule) => `${rule}=${(baseline[rule] ?? []).length}`).join(" ")} ${wordBaseline}`;
+  const baselined = Object.entries(BASELINE_RULES)
+    .map(([rule, spec]) => {
+      if (spec.shape === "keys") return `${rule}=${(baseline[rule] ?? []).length}`;
+      return `${rule}=${Object.values(baseline[rule] ?? {}).reduce((a, b) => a + b, 0)}`;
+    })
+    .join(" ");
   console.log(
     `sketch-lint ${findings.length === 0 ? "pass" : "fail"}: ${findings.length} findings, baseline entries ${baselined}, ${Date.now() - started}ms`,
   );
   process.exit(findings.length === 0 ? 0 : 1);
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

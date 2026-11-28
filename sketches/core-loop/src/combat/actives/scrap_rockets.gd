@@ -102,7 +102,7 @@ func _fly(rocket: Dictionary, delta: float) -> bool:
 
 
 func _contact(at: Vector3):
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not enemy.is_dead() and enemy.global_position.distance_to(at) <= HIT_RADIUS + enemy_girth(enemy, DEFAULT_GIRTH):
 			return enemy
 	return null

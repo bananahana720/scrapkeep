@@ -1,6 +1,8 @@
 extends CharacterBody3D
 
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
@@ -8,6 +10,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const BallRules := preload("res://src/movement/ball_rules.gd")
+const _Tuning := preload("res://src/movement/tuning.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
@@ -16,7 +19,8 @@ const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 const EnemyGait := preload("res://src/presentation/enemy_gait.gd")
 const _Roster := preload("res://src/combat/roster.gd")
 
-const GRAVITY := 26.0
+const GROUP := Groups.ENEMY
+const GRAVITY := _Tuning.GRAVITY
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
 const RALLY_ARRIVE := 0.5
@@ -392,11 +396,11 @@ func _setup_common(target_ref, terrain_ref, root_ref, live_ref: Callable, spec_r
 	if _reaction_bus != null:
 		_reaction_bus.line_state_changed.connect(_on_reaction_line)
 		_reaction_bus.enemy_struck.connect(_on_reaction_hit)
-	add_to_group("enemy")
-	collision_layer = 0
-	collision_mask = 0
-	set_collision_layer_value(3, true)
-	set_collision_mask_value(1, true)
+	add_to_group(GROUP)
+	collision_layer = PhysicsLayers.NONE
+	collision_mask = PhysicsLayers.NONE
+	set_collision_layer_value(PhysicsLayers.ENEMY_LAYER, true)
+	set_collision_mask_value(PhysicsLayers.WORLD_LAYER, true)
 	floor_max_angle = deg_to_rad(60.0)
 	if has_signal("released"):
 		connect("released", _facts_on_released)
@@ -513,8 +517,8 @@ func _die() -> void:
 	_rally_left = 0.0
 	_settle_look()
 	_facts_end(true)
-	collision_layer = 0
-	collision_mask = 0
+	collision_layer = PhysicsLayers.NONE
+	collision_mask = PhysicsLayers.NONE
 	_clear_telegraph()
 	var land := Callable(terrain, "height") if not ringed_out and is_on_floor() and terrain != null else Callable()
 	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction(), land)):

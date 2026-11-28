@@ -1,6 +1,7 @@
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/cli.mjs";
+import { walkSync } from "./lib/walk.mjs";
 
 export const SEVERITIES = ["blocker", "major", "minor", "watch"];
 const LOG_FILE = /(^log$|\.(txt|log|out|err)$)/i;
@@ -251,21 +252,38 @@ export function renderMarkdown({ inputs, logs, findings, skipped = [] }) {
   return out.join("\n") + "\n";
 }
 
+const SKIP_DIRS = new Set(["node_modules", ".git", ".godot"]);
+
 export function collect(inputs) {
   const files = [];
   const skipped = [];
-  const walk = (p) => {
+  const addFile = (p, explicit) => {
     const st = statSync(p, { throwIfNoEntry: false });
     if (!st) return skipped.push(`${p} (missing)`);
-    if (st.isDirectory()) {
-      for (const name of readdirSync(p).sort())
-        if (!["node_modules", ".git", ".godot"].includes(name)) walk(path.join(p, name));
-    } else if (LOG_FILE.test(path.basename(p)) || inputs.includes(p)) {
+    if (st.isDirectory()) return;
+    if (LOG_FILE.test(path.basename(p)) || explicit) {
       if (st.size > MAX_BYTES) skipped.push(`${p} (over ${MAX_BYTES / 1024 / 1024} MB)`);
       else files.push(p);
     }
   };
-  inputs.forEach(walk);
+  for (const input of inputs) {
+    const st = statSync(input, { throwIfNoEntry: false });
+    if (!st) {
+      skipped.push(`${input} (missing)`);
+      continue;
+    }
+    if (st.isDirectory()) {
+      for (const entry of walkSync(input, {
+        sort: true,
+        followSymlinks: true,
+        prune: (item) => SKIP_DIRS.has(item.name),
+      })) {
+        addFile(entry.full, false);
+      }
+    } else {
+      addFile(input, true);
+    }
+  }
   return { files, skipped };
 }
 
@@ -359,5 +377,4 @@ export function main(argv, log = console.log) {
   return 0;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exitCode = main(process.argv.slice(2));
+if (isMain(import.meta.url)) process.exitCode = main(process.argv.slice(2));

@@ -1,5 +1,5 @@
 extends SceneTree
-# smoke: solo timeout=300s (boots the game into the dam and the flume and reads every plate against the colliders)
+# smoke: timeout=300s (boots the game into the dam and the flume and reads every plate against the colliders)
 
 # Lore plate seats (W45 P8): every plate in the Dam and the Flume sits on the surface a ball rolling there stands on.
 #   Seat     around the plate's bottom rim (RIM points) and an inner ring, no point floats more than FLOAT_M above

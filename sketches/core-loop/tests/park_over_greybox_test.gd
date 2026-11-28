@@ -12,6 +12,7 @@ extends SceneTree
 # lines through the lane meet nothing new (coordinator ruling pending on #149, 2026-10-19).
 
 const T := preload("res://tests/support/t.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraphTool := preload("res://tools/park_graph.gd")
 const Terrain := preload("res://src/world/terrain.gd")
@@ -96,7 +97,7 @@ func _run() -> void:
 				ParkRecipes.collider_shapes(grey).size())
 		elif t.check("%s's piece carries its uprights' collider" % id, extra != null and extra.get_child_count() > 0):
 			t.eq("%s's piece collider is on the world layer like the row's" % id, [extra.collision_layer, extra.collision_mask],
-				[1 << (ParkRecipes.WORLD_LAYER - 1), 0])
+				[PhysicsLayers.WORLD_MASK, 0])
 			var inner := INF
 			var faces := 0
 			for shape: Dictionary in ParkRecipes.collider_shapes(extra):

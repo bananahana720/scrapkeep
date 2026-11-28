@@ -8,6 +8,7 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
@@ -251,7 +252,7 @@ func _boss(enemy: Node3D) -> bool:
 
 
 func _enemies() -> Array:
-	return get_tree().get_nodes_in_group("enemy").filter(func(enemy): return _alive(enemy))
+	return get_tree().get_nodes_in_group(Groups.ENEMY).filter(func(enemy): return _alive(enemy))
 
 
 func _knob(name: String, fallback):

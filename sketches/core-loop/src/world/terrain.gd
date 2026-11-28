@@ -3,6 +3,7 @@ extends RefCounted
 const EventGround := preload("res://src/world/events/event_ground.gd")
 
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const PylonBite := preload("res://src/world/pylon_bite.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
@@ -508,7 +509,7 @@ func _surface_hit(space: PhysicsDirectSpaceState3D, x: float, z: float) -> Dicti
 	var ground := height(x, z)
 	if space != null:
 		var top := Vector3(x, ground + SURFACE_REACH_M, z)
-		var query := PhysicsRayQueryParameters3D.create(top, Vector3(x, ground - SURFACE_BELOW_M, z), 1)
+		var query := PhysicsRayQueryParameters3D.create(top, Vector3(x, ground - SURFACE_BELOW_M, z), PhysicsLayers.WORLD_MASK)
 		for i in SURFACE_SKIPS:
 			var hit := space.intersect_ray(query)
 			if hit.is_empty():

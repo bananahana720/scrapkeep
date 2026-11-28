@@ -12,6 +12,19 @@ The initial authorization covered preparation documents. Andrew subsequently aut
 
 ## Navigation
 
+### Active alpha jump table
+
+Active alpha work lives near the bottom of this file; live execution state stays in [STATE.md](project-guide/handoff/STATE.md) and remaining work order in [ROADMAP.md](project-guide/handoff/ROADMAP.md).
+
+| Area | Section |
+| --- | --- |
+| World 1 & scaling overview | [World 1 and scaling backlog (12 November 2026)](#world-1-and-scaling-backlog-12-november-2026) |
+| Ready World 1 rows | [World 1 now: ready to build](#world-1-now-ready-to-build) |
+| Gameplay critique & look rebuilds | [World 1 now: from the gameplay critique (12 November 2026)](#world-1-now-from-the-gameplay-critique-12-november-2026), [World 1 look rebuilds: before the sitting](#world-1-look-rebuilds-before-the-sitting) |
+| Routes, life & points of interest | [World 1 now: routes and life (13 November 2026)](#world-1-now-routes-and-life-13-november-2026), [World 1 now: points of interest (13 November 2026)](#world-1-now-points-of-interest-13-november-2026) |
+| Scaling & Worlds 2–3 groundwork | [Scaling groundwork: ready now, world 1 unchanged](#scaling-groundwork-ready-now-world-1-unchanged), [Scaling: the area blueprint for worlds 2 and 3 (19 November 2026)](#scaling-the-area-blueprint-for-worlds-2-and-3-19-november-2026) |
+| World 1 promises & recent wave audits | [World 1 promises (17 November 2026)](#world-1-promises-17-november-2026), [From the wave 44 audit (19 November 2026)](#from-the-wave-44-audit-19-november-2026), [Wave 45 rulings and the parked area blueprint (21 November 2026)](#wave-45-rulings-and-the-parked-area-blueprint-21-november-2026), [Wave 46 World 1 Demo Catalysts & Sitting Cut (21 November 2026)](#wave-46-world-1-demo-catalysts--sitting-cut-21-november-2026) |
+
 - [Proposed first sprint](#proposed-first-sprint)
 - [Task catalogue](#task-catalogue) and individual cards, including the [asset production cards](#asset-production-cards-16-september-2026)
 - [World 1 and scaling backlog](#world-1-and-scaling-backlog-12-november-2026): the buildable rows for world 1 now and the groundwork for more stages, worlds and features

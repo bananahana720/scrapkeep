@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { walkAsync } from "./lib/walk.mjs";
 
-const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const scriptRoot = REPO_ROOT;
 
 const VALID_MODELS = new Set(["flash_lite", "flash", "pro", "inherit"]);
 const VALID_NATIVE_TOOLS = new Set([
@@ -520,31 +521,24 @@ async function checkEntrypointsAndAstack(findings, root) {
 }
 
 async function walkScriptFiles(root, dir, out = []) {
-  const absDir = path.join(root, dir);
-  if (!(await exists(absDir))) return out;
-  for (const e of await readdir(absDir, { withFileTypes: true })) {
-    const rel = `${dir}/${e.name}`;
-    if (e.isDirectory()) {
-      await walkScriptFiles(root, rel, out);
-    } else if (e.isFile() && SCRIPT_EXTS.has(path.extname(e.name))) {
-      if (rel.includes(".test.") || rel === "scripts/check-agents.mjs") continue;
-      out.push(rel);
-    }
+  const entries = await walkAsync(path.join(root, dir), {
+    filesOnly: true,
+    filter: (entry) => SCRIPT_EXTS.has(path.extname(entry.name)),
+  });
+  for (const entry of entries) {
+    const rel = `${dir}/${entry.rel}`;
+    if (rel.includes(".test.") || rel === "scripts/check-agents.mjs") continue;
+    out.push(rel);
   }
   return out;
 }
 
 async function walkLiveAgentsMarkdown(root, dir, out = []) {
-  const absDir = path.join(root, dir);
-  if (!(await exists(absDir))) return out;
-  for (const e of await readdir(absDir, { withFileTypes: true })) {
-    const rel = `${dir}/${e.name}`;
-    if (e.isDirectory()) {
-      await walkLiveAgentsMarkdown(root, rel, out);
-    } else if (e.isFile() && e.name.endsWith(".md") && e.name !== "lessons.md") {
-      out.push(rel);
-    }
-  }
+  const entries = await walkAsync(path.join(root, dir), {
+    filesOnly: true,
+    filter: (entry) => entry.name.endsWith(".md") && entry.name !== "lessons.md",
+  });
+  for (const entry of entries) out.push(`${dir}/${entry.rel}`);
   return out;
 }
 

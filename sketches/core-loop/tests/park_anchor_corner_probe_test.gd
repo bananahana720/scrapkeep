@@ -36,6 +36,7 @@ extends SceneTree
 # 8 m boxes should show the empty-air events Modeling measured (the positive control).
 
 const T := preload("res://tests/support/t.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
@@ -240,7 +241,7 @@ func _probe_park(park_name: String, speeds: Array) -> void:
 func _make_floor(parent: Node3D) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.collision_layer = 0
-	body.set_collision_layer_value(ParkRecipes.WORLD_LAYER, true)
+	body.set_collision_layer_value(PhysicsLayers.WORLD_LAYER, true)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(4000.0, 1.0, 4000.0)
